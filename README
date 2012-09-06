@@ -1,5 +1,0 @@
-Simple utility that a merchant can run on a tablet device to convert dollars to bitcoins and receive payments from clients
-
-Uses the websocket payment notification API from http://blockchain.info/ to display notifications in real time.
-
-Fetches market price from https://mtgox.com/api/1/BTCCAD/ticker to determine conversion rate 
