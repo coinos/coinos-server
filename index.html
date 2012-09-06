@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Bitcoin Payment Calculator</title>
     <script language="javascript" type="text/javascript" src="http://code.jquery.com/jquery-1.8.1.min.js"></script>
+
     <script language="javascript" type="text/javascript">
       $(function() {
         var websocket = new WebSocket("ws://api.blockchain.info:8335/inv");
@@ -73,14 +74,15 @@
           return decodeURIComponent(results[1].replace(/\+/g, " "));
       }
     </script>
+
+    <style>
+      body, input { font-family: 'Arial'; font-size: 20px; }
+      body { width: 100% }
+      #container { width: 50%; margin: 0px auto; }
+      #total { font-size: 32px; }
+      #status { color: red }
+    </style>
   </head>
-  <style>
-    body, input { font-family: 'Arial'; font-size: 20px; }
-    body { width: 100% }
-    #container { width: 50%; margin: 0px auto; }
-    #total { font-size: 32px; }
-    #status { color: red }
-  </style>
   <body>
     <div id="container">
       <div>
