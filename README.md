@@ -10,6 +10,10 @@ Download market price data from https://mtgox.com/api/1/BTCCAD/ticker into a fil
 
     wget https://mtgox.com/api/1/BTCCAD/ticker > ticker
 
+# Demo Instance
+
+http://bitcoin.adamsoltys.com/
+
 
 # License
 
