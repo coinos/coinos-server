@@ -76,34 +76,38 @@
   </head>
   <style>
     body, input { font-family: 'Arial'; font-size: 20px; }
+    body { width: 100% }
+    #container { width: 50%; margin: 0px auto; }
     #total { font-size: 32px; }
     #status { color: red }
   </style>
   <body>
-    <div>
-      $<input type="text" id="owing" value="0" size="4" /> CAD @
-      <span id="exchange"></span>
-      BTC/CAD
-    </div>
-
-    <br />
-
-    <div>
-      <span>Please send</span>
-      <strong id="total">0.0</strong>
-      bitcoins to:
-
-      <br /><br />
-
-      <span id="address"></span>
+    <div id="container">
+      <div>
+        $<input type="text" id="owing" value="0" size="4" /> CAD @
+        <span id="exchange"></span>
+        BTC/CAD
+      </div>
 
       <br />
 
-      <img id="qr" src="" width="300" height="300" />
-      
-      <br />
-      
-      <span id="status">Waiting for Payment</span>
+      <div>
+        <span>Please send</span>
+        <strong id="total">0.0</strong>
+        bitcoins to:
+
+        <br /><br />
+
+        <span id="address"></span>
+
+        <br />
+
+        <img id="qr" src="" width="300" height="300" />
+        
+        <br />
+        
+        <span id="status">Waiting for Payment</span>
+      </div>
     </div>
   </body>
 </html> 
