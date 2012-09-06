@@ -10,22 +10,30 @@
         var exchange = 0;
         var total = 0;
         var received = 0;
+        var address = getParameterByName('address');
+        var qr_url = 'https://chart.googleapis.com/chart?cht=qr&chl=bitcoin:' + address + '&chs=177x177&chld=H'
+
+        if (address == "")
+          window.location = 'index.html?address=1SoLtySab29J2tAdF2x3PosjnwWF37wEY'
+
+        $('#qr').attr('src', qr_url);
+        $('#address').html(address);
 
         websocket.onopen = function() { 
-          websocket.send('{"op":"addr_sub", "addr":"1PcXspQbZWxUkS9bHcbgMUsb8HsUzP5noT"}');
+          websocket.send('{"op":"addr_sub", "addr":"' + address + '"}');
         }
 
         websocket.onmessage = function(e) { 
           var results = eval('(' + e.data + ')');
           
           $.each(results.x.out, function(i, v) {
-            if (v.addr == '1PcXspQbZWxUkS9bHcbgMUsb8HsUzP5noT') {
+            if (v.addr == address) {
               received += v.value / 100000000;
             }
           });
 
           $.each(results.x.inputs, function(i, v) {
-            if (v.prev_out.addr == '1PcXspQbZWxUkS9bHcbgMUsb8HsUzP5noT') {
+            if (v.prev_out.addr == address) {
               input -= v.prev_out.value / 100000000;
             }
           });
@@ -53,6 +61,17 @@
           $('#total').html(total.toString());
         }
       });
+
+      function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+        var regexS = "[\\?&]" + name + "=([^&#]*)";
+        var regex = new RegExp(regexS);
+        var results = regex.exec(window.location.search);
+        if(results == null)
+          return "";
+        else
+          return decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
     </script>
   </head>
   <style>
@@ -76,11 +95,11 @@
 
       <br /><br />
 
-      1PcXspQbZWxUkS9bHcbgMUsb8HsUzP5noT
+      <span id="address"></span>
 
       <br />
 
-      <img id="qr" src="https://chart.googleapis.com/chart?cht=qr&chl=bitcoin:1PcXspQbZWxUkS9bHcbgMUsb8HsUzP5noT&chs=177x177&chld=H" width="300" height="300" />
+      <img id="qr" src="" width="300" height="300" />
       
       <br />
       
