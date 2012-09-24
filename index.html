@@ -26,6 +26,7 @@
 
         websocket.onmessage = function(e) { 
           var results = eval('(' + e.data + ')');
+          var from_address = '';
           
           $.each(results.x.out, function(i, v) {
             if (v.addr == address) {
@@ -34,6 +35,7 @@
           });
 
           $.each(results.x.inputs, function(i, v) {
+            from_address = v.prev_out.addr
             if (v.prev_out.addr == address) {
               input -= v.prev_out.value / 100000000;
             }
@@ -43,10 +45,19 @@
           if (total <= received) {
             $('#status').css('color', 'green');
           }
+
+          $.get('record_transaction.php',
+            { 
+              address: from_address,
+              date: getFormattedDate(),
+              received: received,
+              exchange: exchange
+            }
+          );
         }
 
-        $.getJSON('ticker', function (data) {
-          exchange = data.return.last.value;  
+        $.getJSON('ticker.json', function (data) {
+          exchange = data.return.last_local.value;  
           $('#exchange').html(exchange);
           updateTotal();
         });
@@ -72,6 +83,13 @@
           return "";
         else
           return decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
+
+      function getFormattedDate() {
+          var date = new Date();
+          var str = date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate() + " " +  date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
+
+          return str;
       }
     </script>
 
