@@ -18,16 +18,39 @@
         <tr>
           <th>Date</th>
           <th>Address</th>
-          <th>Amount</th>
           <th>Exchange Rate</th>
+          <th>BTC</th>
+          <th>CAD</th>
         </tr>
+<?
+$row = 1;
+if (($handle = fopen("transactions.csv", "r")) !== FALSE) {
+    $total_amount = 0;
+    $total_value = 0;
+    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        $num = count($data);
+        $row++;
+        $value = $data[2] * $data[3];
+        $total_amount += $data[2];
+        $total_value += $value;
+?>
         <tr>
-          <td>2012-01-01</td>
-          <td>2134623421lkwfkjhg</td>
-          <td>500</td>
-          <td>12.40</td>
+          <td><? echo $data[1] . "<br />\n"; ?></td>
+          <td><? echo $data[0] . "<br />\n"; ?></td>
+          <td><? echo $data[3] . "<br />\n"; ?></td>
+          <td><? echo $data[2] . "<br />\n"; ?></td>
+          <td>$<? echo $value . "<br />\n"; ?></td>
         </tr>
+<?
+    }
+}
+?>
       </table>
+<br />
+<b>
+      Total BTC: <? echo $total_amount . "<br />\n"; ?>
+      Total CAD: <? echo $total_value . "<br />\n"; ?>
+</b>
     </div>
   </body>
 </html> 
