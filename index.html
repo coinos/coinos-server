@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Bitcoin Payment Calculator</title>
     <script language="javascript" type="text/javascript" src="http://code.jquery.com/jquery-1.8.1.min.js"></script>
+    <script src="qr.js"></script>
 
     <script language="javascript" type="text/javascript">
       $(function() {
@@ -12,12 +13,12 @@
         var total = 0;
         var received = 0;
         var address = getParameterByName('address');
-        var qr_url = 'https://chart.googleapis.com/chart?cht=qr&chl=bitcoin:' + address + '&chs=177x177&chld=H'
+
+        setupqr();
 
         if (address == "")
           window.location = 'index.html?address=1SoLtySab29J2tAdF2x3PosjnwWF37wEY'
 
-        $('#qr').attr('src', qr_url);
         $('#address').html(address);
 
         websocket.onopen = function() { 
@@ -71,6 +72,7 @@
           total = Math.ceil(total * 10000) / 10000;
           if (!$.isNumeric(total)) total = '';
           $('#total').html(total.toString());
+          doqr('bitcoin:' + address + '?amount=' + total.toString());
         }
       });
 
@@ -122,12 +124,10 @@
 
         <br />
 
-        <img id="qr" src="" width="300" height="300" />
-        
-        <br />
-        
         <span id="status">Waiting for Payment</span>
       </div>
-    </div>
+ <div id="qrdiv">
+    <canvas id="qrcanv"}>No Canvas Support?
+</div>   </div>
   </body>
 </html> 
