@@ -14,6 +14,7 @@
   </head>
   <body>
     <div id="container">
+      Date: <input id="date" name="date" type="text" />
       <table>
         <tr>
           <th>Date</th>
@@ -25,14 +26,14 @@
 <?
 $row = 1;
 if (($handle = fopen("transactions.csv", "r")) !== FALSE) {
-    $total_amount = 0;
-    $total_value = 0;
-    while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-        $num = count($data);
-        $row++;
-        $value = $data[2] * $data[3];
-        $total_amount += $data[2];
-        $total_value += $value;
+  $total_amount = 0;
+  $total_value = 0;
+  while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+    $num = count($data);
+    $row++;
+    $value = $data[2] * $data[3];
+    $total_amount += $data[2];
+    $total_value += $value;
 ?>
         <tr>
           <td><? echo $data[1] . "<br />\n"; ?></td>
@@ -41,16 +42,13 @@ if (($handle = fopen("transactions.csv", "r")) !== FALSE) {
           <td><? echo $data[2] . "<br />\n"; ?></td>
           <td>$<? echo $value . "<br />\n"; ?></td>
         </tr>
-<?
-    }
-}
-?>
+<? }} ?>
       </table>
-<br />
-<b>
-      Total BTC: <? echo $total_amount . "<br />\n"; ?>
-      Total CAD: <? echo $total_value . "<br />\n"; ?>
-</b>
+      <br />
+      <b>
+        Total BTC: <? echo $total_amount . "<br />\n"; ?>
+        Total CAD: <? echo $total_value . "<br />\n"; ?>
+      </b>
     </div>
   </body>
 </html> 
