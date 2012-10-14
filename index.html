@@ -58,7 +58,9 @@
         }
 
         $.getJSON('ticker.json', function (data) {
-          exchange = data.return.last_local.value;  
+          exchange = 100 / data.out;
+          exchange = exchange + exchange * 0.03;
+          exchange = Math.ceil(exchange * 100) / 100;
           $('#exchange').html(exchange);
           updateTotal();
         });
@@ -98,13 +100,11 @@
     <style>
       body, input { font-family: 'Arial'; font-size: 20px; }
       body { width: 100% }
-      #container { width: 50%; margin: 0px auto; }
       #total { font-size: 32px; }
       #status { color: red }
     </style>
   </head>
   <body>
-    <div id="container">
       <div>
         $<input type="text" id="owing" value="0" size="4" /> CAD @
         <span id="exchange"></span>
@@ -124,10 +124,11 @@
 
         <br />
 
+        <canvas id="qrcanv">No Canvas Support</canvas>
+
+        <br />
+
         <span id="status">Waiting for Payment</span>
       </div>
- <div id="qrdiv">
-    <canvas id="qrcanv"}>No Canvas Support?
-</div>   </div>
   </body>
 </html> 

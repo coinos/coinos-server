@@ -703,16 +703,9 @@ function genframe(instring)
 
 var wd, ht, qrc;
 function setupqr(){
-    wd = window.innerWidth-40;
-    ht = window.innerHeight-40;
+    wd = 250;
+    ht = 250;
     mp = document.getElementById("mapcanv");
-
-    qrd = document.getElementById("qrdiv");
-    qrd.style.width = wd + "px";
-    qrd.style.height = ht + "px";
-
-    wd -= 4;
-    ht -= 80;
 
     var elem = document.getElementById('qrcanv');
     qrc = elem.getContext('2d');
@@ -720,7 +713,6 @@ function setupqr(){
     qrc.canvas.height = ht;
     qrc.fillStyle = '#eee';
     qrc.fillRect(0,0,wd,ht);
-
 }
 
 function doqr(value) {
