@@ -52,7 +52,7 @@ $(function() {
     exchange = 100 / data.out;
     exchange = exchange + exchange * 0.03;
     exchange = Math.ceil(exchange * 100) / 100;
-    $('#exchange').html(exchange);
+    $('#exchange').val(exchange);
     updateTotal();
   });
 
