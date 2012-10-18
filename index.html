@@ -10,37 +10,25 @@
     <script src="js/qr.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/bitcoin_pos.js"></script>
-    <style></style>
   </head>
   <body>
     <div class="container-fluid">
-      <div class="row-fluid">
-        <span class="span8 offset4">
-          <img src="img/banner.jpg" alt="The Daily Catch" />
-          <label for="exchange">Exchange Rate:</label>
-          <input type="text" id="exchange" value="0" disabled="disabled" />
-          <small>CAD / BTC</small>
+      <img src="img/banner.jpg" alt="The Daily Catch" />
 
-          <label for="owing">Amount:</label>
-          <input type="text" id="owing" value="0" />
-          <small>CAD</small>
-        </span>
-      </div>
-    
+      <label for="exchange">Exchange Rate:</label>
+      <input type="text" id="exchange" value="0" disabled="disabled" />
+      <small>CAD / BTC</small>
+
+      <label for="owing">Amount:</label>
+      <input type="text" id="owing" value="0" />
+      <small>CAD</small>
+
       <br /><br />
 
-      <div class="row-fluid">
-        <span class="span8 offset4">
-          <p>
-            Please send <strong id="total">0.0</strong> bitcoins to:
-          </p>
-          <br />
-          <p>
-            <span id="address"></span>
-          </p>
-          <canvas id="qrcanv">No Canvas Support</canvas>
-        </span>
-      </div>
+      <p>Please send <strong id="total">0.0</strong> bitcoins to:</p><br />
+      <span id="address"></span>
+
+      <canvas id="qrcanv">No Canvas Support</canvas>
     </div>
   </body>
 </html> 

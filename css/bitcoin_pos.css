@@ -1,4 +1,12 @@
+body { text-align: center; }
+input[type="text"] { height: 40px; }
 body, input[type="text"] { font-size: 24px; }
 small, label { font-size: 14px; color: #999; }
-.center { text-align: center; }
-#total { font-size: 36px; }
+strong#total { font-size: 36px; }
+	
+div.container-fluid {
+  width: 500px;
+	margin-left: auto;
+  margin-right: auto;
+	text-align:left;
+}
