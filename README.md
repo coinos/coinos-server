@@ -6,9 +6,9 @@ It uses the websocket payment notification API from http://blockchain.info/ to d
 
 # Installation
 
-Download market price data from https://mtgox.com/api/1/BTCCAD/ticker into a file called `ticker`:
+Download market price data into a file called `ticker.json`:
 
-    wget https://mtgox.com/api/1/BTCCAD/ticker > ticker
+    curl "http://bitcoincharts.com/t/depthcalc.json?symbol=virtexCAD&type=bid&amount=1000&currency=true" > /var/www/bitcoin/ticker.json
 
 # Demo Instance
 

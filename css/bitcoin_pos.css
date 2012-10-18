@@ -1,0 +1,4 @@
+body, input[type="text"] { font-size: 24px; }
+small, label { font-size: 14px; color: #999; }
+.center { text-align: center; }
+#total { font-size: 36px; }
