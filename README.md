@@ -8,7 +8,7 @@ It uses the websocket payment notification API from http://blockchain.info/ to d
 
 Download market price data into a file called `ticker.json`:
 
-    curl "http://bitcoincharts.com/t/depthcalc.json?symbol=virtexCAD&type=bid&amount=1000&currency=true" > /var/www/bitcoin/ticker.json
+    curl "http://bitcoincharts.com/t/depthcalc.json?symbol=virtexCAD&type=bid&amount=1000&currency=true" > ticker.json
 
 # Demo Instance
 

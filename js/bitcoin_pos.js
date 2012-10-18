@@ -49,10 +49,10 @@ $(function() {
   }
 
   $.getJSON('ticker.json', function (data) {
-    exchange = 100 / data.out;
+    exchange = 1000 / data.out;
     exchange = exchange + exchange * 0.03;
     exchange = Math.ceil(exchange * 100) / 100;
-    $('#exchange').val(exchange);
+    $('#exchange').val(exchange.toFixed(2));
     updateTotal();
   });
 
