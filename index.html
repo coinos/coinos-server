@@ -9,26 +9,42 @@
     <script src="js/qr.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/bitcoin.js"></script>
+    <style>
+      body, input[type="text"] { font-size: 24px; }
+      small, label { font-size: 14px; color: #999; }
+      .center { text-align: center; }
+      #total { font-size: 36px; }
+    </style>
   </head>
   <body>
-    <div class="container">
-      <img src="img/banner.jpg" alt="The Daily Catch" />
+    <div class="container-fluid">
+      <div class="row-fluid">
+        <span class="span8 offset4">
+          <img src="img/banner.jpg" alt="The Daily Catch" />
+          <label for="exchange">Exchange Rate:</label>
+          <input type="text" id="exchange" value="0" disabled="disabled" />
+          <small>CAD / BTC</small>
 
-      <label for="exchange">Exchange Rate:</label>
-      <input type="text" id="exchange" value="0" disabled="disabled" />
-      BTC/CAD<br />
+          <label for="owing">Amount:</label>
+          <input type="text" id="owing" value="0" />
+          <small>CAD</small>
+        </span>
+      </div>
+    
+      <br /><br />
 
-      <label for="owing">Amount:</label>
-      <input type="text" id="owing" value="0" />
-      <br />
-
-      <p>
-        <span>Please send</span>
-        <strong id="total">0.0</strong>
-        bitcoins to:
-      </p>
-      <span id="address"></span><br />
-      <canvas id="qrcanv">No Canvas Support</canvas>
+      <div class="row-fluid">
+        <span class="span8 offset4">
+          <p>
+            Please send <strong id="total">0.0</strong> bitcoins to:
+          </p>
+          <br />
+          <p>
+            <span id="address"></span>
+          </p>
+          <canvas id="qrcanv">No Canvas Support</canvas>
+        </span>
+      </div>
     </div>
   </body>
 </html> 
