@@ -1,4 +1,4 @@
-Test# Bitcoin Point of Sale
+# Bitcoin Point of Sale
 
 This is a simple utility that a merchant can run on a tablet or phone to convert dollars to bitcoins and receive payments from clients
 
