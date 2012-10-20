@@ -703,8 +703,8 @@ function genframe(instring)
 
 var wd, ht, qrc;
 function setupqr(){
-    wd = 350;
-    ht = 350;
+    wd = 300;
+    ht = 300;
     mp = document.getElementById("mapcanv");
 
     var elem = document.getElementById('qrcanv');

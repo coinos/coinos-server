@@ -68,7 +68,7 @@ $(function() {
     doqr('bitcoin:' + address + '?amount=' + total.toString());
   }
 
-  $('input').focus(function() { $(this).val(''); });
+  $('input').click(function() { $(this).val(''); });
 });
 
 function getParameterByName(name) {
