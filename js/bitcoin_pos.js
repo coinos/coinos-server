@@ -6,8 +6,7 @@ $(function() {
   var address = getParameterByName('address');
   
   $('#received').hide();
-  $('div.container-fluid').css('width', screen.width.toString() + 'px');
-  $('div.container-fluid').css('width', 600 + 'px');
+  $('div.container-fluid').css('width', Math.min(screen.width, 600) + 'px');
 
   setupqr();
 
