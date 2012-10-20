@@ -1,11 +1,12 @@
 body { text-align: center; }
-input[type="text"] { height: 40px; }
-body, input[type="text"] { font-size: 24px; }
-small, label { font-size: 14px; color: #999; }
-strong#total { font-size: 36px; }
+input[type="text"] { height: 60px; }
+body, input[type="text"] { font-size: 36px; line-height: 30px; }
+small, label { font-size: 30px; color: #999; line-height: 30px; }
+strong#total { font-size: 48px; }
+img#banner { width: 501px; height: 130px; }
 	
 div.container-fluid {
-  width: 500px;
+  width: 480px;
 	margin-left: auto;
   margin-right: auto;
 	text-align:left;
