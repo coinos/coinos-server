@@ -5,15 +5,12 @@ $(function() {
   var received = 0;
   var address = getParameterByName('address');
   
-  $('#received').hide();
-  $('div.container-fluid').css('width', Math.min(screen.width, 600) + 'px');
-
-  setupqr();
-
   if (address == "")
     window.location = 'index.html?address=1KDaKixtYqPdDNsu3fMeAHHB52R2WHvXCQ'
 
-
+  setupqr();
+  $('#received').hide()
+  $('div.container-fluid').css('width', Math.min(screen.width, 600) + 'px');
   $('#address').html(address);
 
   websocket.onopen = function() { 
