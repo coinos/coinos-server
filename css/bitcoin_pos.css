@@ -1,10 +1,10 @@
 body { text-align: center; }
 body { font-size: 100%; line-height: 100%; }
-input[type="text"], span.btn { font-size: 1.4em; height: 1.4em; width: 5em; }
-p, span { font-size: 1.4em; }
+p, span, input[type="text"] { font-size: 1.4em; }
+input[type="text"] { height: 1.4em; width: 5em; }
+span.btn { font-size: 1.4em; width: 80%; }
 small, label { color: #999; font-size: 1.2em; }
 strong#total { font-size: 2em; }
-input[type="submit"] { display: none; }
 img#banner { width: 100%; }
 	
 div.container-fluid {
