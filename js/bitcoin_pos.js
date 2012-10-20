@@ -58,23 +58,24 @@ $(function() {
     updateTotal();
   });
 
-  $('#owing').keyup(updateTotal);
-  $('#owing').focus();
-  $('#owing').click(function() {
+  $('#amount').keyup(updateTotal);
+  $('#amount').focus();
+  $('#amount').focus(function() {
     $('#payment').show();
     $('#received').hide();
+    $('#total').html('0');
+    $(this).val('');
   });
 
   function updateTotal() {
-    var owing = parseFloat($('#owing').val());
-    total = owing / exchange;
+    var amount = parseFloat($('#amount').val());
+    total = amount / exchange;
     total = Math.ceil(total * 10000) / 10000;
     if (!$.isNumeric(total)) total = '';
     $('#total').html(total.toString());
     doqr('bitcoin:' + address + '?amount=' + total.toString());
   }
 
-  $('input').click(function() { $(this).val(''); });
 });
 
 function getParameterByName(name) {
