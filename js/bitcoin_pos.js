@@ -10,7 +10,8 @@ $(function() {
   setupqr();
 
   if (address == "")
-    window.location = 'index.html?address=1SoLtySab29J2tAdF2x3PosjnwWF37wEY'
+    window.location = 'index.html?address=1KDaKixtYqPdDNsu3fMeAHHB52R2WHvXCQ'
+
 
   $('#address').html(address);
 
