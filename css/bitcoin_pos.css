@@ -1,5 +1,5 @@
 body { text-align: center; }
-body, input[type="text"], input[type="number"] { font-size: 24px; height: 30px; line-height: 24px; }
+body, input[type="text"], span.btn { font-size: 24px; height: 30px; line-height: 24px; }
 small, label { font-size: 24px; color: #999; line-height: 24px; }
 strong#total { font-size: 30px; }
 input[type="submit"] { display: none; }

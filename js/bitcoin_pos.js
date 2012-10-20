@@ -4,6 +4,8 @@ $(function() {
   var total = 0;
   var received = 0;
   var address = getParameterByName('address');
+  
+  $('#received').hide();
 
   setupqr();
 
@@ -33,9 +35,9 @@ $(function() {
       }
     });
 
-    $('#status').html('Received: ' + received.toString());
     if (total <= received) {
-      $('#status').css('color', 'green');
+      $('#payment').hide();
+      $('#received').fadeIn('slow');
     }
 
     $.get('record_transaction.php',
@@ -58,6 +60,10 @@ $(function() {
 
   $('#owing').keyup(updateTotal);
   $('#owing').focus();
+  $('#owing').click(function() {
+    $('#payment').show();
+    $('#received').hide();
+  });
 
   function updateTotal() {
     var owing = parseFloat($('#owing').val());

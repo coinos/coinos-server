@@ -17,21 +17,23 @@
       <img id="banner" src="img/banner.jpg" alt="The Daily Catch" />
 
       <label for="exchange">Exchange Rate:</label>
-      <input type="number" id="exchange" value="0" disabled="disabled" />
+      <input type="text" id="exchange" value="0" disabled="disabled" />
       <small>CAD / BTC</small>
 
       <label for="owing">Amount:</label>
       <input type="text" id="owing" value="0" />
       <small>CAD</small>
 
-      <input type="submit" />
-
       <br /><br />
 
-      <p>Please send <strong id="total">0.0</strong> bitcoins to:</p><br />
-      <span id="address"></span>
+      <div id="payment">
+        <p>Please send <strong id="total">0.0</strong> bitcoins to:</p><br />
+        <span id="address"></span>
 
-      <canvas id="qrcanv">No Canvas Support</canvas>
+        <canvas id="qrcanv">No Canvas Support</canvas>
+      </div>
+
+      <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
     </div>
   </body>
 </html> 
