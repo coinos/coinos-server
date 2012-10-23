@@ -35,6 +35,7 @@ $(function() {
     });
 
     if (total <= received) {
+      $('#amount').blur();
       $('#payment').hide();
       $('#received').fadeIn('slow');
     }
