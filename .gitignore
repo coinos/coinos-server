@@ -1,3 +1,5 @@
 ticker.json
 transactions.csv
 .htpasswd
+.rvmrc
+db/migrate.rb

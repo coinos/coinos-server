@@ -1,0 +1,14 @@
+require 'rubygems'
+require 'active_record'
+
+ActiveRecord::Base.establish_connection(
+  :adapter=>'mysql2', 
+  :hostname => 'localhost',
+  :username => 'root',
+  :password => '',
+  :database => 'bitcoin_pos',
+  :reconnect => true
+)
+
+ActiveRecord::Migration.verbose = true
+ActiveRecord::Migrator.migrate "migrations/"
