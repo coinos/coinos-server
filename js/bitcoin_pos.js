@@ -43,7 +43,7 @@ $(function() {
     $.get('record_transaction.php',
       { 
         address: from_address,
-        date: getFormattedDate(),
+        date: moment().format("YYYY-MM-DD HH:mm:ss"),
         received: received,
         exchange: exchange
       }

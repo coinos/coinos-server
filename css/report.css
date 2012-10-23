@@ -1,0 +1,8 @@
+body { font-size: 100%; line-height: 100%; margin: 10px; }
+td#total { font-weight: bold; text-align: right; }
+	
+div.container-fluid {
+  margin-left: auto;
+  margin-right: auto;
+  text-align:left;
+}
