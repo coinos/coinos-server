@@ -1,13 +1,17 @@
 <?php
-$list = array (
-  array($_GET['address'], $_GET['date'], $_GET['received'], $_GET['exchange'])
+
+$file = 'transactions.json'; 
+
+$transaction = array(
+  'address'=> $_GET['address'],
+  'date'=> $_GET['date'],
+  'received'=> $_GET['received'],
+  'exchange'=> $_GET['exchange'],
+  'value'=> $_GET['received'] * $_GET['exchange']
 );
 
-$fp = fopen('transactions.csv', 'a');
+$json = json_decode(file_get_contents($file));
+array_push($json->transactions, $transaction);
+file_put_contents($file, json_encode($json));
 
-foreach ($list as $fields) {
-  fputcsv($fp, $fields);
-}
-
-fclose($fp);
 ?>
