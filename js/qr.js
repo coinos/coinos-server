@@ -702,7 +702,7 @@ function genframe(instring)
 }
 
 var wd, ht, qrc;
-function setupqr(){
+function setupQR(){
     wd = 300;
     ht = 300;
     mp = document.getElementById("mapcanv");
@@ -715,7 +715,7 @@ function setupqr(){
     qrc.fillRect(0,0,wd,ht);
 }
 
-function doqr(value) {
+function displayQR(value) {
     d = document;
     ecclevel = 1;
     qf = genframe(value);
