@@ -22,20 +22,22 @@ $(function() {
   $('#amount').keyup(updateTotal);
   $('#amount').focus();
   $('#amount').focus(function() {
-    $('#payment').show();
     $('#received').hide();
-    $('#total').html('0');
     $(this).val('');
+    updateTotal();
   });
 
   function updateTotal() {
     var amount = parseFloat($('#amount').val());
     var total = amount / exchange;
     total = Math.ceil(total * 10000) / 10000;
-    if (!$.isNumeric(total)) total = '';
-    $('#total').html(total.toString());
-
-    displayQR('bitcoin:' + address + '?amount=' + total.toString());
+    if (!$.isNumeric(total) || total == 0) {
+      $('#payment').fadeOut('slow');
+    } else {
+      $('#payment').fadeIn('slow');
+      $('#total').html(total.toString());
+      displayQR('bitcoin:' + address + '?amount=' + total.toString());
+    }
   }
 
   function setupSocket() {
