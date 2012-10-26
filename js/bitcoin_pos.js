@@ -27,6 +27,7 @@ $(function() {
     exchange = Math.ceil(exchange * 100) / 100;
     $('#exchange').val(exchange.toFixed(2));
     updateTotal();
+    $('div.container-fluid').fadeIn('slow');
   });
 
   $('#amount').keyup(updateTotal);
@@ -37,8 +38,6 @@ $(function() {
     $(this).val('');
     updateTotal();
   });
-
-  $('div.container-fluid').fadeIn('slow');
 
   function updateTotal() {
     var amount = parseFloat($('#amount').val());
