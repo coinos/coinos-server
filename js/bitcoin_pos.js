@@ -1,14 +1,23 @@
 $(function() {
   var websocket = null;
+  var title = getParameterByName('title');
   var address = getParameterByName('address');
+  var logo = getParameterByName('logo');
   var exchange = 0;
 
+  if (title != "")
+    $('#title').html(title);
+
+  if (logo != "") {
+    $('#logo').attr('src', logo).show();
+    $('#title').hide();
+  }
+
   if (address == "")
-    window.location = 'index.html?address=1KDaKixtYqPdDNsu3fMeAHHB52R2WHvXCQ'
+    address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
+  $('#address').html(address);
 
   $('#received').hide()
-  $('div.container-fluid').css('width', Math.min(screen.width, 600) + 'px');
-  $('#address').html(address);
   setupQR();
   setInterval(setupSocket, 5000);
 
@@ -28,6 +37,8 @@ $(function() {
     $(this).val('');
     updateTotal();
   });
+
+  $('div.container-fluid').fadeIn('slow');
 
   function updateTotal() {
     var amount = parseFloat($('#amount').val());

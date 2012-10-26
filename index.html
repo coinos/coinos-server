@@ -8,34 +8,22 @@
     <link href="css/bootstrap.min.css" rel="stylesheet" />
     <link href="css/bootstrap-responsive.min.css" rel="stylesheet" />
     <link href="css/bitcoin_pos.css" rel="stylesheet" />
-    <script src="js/jquery-1.8.2.min.js"></script>
-    <script src="js/moment.min.js"></script>
-    <script src="js/qr.js"></script>
     <script src="js/bootstrap.min.js"></script>
-    <script src="js/bitcoin_pos.js"></script>
   </head>
   <body>
     <div class="container-fluid">
-      <img id="banner" src="img/banner.jpg" alt="The Daily Catch" />
+      <form action="calculator.html">
+        <h1>Calculator Setup</h1>
 
-      <label for="exchange">Exchange Rate:</label>
-      <input type="text" id="exchange" value="0" disabled="disabled" />
-      <small>CAD / BTC</small>
+        <label for="title">Name:</label>
+        <input type="text" id="title" name="title" />
 
-      <label for="amount">Amount:</label>
-      <input type="text" id="amount" />
-      <small>CAD</small>
-
-      <br /><br />
-
-      <div id="payment">
-        <p>Please send <strong id="total">0.0</strong> bitcoins to:</p><br />
-        <span id="address"></span>
-
-        <canvas id="qrcanv">No Canvas Support</canvas>
-      </div>
-
-      <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
+        <label for="address">Bitcoin Address:</label>
+        <input type="text" id="address" name="address" />
+        
+        <br />
+        <input class="btn" type="submit" value="Go" />
+      </form>
     </div>
   </body>
 </html> 

@@ -1,5 +1,5 @@
 $(function() {
-  $('#date').datepicker();
+  $('.date').datepicker();
 
   $.getJSON('transactions.json', function(data) {
     $.each(data.transactions, function() {
