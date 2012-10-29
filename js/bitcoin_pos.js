@@ -2,11 +2,15 @@ $(function() {
   var websocket = null;
   var title = getParameterByName('title');
   var address = getParameterByName('address');
+  var commission = getParameterByName('commission');
   var logo = getParameterByName('logo');
   var exchange = 0;
 
   if (title != "")
     $('#title').html(title);
+
+  if (commission == "")
+    commission = 3;
 
   if (logo != "") {
     $('#logo').attr('src', logo).show();
@@ -19,16 +23,7 @@ $(function() {
 
   $('#received').hide()
   setupQR();
-  setInterval(setupSocket, 5000);
-
-  $.getJSON('ticker.json', function (data) {
-    exchange = 1000 / data.out;
-    exchange = exchange + exchange * 0.03;
-    exchange = Math.ceil(exchange * 100) / 100;
-    $('#exchange').val(exchange.toFixed(2));
-    updateTotal();
-    $('div.container-fluid').fadeIn('slow');
-  });
+  setupSocket();
 
   $('#amount').keyup(updateTotal);
   $('#amount').focus();
@@ -37,6 +32,10 @@ $(function() {
     $('#payment').fadeIn('slow');
     $(this).val('');
     updateTotal();
+  });
+
+  $('#error').click(function() {
+    location.reload();
   });
 
   function updateTotal() {
@@ -52,13 +51,40 @@ $(function() {
     displayQR('bitcoin:' + address + '?amount=' + total.toString());
   }
 
+  function fetchExchangeRate() {
+    $.getJSON('ticker.php', function (data) {
+      if (data == null) {
+        $('#error').show();
+      } else {
+        exchange = 1000 / data.out;
+        exchange = exchange - exchange * commission * 0.01;
+        exchange = Math.ceil(exchange * 100) / 100;
+        $('#exchange').val(exchange.toFixed(2));
+        updateTotal();
+
+        $('#error').hide();
+        $('#calculator').fadeIn('slow');
+      }
+    });
+
+    setTimeout(fetchExchangeRate, 900000);
+  }
+
   function setupSocket() {
+    setTimeout(setupSocket, 10000);
+
     if (!websocket || websocket.readystate != 1) {
       websocket = new WebSocket("ws://api.blockchain.info:8335/inv");
 
       websocket.onopen = function() { 
         websocket.send('{"op":"addr_sub", "addr":"' + address + '"}');
+        fetchExchangeRate();
       }
+
+      websocket.onerror = websocket.onclose = function() {
+        $('#calculator').hide();
+        $('#error').show();
+      };
 
       websocket.onmessage = function(e) { 
         var results = eval('(' + e.data + ')');

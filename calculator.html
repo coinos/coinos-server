@@ -15,29 +15,33 @@
     <script src="js/bitcoin_pos.js"></script>
   </head>
   <body>
-    <div class="container-fluid" style="display: none">
-      <h1 id="title">Bitcoin Payment Calculator</h1>
+    <div class="container-fluid">
+      <div id="calculator" style="display: none">
+        <h1 id="title">Bitcoin Payment Calculator</h1>
 
-      <img id="logo" src="img/logo.jpg" alt="Logo" style="display: none" />
+        <img id="logo" src="img/logo.jpg" alt="Logo" style="display: none" />
 
-      <label for="exchange">Exchange Rate:</label>
-      <input type="text" id="exchange" value="0" disabled="disabled" />
-      <small>CAD / BTC</small>
+        <label for="exchange">Exchange Rate:</label>
+        <input type="text" id="exchange" value="0" disabled="disabled" />
+        <small>CAD / BTC</small>
 
-      <label for="amount">Amount:</label>
-      <input type="text" id="amount" />
-      <small>CAD</small>
+        <label for="amount">Amount:</label>
+        <input type="text" id="amount" />
+        <small>CAD</small>
 
-      <br /><br />
+        <br /><br />
 
-      <div id="payment">
-        <p>Please send <strong id="total">0.0</strong> bitcoins to:</p><br />
-        <p id="address"></p>
+        <div id="payment">
+          <p>Please send <strong id="total">0.0</strong> bitcoins to:</p><br />
+          <p id="address"></p>
 
-        <canvas id="qrcanv">No Canvas Support</canvas>
+          <canvas id="qrcanv">No Canvas Support</canvas>
+        </div>
+
+        <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
       </div>
 
-      <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
+      <span id="error" class="btn btn-danger" style="display: none">Can't establish connection</span> 
     </div>
   </body>
 </html> 
