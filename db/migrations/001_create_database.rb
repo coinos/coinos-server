@@ -7,6 +7,7 @@ class CreateDatabase <  ActiveRecord::Migration
       t.string :address
       t.decimal :credit, :precision => 10, :scale => 2
       t.string :logo
+      t.decimal :commission, :precision => 10, :scale => 2
     end
 
     create_table :transactions do |t|

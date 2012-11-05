@@ -6,22 +6,20 @@ $(function() {
   var logo = getParameterByName('logo');
   var exchange = 0;
 
-  if (title != "")
-    $('#title').html(title);
+  if (address == "")
+    address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
 
   if (commission == "")
     commission = 3;
 
-  if (logo != "") {
+  if (logo != "") 
     $('#logo').attr('src', logo).show();
-    $('#title').hide();
-  }
 
-  if (address == "")
-    address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
+
+  $('#title').html(title);
   $('#address').html(address);
+  $('#received').hide();
 
-  $('#received').hide()
   setupQR();
   setupSocket();
 
@@ -51,11 +49,19 @@ $(function() {
     displayQR('bitcoin:' + address + '?amount=' + total.toString());
   }
 
+  function exchangeFail() {
+    $('#error').show().html("Error fetching exchange rate");
+    $('#calculator').hide();
+  }
+
   function fetchExchangeRate() {
-    $.getJSON('ticker.php', function (data) {
-      if (data == null) {
-        $('#error').show();
-      } else {
+    $.getJSON('ticker.php') 
+      .success(function (data) {
+        if (data == null) {
+          exchangeFail();
+          return;
+        }
+
         exchange = 1000 / data.out;
         exchange = exchange - exchange * commission * 0.01;
         exchange = Math.ceil(exchange * 100) / 100;
@@ -65,15 +71,16 @@ $(function() {
         $('#error').hide();
         $('#calculator').fadeIn('slow');
       }
-    });
+    ).error(exchangeFail);
 
     setTimeout(fetchExchangeRate, 900000);
   }
 
+
   function setupSocket() {
     setTimeout(setupSocket, 10000);
 
-    if (!websocket || websocket.readystate != 1) {
+    if (!websocket || websocket.readyState != 1) {
       websocket = new WebSocket("ws://api.blockchain.info:8335/inv");
 
       websocket.onopen = function() { 
@@ -83,7 +90,7 @@ $(function() {
 
       websocket.onerror = websocket.onclose = function() {
         $('#calculator').hide();
-        $('#error').show();
+        $('#error').show().html("Error connecting to payment server");
       };
 
       websocket.onmessage = function(e) { 
@@ -129,6 +136,7 @@ function getParameterByName(name) {
   var regexS = "[\\?&]" + name + "=([^&#]*)";
   var regex = new RegExp(regexS);
   var results = regex.exec(window.location.search);
+
   if(results == null)
     return "";
   else
