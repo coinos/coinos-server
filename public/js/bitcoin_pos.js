@@ -53,7 +53,7 @@ $(function() {
   }
 
   function fetchExchangeRate() {
-    $.getJSON('ticker.php') 
+    $.getJSON('ticker') 
       .success(function (data) {
         if (data == null) {
           exchangeFail();

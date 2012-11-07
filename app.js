@@ -1,36 +1,38 @@
-
-/**
- * Module dependencies.
- */
-
 var express = require('express')
-  , routes = require('./routes')
-  , user = require('./routes/user')
   , http = require('http')
-  , path = require('path');
+  , path = require('path')
+  , engines = require('consolidate')
+  , app = express();
 
-var app = express();
+app.engine('html', engines.hogan);
+app.set('view engine', 'html');
+app.set('views', __dirname + '/views');
+app.use(express.static(path.join(__dirname, 'public')));
 
-app.configure(function(){
-  app.set('port', process.env.PORT || 3000);
-  app.set('views', __dirname + '/views');
-  app.use(express.favicon());
-  app.use(express.logger('dev'));
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(app.router);
-  app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', function(req, res) {
+  res.render('index');
 });
 
-app.configure('development', function(){
-  app.use(express.errorHandler());
+app.get('/report', function(req, res) {
+  res.render('report');
 });
 
-app.get('/users', user.list);
-app.get('/:client', function() {
-  res.render('index', { title: req.param('client') });
+app.get('/ticker', function(req, res) {
+  var options = {
+    host: 'bitcoincharts.com', 
+    path: '/t/depthcalc.json?symbol=virtexCAD&type=bid&amount=1001&currency=true'
+  }
+
+  require('http').get(options, function(r) {
+    r.setEncoding('utf-8');
+    r.on('data', function(chunk) {
+      res.send(chunk);
+    }); 
+  });
 });
 
-http.createServer(app).listen(app.get('port'), function(){
-  console.log("Express server listening on port " + app.get('port'));
+app.get('/:client', function(req, res) {
+  res.render('calculator', { title: req.param('client') });
 });
+
+app.listen(3000);
