@@ -1,27 +1,25 @@
 $(function() {
   var websocket = null;
+  var client = getParameterByName('client');
   var title = getParameterByName('title');
   var address = getParameterByName('address');
   var commission = getParameterByName('commission');
   var logo = getParameterByName('logo');
   var exchange = 0;
 
-  if (address == "")
-    address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
-
-  if (commission == "")
-    commission = 3;
-
-  if (logo != "") 
-    $('#logo').attr('src', logo).show();
-
-
-  $('#title').html(title);
-  $('#address').html(address);
-  $('#received').hide();
-
+  setupPage();
   setupQR();
   setupSocket();
+
+  if (client != "") {
+    $.getJSON('client.json', { name: client }, function(data) {
+      title = data.title; 
+      address = data.address; 
+      commission = data.commission; 
+      logo = data.logo; 
+      setupPage();
+    });
+  }
 
   $('#amount').keyup(updateTotal);
   $('#amount').focus();
@@ -76,6 +74,21 @@ $(function() {
     setTimeout(fetchExchangeRate, 900000);
   }
 
+  function setupPage() {
+    if (address == "")
+      address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
+
+    if (commission == "")
+      commission = 3;
+
+    if (logo != "") 
+      $('#logo').attr('src', logo).show();
+    else
+      $('#title').html(title);
+
+    $('#address').html(address);
+    $('#received').hide();
+  }
 
   function setupSocket() {
     setTimeout(setupSocket, 10000);
