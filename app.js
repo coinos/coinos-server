@@ -2,6 +2,7 @@ var express = require('express')
   , http = require('http')
   , path = require('path')
   , engines = require('consolidate')
+  , config = require('./config')
   , app = express();
 
 app.engine('html', engines.hogan);
@@ -17,10 +18,27 @@ app.get('/report', function(req, res) {
   res.render('report');
 });
 
+app.get('/calculator', function(req, res) {
+  res.render('calculator');
+});
+
+app.get('/client/:login', function(req, res) {
+  var connection = require('mysql').createConnection(config.database);
+
+  connection.connect();
+  connection.query("SELECT name, address, commission, logo FROM users WHERE login = ?", 
+    [req.params.login], function(err, rows) {
+      res.write(JSON.stringify(rows));
+      connection.end();
+      res.end();
+    }
+  );
+});
+
 app.get('/ticker', function(req, res) {
   var options = {
     host: 'bitcoincharts.com', 
-    path: '/t/depthcalc.json?symbol=virtexCAD&type=bid&amount=1001&currency=true'
+    path: '/t/depthcalc.json?symbol=virtexCAD&type=bid&amount=1000&currency=true'
   }
 
   require('http').get(options, function(r) {
@@ -32,7 +50,7 @@ app.get('/ticker', function(req, res) {
 });
 
 app.get('/:client', function(req, res) {
-  res.render('calculator', { title: req.param('client') });
+  res.render('calculator', { client: req.params.client });
 });
 
 app.listen(3000);

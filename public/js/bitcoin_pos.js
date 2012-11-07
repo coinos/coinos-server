@@ -1,10 +1,10 @@
 $(function() {
   var websocket = null;
-  var client = getParameterByName('client');
-  var title = getParameterByName('title');
-  var address = getParameterByName('address');
-  var commission = getParameterByName('commission');
-  var logo = getParameterByName('logo');
+  var client = $('#client').val();
+  var title = get('title');
+  var address = get('address');
+  var commission = get('commission');
+  var logo = get('logo');
   var exchange = 0;
 
   setupPage();
@@ -12,11 +12,12 @@ $(function() {
   setupSocket();
 
   if (client != "") {
-    $.getJSON('client.json', { name: client }, function(data) {
-      title = data.title; 
-      address = data.address; 
-      commission = data.commission; 
-      logo = data.logo; 
+    $.getJSON('client/' + client, function(data) {
+      var user = data[0];
+      title = user.title; 
+      address = user.address; 
+      commission = user.commission; 
+      logo = user.logo; 
       setupPage();
     });
   }
@@ -88,6 +89,8 @@ $(function() {
 
     $('#address').html(address);
     $('#received').hide();
+
+    fetchExchangeRate();
   }
 
   function setupSocket() {
@@ -98,7 +101,6 @@ $(function() {
 
       websocket.onopen = function() { 
         websocket.send('{"op":"addr_sub", "addr":"' + address + '"}');
-        fetchExchangeRate();
       }
 
       websocket.onerror = websocket.onclose = function() {
@@ -144,7 +146,7 @@ $(function() {
   }
 });
 
-function getParameterByName(name) {
+function get(name) {
   name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
   var regexS = "[\\?&]" + name + "=([^&#]*)";
   var regex = new RegExp(regexS);
