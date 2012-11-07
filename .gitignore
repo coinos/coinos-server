@@ -2,3 +2,4 @@ transactions.json
 .htpasswd
 .rvmrc
 db/migrate.rb
+node_modules
