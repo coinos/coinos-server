@@ -3,4 +3,4 @@ transactions.json
 .rvmrc
 db/migrate.rb
 node_modules
-config.js.sample
+config.js
