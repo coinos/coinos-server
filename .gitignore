@@ -1,4 +1,3 @@
-transactions.json
 .htpasswd
 .rvmrc
 db/migrate.rb

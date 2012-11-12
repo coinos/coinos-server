@@ -21,7 +21,7 @@ $(->
   if client? and client
     $.getJSON('client/' + client, (data) ->
       user = data[0]
-      g.title = user.title 
+      g.title = user.name
       g.address = user.address 
       g.commission = user.commission 
       g.logo = user.logo 
@@ -81,7 +81,7 @@ setupPage = ->
   if logo
     $('#logo').attr('src', logo).show()
   else
-    $('#title').html(title)
+    $('#title').html(title).show()
 
   $('#address').html(address)
   $('#received').hide()
