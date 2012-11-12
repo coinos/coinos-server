@@ -9,6 +9,7 @@
     "express": "3.0.1",
     "consolidate": "0.5.0",
     "hogan.js": "2.0.0",
-    "coffee-script": "1.4.0"
+    "coffee-script": "1.4.0",
+    "connect-assets": "2.3.3"
   }
 }
