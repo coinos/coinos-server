@@ -24,15 +24,11 @@ app.get('/report', (req, res) ->
   res.render('report',  js: (-> global.js), css: (-> global.css))
 )
 
-app.get('/client/:login', (req, res) ->
-  connection = require('mysql').createConnection(config.database)
-
-  connection.connect()
-  connection.query("SELECT name, address, commission, logo FROM users WHERE login = ?", 
-    [req.params.login], (err, rows) ->
-      res.write(JSON.stringify(rows))
-      connection.end()
-      res.end()
+app.get('/client/:client', (req, res) ->
+  db = require("redis").createClient()
+  db.hgetall(req.params.client, (err, obj) ->
+    res.write(JSON.stringify(obj))
+    res.end()
   )
 )
 
@@ -65,24 +61,10 @@ app.get('/ticker', (req, res) ->
 )
 
 app.post('/create', (req, res) ->
-  connection = require('mysql').createConnection(config.database)
-
-  connection.connect()
-  connection.query("""
-    INSERT INTO users 
-      (login, name, address, commission) 
-    VALUES 
-      (?, ?, ?, ?)
-    """, 
-    [
-      req.body.login,
-      req.body.name,
-      req.body.address,
-      req.body.commission
-    ], (err, rows) ->
-      connection.end()
-      res.writeHead(302, 'Location': '/' + req.body.login)
-      res.end()
+  db = require("redis").createClient()
+  db.hmset(req.body.login, req.body, ->
+    res.writeHead(302, 'Location': '/' + req.body.login)
+    res.end()
   )
 )
 

@@ -20,11 +20,10 @@ $(->
 
   if client? and client
     $.getJSON('client/' + client, (data) ->
-      user = data[0]
-      g.title = user.name
-      g.address = user.address 
-      g.commission = user.commission 
-      g.logo = user.logo 
+      g.title = data.name
+      g.address = data.address 
+      g.commission = data.commission 
+      g.logo = data.logo 
       setupPage()
     )
 
@@ -40,14 +39,14 @@ $(->
 
 updateTotal = ->
   amount = parseFloat($('#amount').val())
-  total = amount / exchange
+  total = amount / g.exchange
   total = Math.ceil(total * 10000) / 10000
 
   unless $.isNumeric(total)
     total = ''
 
   $('#total').html(total.toString())
-  displayQR('bitcoin:' + address + '?amount=' + total.toString())
+  displayQR('bitcoin:' + g.address + '?amount=' + total.toString())
 
 exchangeFail = ->
   $('#error').show().html("Error fetching exchange rate")
@@ -63,7 +62,7 @@ fetchExchangeRate = ->
       exchange = 1000 / data.out
       exchange = exchange - exchange * commission * 0.01
       g.exchange = Math.ceil(exchange * 100) / 100
-      $('#exchange').val(exchange.toFixed(2))
+      $('#exchange').val(g.exchange.toFixed(2))
       updateTotal()
 
       $('#error').hide()
@@ -72,18 +71,18 @@ fetchExchangeRate = ->
   setTimeout(fetchExchangeRate, 900000)
 
 setupPage = ->
-  unless address
-    address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
+  unless g.address
+    g.address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
 
-  unless commission
-    commission = 3
+  unless g.commission
+    g.commission = 3
 
-  if logo
-    $('#logo').attr('src', logo).show()
+  if g.logo
+    $('#logo').attr('src', g.logo).show()
   else
     $('#title').html(title).show()
 
-  $('#address').html(address)
+  $('#address').html(g.address)
   $('#received').hide()
 
   fetchExchangeRate()
@@ -95,7 +94,7 @@ setupSocket = ->
     g.websocket = new WebSocket("ws://api.blockchain.info:8335/inv")
 
     g.websocket.onopen = -> 
-      g.websocket.send('{"op":"addr_sub", "addr":"' + address + '"}')
+      g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
     
 
     g.websocket.onerror = g.websocket.onclose = ->
@@ -110,13 +109,13 @@ setupSocket = ->
       received = 0
       
       $.each(results.x.out, (i, v) ->
-        if (v.addr == address) 
+        if (v.addr == g.address) 
           received += v.value / 100000000
       )
 
       $.each(results.x.inputs, (i, v) ->
         from_address = v.prev_out.addr
-        if (v.prev_out.addr == address) 
+        if (v.prev_out.addr == g.address) 
           input -= v.prev_out.value / 100000000
       )
 
