@@ -20,8 +20,8 @@ app.get('/', (req, res) ->
   res.render('index',  js: (-> global.js), css: (-> global.css))
 )
 
-app.get('/report', (req, res) ->
-  res.render('report',  js: (-> global.js), css: (-> global.css))
+app.get('/:user/report', (req, res) ->
+  res.render('report',  user: req.params.user, js: (-> global.js), css: (-> global.css))
 )
 
 app.get('/:user.json', (req, res) ->
@@ -35,15 +35,23 @@ app.get('/:user.json', (req, res) ->
 app.get('/:user/transactions', (req, res) ->
   db = require("redis").createClient()
   user = req.params.user
+  r = 'transactions': []
 
   db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
-    for i in transactions
-      db.hgetall("#{user}:transactions:#{i}", (err, t) ->
-        res.write(JSON.stringify(t))
+    process = (err, t) ->
+      r.transactions.push t
+
+      if i >= transactions.length
+        res.write(JSON.stringify(r))
         res.end()
-      )
+      else
+        db.hgetall("#{user}:transactions:#{transactions[i++]}", process)
+    
+    i = 0
+    db.hgetall("#{user}:transactions:#{transactions[i++]}", process)
   )
 )
+
 
 app.get('/ticker', (req, res) ->
   symbol = req.params.symbol
