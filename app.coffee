@@ -24,23 +24,24 @@ app.get('/report', (req, res) ->
   res.render('report',  js: (-> global.js), css: (-> global.css))
 )
 
-app.get('/client/:client', (req, res) ->
+app.get('/:user.json', (req, res) ->
   db = require("redis").createClient()
-  db.hgetall(req.params.client, (err, obj) ->
+  db.hgetall(req.params.user, (err, obj) ->
     res.write(JSON.stringify(obj))
     res.end()
   )
 )
 
-app.get('/transactions/:login', (req, res) ->
-  connection = require('mysql').createConnection(config.database)
+app.get('/:user/transactions', (req, res) ->
+  db = require("redis").createClient()
+  user = req.params.user
 
-  connection.connect()
-  connection.query("SELECT * FROM transactions", 
-    [req.params.login], (err, rows) ->
-      res.write(JSON.stringify(rows))
-      connection.end()
-      res.end()
+  db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
+    for i in transactions
+      db.hgetall("#{user}:transactions:#{i}", (err, t) ->
+        res.write(JSON.stringify(t))
+        res.end()
+      )
   )
 )
 
@@ -60,7 +61,7 @@ app.get('/ticker', (req, res) ->
   )
 )
 
-app.post('/create', (req, res) ->
+app.post('/users', (req, res) ->
   db = require("redis").createClient()
   db.hmset(req.body.login, req.body, ->
     res.writeHead(302, 'Location': '/' + req.body.login)
@@ -68,9 +69,22 @@ app.post('/create', (req, res) ->
   )
 )
 
-app.get('/:client', (req, res) ->
+app.post('/:user/transactions', (req, res) ->
+  user = req.params.user
+  db = require("redis").createClient()
+  db.incr('transactions', (err, id) ->
+    db.hmset("#{user}:transactions:#{id}", req.body, ->
+      db.rpush("#{user}:transactions", id, ->
+        res.write(JSON.stringify(req.body))
+        res.end()
+      )
+    )
+  )
+)
+
+app.get('/:user', (req, res) ->
   res.render('calculator', 
-    client: req.params.client, 
+    user: req.params.user, 
     js: (-> global.js), 
     css: (-> global.css) 
   )

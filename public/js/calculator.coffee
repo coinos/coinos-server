@@ -7,7 +7,7 @@ g = exports ? this
 
 $(->
   g.websocket = null
-  g.client = $('#client').val()
+  g.user = $('#user').val()
   g.title = get('title')
   g.address = get('address')
   g.commission = get('commission')
@@ -18,8 +18,8 @@ $(->
   setupQR()
   setupSocket()
 
-  if client? and client
-    $.getJSON('client/' + client, (data) ->
+  if user? and user
+    $.getJSON(user + '.json', (data) ->
       g.title = data.name
       g.address = data.address 
       g.commission = data.commission 
@@ -124,11 +124,11 @@ setupSocket = ->
         $('#payment').hide()
         $('#received').fadeIn('slow')
 
-      $.get('record_transaction.php',
-          address: from_address,
-          date: moment().format("YYYY-MM-DD HH:mm:ss"),
-          received: received,
-          exchange: g.exchange
+      $.post("/#{g.user}/transactions",
+        address: from_address,
+        date: moment().format("YYYY-MM-DD HH:mm:ss"),
+        received: received,
+        exchange: g.exchange
       )
 
 get = (name) ->
