@@ -1,4 +1,3 @@
-
 express = require('express')
 http = require('http')
 path = require('path')
@@ -55,6 +54,11 @@ app.get('/:user/transactions', (req, res) ->
 
 
 app.get('/ticker', (req, res) ->
+  t = setTimeout(->
+    res.writeHead(500, {'Content-Type': 'text/plain'})
+    res.end()
+  , 2000)
+
   options = 
     host: 'bitcoincharts.com', 
     path: '/t/depthcalc.json?symbol=' + req.query.symbol + '&type=bid&amount=1000&currency=true'
@@ -62,8 +66,10 @@ app.get('/ticker', (req, res) ->
   require('http').get(options, (r) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
+      clearTimeout(t)
       res.send(chunk)
-    ) 
+      res.end()
+    )
   )
 )
 
