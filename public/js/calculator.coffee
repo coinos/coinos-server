@@ -8,8 +8,9 @@ g = exports ? this
 $(->
   g.websocket = null
   g.user = $('#user').val()
-  g.title = get('title')
+  g.name = get('name')
   g.address = get('address')
+  g.symbol = get('symbol')
   g.commission = get('commission')
   g.logo = get('logo')
   g.exchange = 0
@@ -20,7 +21,7 @@ $(->
 
   if user? and user
     $.getJSON(user + '.json', (data) ->
-      g.title = data.name
+      g.name = data.name
       g.address = data.address 
       g.commission = data.commission 
       g.logo = data.logo 
@@ -53,7 +54,7 @@ exchangeFail = ->
   $('#calculator').hide()
 
 fetchExchangeRate = ->
-  $.getJSON('ticker') 
+  $.getJSON('ticker?symbol=' + g.symbol) 
     .success((data) -> 
       unless data?
         exchangeFail()
@@ -71,18 +72,20 @@ fetchExchangeRate = ->
   setTimeout(fetchExchangeRate, 900000)
 
 setupPage = ->
-  unless g.address
-    g.address = '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
-
-  unless g.commission
-    g.commission = 3
+  g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
+  g.commission or= 3
+  g.symbol or= 'virtexCAD'
 
   if g.logo
     $('#logo').attr('src', g.logo).show()
+  else if not g.name
+    $('#logo').attr('src', 'img/bitcoin.png').show()
   else
-    $('#title').html(title).show()
+    $('#name').html(g.name).show()
 
   $('#address').html(g.address)
+  $('#symbol').html(g.symbol + " - " + commission.toFixed(0) + "%")
+  $('#currency').html(g.symbol.slice(-3))
   $('#received').hide()
 
   fetchExchangeRate()

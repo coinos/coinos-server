@@ -1,3 +1,4 @@
+
 express = require('express')
 http = require('http')
 path = require('path')
@@ -54,13 +55,10 @@ app.get('/:user/transactions', (req, res) ->
 
 
 app.get('/ticker', (req, res) ->
-  symbol = req.params.symbol
-  symbol or= 'virtexCAD'
-
   options = 
     host: 'bitcoincharts.com', 
-    path: '/t/depthcalc.json?symbol=' + symbol + '&type=bid&amount=1000&currency=true'
-  
+    path: '/t/depthcalc.json?symbol=' + req.query.symbol + '&type=bid&amount=1000&currency=true'
+
   require('http').get(options, (r) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
@@ -70,11 +68,17 @@ app.get('/ticker', (req, res) ->
 )
 
 app.post('/users', (req, res) ->
-  db = require("redis").createClient()
-  db.hmset(req.body.login, req.body, ->
-    res.writeHead(302, 'Location': '/' + req.body.login)
-    res.end()
-  )
+  if req.body.login
+    db = require("redis").createClient()
+    db.hmset(req.body.login, req.body, ->
+      res.redirect(req.body.login)
+    )
+  else
+    params = []
+    for k,v of req.body
+      params.push(encodeURIComponent(k), '=', encodeURIComponent(v), '&') 
+    params.pop() if (params.length) 
+    res.redirect('calculator?' + params.join(''))
 )
 
 app.post('/:user/transactions', (req, res) ->
@@ -90,6 +94,13 @@ app.post('/:user/transactions', (req, res) ->
   )
 )
 
+app.get('/calculator', (req, res) ->
+  res.render('calculator', 
+    js: (-> global.js), 
+    css: (-> global.css) 
+  )
+)
+
 app.get('/:user', (req, res) ->
   res.render('calculator', 
     user: req.params.user, 
@@ -101,5 +112,6 @@ app.get('/:user', (req, res) ->
 app.use((err, req, res, next) ->
   console.log(err)
 )
+
 
 app.listen(3000)
