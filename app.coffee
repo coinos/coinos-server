@@ -13,7 +13,8 @@ app.use(require('connect-assets')(src: 'public'))
 app.use(express.bodyParser());
 app.use((err, req, res, next) ->
   res.status(500)
-  res.render('error', error: err )
+  console.log(err)
+  res.end()
 )
 
 app.get('/', (req, res) ->

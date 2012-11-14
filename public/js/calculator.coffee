@@ -2,8 +2,15 @@
 #= require moment.min.js
 #= require qr.js
 #= require bootstrap.min.js
+#= require 2.5.3-crypto-sha256.js
+#= require jsbn.js
+#= require jsbn2.js
+#= require check_address.js
 
 g = exports ? this
+EXCHANGE_FAIL = "Error fetching exchange rate"
+SOCKET_FAIL = "Error connecting to payment server"
+ADDRESS_FAIL = "Invalid address"
 
 $(->
   g.websocket = null
@@ -21,8 +28,10 @@ $(->
 
   if user? and user
     $.getJSON(user + '.json', (data) ->
+      return unless data?
       g.name = data.name
       g.address = data.address 
+      g.symbol = data.symbol
       g.commission = data.commission 
       g.logo = data.logo 
       setupPage()
@@ -50,7 +59,7 @@ updateTotal = ->
   displayQR('bitcoin:' + g.address + '?amount=' + total.toString())
 
 exchangeFail = ->
-  $('#error').show().html("Error fetching exchange rate")
+  $('#error').show().html(EXCHANGE_FAIL)
   $('#calculator').hide()
 
 fetchExchangeRate = ->
@@ -66,10 +75,21 @@ fetchExchangeRate = ->
       $('#exchange').val(g.exchange.toFixed(2))
       updateTotal()
 
-      $('#error').hide()
-      $('#calculator').fadeIn('slow')
+      clear(EXCHANGE_FAIL)
+
+      if $('#error').html() is ""
+        $('#error').hide()
+        $('#calculator').fadeIn('slow')
   ).error(exchangeFail)
   setTimeout(fetchExchangeRate, 900000)
+
+fail = (err) ->
+  $('#calculator').hide()
+  $('#error').html(err).show()
+  
+clear = (msg) ->
+  if $('#error').html() is msg
+    $('#error').html("")
 
 setupPage = ->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
@@ -83,7 +103,11 @@ setupPage = ->
   else
     $('#name').html(g.name).show()
 
-  $('#address').html(g.address)
+  if check_address(g.address)
+    $('#address').html(g.address)
+  else
+    fail(ADDRESS_FAIL)
+    
   $('#symbol').html(g.symbol + " - " + commission.toFixed(0) + "%")
   $('#currency').html(g.symbol.slice(-3))
   $('#received').hide()
@@ -99,11 +123,8 @@ setupSocket = ->
     g.websocket.onopen = -> 
       g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
     
-
     g.websocket.onerror = g.websocket.onclose = ->
-      $('#calculator').hide()
-      $('#error').show().html("Error connecting to payment server")
-    
+      fail(SOCKET_FAIL)
 
     g.websocket.onmessage = (e) ->
       results = eval('(' + e.data + ')')
