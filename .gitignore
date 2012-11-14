@@ -3,3 +3,4 @@
 db/migrate.rb
 node_modules
 config.js
+builtAssets
