@@ -77,8 +77,13 @@ app.get('/ticker', (req, res) ->
 app.post('/users', (req, res) ->
   if req.body.login
     db = require("redis").createClient()
-    db.hmset(req.body.login, req.body, ->
-      res.redirect(req.body.login)
+    db.exists(req.body.login, (err, obj) ->
+      if obj
+        res.redirect(req.body.login)
+      else 
+        db.hmset(req.body.login, req.body, ->
+          res.redirect(req.body.login)
+        )
     )
   else
     params = []
