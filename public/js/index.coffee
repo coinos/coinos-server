@@ -17,4 +17,13 @@ $(->
     else
       $(this).css('color', 'red')
   )
+
+  if $('#login').val() != ""
+    $.getJSON('/' + $('#login').val() + '.json', (data) ->
+      $('#name').val(data.name)
+      $('#image').val(data.image)
+      $('#address').val(data.address)
+      $('#symbol option[value=' + data.symbol + ']').attr('selected', 'selected')
+      $('#commission').val(data.commission)
+    )
 )

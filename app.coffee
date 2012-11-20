@@ -2,6 +2,7 @@ express = require('express')
 http = require('http')
 path = require('path')
 engines = require('consolidate')
+passport = require('passport')
 config = require('./config')
 app = express()
 
@@ -74,6 +75,12 @@ app.get('/ticker', (req, res) ->
   )
 )
 
+app.post('/login',
+  passport.authenticate('local'),
+  (req, res) ->
+    res.redirect('/users/' + req.user.username)
+)
+
 app.post('/users', (req, res) ->
   if req.body.login
     db = require("redis").createClient()
@@ -112,6 +119,15 @@ app.get('/calculator', (req, res) ->
     css: (-> global.css) 
   )
 )
+
+app.get('/:user/edit', (req, res) ->
+  res.render('index', 
+    user: req.params.user, 
+    js: (-> global.js), 
+    css: (-> global.css) 
+  )
+)
+
 
 app.get('/:user', (req, res) ->
   res.render('calculator', 
