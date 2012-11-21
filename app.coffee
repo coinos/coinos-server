@@ -3,6 +3,7 @@ http = require('http')
 path = require('path')
 engines = require('consolidate')
 passport = require('passport')
+bcrypt = require('bcrypt')
 config = require('./config')
 app = express()
 
@@ -42,6 +43,14 @@ app.use((err, req, res, next) ->
 
 app.get('/', (req, res) ->
   res.render('index',  js: (-> global.js), css: (-> global.css))
+)
+
+app.get('/bcrypt', (req, res) ->
+  salt = "$2a$10$3R8tUtIoU/fllQD9zEgTZe"
+  hash = bcrypt.hashSync("chelsea", salt)
+  res.write(salt + "\n")
+  res.write(hash)
+  res.end()
 )
 
 app.get('/:user/report', (req, res) ->
@@ -117,6 +126,31 @@ app.post('/login', (req, res, next) ->
       return res.redirect('/' + user.username)
     )
   )(req, res, next)
+)
+
+app.post('/users', (req, res) ->
+  if req.body.login
+    if req.body.password
+      bcrypt.hash(req.body.password, 12, (err, hash) ->
+        db = require("redis").createClient()
+        db.hget(req.body.login, 'password', (err, password) ->
+          bcrypt.compare(req.body.password, password, (err, match) ->
+            if match
+              req.body.password = password
+              db.hmset(req.body.login, req.body, ->
+                res.redirect(req.body.login)
+              )
+            else
+              res.redirect(req.body.login)
+          )
+        )
+      )
+  else
+    params = []
+    for k,v of req.body
+      params.push(encodeURIComponent(k), '=', encodeURIComponent(v), '&') 
+    params.pop() if (params.length) 
+    res.redirect('calculator?' + params.join(''))
 )
 
 app.post('/:user/transactions', (req, res) ->
