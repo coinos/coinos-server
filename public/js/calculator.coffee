@@ -122,7 +122,7 @@ setupPage = ->
     fail(ADDRESS_FAIL)
     
   symbol = g.symbol
-  symbol += " - #{g.commission.toFixed(0)}%" if g.commission > 0 
+  symbol += " - #{parseFloat(g.commission).toFixed(0)}%" if g.commission > 0 
 
   $('#symbol').html(symbol)
   $('#currency').html(g.symbol.slice(-3))
