@@ -113,7 +113,7 @@ setupPage = ->
     $('#name').html(g.name).show()
 
   if check_address(g.address)
-    $('#address').html(g.address)
+    $('#address').html("<a href='https://blockchain.info/address/#{g.address}'>#{g.address}</a>")
   else
     fail(ADDRESS_FAIL)
     
