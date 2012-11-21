@@ -8,6 +8,7 @@
 #= require check_address.js
 
 g = exports ? this
+
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
 ADDRESS_FAIL = "Invalid address"
@@ -18,23 +19,28 @@ $(->
   g.name = get('name')
   g.address = get('address')
   g.symbol = get('symbol')
-  g.commission = get('commission')
+  g.commission = parseFloat(get('commission'))
   g.logo = get('logo')
   g.exchange = 0
+  g.errors = []
 
   setupPage()
   setupQR()
   setupSocket()
 
   if user? and user
-    $.getJSON(user + '.json', (data) ->
-      return unless data?
-      g.name = data.name
-      g.address = data.address 
-      g.symbol = data.symbol
-      g.commission = data.commission 
-      g.logo = data.logo 
-      setupPage()
+    $.ajax(
+      url: user + '.json', 
+      cache: false,
+      dataType: 'json',
+      success: (data) ->
+        return unless data?
+        g.name = data.name
+        g.address = data.address 
+        g.symbol = data.symbol
+        g.commission = data.commission 
+        g.logo = data.logo 
+        setupPage()
     )
 
   $('#amount').keyup(updateTotal)
@@ -58,42 +64,45 @@ updateTotal = ->
   $('#total').html(total.toString())
   displayQR('bitcoin:' + g.address + '?amount=' + total.toString())
 
-exchangeFail = ->
-  $('#error').show().html(EXCHANGE_FAIL)
-  $('#calculator').hide()
-
 fetchExchangeRate = ->
-  $.getJSON('ticker?symbol=' + g.symbol) 
-    .success((data) -> 
-      unless data?
-        exchangeFail()
+  $.ajax(
+    url: 'ticker?symbol=' + g.symbol,
+    dataType: 'json',
+    cache: false,
+    success: (data) -> 
+      if data?
+        clear(EXCHANGE_FAIL)
+      else
+        fail(EXCHANGE_FAIL)
         return
 
       exchange = 1000 / data.out
-      exchange = exchange - exchange * commission * 0.01
+      exchange = exchange - exchange * g.commission * 0.01
       g.exchange = Math.ceil(exchange * 100) / 100
       $('#exchange').val(g.exchange.toFixed(2))
       updateTotal()
+    error: -> fail(EXCHANGE_FAIL)
+  )
 
-      clear(EXCHANGE_FAIL)
-
-      if $('#error').html() is ""
-        $('#error').hide()
-        $('#calculator').fadeIn('slow')
-  ).error(exchangeFail)
   setTimeout(fetchExchangeRate, 900000)
 
-fail = (err) ->
+fail = (msg) ->
+  g.errors.push(msg)
   $('#calculator').hide()
-  $('#error').html(err).show()
+  $('#error').show().html(g.errors.toString())
   
 clear = (msg) ->
-  if $('#error').html() is msg
-    $('#error').html("")
+  i = g.errors.indexOf(msg)
+  g.errors.splice(i, 1) if i >= 0
+  if (g.errors.length > 0)
+    $('#error').show().html(g.errors.toString())
+  else
+    $('#error').hide()
+    $('#calculator').fadeIn('slow')
 
 setupPage = ->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
-  g.commission or= 3
+  g.commission or= 0
   g.symbol or= 'virtexCAD'
 
   if g.logo
@@ -108,11 +117,15 @@ setupPage = ->
   else
     fail(ADDRESS_FAIL)
     
-  $('#symbol').html(g.symbol + " - " + commission.toFixed(0) + "%")
+  symbol = g.symbol
+  symbol += " - #{g.commission.toFixed(0)}%" if g.commission > 0 
+
+  $('#symbol').html(symbol)
   $('#currency').html(g.symbol.slice(-3))
   $('#received').hide()
 
-  fetchExchangeRate()
+  if g.exchange is 0
+    fetchExchangeRate()
 
 setupSocket = ->
   setTimeout(setupSocket, 10000)
@@ -148,12 +161,13 @@ setupSocket = ->
         $('#payment').hide()
         $('#received').fadeIn('slow')
 
-      $.post("/#{g.user}/transactions",
-        address: from_address,
-        date: moment().format("YYYY-MM-DD HH:mm:ss"),
-        received: received,
-        exchange: g.exchange
-      )
+      if g.user
+        $.post("/#{g.user}/transactions",
+          address: from_address,
+          date: moment().format("YYYY-MM-DD HH:mm:ss"),
+          received: received,
+          exchange: g.exchange
+        )
 
 get = (name) ->
   name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]")
