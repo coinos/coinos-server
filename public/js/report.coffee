@@ -10,8 +10,8 @@ $(->
         <tr>
           <td>#{this.date}</td>
           <td>#{this.address}</td>
-          <td>#{this.exchange}</td>
-          <td>#{this.received}</td>
+          <td>#{this.exchange.toFixed(2)}</td>
+          <td>#{this.received.toFixed(2)}</td>
           <td>#{(this.received * this.exchange).toFixed(2)}</td>
         </tr>
       """)
