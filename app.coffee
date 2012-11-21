@@ -93,7 +93,7 @@ app.get('/ticker', (req, res) ->
     host: 'bitcoincharts.com', 
     path: '/t/depthcalc.json?symbol=' + 
       req.query.symbol + 
-      '&type=bid&amount=1000&currency=true'
+      '&type=ask&amount=1000&currency=true'
 
   require('http').get(options, (r) ->
     r.setEncoding('utf-8')
