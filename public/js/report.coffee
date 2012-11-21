@@ -21,12 +21,12 @@ $(->
     $('td:nth-child(4)').each(->
       btc += parseFloat($(this).html())
     )
-    $('#btc').html(btc)
+    $('#btc').html(btc.toFixed(2))
 
     cad = 0
     $('td:nth-child(5)').each(->
       cad += parseFloat($(this).html())
     )
-    $('#cad').html(cad)
+    $('#cad').html(cad.toFixed(2))
   )
 )
