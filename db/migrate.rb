@@ -5,8 +5,8 @@ ActiveRecord::Base.establish_connection(
   :adapter=>'mysql2', 
   :hostname => 'localhost',
   :username => 'root',
-  :password => '',
-  :database => 'bitcoin_pos',
+  :password => 'MPJzfq97',
+  :database => 'vanbtc',
   :reconnect => true
 )
 
