@@ -28,7 +28,7 @@ $(->
   setupQR()
   setupSocket()
 
-  if user? and user
+  if g.user? and g.user
     $.ajax(
       url: user + '.json', 
       cache: false,
@@ -112,8 +112,12 @@ setupPage = ->
   else
     $('#name').html(g.name).show()
 
+  address = g.address
+  if g.user? and g.user
+    address = "<a href='/#{g.user}/report'>#{address}</a>"
+
   if check_address(g.address)
-    $('#address').html("<a href='https://blockchain.info/address/#{g.address}'>#{g.address}</a>")
+    $('#address').html(address)
   else
     fail(ADDRESS_FAIL)
     
