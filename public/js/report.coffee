@@ -5,6 +5,8 @@
 g = exports ? this
 
 $(->
+  $('#from').val(moment().subtract('days', 7).format("MM/DD/YYYY"))
+  $('#to').val(moment().format("MM/DD/YYYY"))
   $('.date').datepicker(onClose: ->
     transactions = $.grep(g.transactions, (e, i) ->
       from = moment($('#from').val(), "MM/DD/YYYY")
