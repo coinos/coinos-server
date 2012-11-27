@@ -45,6 +45,14 @@ app.get('/', (req, res) ->
   res.render('index',  js: (-> global.js), css: (-> global.css))
 )
 
+app.get('/setup', (req, res) ->
+  res.render('setup',  js: (-> global.js), css: (-> global.css))
+)
+
+app.get('/about', (req, res) ->
+  res.render('about',  js: (-> global.js), css: (-> global.css))
+)
+
 app.get('/bcrypt', (req, res) ->
   salt = "$2a$10$3R8tUtIoU/fllQD9zEgTZe"
   hash = bcrypt.hashSync("chelsea", salt)
