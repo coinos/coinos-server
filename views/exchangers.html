@@ -7,7 +7,9 @@
     <link href="img/favicon.ico" rel="shortcut icon" />
     {{#css}}index{{/css}}
     <style>
-      div.span4 img { width: 150px; height: 150px; float: left; padding-right: 20px; }
+      div.row-fluid img { width: 150px; height: 150px; float: left; padding-right: 20px; }
+      b.price { color: white; }
+      p.labels { overflow: hidden; float: left; text-align: right; padding-right: 5px; }
     </style>
   </head>
   <body>
@@ -17,6 +19,7 @@
           <a class="brand" href="/">VanBTC</a>
           <div class="nav-collapse collapse">
             <p class="navbar-text pull-right">
+              Exchange Rate: <b class="price">$12.50</b> |
               <a href="/login" class="navbar-link">Login</a>
             </p>
             <ul class="nav">
@@ -34,20 +37,60 @@
         <div class="span6">
           <h1>Exchangers</h1>
           <p>
-           Our aim is to establish a network of trusted individuals who are willing to provide a consistent experience and price for people wanting to trade bitcoins in Vancouver.
+           Our goal is to establish a network of trusted individuals who can provide a consistent experience and reliable price for people wanting to trade bitcoins in Vancouver.
           </p>
           <p><a class="btn" href="/exchangers/new">Join Us!</a></p>
+        </div>
+        <div class="span6">
+          <h1>Meeting Procedure</h1>
+          <ul>
+            <li>Contact one of us letting us know how much you want to spend and your availability</li>
+            <li>We'll set a time to meet at a public place like a caf&eacute; or a bank</li>
+            <li>We'll meet up and use the exchange rate above to convert the specified amount of CAD to BTC</li>
+            <li>You provide us with a bitcoin address and count out the cash</li>
+            <li>We send bitcoins to your address and take the cash</li>
+          </ul>
         </div>
       </div>
       <div class="row-fluid">
         <div class="span4">
           <h2>Adam Soltys</h2>
           <img src="http://photos3.meetupstatic.com/photos/member/c/5/0/member_60963152.jpeg" />
-          <p>Neighbourhood: Hastings/Sunrise, Gastown</p>
-          <p>Email: <a href="mailto:asoltys@gmail.com">asoltys@gmail.com</a></p>
-          <p>Availability: 9am - 9pm Mon - Sun</p>
-          
+          <p class="labels">
+            <b>Neighbourhood:</b><br />
+            <b>Email:</b><br />
+          </p>
+          <p>
+            Hastings/Sunrise<br />
+            <a href="mailto:asoltys@gmail.com">asoltys@gmail.com</a>
+          </p>
         </div>
+        <!--
+        <div class="span4">
+          <h2>Adam Soltys</h2>
+          <img src="http://photos3.meetupstatic.com/photos/member/c/5/0/member_60963152.jpeg" />
+          <p class="labels">
+            <b>Neighbourhood:</b><br />
+            <b>Email:</b><br />
+          </p>
+          <p>
+            Hastings/Sunrise<br />
+            <a href="mailto:asoltys@gmail.com">asoltys@gmail.com</a>
+          </p>
+        </div>
+        <div class="span4">
+          <h2>Adam Soltys</h2>
+          <img src="http://photos3.meetupstatic.com/photos/member/c/5/0/member_60963152.jpeg" />
+          <p class="labels">
+            <b>Neighbourhood:</b><br />
+            <b>Email:</b><br />
+          </p>
+          <p>
+            Hastings/Sunrise<br />
+            <a href="mailto:asoltys@gmail.com">asoltys@gmail.com</a>
+          </p>
+        </div>
+        -->
         <!--/span-->
       </div><!--/row-->
 
