@@ -24,10 +24,11 @@ passport.deserializeUser((id, done) ->
   done(null, user)
 )
 
-app.engine('html', engines.hogan)
+app.engine('html', require('mmm').__express)
 app.enable('trust proxy')
 app.set('view engine', 'html')
 app.set('views', __dirname + '/views')
+app.set('layout', 'layout')
 app.use(express.static(__dirname + '/public'))
 app.use(require('connect-assets')(src: 'public'))
 app.use(express.bodyParser())
