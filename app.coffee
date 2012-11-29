@@ -4,14 +4,15 @@ path = require('path')
 engines = require('consolidate')
 passport = require('passport')
 bcrypt = require('bcrypt')
-db = require("redis")
+db = require("redis").createClient()
+async = require('async')
 config = require('./config')
 app = express()
 
 LocalStrategy = require('passport-local').Strategy
 passport.use(new LocalStrategy(
   (username, password, done) ->
-    user = {username: 'soltysa', password: 'adam'}
+    user = username: 'soltysa', password: 'adam'
     return done(null, user)
 ))
 
@@ -20,15 +21,14 @@ passport.serializeUser((user, done) ->
 )
 
 passport.deserializeUser((id, done) ->
-  user = {username: 'soltysa', password: 'adam'}
+  user = username: 'soltysa', password: 'adam'
   done(null, user)
 )
 
-app.engine('html', require('mmm').__express)
 app.enable('trust proxy')
+app.engine('html', require('mmm').__express)
 app.set('view engine', 'html')
 app.set('views', __dirname + '/views')
-app.set('layout', 'layout')
 app.use(express.static(__dirname + '/public'))
 app.use(require('connect-assets')(src: 'public'))
 app.use(express.bodyParser())
@@ -37,49 +37,28 @@ app.use(express.session(secret: 'weareallmadeofstars'))
 app.use(passport.initialize())
 app.use(passport.session())
 app.use(app.router)
-app.use((err, req, res, next) ->
-  res.status(500)
-  console.log(err)
-  res.end()
-)
 
-app.get('/', (req, res) ->
-  res.render('index',  js: (-> global.js), css: (-> global.css))
-)
+for route in ['', 'about', 'exchangers', 'merchants']
+  ((route) ->
+    app.get("/#{route}", (req, res) ->
+      route = 'index' if route == '' 
+      res.render(route, js: (-> global.js), css: (-> global.css), layout: 'layout')
+    )
+  )(route) 
 
 app.get('/setup', (req, res) ->
   res.render('setup',  js: (-> global.js), css: (-> global.css))
-)
-
-app.get('/about', (req, res) ->
-  res.render('about',  js: (-> global.js), css: (-> global.css))
-)
-
-app.get('/merchants', (req, res) ->
-  res.render('merchants',  js: (-> global.js), css: (-> global.css))
-)
-
-app.get('/exchangers', (req, res) ->
-  res.render('exchangers',  js: (-> global.js), css: (-> global.css))
-)
-
-app.get('/bcrypt', (req, res) ->
-  salt = "$2a$10$3R8tUtIoU/fllQD9zEgTZe"
-  hash = bcrypt.hashSync("chelsea", salt)
-  res.write(salt + "\n")
-  res.write(hash)
-  res.end()
 )
 
 app.get('/:user/report', (req, res) ->
   res.render('report',  
     user: req.params.user,
     js: (-> global.js), 
-    css: (-> global.css))
+    css: (-> global.css)
+  )
 )
 
 app.get('/:user.json', (req, res) ->
-  db.createClient()
   db.hgetall(req.params.user, (err, obj) ->
     res.write(JSON.stringify(obj))
     res.end()
@@ -87,7 +66,6 @@ app.get('/:user.json', (req, res) ->
 )
 
 app.get('/:user/transactions', (req, res) ->
-  db.createClient()
   user = req.params.user
   r = 'transactions': []
 
@@ -116,10 +94,16 @@ app.get('/ticker', (req, res) ->
   require('http').get(options, (r) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
+      try
+        exchange = 1000 / JSON.parse(chunk).out
+        exchange = (Math.ceil(exchange * 100) / 100).toString()
+      catch e
+        exchange = ""
+
       res.writeHead(200, 
-        'Content-Length': chunk.length,
+        'Content-Length': exchange.length,
         'Content-Type': 'text/plain')
-      res.write(chunk)
+      res.write(exchange)
       res.end()
     )
   )
@@ -150,17 +134,22 @@ app.post('/users', (req, res) ->
   if req.body.login
     if req.body.password
       bcrypt.hash(req.body.password, 12, (err, hash) ->
-        db.createClient()
         db.hget(req.body.login, 'password', (err, password) ->
-          bcrypt.compare(req.body.password, password, (err, match) ->
-            if match
-              req.body.password = password
-              db.hmset(req.body.login, req.body, ->
+          if password
+            bcrypt.compare(req.body.password, password, (err, match) ->
+              if match
+                req.body.password = password
+                db.hmset(req.body.login, req.body, ->
+                  res.redirect(req.body.login)
+                )
+              else
                 res.redirect(req.body.login)
-              )
-            else
+            )
+          else
+            req.body.password = hash
+            db.hmset(req.body.login, req.body, ->
               res.redirect(req.body.login)
-          )
+            )
         )
       )
   else
@@ -173,7 +162,6 @@ app.post('/users', (req, res) ->
 
 app.post('/:user/transactions', (req, res) ->
   user = req.params.user
-  db.createClient()
   db.incr('transactions', (err, id) ->
     db.hmset("#{user}:transactions:#{id}", req.body, ->
       db.rpush("#{user}:transactions", id, ->
@@ -187,7 +175,7 @@ app.post('/:user/transactions', (req, res) ->
 app.get('/calculator', (req, res) ->
   res.render('calculator', 
     js: (-> global.js), 
-    css: (-> global.css) 
+    css: (-> global.css),
   )
 )
 
@@ -199,7 +187,6 @@ app.get('/:user/edit', (req, res) ->
   )
 )
 
-
 app.get('/:user', (req, res) ->
   res.render('calculator', 
     user: req.params.user, 
@@ -208,5 +195,10 @@ app.get('/:user', (req, res) ->
   )
 )
 
+app.use((err, req, res, next) ->
+  res.status(500)
+  console.log(err)
+  res.end()
+)
 
 app.listen(3000)

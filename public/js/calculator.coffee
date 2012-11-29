@@ -7,44 +7,39 @@
 #= require jsbn2.js
 #= require check_address.js
 
-g = exports ? this
-
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
 ADDRESS_FAIL = "Invalid address"
 
+g = exports ? this
+
 $(->
-  g.websocket = null
   g.user = $('#user').val()
   g.name = get('name')
   g.address = get('address')
   g.symbol = get('symbol')
   g.commission = parseFloat(get('commission'))
   g.logo = get('logo')
-  g.exchange = 0
   g.errors = []
 
-  setupPage()
-  setupQR()
-  setupSocket()
-
-  if g.user? and g.user
+  if g.user
     $.ajax(
-      url: user + '.json', 
+      url: g.user + '.json', 
       cache: false,
       dataType: 'json',
       success: (data) ->
-        return unless data?
-        g.name = data.name
-        g.address = data.address 
-        g.symbol = data.symbol
-        g.commission = data.commission 
-        g.logo = data.logo 
-        setupPage()
+        if data?
+          g.name = data.name
+          g.address = data.address 
+          g.symbol = data.symbol
+          g.commission = data.commission 
+          g.logo = data.logo 
+        setup()
     )
+  else 
+    setup()
 
   $('#amount').keyup(updateTotal)
-  $('#amount').focus()
   $('#amount').focus(->
     $('#received').hide()
     $('#payment').fadeIn('slow')
@@ -53,54 +48,7 @@ $(->
   )
 )
 
-updateTotal = ->
-  amount = parseFloat($('#amount').val())
-  total = amount / g.exchange
-  total = Math.ceil(total * 10000) / 10000
-
-  unless $.isNumeric(total)
-    total = ''
-
-  $('#total').html(total.toString())
-  displayQR('bitcoin:' + g.address + '?amount=' + total.toString())
-
-fetchExchangeRate = ->
-  $.ajax(
-    url: 'ticker?symbol=' + g.symbol,
-    dataType: 'json',
-    cache: false,
-    success: (data) -> 
-      if data?
-        clear(EXCHANGE_FAIL)
-      else
-        fail(EXCHANGE_FAIL)
-        return
-
-      exchange = 1000 / data.out
-      exchange = exchange - exchange * g.commission * 0.01
-      g.exchange = Math.ceil(exchange * 100) / 100
-      $('#exchange').val(g.exchange.toFixed(2))
-      updateTotal()
-    error: -> fail(EXCHANGE_FAIL)
-  )
-
-  setTimeout(fetchExchangeRate, 900000)
-
-fail = (msg) ->
-  g.errors.push(msg)
-  $('#calculator').hide()
-  $('#error').show().html(g.errors.toString())
-  
-clear = (msg) ->
-  i = g.errors.indexOf(msg)
-  g.errors.splice(i, 1) if i >= 0
-  if (g.errors.length > 0)
-    $('#error').show().html(g.errors.toString())
-  else
-    $('#error').hide()
-    $('#calculator').fadeIn('slow')
-
-setupPage = ->
+setup = ->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
   g.commission or= 0
   g.symbol or= 'virtexCAD'
@@ -128,8 +76,34 @@ setupPage = ->
   $('#currency').html(g.symbol.slice(-3))
   $('#received').hide()
 
-  if g.exchange is 0
-    fetchExchangeRate()
+  setupQR()
+  setupSocket()
+  fetchExchangeRate()
+
+fetchExchangeRate = ->
+  $.ajax(
+    url: 'ticker?symbol=' + g.symbol,
+    cache: false,
+    success: (exchange) -> 
+      if exchange?
+        clear(EXCHANGE_FAIL)
+      else
+        fail(EXCHANGE_FAIL)
+        return
+
+      unless g.setupComplete
+        finalize() 
+
+      g.exchange = exchange - exchange * g.commission * 0.01
+      $('#exchange').val(g.exchange.toFixed(2))
+      updateTotal()
+    error: -> fail(EXCHANGE_FAIL)
+  )
+  setTimeout(fetchExchangeRate, 900000)
+
+finalize = ->
+  $('#amount').focus()
+  g.setupComplete = true
 
 setupSocket = ->
   setTimeout(setupSocket, 10000)
@@ -173,6 +147,32 @@ setupSocket = ->
           exchange: g.exchange
         )
 
+updateTotal = ->
+  amount = parseFloat($('#amount').val())
+  total = amount / g.exchange
+  total = Math.ceil(total * 10000) / 10000
+
+  unless $.isNumeric(total)
+    total = ''
+
+  $('#total').html(total.toString())
+  displayQR('bitcoin:' + g.address + '?amount=' + total.toString())
+
+fail = (msg) ->
+  g.errors.push(msg)
+  g.errors = g.errors.uniq()
+  $('#calculator').hide()
+  $('#error').show().html(g.errors.toString())
+  
+clear = (msg) ->
+  i = g.errors.indexOf(msg)
+  g.errors.splice(i, 1) if i >= 0
+  if (g.errors.length > 0)
+    $('#error').show().html(g.errors.toString())
+  else
+    $('#error').hide()
+    $('#calculator').fadeIn('slow')
+
 get = (name) ->
   name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]")
   regexS = "[\\?&]" + name + "=([^&#]*)"
@@ -184,3 +184,7 @@ get = (name) ->
   else
     return decodeURIComponent(results[1].replace(/\+/g, " "))
 
+Array::uniq = ->
+  output = {}
+  output[@[key]] = @[key] for key in [0...@length]
+  value for key, value of output

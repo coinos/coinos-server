@@ -5,6 +5,7 @@
 		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
     <title>Vancouver Bitcoin</title>
     <link href="img/favicon.ico" rel="shortcut icon" />
+    {{#js}}index{{/js}}
     {{#css}}index{{/css}}
   </head>
   <body>
@@ -14,7 +15,7 @@
           <a class="brand" href="/">VanBTC</a>
           <div class="nav-collapse collapse">
             <p class="navbar-text pull-right">
-              Exchange Rate: <b class="price">$12.50</b> |
+              Exchange Rate: <b class="exchange"></b> |
               <a href="/login" class="navbar-link">Login</a>
             </p>
             <ul class="nav">
@@ -31,8 +32,6 @@
       {{>content}}
     </div>
     <hr>
-    <footer>
-      <p>&copy; VanBTC 2012</p>
-    </footer>
+    <footer>Website by Adam Soltys</footer>
   </body>
 </html> 
