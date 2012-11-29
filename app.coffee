@@ -43,6 +43,8 @@ routes =
   "/exchangers": 'exchangers'
   "/exchangers/new": 'join'
   "/merchants": 'merchants'
+  "/merchants/new": 'signup'
+  "/contact": 'contact'
 
 for route, view of routes
   ((route, view) ->
