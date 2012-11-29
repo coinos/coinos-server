@@ -41,9 +41,9 @@ routes =
   "/": 'index'
   "/about": 'about'
   "/exchangers": 'exchangers'
-  "/exchangers/new": 'join'
+  "/exchangers/join": 'join'
   "/merchants": 'merchants'
-  "/merchants/new": 'signup'
+  "/merchants/signup": 'signup'
   "/contact": 'contact'
 
 for route, view of routes
