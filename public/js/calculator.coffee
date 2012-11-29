@@ -82,7 +82,7 @@ setup = ->
 
 fetchExchangeRate = ->
   $.ajax(
-    url: 'ticker?symbol=' + g.symbol,
+    url: "ticker?symbol=#{g.symbol}&type=ask&amount=1000",
     cache: false,
     success: (exchange) -> 
       if exchange?

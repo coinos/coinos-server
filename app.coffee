@@ -37,13 +37,19 @@ app.use(passport.initialize())
 app.use(passport.session())
 app.use(app.router)
 
-for route in ['', 'about', 'exchangers', 'merchants']
-  ((route) ->
-    app.get("/#{route}", (req, res) ->
-      route = 'index' if route == '' 
-      res.render(route, js: (-> global.js), css: (-> global.css), layout: 'layout')
+routes = 
+  "/": 'index'
+  "/about": 'about'
+  "/exchangers": 'exchangers'
+  "/exchangers/new": 'join'
+  "/merchants": 'merchants'
+
+for route, view of routes
+  ((route, view) ->
+    app.get(route, (req, res) ->
+      res.render(view, js: (-> global.js), css: (-> global.css), layout: 'layout')
     )
-  )(route) 
+  )(route, view) 
 
 app.get('/setup', (req, res) ->
   res.render('setup',  js: (-> global.js), css: (-> global.css))
@@ -86,9 +92,7 @@ app.get('/:user/transactions', (req, res) ->
 app.get('/ticker', (req, res) ->
   options = 
     host: 'bitcoincharts.com', 
-    path: '/t/depthcalc.json?symbol=' + 
-      req.query.symbol + 
-      '&type=ask&amount=1000&currency=true'
+    path: "/t/depthcalc.json?symbol=#{req.query.symbol}&type=#{req.query.type}&amount=#{req.query.amount}&currency=true"
 
   require('http').get(options, (r) ->
     r.setEncoding('utf-8')
