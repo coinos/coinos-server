@@ -4,6 +4,7 @@ path = require('path')
 engines = require('consolidate')
 passport = require('passport')
 bcrypt = require('bcrypt')
+db = require("redis")
 config = require('./config')
 app = express()
 
@@ -77,7 +78,7 @@ app.get('/:user/report', (req, res) ->
 )
 
 app.get('/:user.json', (req, res) ->
-  db = require("redis").createClient()
+  db.createClient()
   db.hgetall(req.params.user, (err, obj) ->
     res.write(JSON.stringify(obj))
     res.end()
@@ -85,7 +86,7 @@ app.get('/:user.json', (req, res) ->
 )
 
 app.get('/:user/transactions', (req, res) ->
-  db = require("redis").createClient()
+  db.createClient()
   user = req.params.user
   r = 'transactions': []
 
@@ -148,7 +149,7 @@ app.post('/users', (req, res) ->
   if req.body.login
     if req.body.password
       bcrypt.hash(req.body.password, 12, (err, hash) ->
-        db = require("redis").createClient()
+        db.createClient()
         db.hget(req.body.login, 'password', (err, password) ->
           bcrypt.compare(req.body.password, password, (err, match) ->
             if match
@@ -171,7 +172,7 @@ app.post('/users', (req, res) ->
 
 app.post('/:user/transactions', (req, res) ->
   user = req.params.user
-  db = require("redis").createClient()
+  db.createClient()
   db.incr('transactions', (err, id) ->
     db.hmset("#{user}:transactions:#{id}", req.body, ->
       db.rpush("#{user}:transactions", id, ->
