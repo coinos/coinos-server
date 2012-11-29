@@ -5,7 +5,6 @@ engines = require('consolidate')
 passport = require('passport')
 bcrypt = require('bcrypt')
 db = require("redis").createClient()
-async = require('async')
 config = require('./config')
 app = express()
 
