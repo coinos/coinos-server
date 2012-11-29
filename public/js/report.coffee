@@ -7,23 +7,24 @@ g = exports ? this
 $(->
   $('#from').val(moment().subtract('days', 7).format("MM/DD/YYYY"))
   $('#to').val(moment().format("MM/DD/YYYY"))
-  $('.date').datepicker(onClose: ->
-    transactions = $.grep(g.transactions, (e, i) ->
-      from = moment($('#from').val(), "MM/DD/YYYY")
-      to = moment($('#to').val(), "MM/DD/YYYY")
-      d = moment(e.date)
-
-      return (!from? || d.diff(from) >= 0) && (!to? || d.diff(to) <= 0)
-    )
-
-    display(transactions)   
-  )
-
+  $('.date').datepicker(onClose: filterDates)
   $.getJSON('transactions', (data) ->
     g.transactions = data.transactions
     display(g.transactions)
+    filterDates()
   )
 )
+
+filterDates = ->
+  transactions = $.grep(g.transactions, (e, i) ->
+    from = moment($('#from').val(), "MM/DD/YYYY")
+    to = moment($('#to').val(), "MM/DD/YYYY")
+    d = moment(e.date)
+
+    return (!from? || d.diff(from) >= 0) && (!to? || d.diff(to) <= 0)
+  )
+
+  display(transactions)   
 
 display = (transactions) ->
   $('tbody tr').remove()
