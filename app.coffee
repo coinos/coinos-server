@@ -5,7 +5,6 @@ engines = require('consolidate')
 passport = require('passport')
 bcrypt = require('bcrypt')
 db = require("redis").createClient()
-config = require('./config')
 app = express()
 
 LocalStrategy = require('passport-local').Strategy
@@ -37,7 +36,7 @@ app.use(passport.initialize())
 app.use(passport.session())
 app.use(app.router)
 
-routes = 
+routes =
   "/": 'index'
   "/about": 'about'
   "/exchangers": 'exchangers'
@@ -45,6 +44,7 @@ routes =
   "/merchants": 'merchants'
   "/merchants/signup": 'signup'
   "/contact": 'contact'
+
 
 for route, view of routes
   ((route, view) ->
