@@ -11,7 +11,6 @@ fetchExchangeRate = (type) ->
 
   $.ajax(
     url: "ticker?symbol=virtexCAD&type=#{type}&amount=1000",
-    cache: false,
     success: (exchange) -> 
       if not exchange?
         exchange = '??'

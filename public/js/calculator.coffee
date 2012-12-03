@@ -25,7 +25,6 @@ $(->
   if g.user
     $.ajax(
       url: g.user + '.json', 
-      cache: false,
       dataType: 'json',
       success: (data) ->
         if data?
@@ -83,7 +82,6 @@ setup = ->
 fetchExchangeRate = ->
   $.ajax(
     url: "ticker?symbol=#{g.symbol}&type=ask&amount=1000",
-    cache: false,
     success: (exchange) -> 
       if exchange?
         clear(EXCHANGE_FAIL)
