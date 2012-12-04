@@ -5,14 +5,9 @@ engines = require('consolidate')
 passport = require('passport')
 bcrypt = require('bcrypt')
 db = require("redis").createClient()
-app = express()
+ask = bid = 0
 
 LocalStrategy = require('passport-local').Strategy
-passport.use(new LocalStrategy(
-  (username, password, done) ->
-    user = username: 'soltysa', password: 'adam'
-    return done(null, user)
-))
 
 passport.serializeUser((user, done) ->
   done(null, user.username)
@@ -23,6 +18,29 @@ passport.deserializeUser((id, done) ->
   done(null, user)
 )
 
+passport.use(new LocalStrategy(
+  (username, password, done) ->
+    bcrypt.hash(password, 12, (err, hash) ->
+      db.hget(username, 'password', (err, result) ->
+        console.log(result)
+        if result
+          bcrypt.compare(password, result, (err, match) ->
+            console.log(match)
+            if match
+              db.hgetall(username, (err, user) ->
+                return done(null, user)
+              )
+          )
+      )
+    )
+    return done(null, false)
+))
+
+ensureAuthenticated = (req, res, next) ->
+  return next() if req.isAuthenticated()  
+  res.redirect('/login')
+
+app = express()
 app.enable('trust proxy')
 app.engine('html', require('mmm').__express)
 app.set('view engine', 'html')
@@ -45,11 +63,14 @@ routes =
   "/merchants/signup": 'signup'
   "/contact": 'contact'
 
-
 for route, view of routes
   ((route, view) ->
     app.get(route, (req, res) ->
-      res.render(view, js: (-> global.js), css: (-> global.css), layout: 'layout')
+      res.render(view, 
+        js: (-> global.js), 
+        css: (-> global.css), 
+        layout: 'layout'
+      )
     )
   )(route, view) 
 
@@ -96,7 +117,7 @@ app.get('/ticker', (req, res) ->
     host: 'bitcoincharts.com', 
     path: "/t/depthcalc.json?symbol=#{req.query.symbol}&type=#{req.query.type}&amount=#{req.query.amount}&currency=true"
 
-  require('http').get(options, (r) ->
+  http.get(options, (r) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
       try
@@ -136,28 +157,6 @@ app.post('/login', (req, res, next) ->
 )
 
 app.post('/users', (req, res) ->
-  if req.body.login
-    if req.body.password
-      bcrypt.hash(req.body.password, 12, (err, hash) ->
-        db.hget(req.body.login, 'password', (err, password) ->
-          if password
-            bcrypt.compare(req.body.password, password, (err, match) ->
-              if match
-                req.body.password = password
-                db.hmset(req.body.login, req.body, ->
-                  res.redirect(req.body.login)
-                )
-              else
-                res.redirect(req.body.login)
-            )
-          else
-            req.body.password = hash
-            db.hmset(req.body.login, req.body, ->
-              res.redirect(req.body.login)
-            )
-        )
-      )
-  else
     params = []
     for k,v of req.body
       params.push(encodeURIComponent(k), '=', encodeURIComponent(v), '&') 
@@ -165,7 +164,7 @@ app.post('/users', (req, res) ->
     res.redirect('calculator?' + params.join(''))
 )
 
-app.post('/:user/transactions', (req, res) ->
+app.post('/:user/transactions', ensureAuthenticated, (req, res) ->
   user = req.params.user
   db.incr('transactions', (err, id) ->
     db.hmset("#{user}:transactions:#{id}", req.body, ->
@@ -178,21 +177,23 @@ app.post('/:user/transactions', (req, res) ->
 )
 
 app.get('/calculator', (req, res) ->
+  console.log(req.user)
   res.render('calculator', 
     js: (-> global.js), 
     css: (-> global.css),
   )
 )
 
-app.get('/:user/edit', (req, res) ->
-  res.render('index', 
+app.get('/:user/edit', ensureAuthenticated, (req, res) ->
+  res.render('user', 
     user: req.params.user, 
     js: (-> global.js), 
     css: (-> global.css) 
   )
 )
 
-app.get('/:user', (req, res) ->
+app.get('/:user', ensureAuthenticated, (req, res) ->
+  console.log(req.user)
   res.render('calculator', 
     user: req.params.user, 
     js: (-> global.js), 
