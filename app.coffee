@@ -164,7 +164,7 @@ app.post('/users', (req, res) ->
     res.redirect('calculator?' + params.join(''))
 )
 
-app.post('/:user/transactions', ensureAuthenticated, (req, res) ->
+app.post('/:user/transactions', (req, res) ->
   user = req.params.user
   db.incr('transactions', (err, id) ->
     db.hmset("#{user}:transactions:#{id}", req.body, ->
@@ -192,7 +192,7 @@ app.get('/:user/edit', ensureAuthenticated, (req, res) ->
   )
 )
 
-app.get('/:user', ensureAuthenticated, (req, res) ->
+app.get('/:user', (req, res) ->
   console.log(req.user)
   res.render('calculator', 
     user: req.params.user, 
