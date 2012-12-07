@@ -1,16 +1,13 @@
 express = require('express')
 path = require('path')
 engines = require('consolidate')
-passport = require('./passport').passport
+passport = require('./passport')
 
 calculator = require("./routes/calculator")
 sessions = require("./routes/sessions")(passport)
 transactions = require("./routes/transactions")
 users = require("./routes/users")
 
-authorize = (req, res, next) ->
-  return next() if req.isAuthenticated()
-  res.redirect('/login')
 
 app = express()
 app.enable('trust proxy')
@@ -46,12 +43,19 @@ for route, view of routes
     )
   )(route, view) 
 
+authorize = (req, res, next) ->
+  return next() if req.isAuthenticated() and
+    req.params.user is req.user.username or 
+    req.user.username is 'admin'
+  res.redirect('/login')
+
 app.get('/setup', calculator.new)
 app.get('/calculator', calculator.show)
 app.get('/ticker', calculator.ticker)
 
 app.get('/login', sessions.new)
 app.post('/login', sessions.create)
+app.get('/logout', sessions.destroy)
 
 app.get('/:user.json', authorize, users.json)
 app.get('/:user', authorize, users.show)

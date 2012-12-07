@@ -27,4 +27,4 @@ passport.use(new LocalStrategy(
     )
 ))
 
-exports.passport = passport
+module.exports = passport

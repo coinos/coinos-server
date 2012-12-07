@@ -17,3 +17,7 @@ module.exports = (passport) ->
         return res.redirect('/' + user.username)
       )
     )(req, res, next)
+
+  destroy: (req, res) ->
+    req.logout()
+    res.redirect('/login')
