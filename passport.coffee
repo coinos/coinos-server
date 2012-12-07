@@ -17,13 +17,18 @@ passport.deserializeUser((username, done) ->
 passport.use(new LocalStrategy(
   (username, password, done) ->
     db.hget(username, 'password', (err, hash) ->
+      return done(err) if err
       if hash
         bcrypt.compare(password, hash, (err, match) ->
           if match
             db.hgetall(username, (err, user) ->
               return done(null, user)
             )
+          else
+            return done(null, false)
         )
+      else
+        return done(null, false)
     )
 ))
 
