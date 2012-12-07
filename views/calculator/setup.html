@@ -10,19 +10,15 @@
   </head>
   <body>
     <div class="container-fluid">
-      <form action="users" method="post">
+      <form id="setup" action="/calculator" method="get">
         <h1>Calculator Setup</h1>
 
-        <label for="login">Username:</label>
-        <input type="text" id="login" name="login" value="{{user}}" />
+        <input type="hidden" id="username" name="username" value="{{user}}" />
 
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" value="" />
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" />
 
-        <label for="name">Title:</label>
-        <input type="text" id="name" name="name" />
-
-        <label for="logo">Image:</label>
+        <label for="logo">Logo:</label>
         <input type="text" id="logo" name="logo" />
 
         <label for="address">Bitcoin Address:</label>

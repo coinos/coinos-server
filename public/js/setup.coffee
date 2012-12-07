@@ -6,10 +6,14 @@
 
 $(->
   symbols = ['mtgoxUSD', 'btceUSD', 'bitstampUSD', 'virwoxSLL', 'btcdeEUR', 'mtgoxEUR', 'btc24EUR', 'mtgoxAUD', 'cryptoxAUD', 'mtgoxGBP', 'btcnCNY', 'intrsngEUR', 'virtexCAD', 'mtgoxPLN', 'cbxUSD', 'bitcurexPLN', 'bitmarketEUR', 'bitfloorUSD', 'mrcdBRL', 'bcEUR']
+  symbols = symbols.sort()
+
+  user = $('#username').val()
 
   $.each(symbols, (i, v) ->
     $('#symbol').append("<option value='#{v}'>#{v}</option>")
   )
+  $("#symbol option[value='mtgoxUSD']").attr('selected', 'selected')
 
   $('#address').change(->
     if check_address($(this).val())
@@ -18,12 +22,13 @@ $(->
       $(this).css('color', 'red')
   )
 
-  if $('#login').val() != ""
-    $.getJSON('/' + $('#login').val() + '.json', (data) ->
-      $('#name').val(data.name)
-      $('#image').val(data.image)
+  if user
+    $('#setup').attr('action', "/#{user}/update").attr('method', 'post')
+    $.getJSON("/#{user}.json", (data) ->
+      $('#title').val(data.title)
+      $('#logo').val(data.logo)
       $('#address').val(data.address)
-      $('#symbol option[value=' + data.symbol + ']').attr('selected', 'selected')
+      $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
       $('#commission').val(data.commission)
     )
 )

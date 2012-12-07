@@ -8,7 +8,7 @@ $(->
   $('#from').val(moment().subtract('days', 7).format("MM/DD/YYYY"))
   $('#to').val(moment().format("MM/DD/YYYY"))
   $('.date').datepicker(onClose: filterDates)
-  $.getJSON('transactions', (data) ->
+  $.getJSON('transactions.json', (data) ->
     g.transactions = data.transactions
     display(g.transactions)
     filterDates()

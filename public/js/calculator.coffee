@@ -15,7 +15,7 @@ g = exports ? this
 
 $(->
   g.user = $('#user').val()
-  g.name = get('name')
+  g.title = get('title')
   g.address = get('address')
   g.symbol = get('symbol')
   g.commission = parseFloat(get('commission'))
@@ -28,7 +28,7 @@ $(->
       dataType: 'json',
       success: (data) ->
         if data?
-          g.name = data.name
+          g.title = data.title
           g.address = data.address 
           g.symbol = data.symbol
           g.commission = data.commission 
@@ -54,10 +54,10 @@ setup = ->
 
   if g.logo
     $('#logo').attr('src', g.logo).show()
-  else if not g.name
+  else if not g.title
     $('#logo').attr('src', 'img/bitcoin.png').show()
   else
-    $('#name').html(g.name).show()
+    $('#title').html(g.title).show()
 
   address = g.address
   if g.user? and g.user

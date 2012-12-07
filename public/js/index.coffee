@@ -3,6 +3,7 @@
 $(->
   fetchExchangeRate('ask') 
   fetchExchangeRate('bid') 
+  setTimeout(fetchExchangeRate, 900000)
 )
 
 fetchExchangeRate = (type) ->
@@ -20,4 +21,3 @@ fetchExchangeRate = (type) ->
     error: -> 
       $("##{type}").html('??')
   )
-  setTimeout(fetchExchangeRate, 900000)

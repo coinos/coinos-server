@@ -1,43 +1,15 @@
 express = require('express')
-http = require('http')
 path = require('path')
 engines = require('consolidate')
-passport = require('passport')
-bcrypt = require('bcrypt')
-db = require("redis").createClient()
-ask = bid = 0
+passport = require('./passport').passport
 
-LocalStrategy = require('passport-local').Strategy
+calculator = require("./routes/calculator")
+sessions = require("./routes/sessions")(passport)
+transactions = require("./routes/transactions")
+users = require("./routes/users")
 
-passport.serializeUser((user, done) ->
-  done(null, user.username)
-)
-
-passport.deserializeUser((id, done) ->
-  user = username: 'soltysa', password: 'adam'
-  done(null, user)
-)
-
-passport.use(new LocalStrategy(
-  (username, password, done) ->
-    bcrypt.hash(password, 12, (err, hash) ->
-      db.hget(username, 'password', (err, result) ->
-        console.log(result)
-        if result
-          bcrypt.compare(password, result, (err, match) ->
-            console.log(match)
-            if match
-              db.hgetall(username, (err, user) ->
-                return done(null, user)
-              )
-          )
-      )
-    )
-    return done(null, false)
-))
-
-ensureAuthenticated = (req, res, next) ->
-  return next() if req.isAuthenticated()  
+authorize = (req, res, next) ->
+  return next() if req.isAuthenticated()
   res.redirect('/login')
 
 app = express()
@@ -55,13 +27,13 @@ app.use(passport.session())
 app.use(app.router)
 
 routes =
-  "/": 'index'
-  "/about": 'about'
-  "/exchangers": 'exchangers'
-  "/exchangers/join": 'join'
-  "/merchants": 'merchants'
-  "/merchants/signup": 'signup'
-  "/contact": 'contact'
+  "/": 'main/index'
+  "/about": 'main/about'
+  "/exchangers": 'main/exchangers'
+  "/exchangers/join": 'main/join'
+  "/merchants": 'main/merchants'
+  "/merchants/signup": 'main/signup'
+  "/contact": 'main/contact'
 
 for route, view of routes
   ((route, view) ->
@@ -74,132 +46,25 @@ for route, view of routes
     )
   )(route, view) 
 
-app.get('/setup', (req, res) ->
-  res.render('setup',  js: (-> global.js), css: (-> global.css))
-)
+app.get('/setup', calculator.new)
+app.get('/calculator', calculator.show)
+app.get('/ticker', calculator.ticker)
 
-app.get('/:user/report', (req, res) ->
-  res.render('report',  
-    user: req.params.user,
-    js: (-> global.js), 
-    css: (-> global.css)
-  )
-)
+app.get('/login', sessions.new)
+app.post('/login', sessions.create)
 
-app.get('/:user.json', (req, res) ->
-  db.hgetall(req.params.user, (err, obj) ->
-    res.write(JSON.stringify(obj))
-    res.end()
-  )
-)
+app.get('/:user.json', authorize, users.json)
+app.get('/:user', authorize, users.show)
 
-app.get('/:user/transactions', (req, res) ->
-  user = req.params.user
-  r = 'transactions': []
+app.get('/users/new', authorize, users.new)
+app.post('/users', authorize, users.create)
 
-  db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
-    process = (err, t) ->
-      r.transactions.push t
+app.get('/:user/edit', authorize, users.edit)
+app.post('/:user/update', authorize, users.update)
 
-      if i >= transactions.length
-        res.write(JSON.stringify(r))
-        res.end()
-      else
-        db.hgetall("#{user}:transactions:#{transactions[i++]}", process)
-    
-    i = 0
-    db.hgetall("#{user}:transactions:#{transactions[i++]}", process)
-  )
-)
-
-app.get('/ticker', (req, res) ->
-  options = 
-    host: 'bitcoincharts.com', 
-    path: "/t/depthcalc.json?symbol=#{req.query.symbol}&type=#{req.query.type}&amount=#{req.query.amount}&currency=true"
-
-  http.get(options, (r) ->
-    r.setEncoding('utf-8')
-    r.on('data', (chunk) ->
-      try
-        exchange = 1000 / JSON.parse(chunk).out
-        exchange = (Math.ceil(exchange * 100) / 100).toString()
-      catch e
-        exchange = ""
-
-      res.writeHead(200, 
-        'Content-Length': exchange.length,
-        'Content-Type': 'text/plain')
-      res.write(exchange)
-      res.end()
-    )
-  )
-)
-
-app.get('/login', (req, res) ->
-  res.render('login', 
-    js: (-> global.js), 
-    css: (-> global.css) 
-  )
-)
-
-app.post('/login', (req, res, next) ->
-  passport.authenticate('local', (err, user, info) ->
-    if (err)
-      return next(err)
-    if (!user) 
-      return res.redirect('/login')
-    req.logIn(user, (err) ->
-      if (err) 
-        return next(err)
-      return res.redirect('/' + user.username)
-    )
-  )(req, res, next)
-)
-
-app.post('/users', (req, res) ->
-    params = []
-    for k,v of req.body
-      params.push(encodeURIComponent(k), '=', encodeURIComponent(v), '&') 
-    params.pop() if (params.length) 
-    res.redirect('calculator?' + params.join(''))
-)
-
-app.post('/:user/transactions', (req, res) ->
-  user = req.params.user
-  db.incr('transactions', (err, id) ->
-    db.hmset("#{user}:transactions:#{id}", req.body, ->
-      db.rpush("#{user}:transactions", id, ->
-        res.write(JSON.stringify(req.body))
-        res.end()
-      )
-    )
-  )
-)
-
-app.get('/calculator', (req, res) ->
-  console.log(req.user)
-  res.render('calculator', 
-    js: (-> global.js), 
-    css: (-> global.css),
-  )
-)
-
-app.get('/:user/edit', ensureAuthenticated, (req, res) ->
-  res.render('user', 
-    user: req.params.user, 
-    js: (-> global.js), 
-    css: (-> global.css) 
-  )
-)
-
-app.get('/:user', (req, res) ->
-  console.log(req.user)
-  res.render('calculator', 
-    user: req.params.user, 
-    js: (-> global.js), 
-    css: (-> global.css) 
-  )
-)
+app.get('/:user/transactions.json', authorize, transactions.json)
+app.post('/:user/transactions', authorize, transactions.create)
+app.get('/:user/report', authorize, transactions.index)
 
 app.use((err, req, res, next) ->
   res.status(500)
