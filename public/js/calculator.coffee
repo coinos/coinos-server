@@ -52,12 +52,13 @@ setup = ->
   g.commission or= 0
   g.symbol or= 'virtexCAD'
 
+  if g.title 
+    $('#title').html(g.title).show()
+
   if g.logo
     $('#logo').attr('src', g.logo).show()
-  else if not g.title
+  else unless g.title
     $('#logo').attr('src', 'img/bitcoin.png').show()
-  else
-    $('#title').html(g.title).show()
 
   address = g.address
   if g.user? and g.user
