@@ -9,7 +9,7 @@ transactions = require("./routes/transactions")
 users = require("./routes/users")
 
 RedisStore = require('connect-redis')(express)
-sessionStore = new RedisStore()
+sessionStore = new RedisStore(ttl: 172800)
 
 app = express()
 app.enable('trust proxy')
@@ -46,10 +46,9 @@ for route, view of routes
   )(route, view) 
 
 authorize = (req, res, next) ->
-  console.log(req.user)
-  return next() if req.isAuthenticated() and
-    (req.params.user and req.params.user is req.user.username) or 
-    req.user.username is 'admin'
+  if req.params.user? is req.user?.username or 
+    req.user?.username is 'admin'
+      return next() 
   res.redirect('/login')
 
 app.get('/setup', calculator.new)
