@@ -28,14 +28,32 @@ filterDates = ->
 
 display = (transactions) ->
   $('tbody tr').remove()
+  $('thead, tfoot').show()
+
+  if transactions.length is 0
+    $('tbody').append("""
+      <tr>
+        <td colspan='5'>
+          No transactions were found during the specified time period
+        </td>
+      </tr>
+    """)
+    $('thead, tfoot').hide()
+
   $.each(transactions, ->
+    exchange = parseFloat(this.exchange)
+    received = parseFloat(this.received)
+    amount = received * exchange
+
+    return true unless !isNaN(parseFloat(amount)) && isFinite(amount)
+
     $('tbody').append("""
       <tr>
         <td>#{this.date}</td>
         <td>#{this.address}</td>
-        <td>#{parseFloat(this.exchange).toFixed(2)}</td>
-        <td>#{parseFloat(this.received).toFixed(2)}</td>
-        <td>#{(this.received * this.exchange).toFixed(2)}</td>
+        <td>#{exchange.toFixed(2)}</td>
+        <td>#{received.toFixed(2)}</td>
+        <td>#{amount.toFixed(2)}</td>
       </tr>
     """)
   )
