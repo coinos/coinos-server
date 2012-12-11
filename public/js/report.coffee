@@ -17,13 +17,15 @@ $(->
 
 filterDates = ->
   transactions = $.grep(g.transactions, (e, i) ->
+    return false unless e
+
     from = moment($('#from').val(), "MM/DD/YYYY")
     to = moment($('#to').val(), "MM/DD/YYYY")
     d = moment(e.date)
     amount = parseFloat(e.exchange) * parseFloat(e.received)
 
-    return false unless !isNaN(parseFloat(amount)) && isFinite(amount)
-    return (!from? || d.diff(from) >= 0) && (!to? || d.diff(to) <= 0)
+    !isNaN(parseFloat(amount)) && isFinite(amount) &&
+      (!from? || d.diff(from) >= 0) && (!to? || d.diff(to) <= 0) 
   )
 
   display(transactions)   
@@ -36,7 +38,7 @@ display = (transactions) ->
     $('tbody').append("""
       <tr>
         <td colspan='5'>
-          No transactions were found during the specified time period
+          No transactions were found for the specified time period
         </td>
       </tr>
     """)

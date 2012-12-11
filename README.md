@@ -1,27 +1,27 @@
-# Bitcoin Point of Sale
+# Vancouver Bitcoin
 
-This is a simple utility that a merchant can run on a tablet or phone to convert dollars to bitcoins and receive payments from clients.  A setup page allows you to configure the company title, logo, address, exchange rate, and commission.
+This is the source code for http://vanbtc.ca/
 
-We use the websocket payment notification API from http://blockchain.info/api/api_websocket to listen for and display payment notifications in real time. The bitcoin exchange rates are fetched from http://bitcoincharts.com/.
+The site includes a simple Point-of-Sale utility that merchants can run on a tablet or phone to convert dollars to bitcoins and receive payments from customers.  See http://vanbtc.ca/calculator for an example. 
 
-When transactions are detected, they are logged along with the time and current exchange rate, and a report is provided so that merchants can account for how many bitcoins they received in a given time period and see their equivalent dollar value.  If desired, merchants can then keep a cash float on hand and instruct cashiers to convert the received bitcoins to dollars on-premise at the time of payment, daily, weekly, monthly or as desired.
+A setup page allows anyone to configure some basic parameters like title, logo, address, exchange, and commission: http://vanbtc.ca/setup
+
+These parameters can be saved and made available at a convenient URL.
+
+# Technical Details
+
+The site is programmed in HTML and Coffeescript using NodeJS and jQuery. Account details and transactions are stored in a Redis database.
+
+We use the websocket payment notification API from http://blockchain.info/api/api_websocket to listen for and display payment notifications in real time. The bitcoin exchange rates are fetched from http://bitcoincharts.com/ and cached with a 15 minute expiry.
+
+When transactions are detected, they're logged along with the current exchange rate. A report is provided so that merchants can account for how many bitcoins they received in a given time period and see their equivalent dollar value. This allows us to insulate merchants from bitcoin market volatility by offering to purchase their bitcoins for exactly what they were worth at the time of sale.
 
 # Installation
 
-The main calculator page `calculator.html` is programmed in HTML5 and should run in any modern browser.  The transaction logging and reporting functionality requires a data store.  It's currently using PHP to write to flat JSON files but am probably going to switch to NodeJS and MySQL.
-
-# Demo Instance
-
-http://vanbtc.ca/
-
-# Todo
-
-* Allow calculator configurations to be saved and assigned to an account
-* Short/pretty URLs for pre-saved configurations
-* Security/authentication around transaction logging
-* Verify transaction logs against the blockchain
-* More robust disconnect and error handling
-* Better device detection and browser testing
+    git clone https://github.com/asoltys/vanbtc.ca  
+    cd vanbtc.ca  
+    npm install  
+    coffee app
 
 # License
 

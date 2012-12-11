@@ -46,7 +46,7 @@ for route, view of routes
   )(route, view) 
 
 authorize = (req, res, next) ->
-  if req.params.user? is req.user?.username or 
+  if req.params.user is req.user?.username or 
     req.user?.username is 'admin'
       return next() 
   res.redirect('/login')
