@@ -14,7 +14,9 @@ module.exports = (passport) ->
       req.login(user, (err) ->
         if (err) 
           return next(err)
-        return res.redirect('/' + user.username)
+        url = req.headers['referer']
+        url = "/#{user.username}" unless /edit/.test(url) 
+        return res.redirect(url)
       )
     )(req, res, next)
 

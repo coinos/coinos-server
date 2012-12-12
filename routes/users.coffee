@@ -1,7 +1,7 @@
 db = require("redis").createClient()
 bcrypt = require('bcrypt')
 
-module.exports =
+module.exports = (sessions) ->
   json: (req, res) ->
     db.hgetall(req.params.user, (err, obj) ->
       delete obj['password']
@@ -23,11 +23,19 @@ module.exports =
     )
 
   create: (req, res) ->
-    bcrypt.hash(req.body.password, 12, (err, hash) ->
-      req.body.password = hash
-      db.hmset(req.body.username, req.body, ->
-       res.redirect(req.body.username)
-      )
+    db.hgetall(req.body.username, (err, obj) ->
+      if obj
+        res.redirect(req.body.username)
+      else
+        bcrypt.hash(req.body.password, 12, (err, hash) ->
+          db.hmset(
+            req.body.username, 
+            {username: req.body.username, password: hash},
+            ->
+              req.headers['referer'] = "/#{req.body.username}/edit"
+              sessions.create(req, res)
+          )
+        )
     )
 
   edit: (req, res) ->
