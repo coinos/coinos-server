@@ -1,12 +1,22 @@
 @import "bootstrap.min.css";
 
-div.hero-unit {
-  background-image: url(/img/vancouver.jpg);
-  background-repeat: no-repeat;
-  background-size: 100%;
+.hero-unit {
+  background: url(/img/vancouver.jpg);
+  background-size: 100% 100%;
+}
+
+.hero-unit p {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .navbar-inverse, .navbar-inverse .navbar-link, .navbar-inverse .brand, .navbar-inverse .nav > li > a { color: #ddd; }
+
+.navbar-inner {
+  border-radius: 0px;
+  -webkit-border-radius: 0px;
+  -moz-border-radius: 0px;
+}
+
 footer { 
   background: black; 
   color: #ddd; 

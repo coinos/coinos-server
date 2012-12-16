@@ -3,7 +3,6 @@
 $(->
   fetchExchangeRate('ask') 
   fetchExchangeRate('bid') 
-  setTimeout(fetchExchangeRate, 900000)
 )
 
 fetchExchangeRate = (type) ->
