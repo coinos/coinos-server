@@ -6,11 +6,11 @@ $(->
 )
 
 fetchExchangeRate = (type) ->
-  commission = 0.03
+  commission = 0.015
   commission *= -1 if type is 'bid'
 
   $.ajax(
-    url: "/ticker?symbol=virtexCAD&type=#{type}&amount=1000",
+    url: "/ticker?symbol=virtexCAD&type=#{type}&amount=100",
     success: (exchange) -> 
       if not exchange?
         exchange = '??'
