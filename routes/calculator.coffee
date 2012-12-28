@@ -16,7 +16,7 @@ exports.ticker = (req, res) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
       try
-        exchange = 1000 / JSON.parse(chunk).out
+        exchange = req.query.amount / JSON.parse(chunk).out
         exchange = (Math.ceil(exchange * 100) / 100).toString()
       catch e
         exchange = ""

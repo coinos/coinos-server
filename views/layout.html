@@ -2,36 +2,35 @@
 <html>
   <head>
     <meta charset="utf-8" />
-		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
     <title>Vancouver Bitcoin</title>
     <link href="img/favicon.ico" rel="shortcut icon" />
     {{#js}}index{{/js}}
     {{#css}}index{{/css}}
+    <meta name="description" content="Vancouver's Bitcoin Community of Merchants and Exchangers" />
+    <meta name="keywords" content="Bitcoin, Vancouver, Point of Sale, Merchants, Exchangers" />
   </head>
   <body>
-    <div class="navbar navbar-inverse">
-      <div class="navbar-inner">
-        <div class="container-fluid">
-          <a class="brand" href="/">VanBTC</a>
-          <div class="nav-collapse collapse">
-            <p class="navbar-text pull-right">
-              Buy: <b id="bid"></b> | Sell: <b id="ask"></b>
-            </p>
-            <ul class="nav">
-              <li><a href="/about">Info</a></li>
-              <li><a href="/merchants">Merchants</a></li>
-              <li><a href="/exchangers">Exchangers</a></li>
-              <li><a href="/contact">Contact</a></li>
-            </ul>
-          </div><!--/.nav-collapse -->
+    <div class="container">
+      <div class="navbar navbar-inverse">
+        <div class="navbar-inner">
+          <div class="container-fluid">
+            <a class="brand" href="/">VanBTC</a>
+            <div class="nav-collapse collapse">
+              <p class="navbar-text pull-right">
+                Buy: <b id="bid"></b> | Sell: <b id="ask"></b>
+              </p>
+              <ul class="nav">
+                <li><a href="/about">Info</a></li>
+                <li><a href="/merchants">Merchants</a></li>
+                <li><a href="/exchangers">Exchangers</a></li>
+                <li><a href="/contact">Contact</a></li>
+              </ul>
+            </div><!--/.nav-collapse -->
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="container-fluid">
       {{>content}}
+      <footer>&nbsp;</footer>
     </div>
-    <hr>
-    <footer>&nbsp;</footer>
   </body>
 </html> 
