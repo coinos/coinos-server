@@ -59,6 +59,7 @@ app.get('/login', sessions.new)
 app.post('/login', sessions.create)
 app.get('/logout', sessions.destroy)
 
+app.get('/:user/exists', users.exists)
 app.get('/:user.json', authorize, users.json)
 app.get('/:user', authorize, users.show)
 

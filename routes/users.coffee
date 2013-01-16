@@ -2,6 +2,12 @@ db = require("redis").createClient()
 bcrypt = require('bcrypt')
 
 module.exports = (sessions) ->
+  exists: (req, res) ->
+    db.hgetall(req.params.user, (err, obj) ->
+      if obj? then res.write('true') else res.write('false')
+      res.end()
+    )
+  
   json: (req, res) ->
     db.hgetall(req.params.user, (err, obj) ->
       delete obj['password']

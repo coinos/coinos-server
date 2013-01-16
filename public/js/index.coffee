@@ -1,8 +1,29 @@
 #= require jquery-1.8.2.min.js
 
+g = exports ? this
+
 $(->
   fetchExchangeRate('ask') 
   fetchExchangeRate('bid') 
+
+  $('#username').blur(->
+    $.get(
+      "/#{$(this).val()}/exists", 
+      username: $(this).val(),
+      (data) ->
+        if data is "true"
+          $('#username').prev().css('color', 'red').html('Username (taken)')
+          g.preventSubmit = true
+        else
+          $('#username').prev().css('color', 'black').html('Username')
+          g.preventSubmit = false
+    )
+  )
+
+  $('#signup').submit(->
+    return false if g.preventSubmit
+    return true
+  )
 )
 
 fetchExchangeRate = (type) ->
