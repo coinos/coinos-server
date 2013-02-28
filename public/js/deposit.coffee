@@ -39,13 +39,13 @@ setupSocket = ->
       
       $.each(results.x.out, (i, v) ->
         if (v.addr == g.address) 
-          received += v.value / 100000000
+          received += v.value
       )
 
       $.each(results.x.inputs, (i, v) ->
         from_address = v.prev_out.addr
         if (v.prev_out.addr == g.address) 
-          input -= v.prev_out.value / 100000000
+          input -= v.prev_out.value
       )
 
       $.get("/issue/#{received}", (data) ->
