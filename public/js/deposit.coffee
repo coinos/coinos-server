@@ -48,7 +48,9 @@ setupSocket = ->
           input -= v.prev_out.value / 100000000
       )
 
-      $('#received').html(received)
+      $.get("/issue/#{received}", (data) ->
+        $('#received').html(data.replace(/\n/g, '<br />'))
+      )
 
 fail = (msg) ->
   g.errors.push(msg)

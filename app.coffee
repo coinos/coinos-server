@@ -63,8 +63,7 @@ app.get('/deposit', (req, res) ->
 app.get('/issue/:amount', (req, res) ->
   exec = require('child_process').exec
 
-
-#  exec("opentxs sendcheque --myacct issuer --args \"memo \\\"here are your OT bitcoins.\\\" amount #{req.params.amount}\" --args \\\"validfor 2592001\\\"", (err, out, stderr) ->
+  exec("opentxs writecheque --myacct issuer --args \"memo \\\"Here's some OT-Bitcoins.\\\" amount #{req.params.amount} validfor 2592000\"", (err, out, stderr) ->
   exec("opentxs stat", (err, out, stderr) ->
     res.write(out)
     res.end()
