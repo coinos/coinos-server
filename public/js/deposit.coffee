@@ -16,6 +16,8 @@ g = exports ? this
 $(->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
   setupSocket()
+  setupQR()
+  displayQR('bitcoin:' + g.address)
 )
 
 setupSocket = ->
