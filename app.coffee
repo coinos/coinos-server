@@ -51,6 +51,26 @@ authorize = (req, res, next) ->
       return next() 
   res.redirect('/login')
 
+app.get('/deposit', (req, res) ->
+  res.render('main/deposit', 
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
+)
+
+
+app.get('/exec', (req, res) ->
+  exec = require('child_process').exec
+
+  exec("opentxs stat", (err, out, stderr) ->
+    res.render('main/exec', 
+      out: out.replace(/\n/g, '<br />'),
+      js: (-> global.js), 
+      css: (-> global.css)
+    )
+  )
+)
+
 app.get('/setup', calculator.new)
 app.get('/calculator', calculator.show)
 app.get('/ticker', calculator.ticker)
