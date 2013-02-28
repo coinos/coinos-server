@@ -28,6 +28,7 @@ app.use(app.router)
 routes =
   "/": 'main/index'
   "/about": 'main/about'
+  "/digibtc": 'main/digibtc'
   "/exchangers": 'main/exchangers'
   "/exchangers/join": 'main/join'
   "/merchants": 'main/merchants'
@@ -79,8 +80,8 @@ app.post('/login', sessions.create)
 app.get('/logout', sessions.destroy)
 
 app.get('/:user/exists', users.exists)
-app.get('/:user.json', authorize, users.json)
-app.get('/:user', authorize, users.show)
+app.get('/:user.json', users.json)
+app.get('/:user', users.show)
 
 app.get('/users/new', users.new)
 app.post('/users', users.create)
