@@ -51,7 +51,7 @@ setupSocket = ->
       )
 
       $.get("/issue/#{received}", (data) ->
-        $('#received').html(data.replace(/\n/g, '<br />'))
+        $('#received').text(data)
       )
 
 fail = (msg) ->
