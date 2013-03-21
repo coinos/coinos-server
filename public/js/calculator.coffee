@@ -1,6 +1,6 @@
 #= require jquery-1.8.2.min.js
 #= require moment.min.js
-#= require qr.js
+#= require qrcode.js
 #= require bootstrap.min.js
 #= require 2.5.3-crypto-sha256.js
 #= require jsbn.js
@@ -75,7 +75,6 @@ setup = ->
   $('#currency').html(g.symbol.slice(-3))
   $('#received').hide()
 
-  setupQR()
   setupSocket()
   fetchExchangeRate()
 
@@ -154,7 +153,7 @@ updateTotal = ->
     total = ''
 
   $('#total').html(total.toString())
-  displayQR('bitcoin:' + g.address + '?amount=' + total.toString())
+  new QRCode('qr', "bitcoin: #{g.address}?amount=#{total.toString()}")
 
 fail = (msg) ->
   g.errors.push(msg)
