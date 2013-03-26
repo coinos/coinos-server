@@ -15,7 +15,7 @@
     "redis": "0.8.2",
     "passport": "0.1.15",
     "passport-local": "0.1.6",
-    "bcrypt": "0.7.3",
+    "bcrypt": "0.7.4",
     "mmm": "0.2.1",
     "connect-redis": "1.4.5"
   }
