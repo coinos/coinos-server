@@ -106,7 +106,7 @@ setupSocket = ->
   setTimeout(setupSocket, 10000)
 
   unless g.websocket and g.websocket.readyState is 1
-    g.websocket = new WebSocket("ws://api.blockchain.info:8335/inv")
+    g.websocket = new WebSocket("ws://ws.blockchain.info:8335/inv")
 
     g.websocket.onopen = -> 
       g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
