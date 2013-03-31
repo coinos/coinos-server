@@ -106,13 +106,16 @@ setupSocket = ->
   setTimeout(setupSocket, 10000)
 
   unless g.websocket and g.websocket.readyState is 1
-    g.websocket = new WebSocket("ws://ws.blockchain.info:8335/inv")
+    g.websocket = new WebSocket("ws://ws.blockchain.info/inv")
 
     g.websocket.onopen = -> 
       g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
     
-    g.websocket.onerror = g.websocket.onclose = ->
+    g.websocket.onerror =  ->
       fail(SOCKET_FAIL)
+
+    g.websocket.onclose = ->
+      setupSocket()
 
     g.websocket.onmessage = (e) ->
       results = eval('(' + e.data + ')')
@@ -153,7 +156,8 @@ updateTotal = ->
     total = ''
 
   $('#total').html(total.toString())
-  new QRCode('qr', "bitcoin: #{g.address}?amount=#{total.toString()}")
+  $('#qr').html('')
+  new QRCode('qr', "bitcoin:#{g.address}?amount=#{total.toString()}")
 
 fail = (msg) ->
   g.errors.push(msg)
