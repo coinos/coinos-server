@@ -50,7 +50,7 @@ $(->
 setup = ->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
   g.commission or= 0
-  g.symbol or= 'virtexCAD'
+  g.symbol or= 'mtgoxUSD'
 
   if g.title 
     $('#title').html(g.title).show()

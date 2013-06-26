@@ -25,52 +25,14 @@ app.use(passport.initialize())
 app.use(passport.session())
 app.use(app.router)
 
-routes =
-  "/": 'main/index'
-  "/about": 'main/about'
-  "/digibtc": 'main/digibtc'
-  "/exchangers": 'main/exchangers'
-  "/exchangers/join": 'main/join'
-  "/merchants": 'main/merchants'
-  "/merchants/signup": 'main/signup'
-  "/contact": 'main/contact'
-
-for route, view of routes
-  ((route, view) ->
-    app.get(route, (req, res) ->
-      res.render(view, 
-        js: (-> global.js), 
-        css: (-> global.css), 
-        layout: 'layout'
-      )
-    )
-  )(route, view) 
-
 authorize = (req, res, next) ->
   if req.params.user is req.user?.username or 
     req.user?.username is 'admin'
       return next() 
   res.redirect('/login')
 
-app.get('/deposit', (req, res) ->
-  res.render('main/deposit', 
-    js: (-> global.js), 
-    css: (-> global.css)
-  )
-)
-
-
-app.get('/issue/:amount', (req, res) ->
-  exec = require('child_process').exec
-
-  exec("opentxs writecheque --myacct issuer --args \"memo \\\"Here's some OT-Bitcoins.\\\" amount #{req.params.amount} validfor 2592000\"", (err, out, stderr) ->
-    res.write(out)
-    res.end()
-  )
-)
-
+app.get('/', calculator.show)
 app.get('/setup', calculator.new)
-app.get('/calculator', calculator.show)
 app.get('/ticker', calculator.ticker)
 
 app.get('/login', sessions.new)
