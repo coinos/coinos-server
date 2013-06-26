@@ -32,7 +32,9 @@ authorize = (req, res, next) ->
   res.redirect('/login')
 
 app.get('/', calculator.show)
-app.get('/setup', calculator.new)
+app.get('/register', users.new)
+app.get('/setup', calculator.setup)
+app.get('/calculator', calculator.show)
 app.get('/ticker', calculator.ticker)
 
 app.get('/login', sessions.new)
