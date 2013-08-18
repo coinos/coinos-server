@@ -1,10 +1,10 @@
-# Vancouver Bitcoin
+# Bitcoin Point of Sale Page
 
-This is the source code for http://vanbtc.ca/
+This is the source code for http://pos.bitcoincoop.org/
 
-The site includes a simple Point-of-Sale utility that merchants can run on a tablet or phone to convert dollars to bitcoins and receive payments from customers.  See http://vanbtc.ca/calculator for an example. 
+This is a simple Point-of-Sale page that merchants can run on a tablet or phone to convert dollars to bitcoins and receive payments from customers.  
 
-A setup page allows anyone to configure some basic parameters like title, logo, address, exchange, and commission: http://vanbtc.ca/setup
+A setup page allows anyone to configure some basic parameters like title, logo, address, exchange, and commission: http://pos.bitcoincoop.org/setup
 
 These parameters can be saved and made available at a convenient URL.
 
@@ -18,10 +18,14 @@ When transactions are detected, they're logged along with the current exchange r
 
 # Installation
 
-    git clone https://github.com/asoltys/vanbtc.ca  
-    cd vanbtc.ca  
+Install nodeJS (http://nodejs.org/) and redis (http://redis.io/) then:
+
+    git clone https://github.com/asoltys/pos.bitcoincoop.org pos
+    cd pos
     npm install  
     coffee app
+
+Now the app should be runnning at http://localhost:3000/
 
 # License
 

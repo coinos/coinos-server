@@ -33,7 +33,7 @@ authorize = (req, res, next) ->
 
 app.get('/', calculator.show)
 app.get('/register', users.new)
-app.get('/setup', calculator.setup)
+app.get('/setup', calculator.new)
 app.get('/calculator', calculator.show)
 app.get('/ticker', calculator.ticker)
 
