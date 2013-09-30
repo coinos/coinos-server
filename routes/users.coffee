@@ -36,7 +36,23 @@ module.exports = (sessions) ->
         bcrypt.hash(req.body.password, 12, (err, hash) ->
           db.hmset(
             req.body.username, 
-            {username: req.body.username, password: hash},
+            {   
+            	username: req.body.username, 
+            	password: hash, 
+            	email: req.body.email,
+            	firstname: req.body.firstname,
+            	lastname: req.body.lastname,
+            	company: req.body.company,
+            	email: req.body.email,
+            	companytype: req.body.companytype,
+            	address1: req.body.address1,
+            	address2: req.body.address2,
+            	city: req.body.city,
+            	postcode: req.body.postcode,
+            	state: req.body.state,
+            	country: req.body.country	
+            }
+            ,
             ->
               req.headers['referer'] = "/#{req.body.username}/edit"
               sessions.create(req, res)
