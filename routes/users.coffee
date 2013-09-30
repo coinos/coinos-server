@@ -3,13 +3,14 @@ bcrypt = require('bcrypt')
 
 module.exports = (sessions) ->
   exists: (req, res) ->
-    db.hgetall(req.params.user, (err, obj) ->
+  	
+    db.hgetall("user:"+req.params.user, (err, obj) ->
       if obj? then res.write('true') else res.write('false')
       res.end()
     )
   
   json: (req, res) ->
-    db.hgetall(req.params.user, (err, obj) ->
+    db.hgetall("user:"+req.params.user, (err, obj) ->
       delete obj['password']
       res.write(JSON.stringify(obj))
       res.end()
@@ -29,28 +30,30 @@ module.exports = (sessions) ->
     )
 
   create: (req, res) ->
-    db.hgetall(req.body.username, (err, obj) ->
+    userkey = "user:"+req.body.username
+    db.hgetall(userkey, (err, obj) ->
       if obj
         res.redirect(req.body.username)
       else
         bcrypt.hash(req.body.password, 12, (err, hash) ->
+          db.sadd("users",userkey)
           db.hmset(
-            req.body.username, 
+            userkey, 
             {   
-            	username: req.body.username, 
-            	password: hash, 
-            	email: req.body.email,
-            	firstname: req.body.firstname,
-            	lastname: req.body.lastname,
-            	company: req.body.company,
-            	email: req.body.email,
-            	companytype: req.body.companytype,
-            	address1: req.body.address1,
-            	address2: req.body.address2,
-            	city: req.body.city,
-            	postcode: req.body.postcode,
-            	state: req.body.state,
-            	country: req.body.country	
+                username: req.body.username, 
+                password: hash, 
+                email: req.body.email,
+                firstname: req.body.firstname,
+                lastname: req.body.lastname,
+                company: req.body.company,
+                email: req.body.email,
+                companytype: req.body.companytype,
+                address1: req.body.address1,
+                address2: req.body.address2,
+                city: req.body.city,
+                postcode: req.body.postcode,
+                state: req.body.state,
+                country: req.body.country   
             }
             ,
             ->
@@ -70,6 +73,6 @@ module.exports = (sessions) ->
   update: (req, res) ->
     return unless req.params.user is req.user.username or 
       req.user.username is 'admin'
-    db.hmset(req.params.user, req.body, ->
+    db.hmset("user:"+req.params.user, req.body, ->
      res.redirect("/#{req.params.user}")
     )
