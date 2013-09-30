@@ -47,6 +47,7 @@ module.exports = (sessions) ->
                 lastname: req.body.lastname,
                 company: req.body.company,
                 email: req.body.email,
+                phone: req.body.phone,
                 companytype: req.body.companytype,
                 address1: req.body.address1,
                 address2: req.body.address2,
