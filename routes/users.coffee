@@ -3,7 +3,7 @@ bcrypt = require('bcrypt')
 
 module.exports = (sessions) ->
   exists: (req, res) ->
-  	
+      
     db.hgetall("user:"+req.params.user, (err, obj) ->
       if obj? then res.write('true') else res.write('false')
       res.end()
@@ -39,7 +39,7 @@ module.exports = (sessions) ->
           db.sadd("users",userkey)
           db.hmset(
             userkey, 
-            {   
+            {
                 username: req.body.username, 
                 password: hash, 
                 email: req.body.email,
@@ -56,11 +56,10 @@ module.exports = (sessions) ->
                 state: req.body.state,
                 country: req.body.country,
                 web: req.body.web
-            }
-            ,
+            },
             ->
-			req.headers['referer'] = "/#{req.body.username}/edit"
-			sessions.create(req, res)
+            req.headers['referer'] = "/#{req.body.username}/edit"
+            sessions.create(req, res)
           )
         )
     )
@@ -74,7 +73,7 @@ module.exports = (sessions) ->
 
   update: (req, res) ->
     return unless req.params.user is req.user.username or 
-      req.user.username is 'admin'
+    req.user.username is 'admin'
     db.hmset("user:"+req.params.user, req.body, ->
-     res.redirect("/#{req.params.user}")
+    res.redirect("/#{req.params.user}")
     )
