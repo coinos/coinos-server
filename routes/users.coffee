@@ -59,8 +59,8 @@ module.exports = (sessions) ->
             }
             ,
             ->
-              req.headers['referer'] = "/#{req.body.username}/edit"
-              sessions.create(req, res)
+			req.headers['referer'] = "/#{req.body.username}/edit"
+			sessions.create(req, res)
           )
         )
     )
