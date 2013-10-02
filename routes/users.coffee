@@ -54,7 +54,8 @@ module.exports = (sessions) ->
                 city: req.body.city,
                 postcode: req.body.postcode,
                 state: req.body.state,
-                country: req.body.country   
+                country: req.body.country,
+                web: req.body.web
             }
             ,
             ->
