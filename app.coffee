@@ -62,3 +62,21 @@ app.use((err, req, res, next) ->
 )
 
 app.listen(3000)
+
+# Setup DB
+db = require("redis").createClient()
+db.sismember("mts","mt:othr", (err,res) ->
+   if !res
+      db.hmset("mt:rest",{code: rest, label: "Restaurant/Bar"}, ->
+          db.sadd("mts","mt:rest")
+      )	  
+      db.hmset("mt:coff",{code: rest, label: "Coffee Shop"}, ->
+          db.sadd("mts","mt:coff")
+      )	
+      db.hmset("mt:othr",{code: rest, label: "Other"}, ->
+          db.sadd("mts","mt:othr")
+      )	         
+      console.log("Added merchant types.")
+)
+
+   
