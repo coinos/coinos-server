@@ -72,10 +72,7 @@ db.sismember("mts","mt:othr", (err,res) ->
       )	  
       db.hmset("mt:coff",{code: rest, label: "Coffee Shop"}, ->
           db.sadd("mts","mt:coff")
-      )	
-      db.hmset("mt:othr",{code: rest, label: "Other"}, ->
-          db.sadd("mts","mt:othr")
-      )	         
+      )	        
       console.log("Added merchant types.")
 )
 
