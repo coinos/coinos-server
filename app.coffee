@@ -65,7 +65,7 @@ app.listen(3000)
 
 # Setup DB
 db = require("redis").createClient()
-db.sismember("mts","mt:othr", (err,res) ->
+db.sismember("mts","mt:rest", (err,res) ->
    if !res
       db.hmset("mt:rest",{code: rest, label: "Restaurant/Bar"}, ->
           db.sadd("mts","mt:rest")
