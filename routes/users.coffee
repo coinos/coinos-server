@@ -36,31 +36,12 @@ module.exports = (sessions) ->
         res.redirect(req.body.username)
       else
         bcrypt.hash(req.body.password, 12, (err, hash) ->
-          db.sadd("users",userkey)
-          db.hmset(
-            userkey, 
-            {
-                username: req.body.username, 
-                password: hash, 
-                email: req.body.email,
-                firstname: req.body.firstname,
-                lastname: req.body.lastname,
-                company: req.body.company,
-                email: req.body.email,
-                phone: req.body.phone,
-                companytype: req.body.companytype,
-                address1: req.body.address1,
-                address2: req.body.address2,
-                city: req.body.city,
-                postcode: req.body.postcode,
-                state: req.body.state,
-                country: req.body.country,
-                web: req.body.web
-            },
-            ->
-            req.headers['referer'] = "/#{req.body.username}/edit"
-            sessions.create(req, res)
-          )
+           db.sadd("users",userkey)
+           formfields = {username: req.body.username,password: hash,email: req.body.email,firstname: req.body.firstname,lastname: req.body.lastname,company: req.body.company,email: req.body.email,phone: req.body.phone,companytype: req.body.companytype,address1: req.body.address1,address2: req.body.address2,city: req.body.city,postcode: req.body.postcode,state: req.body.state,country: req.body.country,web: req.body.web}
+           db.hmset(userkey,formfields, ->
+              req.headers['referer'] = "/#{req.body.username}/edit"
+              sessions.create(req, res)
+           )
         )
     )
 
