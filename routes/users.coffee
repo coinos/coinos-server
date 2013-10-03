@@ -24,11 +24,19 @@ module.exports = (sessions) ->
     )
 
   new: (req, res) ->
-    res.render('users/new', 
-      js: (-> global.js), 
-      css: (-> global.css),
+    db.smembers('mts', (err, keys) ->
+       mts = []
+       for mt in keys
+          db.hgetall(mt, (err, it) ->
+            mts.push(it)
+            if keys.length==mts.length
+               res.render('users/new', 
+                  js: (-> global.js), 
+                  css: (-> global.css),
+                  mtypes: mts
+               )     
+          )
     )
-
   create: (req, res) ->
     userkey = "user:"+req.body.username
     db.hgetall(userkey, (err, obj) ->
