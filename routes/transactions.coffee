@@ -1,4 +1,4 @@
-db = require("redis").createClient()
+db = require('../redis')
 
 module.exports =
   json: (req, res) ->

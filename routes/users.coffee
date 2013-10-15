@@ -1,4 +1,4 @@
-db = require("redis").createClient()
+db = require("../redis")
 bcrypt = require('bcrypt')
 
 module.exports = (sessions) ->

@@ -9,7 +9,7 @@ transactions = require("./routes/transactions")
 users = require("./routes/users")(sessions)
 
 RedisStore = require('connect-redis')(express)
-sessionStore = new RedisStore(ttl: 172800)
+sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
 
 app = express()
 app.enable('trust proxy')
