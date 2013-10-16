@@ -1,10 +1,9 @@
 {
-  "name": "application-name",
+  "name": "pos.bitcoincoop.org",
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "coffee app.coffee",
-    "prepublish": "cp redis.coffee.default redis.coffee"
+    "start": "coffee app.coffee"
   },
   "dependencies": {
     "express": "3.0.1",

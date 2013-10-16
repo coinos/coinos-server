@@ -2,4 +2,3 @@ public/bitcoins.pdf
 node_modules
 config.js
 builtAssets
-redis.coffee
