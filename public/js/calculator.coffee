@@ -112,6 +112,7 @@ setupSocket = ->
       g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
     
     g.websocket.onerror =  ->
+      g.websocket = null
       fail(SOCKET_FAIL)
 
     g.websocket.onclose = ->
