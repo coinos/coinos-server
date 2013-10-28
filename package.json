@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "prepublish": "coffee install.coffee",
     "start": "coffee app.coffee"
   },
   "dependencies": {
