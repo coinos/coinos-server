@@ -25,4 +25,3 @@ db.sismember("mts","mt:rest", (err,res) ->
       console.log("Added merchant types")
 )
 
-process.exit()
