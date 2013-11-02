@@ -9,17 +9,13 @@ exports.show = (req, res) ->
 
 exports.ticker = (req, res) ->
   options = 
-    host: 'bitcoincharts.com', 
-    path: "/t/depthcalc.json?symbol=#{req.query.symbol}&type=#{req.query.type}&amount=#{req.query.amount}&currency=true"
+    host: 'api.bitcoinaverage.com', 
+    path: "/exchanges/CAD"
 
   require('http').get(options, (r) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
-      try
-        exchange = req.query.amount / JSON.parse(chunk).out
-        exchange = (Math.ceil(exchange * 100) / 100).toString()
-      catch e
-        exchange = ""
+      exchange = JSON.parse(chunk).cavirtex.rates[req.query.type].toString()
 
       res.writeHead(200, 
         'Content-Length': exchange.length,
