@@ -3,7 +3,6 @@ bcrypt = require('bcrypt')
 
 module.exports = (sessions) ->
   exists: (req, res) ->
-      
     db.hgetall("user:"+req.params.user, (err, obj) ->
       if obj? then res.write('true') else res.write('false')
       res.end()
@@ -14,6 +13,19 @@ module.exports = (sessions) ->
       delete obj['password']
       res.write(JSON.stringify(obj))
       res.end()
+    )
+
+  index: (req, res) -> 
+    db.keys('*', (err, obj) ->
+      res.write(JSON.stringify(obj))
+      res.end()
+    )
+
+  list: (req, res) ->
+    res.render('users/index', 
+      js: (-> global.js), 
+      css: (-> global.css),
+      layout: 'layout'
     )
 
   show: (req, res) ->
@@ -37,6 +49,7 @@ module.exports = (sessions) ->
                )     
           )
     )
+
   create: (req, res) ->
     userkey = "user:"+req.body.username
     db.hgetall(userkey, (err, obj) ->
