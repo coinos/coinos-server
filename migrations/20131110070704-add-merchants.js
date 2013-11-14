@@ -3,12 +3,12 @@ var async = require('async');
 var type = dbm.dataType;
 
 exports.up = function(db, callback) {
-  async.series([db.bind.createTable('merchants', {
+  async.series([db.createTable.bind(db, 'merchants', {
       user_id: { type: 'int', primaryKey: true },
       formula: { type: 'string' },
       limit: { type: 'decimal' }
     }),
-    db.runSql('ALTER TABLE merchants ALTER COLUMN "limit" type decimal(10,2);')
+    db.runSql.bind(db, 'ALTER TABLE merchants ALTER COLUMN "limit" type decimal(10,2);')
     ], callback);
 
 };

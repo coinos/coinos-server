@@ -4,7 +4,7 @@ var type = dbm.dataType;
 
 exports.up = function(db, callback) {
   async.series([
-    db.createTable('orders', {
+    db.createTable.bind(db, 'orders', {
       id: { type: 'int', primaryKey: true, autoIncrement: true },
       merchant_id: { type: 'int' },
       amount: { type: 'decimal' },
@@ -13,8 +13,8 @@ exports.up = function(db, callback) {
       creation_time: { type: 'datetime' },
       expiration_time: { type: 'datetime' }
     }),
-    db.runSql('ALTER TABLE orders ALTER COLUMN amount type decimal(10,2);'),
-    db.runSql('ALTER TABLE orders ALTER COLUMN rate type decimal(10,2);')
+    db.runSql.bind(db, 'ALTER TABLE orders ALTER COLUMN amount type decimal(10,2);'),
+    db.runSql.bind(db, 'ALTER TABLE orders ALTER COLUMN rate type decimal(10,2);')
   ], callback);
 };
 
