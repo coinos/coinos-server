@@ -151,7 +151,7 @@ setupSocket = ->
 updateTotal = ->
   amount = parseFloat($('#amount').val())
   total = amount / g.exchange
-  total = Math.ceil(total * 10000) / 10000
+  total = Math.ceil(total * 10000) / 10
 
   unless $.isNumeric(total)
     total = ''
