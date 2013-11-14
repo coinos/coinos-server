@@ -13,9 +13,9 @@ exports.up = function(db, callback) {
       creation_time: { type: 'datetime' },
       expiration_time: { type: 'datetime' }
     }),
-    db.runSql('ALTER TABLE orders ALTER COLUMN amount type decimal(10,2);', callback),
-    db.runSql('ALTER TABLE orders ALTER COLUMN rate type decimal(10,2);', callback)
-  ]);
+    db.runSql('ALTER TABLE orders ALTER COLUMN amount type decimal(10,2);'),
+    db.runSql('ALTER TABLE orders ALTER COLUMN rate type decimal(10,2);')
+  ], callback);
 };
 
 exports.down = function(db, callback) {
