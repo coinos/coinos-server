@@ -21,6 +21,7 @@ $(->
   g.commission = parseFloat(get('commission'))
   g.logo = get('logo')
   g.errors = []
+  g.receivable = 0
 
   if g.user
     $.ajax(
@@ -121,7 +122,6 @@ setupSocket = ->
     g.websocket.onmessage = (e) ->
       results = eval('(' + e.data + ')')
       from_address = ''
-      total = 0
       received = 0
       
       $.each(results.x.out, (i, v) ->
@@ -135,7 +135,7 @@ setupSocket = ->
           input -= v.prev_out.value / 100000000
       )
 
-      if (total <= received) 
+      if (g.receivable <= received) 
         $('#amount').blur()
         $('#payment').hide()
         $('#received').fadeIn('slow')
@@ -150,15 +150,15 @@ setupSocket = ->
 
 updateTotal = ->
   amount = parseFloat($('#amount').val())
-  total = amount / g.exchange
-  total = Math.ceil(total * 10000) / 10
+  total = (amount * 1000 / g.exchange).toFixed(5)
+  g.receivable = (amount / g.exchange).toFixed(8)
 
   unless $.isNumeric(total)
     total = ''
 
   $('#total').html(total.toString())
   $('#qr').html('')
-  new QRCode('qr', "bitcoin:#{g.address}?amount=#{total.toString()}")
+  new QRCode('qr', "bitcoin:#{g.address}?amount=#{g.receivable.toString()}")
 
 fail = (msg) ->
   g.errors.push(msg)
