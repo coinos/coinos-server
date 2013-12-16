@@ -49,9 +49,9 @@ app.post('/users', users.create)
 app.get('/:user/edit', authorize, users.edit)
 app.post('/:user/update', authorize, users.update)
 
-app.get('/:user/transactions.json', transactions.json)
+app.get('/:user/transactions.json', authorize, transactions.json)
 app.post('/:user/transactions', transactions.create)
-app.get('/:user/report', transactions.index)
+app.get('/:user/report', authorize, transactions.index)
 app.get('/:user', users.show)
 
 app.use((err, req, res, next) ->
