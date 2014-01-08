@@ -23,6 +23,7 @@ Install nodeJS (http://nodejs.org/) and redis (http://redis.io/) then:
     git clone https://github.com/asoltys/pos.bitcoincoop.org pos
     cd pos
     npm install  
+    ./fetch_rates.sh
     coffee app
 
 Now the app should be runnning at http://localhost:3000/
