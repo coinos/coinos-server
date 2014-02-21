@@ -16,6 +16,7 @@ module.exports = (sessions) ->
     )
 
   index: (req, res) -> 
+    return
     db.keys('*', (err, obj) ->
       res.write(JSON.stringify(obj))
       res.end()
