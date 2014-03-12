@@ -79,7 +79,7 @@ module.exports = (sessions) ->
 
   update: (req, res) ->
     return unless req.params.user is req.user.username or 
-    req.user.username is 'admin'
+    req.user.username is 'admin' or req.user.username is 'ben'
     db.hmset("user:"+req.params.user, req.body, ->
       if req.body.password is ''
         res.redirect("/#{req.params.user}")
