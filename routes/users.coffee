@@ -81,5 +81,12 @@ module.exports = (sessions) ->
     return unless req.params.user is req.user.username or 
     req.user.username is 'admin'
     db.hmset("user:"+req.params.user, req.body, ->
-      res.redirect("/#{req.params.user}")
+      if req.body.password==''
+        res.redirect("/#{req.params.user}")
+      else
+        bcrypt.hash(req.body.password, 12, (err, hash) ->
+          db.hmset("user:"+req.params.user,password: hash, ->
+            res.redirect("/#{req.params.user}")
+          )
+        )
     )

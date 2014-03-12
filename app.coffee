@@ -26,8 +26,10 @@ app.use(passport.session())
 app.use(app.router)
 
 authorize = (req, res, next) ->
-  if req.params.user is req.user?.username or 
-    req.user?.username is 'admin'
+
+  if req.params.user is req.user?.username or
+    req.user?.username is 'admin' or
+    req.user?.username is 'ben'
       return next() 
   res.redirect('/login')
 
