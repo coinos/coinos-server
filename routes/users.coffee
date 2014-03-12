@@ -11,7 +11,7 @@ module.exports = (sessions) ->
   json: (req, res) ->
     db.hgetall("user:"+req.params.user, (err, obj) ->
       delete obj['password']
-      res.write(200, {"Content-Type": "application/json"});
+      res.writeHead(200, {"Content-Type": "application/json"});
       res.write(JSON.stringify(obj))
       res.end()
     )
