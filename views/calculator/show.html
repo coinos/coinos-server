@@ -24,7 +24,17 @@
         <input type="text" id="amount" />
         <small id="currency"></small>
 
-        <br /><br />
+        <label for="tip">Tip:</label>
+        <div class="btn-toolbar">
+          <div class="btn-group" id="tip">
+              <a id="tip0" class="btn tipSelect active" href="#"><i class="icon-align-left">0%</i></a>
+              <a id="tip10" class="btn tipSelect" href="#"><i class="icon-align-left">10%</i></a>
+              <a id="tip15" class="btn tipSelect" href="#"><i class="icon-align-center">15%</i></a>
+              <a id="tip20" class="btn tipSelect" href="#"><i class="icon-align-right">20%</i></a>
+          </div>
+        </div>
+
+        <br />
 
         <div id="payment">
           <p>Please send <strong id="total">0.0</strong> mBTC to</p><br />

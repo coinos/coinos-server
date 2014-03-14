@@ -11,6 +11,8 @@ EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
 ADDRESS_FAIL = "Invalid address"
 
+tip = 1
+
 g = exports ? this
 
 $(->
@@ -39,6 +41,10 @@ $(->
   else 
     setup()
 
+  $('.tipSelect').click(->
+    activateTip(this.id.substring(3))
+    updateTotal()
+  )
   $('#amount').keyup(updateTotal)
   $('#amount').focus(->
     $('#received').hide()
@@ -47,6 +53,13 @@ $(->
     updateTotal()
   )
 )
+
+activateTip = (p) ->
+  $('.tipSelect').css('font-weight','normal')
+  $('.tipSelect').removeClass('active')
+  $('#tip'+p).css('font-weight','bold')
+  $('#tip'+p).addClass('active')
+  tip = 1+(parseFloat(p)/100)
 
 setup = ->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
@@ -149,7 +162,7 @@ setupSocket = ->
         )
 
 updateTotal = ->
-  amount = parseFloat($('#amount').val())
+  amount = parseFloat($('#amount').val() * tip)
   total = (amount * 1000 / g.exchange).toFixed(5)
   g.receivable = (amount / g.exchange).toFixed(8)
 
@@ -159,6 +172,7 @@ updateTotal = ->
   $('#total').html(total.toString())
   $('#qr').html('')
   new QRCode('qr', "bitcoin:#{g.address}?amount=#{g.receivable.toString()}")
+
 
 fail = (msg) ->
   g.errors.push(msg)
