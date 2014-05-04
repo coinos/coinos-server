@@ -15,7 +15,6 @@ exports.ticker = (req, res) ->
   require('https').get(options, (r) ->
     r.setEncoding('utf-8')
     r.on('data', (chunk) ->
-      console.log(chunk)
       exchange = JSON.parse(chunk).cavirtex.rates[req.query.type].toString()
 
       res.writeHead(200, 
