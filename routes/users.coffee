@@ -31,10 +31,15 @@ module.exports = (sessions) ->
     )
 
   show: (req, res) ->
-    res.render('calculator/show', 
-      user: req.params.user, 
-      js: (-> global.js), 
-      css: (-> global.css) 
+    db.hgetall("user:"+req.params.user, (err, obj) ->
+      if obj 
+        res.render('calculator/show', 
+          user: req.params.user, 
+          js: (-> global.js), 
+          css: (-> global.css) 
+        )
+      else 
+        res.redirect('/login')
     )
 
   new: (req, res) ->
