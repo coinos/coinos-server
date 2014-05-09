@@ -86,8 +86,10 @@ module.exports = (sessions) ->
   update: (req, res) ->
     return unless req.params.user is req.user.username or 
     req.user.username is 'admin' or req.user.username is 'ben'
+    if req.body.password is ''
+      delete req.body.password
     db.hmset("user:"+req.params.user, req.body, ->
-      if req.body.password is ''
+      if not req.body.password?
         res.redirect("/#{req.params.user}")
       else
         bcrypt.hash(req.body.password, 12, (err, hash) ->
