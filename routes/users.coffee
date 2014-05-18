@@ -39,7 +39,11 @@ module.exports = (sessions) ->
           css: (-> global.css) 
         )
       else 
-        res.redirect('/login')
+        res.render('sessions/new', 
+          js: (-> global.js), 
+          css: (-> global.css),
+          notice: true
+        )
     )
 
   new: (req, res) ->
