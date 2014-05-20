@@ -1,27 +1,29 @@
-# Bitcoin Point of Sale Page
+# CoinOS
 
-This is the source code for http://pos.bitcoincoop.org/
+CoinOS is a mobile-friendly Point-of-Sale page that merchants can use to accept Bitcoin payments.
 
-This is a simple Point-of-Sale page that merchants can run on a tablet or phone to convert dollars to bitcoins and receive payments from customers.  
+# How it Works
 
-A setup page allows anyone to configure some basic parameters like title, logo, address, exchange, and commission: http://pos.bitcoincoop.org/setup
-
-These parameters can be saved and made available at a convenient URL.
+* You create an account and configure some basic parameters for your storefront like a name, logo, and bitcoin receiving address
+* You set an exchange rate to be used to convert from your local currency to bitcoin
+* CoinOS creates a custom webpage that you can bring up on a mobile device to generate payment requests
+* You enter a sale amount in your local currency and CoinOS converts it to bitcoin using your chosen exchange rate
+* CoinOS creates a QR code for the payment request with your receiving address and the sale amount encoded
+* CoinOS listens for transactions on the Bitcoin network and displays a notification when the requested amount is received at your address
+* The details of the transaction and the exchange rate used at the time of sale are recorded and made available in a convenient report
 
 # Technical Details
 
-The site is programmed in HTML and Coffeescript using NodeJS and jQuery. Account details and transactions are stored in a Redis database.
+The site is programmed in HTML and Coffeescript using NodeJS and jQuery. Account details and transaction data are stored in a Redis database.  Users are responsible for providing their own receiving addresses managed with whatever wallet they prefer, so CoinOS never stores any bitcoins.
 
-We use the websocket payment notification API from http://blockchain.info/api/api_websocket to listen for and display payment notifications in real time. The bitcoin exchange rates are fetched from http://bitcoincharts.com/ and cached with a 15 minute expiry.
-
-When transactions are detected, they're logged along with the current exchange rate. A report is provided so that merchants can account for how many bitcoins they received in a given time period and see their equivalent dollar value. This allows us to insulate merchants from bitcoin market volatility by offering to purchase their bitcoins for exactly what they were worth at the time of sale.
+We use the websocket payment notification API from http://blockchain.info/api/api_websocket to listen for and display payment notifications in real time. The bitcoin exchange rates are fetched from http://bitcoinaverage.com/
 
 # Installation
 
 Install nodeJS (http://nodejs.org/) and redis (http://redis.io/) then:
 
-    git clone https://github.com/asoltys/pos.bitcoincoop.org pos
-    cd pos
+    git clone https://github.com/thebitcoincoop/coinos
+    cd coinos
     npm install  
     ./fetch_rates.sh
     coffee app
