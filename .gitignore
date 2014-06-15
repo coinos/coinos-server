@@ -5,3 +5,4 @@ builtAssets
 database.json
 sequelize.coffee
 npm-debug.log
+rates.json
