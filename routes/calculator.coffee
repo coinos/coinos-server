@@ -8,19 +8,21 @@ exports.show = (req, res) ->
   )
 
 exports.ticker = (req, res) ->
-  options = 
-    host: 'api.bitcoinaverage.com', 
-    path: "/exchanges/CAD"
+  fs = require('fs')
+  fs.readFile("./public/js/rates.json", (err, data) ->
+    req.query.currency ||= 'CAD'
+    req.query.symbol ||= 'quadrigacx'
+    req.query.type ||= 'bid'
 
-  require('https').get(options, (r) ->
-    r.setEncoding('utf-8')
-    r.on('data', (chunk) ->
-      exchange = JSON.parse(chunk).cavirtex.rates[req.query.type].toString()
+    try 
+      exchange = JSON.parse(data)[req.query.currency][req.query.symbol]['rates'][req.query.type].toString()
+    catch e 
+      exchange = "0"
 
-      res.writeHead(200, 
-        'Content-Length': exchange.length,
-        'Content-Type': 'text/plain')
-      res.write(exchange)
-      res.end()
-    )
+    res.writeHead(200, 
+      'Content-Length': exchange.length,
+      'Content-Type': 'text/plain')
+    res.write(exchange)
+    res.end()
   )
+

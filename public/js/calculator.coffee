@@ -20,6 +20,7 @@ $(->
   g.title = get('title')
   g.address = get('address')
   g.symbol = get('symbol')
+  g.currency = get('currency')
   g.commission = parseFloat(get('commission'))
   g.logo = get('logo')
   g.errors = []
@@ -33,6 +34,7 @@ $(->
         if data?
           g.title = data.title
           g.address = data.address 
+          g.currency = data.currency
           g.symbol = data.symbol
           g.commission = data.commission 
           g.logo = data.logo 
@@ -64,7 +66,7 @@ activateTip = (p) ->
 setup = ->
   g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
   g.commission or= 0
-  g.symbol or= 'mtgoxUSD'
+  g.symbol or= 'quadrigacx'
 
   if g.title 
     $('#title').html(g.title).show()
@@ -83,10 +85,8 @@ setup = ->
   else
     fail(ADDRESS_FAIL)
     
-  symbol = g.symbol
-
-  $('#symbol').html(symbol)
-  $('#currency').html(g.symbol.slice(-3))
+  $('#symbol').html(g.currency)
+  $('#currency').html(g.currency)
   $('#received').hide()
 
   setupSocket()
@@ -94,7 +94,7 @@ setup = ->
 
 fetchExchangeRate = ->
   $.ajax(
-    url: "ticker?symbol=#{g.symbol}&type=bid&amount=1000",
+    url: "ticker?currency=#{g.currency}&symbol=#{g.symbol}&type=bid",
     success: (exchange) -> 
       if exchange?
         clear(EXCHANGE_FAIL)

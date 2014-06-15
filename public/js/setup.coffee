@@ -5,30 +5,44 @@
 #= require check_address.js
 
 $(->
-  symbols = ['mtgoxUSD', 'btceUSD', 'bitstampUSD', 'virwoxSLL', 'btcdeEUR', 'mtgoxEUR', 'btc24EUR', 'mtgoxAUD', 'cryptoxAUD', 'mtgoxGBP', 'btcnCNY', 'intrsngEUR', 'virtexCAD', 'mtgoxPLN', 'cbxUSD', 'bitcurexPLN', 'bitmarketEUR', 'bitfloorUSD', 'mrcdBRL', 'bcEUR', 'lybitCAD']
-  symbols = symbols.sort()
+  $.getJSON("/js/rates.json", (data) ->
+    currencies = Object.keys(data)
+    currencies = currencies.sort()
+    currencies.pop()
 
-  user = $('#username').val()
-
-  $.each(symbols, (i, v) ->
-    $('#symbol').append("<option value='#{v}'>#{v}</option>")
-  )
-  $("#symbol option[value='mtgoxUSD']").attr('selected', 'selected')
-
-  $('#address').change(->
-    if check_address($(this).val())
-      $(this).css('color', 'black')
-    else
-      $(this).css('color', 'red')
-  )
-
-  if user
-    $('#setup').attr('action', "/#{user}/update").attr('method', 'post')
-    $.getJSON("/#{user}.json", (data) ->
-      $('#title').val(data.title)
-      $('#logo').val(data.logo)
-      $('#address').val(data.address)
-      $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
-      $('#commission').val(data.commission)
+  
+    $.each(currencies, (i, v) ->
+      $('#currency').append("<option value='#{v}'>#{v}</option>")
     )
+    $("#currency option[value='CAD']").attr('selected', 'selected')
+
+
+    user = $('#username').val()
+
+    $('#currency').change(->
+      $('#symbol option').remove()
+      symbols = Object.keys(data[$(this).val()])
+      $.each(symbols, (i, v) ->
+        $('#symbol').append("<option value='#{v}'>#{v}</option>")
+      )
+      $("#symbol option[value='quadrigacx']").attr('selected', 'selected')
+    ).change()
+
+    $('#address').change(->
+      if check_address($(this).val())
+        $(this).css('color', 'black')
+      else
+        $(this).css('color', 'red')
+    )
+
+    if user
+      $('#setup').attr('action', "/#{user}/update").attr('method', 'post')
+      $.getJSON("/#{user}.json", (data) ->
+        $('#title').val(data.title)
+        $('#logo').val(data.logo)
+        $('#address').val(data.address)
+        $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
+        $('#commission').val(data.commission)
+      )
+  )
 )

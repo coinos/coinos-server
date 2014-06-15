@@ -58,6 +58,7 @@ app.get('/:user', users.show)
 
 app.use((err, req, res, next) ->
   res.status(500)
+  res.send('An error occurred');
   console.log(err)
   res.end()
 )
