@@ -21,4 +21,8 @@ module.exports = (passport) ->
 
   destroy: (req, res) ->
     req.logout()
-    res.redirect('/login')
+    res.render('sessions/new',
+      js: (-> global.js),
+      css: (-> global.css),
+      badpw: true
+    )
