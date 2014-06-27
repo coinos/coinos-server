@@ -64,7 +64,7 @@ activateTip = (p) ->
   tip = 1+(parseFloat(p)/100)
 
 setup = ->
-  g.address or= '1VAnbtCAnYccECnjaMCPnWwt81EHCVgNr'
+  g.address or= ''
   g.commission or= 0
   g.symbol or= 'quadrigacx'
 
