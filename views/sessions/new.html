@@ -34,7 +34,11 @@
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" />
 
-          <br /> <br />
+        <br /> <br />
+        {{#badpw}}
+        <b>Cannot find username/password on file, please try again.</b>
+        {{/badpw}}
+        <br/><br/>
         <input type="submit" value="Login" />
       </form>
       <p><a href="http://bitcoincoop.org/coinos">What is this?</a></p>
