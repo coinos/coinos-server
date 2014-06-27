@@ -76,6 +76,7 @@ setup = ->
   else unless g.title
     $('#logo').attr('src', 'img/bitcoin.png').show()
 
+  $('#logo').click -> $(location).attr("href","/#{g.user}/edit")
   address = g.address
   if g.user? and g.user
     address = "<a href='/#{g.user}/report'>#{address}</a>"
