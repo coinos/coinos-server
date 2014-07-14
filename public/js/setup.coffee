@@ -25,7 +25,13 @@ $(->
       $.each(symbols, (i, v) ->
         $('#symbol').append("<option value='#{v}'>#{v} bid price</option>")
       )
-      $("#symbol option[value='quadrigacx']").attr('selected', 'selected')
+
+      switch $(this).val()
+        when 'CAD'
+          $("#symbol option[value='quadrigacx']").attr('selected', 'selected')
+        when 'USD'
+          $("#symbol option[value='bitstamp']").attr('selected', 'selected')
+
     ).change()
 
     $('#address').change(->
