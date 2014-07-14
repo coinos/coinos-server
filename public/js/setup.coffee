@@ -4,18 +4,19 @@
 #= require jsbn2.js
 #= require check_address.js
 
+g = exports ? this
+g.proceed = false
+
 $(->
   $.getJSON("/js/rates.json", (data) ->
     currencies = Object.keys(data)
     currencies = currencies.sort()
     currencies.pop()
 
-  
     $.each(currencies, (i, v) ->
       $('#currency').append("<option value='#{v}'>#{v}</option>")
     )
     $("#currency option[value='CAD']").attr('selected', 'selected')
-
 
     user = $('#username').val()
 
@@ -39,6 +40,19 @@ $(->
         $(this).css('color', 'black')
       else
         $(this).css('color', 'red')
+    )
+
+    $('#confirm').blur(->
+      $('#confirm_error').remove() 
+      if $('#password').val() != $('#confirm').val()
+        $('#password, #confirm').parent().addClass('has-error')
+        $('#confirm').parent().after('<div id="confirm_error" class="alert alert-danger">Passwords don\'t match</div>')
+      else
+        $('#password, #confirm').parent().removeClass('has-error')
+    )
+
+    $('#setup').submit(->
+      return false if $('.has-error').length()
     )
 
     if user

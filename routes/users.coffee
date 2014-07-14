@@ -53,11 +53,20 @@ module.exports = (sessions) ->
     )
 
   create: (req, res) ->
+    errormsg = ""
     userkey = "user:"+req.body.username
     db.hgetall(userkey, (err, obj) ->
       if obj
         res.redirect(req.body.username)
       else
+        if req.body.confirm != req.body.password
+          errormsg += "Passwords must match"
+          return res.render('users/new',
+            js: (-> global.js), 
+            css: (-> global.css),
+            error: errormsg
+          )
+
         bcrypt.hash(req.body.password, 12, (err, hash) ->
            db.sadd("users",userkey)
            db.hmset(userkey,

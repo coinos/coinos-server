@@ -6,12 +6,15 @@
     <title>Bitcoin Payment Calculator</title>
     <link href="img/favicon.ico" rel="shortcut icon" />
     {{#css}}calculator{{/css}}
-    {{#js}}setup{{/js}}
+    {{#js}}register{{/js}}
   </head>
   <body>
     <div class="container-fluid">
       <form id="register" action="/users" method="post">
         <h1>Register</h1>
+        {{#error}}
+        <div class="alert alert-danger">{{error}}</div>
+        {{/error}}
         <div class="form-group">
           <label for="username">Username:</label>
           <input type="text" id="username" name="username" class="form-control" />
@@ -20,6 +23,11 @@
         <div class="form-group">
           <label for="password">Password:</label>
           <input type="password" id="password" name="password" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm">Confirm Password:</label>
+          <input type="password" id="confirm" name="confirm" class="form-control" />
         </div>
   
         <div class="form-group">
