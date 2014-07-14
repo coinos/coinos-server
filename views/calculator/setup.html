@@ -11,35 +11,49 @@
   <body>
     <div class="container-fluid">
       <form id="setup" action="/calculator" method="get">
-        <h1>Bitcoin Point of Sale Calculator</h1>
+        <h1>Settings</h1>
 
         <input type="hidden" id="username" name="username" value="{{user}}" />
 
-        <label for="title">Title <small>(optional)</small>:</label>
-        <input type="text" id="title" name="title" />
+        <div class="form-group">
+          <label for="title">Store Name:</label>
+          <input type="text" id="title" name="title" class="form-control" />
+        </div>
 
-        <label for="logo">Logo <small>(optional, URL)</small>:</label>
-        <input type="text" id="logo" name="logo" />
+        <div class="form-group">
+          <label for="logo">Logo <small>(optional URL)</small>:</label>
+          <input type="text" id="logo" name="logo" class="form-control" />
+        </div>
 
-        <label for="address">Bitcoin Address:</label>
-        <input type="text" id="address" name="address" />
+        <div class="form-group">
+          <label for="address">Bitcoin Address:</label>
+          <input type="text" id="address" name="address" class="form-control" />
+        </div>
 
-        <label for="currency">Currency:</label>
-        <select id="currency" name="currency">
-        </select>
+        <div class="form-group">
+          <label for="currency">Currency:</label>
+          <select id="currency" name="currency" class="form-control">
+          </select>
+        </div>
 
-        <label for="symbol">Exchange:</label>
-        <select id="symbol" name="symbol">
-        </select>
+        <div class="form-group">
+          <label for="symbol">Exchange Rate:</label>
+          <select id="symbol" name="symbol" class="form-control">
+          </select>
+        </div>
         
-        <label for="commission">Commission <small>(optional, %)</small>:</label>
-        <input type="text" id="commission" name="commission" />
+        <div class="form-group">
+          <label for="commission">Commission/Discount <small>(optional %)</small>:</label>
+          <input type="text" id="commission" name="commission" class="form-control" />
+        </div>
 
-        <label for="password">Password <small>(blank = no change)</small>:</label>
-        <input type="text" id="password" name="password" />
+        <div class="form-group">
+          <label for="password">Password <small>(blank = no change)</small>:</label>
+          <input type="text" id="password" name="password" class="form-control" />
+        </div>
 
         <br />
-        <input class="btn" type="submit" value="Go" />
+        <input class="btn btn-primary" type="submit" value="Done" />
       </form>
     </div>
   </body>

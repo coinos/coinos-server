@@ -6,9 +6,9 @@
     <title>CoinOS Bitcoin Payment Calculator</title>
     <link href="img/favicon.ico?v2" rel="shortcut icon" />
     {{#css}}calculator{{/css}}
+    {{#css}}signin{{/css}}
     {{#js}}modernizr-2.6.2-respond-1.1.0.min.js{{/js}}
     <style>
-.notice { border: 1px solid gray; background: #eee; padding: 10px; }
 </style>
   </head>
   <body>
@@ -18,29 +18,27 @@
       {{#notice}}
         <div class="notice">
         <h2>Your Account Needs To Be Recreated</h2>
-        <p>On May 3, 2014, our hosting provider experienced accidentally wiped out our server and database backups, causing us to lose all of our account data.  Please contact us at <a href="mailto:info@bitcoincoop.org">info@bitcoincoop.org</a> and we'll help you get up and running again. Sorry for the inconvenience.  We appreciate all the merchants who have been using our system and we've taken measures to ensure that this kind of catastrophe won't happen again.</p>
+        <p>On May 3, 2014, our hosting provider accidentally wiped out our server and database backups, causing us to lose all of our account data.  Please contact us at <a href="mailto:info@bitcoincoop.org">info@bitcoincoop.org</a> and we'll help you get up and running again. Sorry for the inconvenience.  We appreciate all the merchants who have been using our system and we've taken measures to ensure that this kind of catastrophe won't happen again.</p>
 </p>
-<p>The Bitcoin Co-op
-        </p>
+<p>The Bitcoin Co-op</p>
         </div>
       {{/notice}}
 
-      <form action="login" method="post">
-        <h2>Login</h2>
+      {{#badpw}}
+      <p class="alert alert-danger">Cannot find username/password on file, please try again.</p>
+      {{/badpw}}
 
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" value="{{user}}" />
-
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" />
-
-        <br /> <br />
-        {{#badpw}}
-        <b>Cannot find username/password on file, please try again.</b>
-        {{/badpw}}
-        <br/><br/>
-        <input type="submit" value="Login" />
+      <form class="form-signin" action="login" method="post">
+        <input name="username" type="text" class="form-control" placeholder="Username" value="{{user}}" required autofocus>
+        <br />
+        <input name="password" type="password" class="form-control" placeholder="Password" required>
+        <br />
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
       </form>
+      <form class="form-signin" action="/users/new">
+        <button class="btn btn-lg btn-secondary btn-block">Register</button>
+      </form>
+
       <p><a href="http://bitcoincoop.org/coinos">What is this?</a></p>
     </div>
   </body>

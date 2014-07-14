@@ -23,7 +23,7 @@ $(->
       $('#symbol option').remove()
       symbols = Object.keys(data[$(this).val()])
       $.each(symbols, (i, v) ->
-        $('#symbol').append("<option value='#{v}'>#{v}</option>")
+        $('#symbol').append("<option value='#{v}'>#{v} bid price</option>")
       )
       $("#symbol option[value='quadrigacx']").attr('selected', 'selected')
     ).change()

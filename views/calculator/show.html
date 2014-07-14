@@ -16,35 +16,42 @@
         <h1 id="title"></h1>
         <img id="logo" src="img/logo.jpg" alt="Logo" />
 
-        <label for="exchange">Exchange Rate:</label>
-        <input type="text" id="exchange" value="0" disabled="disabled" />
-        <small id="symbol"></small>
-
-        <label for="amount">Amount:</label>
-        <input type="text" id="amount" />
-        <small id="currency"></small>
-
-        <label for="tip">Tip:</label>
-        <div class="btn-toolbar">
-          <div class="btn-group" id="tip">
-              <a id="tip0" class="btn tipSelect active" href="#"><i class="icon-align-left">0%</i></a>
-              <a id="tip10" class="btn tipSelect" href="#"><i class="icon-align-left">10%</i></a>
-              <a id="tip15" class="btn tipSelect" href="#"><i class="icon-align-center">15%</i></a>
-              <a id="tip20" class="btn tipSelect" href="#"><i class="icon-align-right">20%</i></a>
+        <form role="form">
+          <div class="form-group">
+            <label for="exchange">Exchange Rate:</label>
+            <input type="text" id="exchange" value="0" disabled="disabled" class="form-control" />
+            <span id="symbol"></span>
           </div>
+
+          <div class="form-group">
+            <label for="amount">Amount:</label>
+            <input type="text" id="amount" class="form-control" />
+            <span id="currency"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="tip">Tip:</label>
+            <div class="btn-toolbar">
+              <div class="btn-group" id="tip">
+                <button type="button" class="active btn btn-default">0%</button>
+                <button type="button" class="btn btn-default">10%</button>
+                <button type="button" class="btn btn-default">15%</button>
+                <button type="button" class="btn btn-default">20%</button>
+              </div>
+            </div>
+          </div>
+
+          <br />
+
+          <div id="payment">
+            <p>Please send <strong id="total">0.0</strong> mBTC to</p><br />
+            <div id="qr"></div>
+            <p id="address"></p>
+          </div>
+
+          <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
         </div>
-
-        <br />
-
-        <div id="payment">
-          <p>Please send <strong id="total">0.0</strong> mBTC to</p><br />
-          <div id="qr"></div>
-          <p id="address"></p>
-
-        </div>
-
-        <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
-      </div>
+      </form>
 
       <span id="error" class="btn btn-danger" style="display: none"></span> 
     </div>

@@ -43,10 +43,16 @@ $(->
   else 
     setup()
 
-  $('.tipSelect').click(->
-    activateTip(this.id.substring(3))
+  $('#tip button').click(->
+    value = $(this).html().slice(0, -1)
+    $(this).siblings().css('font-weight','normal').removeClass('active')
+    $(this).css('font-weight','bold')
+    tip = 1 + (parseFloat(value)/100)
     updateTotal()
   )
+
+  $('#tip button').first().click()
+
   $('#amount').keyup(updateTotal)
   $('#amount').focus(->
     $('#received').hide()
@@ -57,11 +63,6 @@ $(->
 )
 
 activateTip = (p) ->
-  $('.tipSelect').css('font-weight','normal')
-  $('.tipSelect').removeClass('active')
-  $('#tip'+p).css('font-weight','bold')
-  $('#tip'+p).addClass('active')
-  tip = 1+(parseFloat(p)/100)
 
 setup = ->
   g.address or= ''
@@ -86,11 +87,11 @@ setup = ->
   else
     fail(ADDRESS_FAIL)
     
-  $('#symbol').html(g.currency)
+  $('#symbol').html(g.symbol + " bid")
   $('#currency').html(g.currency)
   $('#received').hide()
 
-  setupSocket()
+  # setupSocket()
   fetchExchangeRate()
 
 fetchExchangeRate = ->

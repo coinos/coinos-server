@@ -10,7 +10,11 @@ module.exports = (passport) ->
       if (err)
         return next(err)
       if (!user) 
-        return res.redirect('/login')
+        return res.render('sessions/new',
+          js: (-> global.js),
+          css: (-> global.css),
+          badpw: true
+        )
       req.login(user, (err) ->
         if (err) 
           return next(err)
@@ -21,8 +25,4 @@ module.exports = (passport) ->
 
   destroy: (req, res) ->
     req.logout()
-    res.render('sessions/new',
-      js: (-> global.js),
-      css: (-> global.css),
-      badpw: true
-    )
+    res.redirect('/login')
