@@ -1,11 +1,8 @@
 exports.new = (req, res) ->
-  res.render('calculator/setup',  js: (-> global.js), css: (-> global.css))
+  res.render('calculator/setup')
 
 exports.show = (req, res) ->
-  res.render('calculator/show', 
-    js: (-> global.js), 
-    css: (-> global.css),
-  )
+  res.render('calculator/show', layout: 'layout')
 
 exports.ticker = (req, res) ->
   fs = require('fs')

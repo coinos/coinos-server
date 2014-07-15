@@ -1,40 +1,34 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <title>Bitcoin Payment Report</title>
-    {{#css}}calculator{{/css}}
-    {{#js}}report{{/js}}
-  </head>
-  <body>
-    <div class="container-fluid">
-      <h1>Transactions Report</h1>
+{{#yield-scripts}}
+<script src='/js/jquery-1.8.2.min.js'></script>
+<script src='/js/jquery-ui-1.9.0.custom.min.js'></script>
+<script src='/js/bootstrap.min.js'></script>
+<script src='/js/moment.min.js'></script>
+<script src='/js/report.js'></script>
+{{/yield-scripts}}
 
-      <input id="user" type="hidden" value="{{user}}" />
-      From: <input id="from" name="from" type="text" class="date" />
-      To: <input id="to" name="to" type="text" class="date" />
+<h1>Transactions Report</h1>
 
-      <table class="table report">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Address</th>
-            <th>Rate</th>
-            <th>mBTC</th>
-            <th>CAD</th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td id="total" colspan="3">Totals:</td>
-            <td id="btc"></td>
-            <td id="cad"></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </body>
-</html> 
+<input id="user" type="hidden" value="{{user}}" />
+From: <input id="from" name="from" type="text" class="date" />
+To: <input id="to" name="to" type="text" class="date" />
+
+<table class="table report">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Address</th>
+      <th>Rate</th>
+      <th>mBTC</th>
+      <th>CAD</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td id="total" colspan="3">Totals:</td>
+      <td id="btc"></td>
+      <td id="cad"></td>
+    </tr>
+  </tfoot>
+</table>

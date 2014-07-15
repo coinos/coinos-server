@@ -1,59 +1,56 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <title>Bitcoin Payment Calculator</title>
-    <link href="img/favicon.ico" rel="shortcut icon" />
-    {{#css}}calculator{{/css}}
-    {{#js}}calculator{{/js}}
-  </head>
-  <body>
-    <div class="container-fluid">
-      <div id="calculator" style="display: none">
-        <input id="user" type="hidden" value="{{user}}" />
+{{#yield-scripts}}
+<script src='/js/jquery-1.8.2.min.js'></script>
+<script src='/js/moment.min.js'></script>
+<script src='/js/qrcode.js'></script>
+<script src='/js/bootstrap.min.js'></script>
+<script src='/js/2.5.3-crypto-sha256.js'></script>
+<script src='/js/jsbn.js'></script>
+<script src='/js/jsbn2.js'></script>
+<script src='/js/check_address.js'></script>
+<script src='/js/calculator.js'></script>
+{{/yield-scripts}}
 
-        <h1 id="title"></h1>
-        <img id="logo" src="img/logo.jpg" alt="Logo" />
+<div id="calculator" style="display: none">
+  <input id="user" type="hidden" value="{{user}}" />
 
-        <form role="form">
-          <div class="form-group">
-            <label for="exchange">Exchange Rate:</label>
-            <input type="text" id="exchange" value="0" disabled="disabled" class="form-control" />
-            <span id="symbol"></span>
-          </div>
+  <h1 id="title"></h1>
+  <img id="logo" src="img/bitcoin.png" alt="Logo" />
 
-          <div class="form-group">
-            <label for="amount">Amount:</label>
-            <input type="text" id="amount" class="form-control" />
-            <span id="currency"></span>
-          </div>
-
-          <div class="form-group">
-            <label for="tip">Tip:</label>
-            <div class="btn-toolbar">
-              <div class="btn-group" id="tip">
-                <button type="button" class="active btn btn-default">0%</button>
-                <button type="button" class="btn btn-default">10%</button>
-                <button type="button" class="btn btn-default">15%</button>
-                <button type="button" class="btn btn-default">20%</button>
-              </div>
-            </div>
-          </div>
-
-          <br />
-
-          <div id="payment">
-            <p>Please send <strong id="total">0.0</strong> mBTC to</p><br />
-            <div id="qr"></div>
-            <p id="address"></p>
-          </div>
-
-          <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
-        </div>
-      </form>
-
-      <span id="error" class="btn btn-danger" style="display: none"></span> 
+  <form role="form">
+    <div class="form-group">
+      <label for="exchange">Exchange Rate:</label>
+      <input type="text" id="exchange" value="0" disabled="disabled" class="form-control" />
+      <span id="symbol"></span>
     </div>
-  </body>
-</html> 
+
+    <div class="form-group">
+      <label for="amount">Amount:</label>
+      <input type="text" id="amount" class="form-control" />
+      <span id="currency"></span>
+    </div>
+
+    <div class="form-group">
+      <label for="tip">Tip:</label>
+      <div class="btn-toolbar">
+        <div class="btn-group" id="tip">
+          <button type="button" class="active btn btn-default">0%</button>
+          <button type="button" class="btn btn-default">10%</button>
+          <button type="button" class="btn btn-default">15%</button>
+          <button type="button" class="btn btn-default">20%</button>
+        </div>
+      </div>
+    </div>
+
+    <br />
+
+    <div id="payment">
+      <p>Please send <strong id="total">0.0</strong> mBTC to</p><br />
+      <div id="qr"></div>
+      <p id="address"></p>
+    </div>
+
+    <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
+  </div>
+</form>
+
+<span id="error" class="btn btn-danger" style="display: none"></span> 

@@ -1,65 +1,60 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <title>Bitcoin Payment Calculator</title>
-    <link href="img/favicon.ico" rel="shortcut icon" />
-    {{#css}}calculator{{/css}}
-    {{#js}}setup{{/js}}
-  </head>
-  <body>
-    <div class="container-fluid">
-      <form id="setup" action="/calculator" method="get">
-        <h1>Settings</h1>
+{{#yield-scripts}}
+<script src='/js/jquery-1.8.2.min.js'></script>
+<script src='/js/bootstrap.min.js'></script>
+<script src='/js/2.5.3-crypto-sha256.js'></script>
+<script src='/js/jsbn.js'></script>
+<script src='/js/jsbn2.js'></script>
+<script src='/js/check_address.js'></script>
+<script src='/js/setup.js'></script>
+{{/yield-scripts}}
 
-        <input type="hidden" id="username" name="username" value="{{user}}" />
+<form id="setup" action="/calculator" method="get">
+  <h1>Settings</h1>
 
-        <div class="form-group">
-          <label for="title">Store Name:</label>
-          <input type="text" id="title" name="title" class="form-control" />
-        </div>
+  <input type="hidden" id="username" name="username" value="{{user}}" />
 
-        <div class="form-group">
-          <label for="logo">Logo <small>(optional URL)</small>:</label>
-          <input type="text" id="logo" name="logo" class="form-control" />
-        </div>
+  <div class="form-group">
+    <label for="title">Store Name:</label>
+    <input type="text" id="title" name="title" class="form-control" />
+  </div>
 
-        <div class="form-group">
-          <label for="address">Bitcoin Address:</label>
-          <input type="text" id="address" name="address" class="form-control" />
-        </div>
+  <div class="form-group">
+    <label for="logo">Logo <small>(optional URL)</small>:</label>
+    <input type="text" id="logo" name="logo" class="form-control" />
+  </div>
 
-        <div class="form-group">
-          <label for="currency">Currency:</label>
-          <select id="currency" name="currency" class="form-control">
-          </select>
-        </div>
+  <div class="form-group">
+    <label for="address">Bitcoin Address:</label>
+    <input type="text" id="address" name="address" class="form-control" />
+  </div>
 
-        <div class="form-group">
-          <label for="symbol">Exchange Rate:</label>
-          <select id="symbol" name="symbol" class="form-control">
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="commission">Commission/Discount <small>(optional %)</small>:</label>
-          <input type="text" id="commission" name="commission" class="form-control" />
-        </div>
+  <div class="form-group">
+    <label for="currency">Currency:</label>
+    <select id="currency" name="currency" class="form-control">
+    </select>
+  </div>
 
-        <div class="form-group">
-          <label for="password">New Password <small>(blank = no change)</small>:</label>
-          <input type="password" id="password" name="password" class="form-control" />
-        </div>
+  <div class="form-group">
+    <label for="symbol">Exchange Rate:</label>
+    <select id="symbol" name="symbol" class="form-control">
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="commission">Commission/Discount <small>(optional %)</small>:</label>
+    <input type="text" id="commission" name="commission" class="form-control" />
+  </div>
 
-        <div class="form-group">
-          <label for="confirm">Confirm New Password:</label>
-          <input type="password" id="confirm" name="confirm" class="form-control" />
-        </div>
+  <div class="form-group">
+    <label for="password">New Password <small>(blank = no change)</small>:</label>
+    <input type="password" id="password" name="password" class="form-control" />
+  </div>
 
-        <br />
-        <input class="btn btn-primary" type="submit" value="Done" />
-      </form>
-    </div>
-  </body>
-</html> 
+  <div class="form-group">
+    <label for="confirm">Confirm New Password:</label>
+    <input type="password" id="confirm" name="confirm" class="form-control" />
+  </div>
+
+  <br />
+  <input class="btn btn-primary" type="submit" value="Done" />
+</form>

@@ -13,7 +13,7 @@ sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
 
 app = express()
 app.enable('trust proxy')
-app.engine('html', require('mmm').__express)
+app.engine('html', require('hogan-express'))
 app.set('view engine', 'html')
 app.set('views', __dirname + '/views')
 app.use(express.static(__dirname + '/public'))

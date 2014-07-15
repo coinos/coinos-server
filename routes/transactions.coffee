@@ -33,7 +33,6 @@ module.exports =
   index: (req, res) ->
     res.render('transactions/index',  
       user: req.params.user,
-      js: (-> global.js), 
-      css: (-> global.css)
+      layout: 'layout'
     )
 

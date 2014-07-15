@@ -1,20 +1,13 @@
 module.exports = (passport) ->
   new: (req, res) ->
-    res.render('sessions/new', 
-      js: (-> global.js), 
-      css: (-> global.css) 
-    )
+    res.render('sessions/new')
 
   create: (req, res, next) ->
     passport.authenticate('local', (err, user, info) ->
       if (err)
         return next(err)
       if (!user) 
-        return res.render('sessions/new',
-          js: (-> global.js),
-          css: (-> global.css),
-          badpw: true
-        )
+        return res.render('sessions/new', badpw: true)
       req.login(user, (err) ->
         if (err) 
           return next(err)

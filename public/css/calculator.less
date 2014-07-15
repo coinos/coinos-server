@@ -4,19 +4,25 @@
 
 body { text-align: center; }
 body { line-height: 100%; }
-h1 { width: 100%; }
+h1 { width: 100%; margin-top: 0; }
 	
 div.container-fluid {
-  width: 600px;
+  width: 480px;
   margin-left: auto;
   margin-right: auto;
   text-align:left;
   padding-bottom: 50px;
 }
 
+.navbar-toggle { background-color: #428bca; width: 480px; position: absolute; top: 0px; height: 20px; padding: 0 10px 10px 0; margin: 0; float: none; z-index: 1; }
+.navbar { margin: 0; padding: 0; }
+.navbar-collapse { padding: 0; } 
+.navbar-collapse.in { overflow-y: visible; }
+.nav { margin-top: 20px; padding: 0; }
+.nav li { margin-left: 15px; width: 480px; }
 
 .form-group {
-  .form-control { height: 40px; padding: 3px; }
+  .form-control { height: 40px; padding: 3px; } 
   label { font-weight: normal; font-size: 14px; display: block; }
   p, span, input[type="text"], select { font-size: 18px; }
   span, label { color: #999; }

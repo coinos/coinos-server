@@ -25,8 +25,6 @@ module.exports = (sessions) ->
 
   list: (req, res) ->
     res.render('users/index', 
-      js: (-> global.js), 
-      css: (-> global.css),
       layout: 'layout'
     )
 
@@ -35,13 +33,10 @@ module.exports = (sessions) ->
       if obj 
         res.render('calculator/show', 
           user: req.params.user, 
-          js: (-> global.js), 
-          css: (-> global.css) 
+          layout: 'layout'
         )
       else 
         res.render('sessions/new', 
-          js: (-> global.js), 
-          css: (-> global.css),
           notice: true
         )
     )
@@ -83,8 +78,7 @@ module.exports = (sessions) ->
   edit: (req, res) ->
     res.render('calculator/setup', 
       user: req.params.user, 
-      js: (-> global.js), 
-      css: (-> global.css) 
+      layout: 'layout'
     )
 
   update: (req, res) ->

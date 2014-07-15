@@ -8,6 +8,7 @@ g = exports ? this
 g.proceed = false
 
 $(->
+  $('#title').focus()
   $.getJSON("/js/rates.json", (data) ->
     currencies = Object.keys(data)
     currencies = currencies.sort()
@@ -22,7 +23,9 @@ $(->
 
     $('#currency').change(->
       $('#symbol option').remove()
-      symbols = Object.keys(data[$(this).val()])
+      symbol = $(this).val()
+      return unless symbol
+      symbols = Object.keys(data[symbol])
       $.each(symbols, (i, v) ->
         $('#symbol').append("<option value='#{v}'>#{v} bid price</option>")
       )

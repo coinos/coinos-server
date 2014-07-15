@@ -2,14 +2,36 @@
   <head>
     <meta charset="utf-8" />
 		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <title>Bitcoin Payment Calculator</title>
+    <title>CoinOS</title>
     <link href="img/favicon.ico" rel="shortcut icon" />
-    {{#css}}calculator{{/css}}
-    {{#js}}bootstrap.min.js{{/js}}
+    <link rel='stylesheet' href='/css/calculator.css'>
+    {{{yield-styles}}}
+    {{{yield-scripts}}}
   </head>
   <body>
     <div class="container-fluid">
-      {{>content}}
+      <nav class="navbar" role="navigation">
+          <button type="button" class="btn btn-primary navbar-toggle" data-toggle="collapse" data-target="#nav">
+            <span class="glyphicon glyphicon-list"></span>
+          </button>
+          <div id="nav" class="collapse navbar-collapse">
+            <div class="navbar">
+              <ul class="nav navbar-nav">
+                <!--
+                <li><a href="{{user}}/edit"><span class="glyphicon glyphicon-user"></span> Profile</a></li>
+-->
+                <li><a href="/{{user}}"><span class="glyphicon glyphicon-home"></span> Home</a></li>
+                <li><a href="/{{user}}/edit"><span class="glyphicon glyphicon-cog"></span> Settings</a></li>
+                <li><a href="/{{user}}/report"><span class="glyphicon glyphicon-list-alt"></span> Transactions</a></li>
+                <!--
+                <li><a href="/help"><span class="glyphicon glyphicon-info-sign"></span> Help</a></li>
+-->
+              </ul>
+            </div>
+          </div>
+      </nav>
+
+      {{{yield}}}
     </div>
   </body>
 </html>

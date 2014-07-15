@@ -6,8 +6,8 @@
   position: relative;
   height: auto;
   -webkit-box-sizing: border-box;
-     -moz-box-sizing: border-box;
-          box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
   padding: 10px;
   font-size: 16px;
 }
@@ -23,4 +23,8 @@
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
-.notice { border: 1px solid gray; background: #eee; padding: 10px; }
+.notice {
+  border: 1px solid gray;
+  background: #eee;
+  padding: 10px;
+}
