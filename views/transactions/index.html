@@ -1,16 +1,22 @@
 {{#yield-scripts}}
 <script src='/js/jquery-1.8.2.min.js'></script>
-<script src='/js/jquery-ui-1.9.0.custom.min.js'></script>
+<script src='/js/jquery-ui.min.js'></script>
 <script src='/js/bootstrap.min.js'></script>
 <script src='/js/moment.min.js'></script>
 <script src='/js/report.js'></script>
 {{/yield-scripts}}
 
-<h1>Transactions Report</h1>
+<h1>Transactions</h1>
 
-<input id="user" type="hidden" value="{{user}}" />
-From: <input id="from" name="from" type="text" class="date" />
-To: <input id="to" name="to" type="text" class="date" />
+<div style="margin-bottom: 15px">
+  <input id="user" type="hidden" value="{{user}}" />
+  <input id="from_date" type="text" style="position: relative; top: 25px; height: 0px; width:0px; border: 0px;" />
+  <button id="from" class="btn btn-primary"></button>
+  to
+  <input id="to_date" type="text" style="position: relative; top: 25px; height: 0px; width:0px; border: 0px;" />
+  <button id="to" name="to" class="btn btn-primary"></button>
+</div>
+
 
 <table class="table report">
   <thead>

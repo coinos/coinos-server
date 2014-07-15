@@ -5,9 +5,21 @@
 g = exports ? this
 
 $(->
-  $('#from').val(moment().subtract('days', 7).format("MM/DD/YYYY"))
-  $('#to').val(moment().format("MM/DD/YYYY"))
-  $('.date').datepicker(onClose: filterDates)
+  from = moment().subtract('days', 7)
+  to = moment()
+
+  $('#from').html(from.format("MMMM Do, YYYY"))
+  $('#to').html(to.format("MMMM Do, YYYY"))
+
+  $('#from_date').val(from.format("MM/DD/YYYY"))
+  $('#to_date').val(to.format("MM/DD/YYYY"))
+
+  $('#from_date').datepicker(onClose: filterDates)
+  $('#to_date').datepicker(onClose: filterDates)
+
+  $('#from').click(-> $('#from_date').datepicker('show'))
+  $('#to').click(-> $('#to_date').datepicker('show'))
+
   $.getJSON('transactions.json', (data) ->
     g.transactions = data.transactions
     display(g.transactions)
@@ -16,11 +28,15 @@ $(->
 )
 
 filterDates = ->
+  $('#from').html(moment($('#from_date').datepicker('getDate')).format("MMMM Do, YYYY")) 
+  $('#to').html(moment($('#to_date').datepicker('getDate')).format("MMMM Do, YYYY"))
+
   transactions = $.grep(g.transactions, (e, i) ->
     return false unless e
 
-    from = moment($('#from').val(), "MM/DD/YYYY")
-    to = moment($('#to').val(), "MM/DD/YYYY")
+    from = moment($('#from_date').val(), "MM/DD/YYYY")
+    to = moment($('#to_date').val(), "MM/DD/YYYY")
+
     d = moment(e.date)
     amount = parseFloat(e.exchange) * parseFloat(e.received)
 
@@ -31,18 +47,13 @@ filterDates = ->
   display(transactions)   
 
 display = (transactions) ->
-  $('tbody tr').remove()
-  $('thead, tfoot').show()
+  $('.alert').remove()
+  $('.report tbody tr').remove()
+  $('.report').show()
 
   if transactions.length is 0
-    $('tbody').append("""
-      <tr>
-        <td colspan='5'>
-          No transactions were found for the specified time period
-        </td>
-      </tr>
-    """)
-    $('thead, tfoot').hide()
+    $('.report').before("<p class='alert alert-warning'>No transactions were found for the specified time period</p>")
+    $('.report').hide()
 
   $.each(transactions, ->
     exchange = parseFloat(this.exchange)
@@ -50,7 +61,7 @@ display = (transactions) ->
     amount = received * exchange
     received *= 1000
 
-    $('tbody').append("""
+    $('.report tbody').append("""
       <tr>
         <td>#{this.date}</td>
         <td>#{this.address}</td>
