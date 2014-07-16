@@ -36,6 +36,7 @@ authorize = (req, res, next) ->
 app.get('/', sessions.new)
 app.get('/register', users.new)
 app.get('/ticker', calculator.ticker)
+app.get('/sweep', calculator.sweep)
 
 app.get('/login', sessions.new)
 app.post('/login', sessions.create)

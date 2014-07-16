@@ -1,6 +1,6 @@
 module.exports = (passport) ->
   new: (req, res) ->
-    res.render('sessions/new', layout: ')
+    res.render('sessions/new')
 
   create: (req, res, next) ->
     passport.authenticate('local', (err, user, info) ->
