@@ -10,7 +10,7 @@ var webkit=false;
 var moz=false;
 var v=null;
 
-var vidhtml = '<video id="v" width="300" height="300" autoplay></video>';
+var vidhtml = '<video id="v" width="480" height="480" style="margin-top: -80px; padding: 0;" autoplay></video>';
 
 $(function() {
   load();
@@ -54,13 +54,6 @@ function htmlEntities(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function read(a)
-{
-    var html="<br>";
-    html+="<b>"+htmlEntities(a)+"</b><br><br>";
-    document.getElementById("result").innerHTML=html;
-}	
-
 function isCanvasSupported(){
   var elem = document.createElement('canvas');
   return !!(elem.getContext && elem.getContext('2d'));
@@ -90,21 +83,12 @@ function load()
 	if(isCanvasSupported() && window.File && window.FileReader)
 	{
 		initCanvas(800, 800);
-		qrcode.callback = read;
     setwebcam();
-	}
-	else
-	{
-		document.getElementById("mainbody").style.display="inline";
-		document.getElementById("mainbody").innerHTML='<p id="mp1">QR code scanner for HTML5 capable browsers</p><br>'+
-        '<br><p id="mp2">sorry your browser is not supported</p><br><br>'+
-        '<p id="mp1">try <a href="http://www.mozilla.com/firefox"><img src="firefox.png"/></a> or <a href="http://chrome.google.com"><img src="chrome_logo.gif"/></a> or <a href="http://www.opera.com"><img src="Opera-logo.png"/></a></p>';
 	}
 }
 
 function setwebcam()
 {
-	document.getElementById("result").innerHTML="- scanning -";
     if(stype==1)
     {
         setTimeout(captureToCanvas, 500);    
