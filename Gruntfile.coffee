@@ -15,16 +15,16 @@ module.exports = (grunt) ->
     coffee:
       glob_to_multiple: 
         expand: true
-        cwd: 'public/js'
+        cwd: '.'
         src: '**/*.coffee'
-        dest: 'public/js'
+        dest: '.'
         ext: '.js'
     watch: 
       less: 
         files: ['public/css/**/*.less']
         tasks: ['less']
       coffee:
-        files: ['public/js/**/*.coffee']
+        files: ['**/*.coffee']
         tasks: ['coffee']
   )
 
