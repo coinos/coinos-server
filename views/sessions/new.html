@@ -7,7 +7,9 @@
     <link href="img/favicon.ico?v2" rel="shortcut icon" />
     <link rel='stylesheet' href='/css/calculator.css'>
     <link rel='stylesheet' href='/css/signin.css'>
-    <script src='modernizr-2.6.2-respond-1.1.0.min.js'></script>
+    <script src='/js/modernizr-2.6.2-respond-1.1.0.min.js'></script>
+    <script src='/js/jquery-1.8.2.min.js'></script>
+    <script src='/js/signin.js'></script>
   </head>
   <body>
     <div class="container-fluid">
@@ -33,9 +35,10 @@
         <br />
         <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
       </form>
-      <form class="form-signin" action="/users/new">
-        <button class="btn btn-lg btn-secondary btn-block">Register</button>
-      </form>
+
+      <p>
+        <button id="register" class="btn btn-lg btn-secondary btn-block">Register</button>
+      </p>
 
       <p><a href="http://bitcoincoop.org/coinos">What is this?</a></p>
     </div>

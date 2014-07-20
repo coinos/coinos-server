@@ -9,11 +9,10 @@ body {
   line-height: 100%;
 }
 h1 {
-  width: 100%;
   margin-top: 0;
 }
 div.container-fluid {
-  width: 480px;
+  max-width: 480px;
   margin-left: auto;
   margin-right: auto;
   text-align: left;
@@ -21,36 +20,28 @@ div.container-fluid {
 }
 .navbar-toggle {
   background-color: #428bca;
-  width: 480px;
+  width: 100%;
   position: absolute;
   top: 0px;
-  height: 20px;
-  padding: 0 10px 10px 0;
+  height: 30px;
   margin: 0;
   float: none;
   z-index: 1;
 }
+.navbar-toggle .glyphicon {
+  margin-top: -5px;
+}
 .navbar {
   margin: 0;
-  padding: 0;
-}
-.navbar-collapse {
-  padding: 0;
 }
 .navbar-collapse.in {
   overflow-y: visible;
 }
 .nav {
-  margin-top: 20px;
-  padding: 0;
+  margin-top: 30px;
 }
-.nav li {
-  margin-left: 15px;
-  width: 480px;
-}
-.form-group .form-control {
-  height: 40px;
-  padding: 3px;
+.nav li a {
+  padding: 10px 0 10px 10px;
 }
 .form-group label {
   font-weight: normal;
@@ -59,8 +50,7 @@ div.container-fluid {
 }
 .form-group p,
 .form-group span,
-.form-group input[type="text"],
-.form-group select {
+.form-group .form-control {
   font-size: 18px;
 }
 .form-group span,
@@ -68,11 +58,9 @@ div.container-fluid {
   color: #999;
 }
 .form-group .form-control {
+  height: auto;
+  padding: 3px;
   display: inline-block;
-}
-form#setup .form-control,
-form#register .form-control {
-  width: 400px;
 }
 div#calculator #exchange,
 div#calculator #amount {
@@ -83,7 +71,10 @@ div#calculator span.btn {
   width: 80%;
 }
 div#calculator strong#total {
-  font-size: 2em;
+  font-size: 30px;
+}
+div#calculator p#address {
+  padding-top: 10px;
 }
 div#calculator #title {
   display: none;
@@ -100,10 +91,6 @@ div#calculator #error {
 td#total {
   font-weight: bold;
   text-align: right;
-}
-div#calculator p#address {
-  font-size: 1em;
-  margin-top: 20px;
 }
 #main-logo {
   background-image: url('../img/coinos_logo.png');

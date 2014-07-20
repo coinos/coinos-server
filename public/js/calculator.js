@@ -78,7 +78,7 @@
     });
     address = g.address;
     if ((g.user != null) && g.user) {
-      address = "<a href='http://blockchain.info/address/" + address + "'>" + address + "</a>";
+      address = "" + address + " <a href='http://blockchain.info/address/" + address + "' target='_blank'><img src='/img/blockchain.png' /></a>";
     }
     if (check_address(g.address)) {
       $('#address').html(address);

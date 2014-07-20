@@ -80,7 +80,7 @@ setup = ->
   $('#logo').click -> $(location).attr("href","/#{g.user}/edit")
   address = g.address
   if g.user? and g.user
-    address = "<a href='http://blockchain.info/address/#{address}'>#{address}</a>"
+    address = "#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/img/blockchain.png' /></a>"
 
   if check_address(g.address)
     $('#address').html(address)

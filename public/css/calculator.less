@@ -5,48 +5,41 @@
 
 body { text-align: center; }
 body { line-height: 100%; }
-h1 { width: 100%; margin-top: 0; }
+h1 { margin-top: 0; }
 	
 div.container-fluid {
-  width: 480px;
+  max-width: 480px;
   margin-left: auto;
   margin-right: auto;
   text-align:left;
   padding-bottom: 50px;
 }
 
-.navbar-toggle { background-color: #428bca; width: 480px; position: absolute; top: 0px; height: 20px; padding: 0 10px 10px 0; margin: 0; float: none; z-index: 1; }
-.navbar { margin: 0; padding: 0; }
-.navbar-collapse { padding: 0; } 
+.navbar-toggle { background-color: #428bca; width: 100%; position: absolute; top: 0px; height: 30px; margin: 0; float: none; z-index: 1; }
+.navbar-toggle .glyphicon { margin-top: -5px; }
+.navbar { margin: 0; }
 .navbar-collapse.in { overflow-y: visible; }
-.nav { margin-top: 20px; padding: 0; }
-.nav li { margin-left: 15px; width: 480px; }
+.nav { margin-top: 30px; }
+.nav li a { padding: 10px 0 10px 10px; }
 
 .form-group {
-  .form-control { height: 40px; padding: 3px; } 
   label { font-weight: normal; font-size: 14px; display: block; }
-  p, span, input[type="text"], select { font-size: 18px; }
+  p, span, .form-control { font-size: 18px; }
   span, label { color: #999; }
-  .form-control { display: inline-block; }
+  .form-control { height: auto; padding: 3px; display: inline-block; }
 }
-
-form#setup, form#register {
-  .form-control { width: 400px; }
-}
-
 
 div#calculator {
   #exchange, #amount { width: 5em; }
   span.btn { font-size: 1.4em; width: 80%; }
-  strong#total { font-size: 2em; }
+  strong#total { font-size: 30px; }
+  p#address { padding-top: 10px; }
   #title { display: none; }
   #logo { display: none; padding: 10px 0; margin-bottom: 10px; max-height: 250px; }
   #error { margin-top: 10px; }
 }
 
 td#total { font-weight: bold; text-align: right; }
-div#calculator p#address { font-size: 1em; margin-top: 20px; }
-
 
 #main-logo {
   background-image: url('../img/coinos_logo.png');
@@ -54,6 +47,7 @@ div#calculator p#address { font-size: 1em; margin-top: 20px; }
   height: 80px;
   margin-top: 10px;
 }
+
 .svg #main-logo {
   background-image: url('../img/coinos_logo.svg') !important;
   background-size: 300px 80px;
