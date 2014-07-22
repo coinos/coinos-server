@@ -30,6 +30,7 @@ div.container-fluid {
 }
 .navbar-toggle .glyphicon {
   margin-top: -5px;
+  padding-left: 10px;
 }
 .navbar {
   margin: 0;
@@ -42,6 +43,9 @@ div.container-fluid {
 }
 .nav li a {
   padding: 10px 0 10px 10px;
+}
+#connection {
+  display: none;
 }
 .form-group label {
   font-weight: normal;

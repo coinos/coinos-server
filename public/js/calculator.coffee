@@ -92,7 +92,7 @@ setup = ->
   $('#currency').html(g.currency)
   $('#received').hide()
 
-  # setupSocket()
+  setupSocket()
   fetchExchangeRate()
 
 fetchExchangeRate = ->
@@ -126,14 +126,18 @@ setupSocket = ->
     g.websocket = new WebSocket("wss://ws.blockchain.info/inv")
 
     g.websocket.onopen = -> 
+      $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
       g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
     
     g.websocket.onerror =  ->
+      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
       g.websocket = null
       fail(SOCKET_FAIL)
 
     g.websocket.onclose = ->
-      setupSocket()
+      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
+      g.websocket = null
+      fail(SOCKET_FAIL)
 
     g.websocket.onmessage = (e) ->
       results = eval('(' + e.data + ')')

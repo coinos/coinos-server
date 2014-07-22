@@ -88,6 +88,7 @@
     $('#symbol').html(g.symbol + " bid");
     $('#currency').html(g.currency);
     $('#received').hide();
+    setupSocket();
     return fetchExchangeRate();
   };
 
@@ -125,14 +126,18 @@
     if (!(g.websocket && g.websocket.readyState === 1)) {
       g.websocket = new WebSocket("wss://ws.blockchain.info/inv");
       g.websocket.onopen = function() {
+        $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal');
         return g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}');
       };
       g.websocket.onerror = function() {
+        $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal');
         g.websocket = null;
         return fail(SOCKET_FAIL);
       };
       g.websocket.onclose = function() {
-        return setupSocket();
+        $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal');
+        g.websocket = null;
+        return fail(SOCKET_FAIL);
       };
       return g.websocket.onmessage = function(e) {
         var from_address, received, results;
