@@ -13,27 +13,10 @@
           username: 'admin',
           password: hash
         }, function() {
-          return console.log("Created admin user with password 'admin'");
+          console.log("Created admin user with password 'admin'");
+          return process.exit();
         });
       });
-    }
-  });
-
-  db.sismember("mts", "mt:rest", function(err, res) {
-    if (!res) {
-      db.hmset("mt:rest", {
-        code: "rest",
-        label: "Restaurant/Bar"
-      }, function() {
-        return db.sadd("mts", "mt:rest");
-      });
-      db.hmset("mt:coff", {
-        code: "rest",
-        label: "Coffee Shop"
-      }, function() {
-        return db.sadd("mts", "mt:coff");
-      });
-      return console.log("Added merchant types");
     }
   });
 

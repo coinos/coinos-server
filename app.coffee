@@ -1,4 +1,6 @@
 express = require('express')
+bodyParser = require('body-parser')
+cookieParser = require('cookie-parser')
 path = require('path')
 engines = require('consolidate')
 passport = require('./passport')
@@ -8,8 +10,10 @@ sessions = require("./routes/sessions")(passport)
 transactions = require("./routes/transactions")
 users = require("./routes/users")(sessions)
 
-RedisStore = require('connect-redis')(express)
+session = require('express-session')
+RedisStore = require('connect-redis')(session)
 sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
+
 
 app = express()
 app.enable('trust proxy')
@@ -18,12 +22,13 @@ app.set('view engine', 'html')
 app.set('views', __dirname + '/views')
 app.use(express.static(__dirname + '/public'))
 app.use(require('connect-assets')(src: 'public'))
-app.use(express.bodyParser())
-app.use(express.cookieParser())
-app.use(express.session(secret: 'weareallmadeofstars', store: sessionStore, cookie: { maxAge: 25920000000 }, key: 'vanbtc.sid'))
+app.use(bodyParser.urlencoded({ extended: true}))
+app.use(bodyParser.json())
+app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
+app.use(cookieParser('weareallmadeofstars'))
+app.use(session(resave: true, saveUninitialized: true, secret: 'weareallmadeofstars', store: sessionStore, cookie: { maxAge: 25920000000 }, key: 'vanbtc.sid'))
 app.use(passport.initialize())
 app.use(passport.session())
-app.use(app.router)
 
 authorize = (req, res, next) ->
 

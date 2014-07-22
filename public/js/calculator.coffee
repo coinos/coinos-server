@@ -6,6 +6,7 @@
 #= require jsbn.js
 #= require jsbn2.js
 #= require check_address.js
+#= require socket.io.js
 
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"

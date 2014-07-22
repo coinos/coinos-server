@@ -11,7 +11,8 @@
 
   exports.show = function(req, res) {
     return res.render('calculator/show', {
-      layout: 'layout'
+      layout: 'layout',
+      x: 'meow'
     });
   };
 

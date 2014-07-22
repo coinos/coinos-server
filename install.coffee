@@ -10,18 +10,7 @@ db.get("user:admin", (err, res) ->
          password: hash,
         , ->
           console.log("Created admin user with password 'admin'")
+          process.exit()
        )
     )
 )
-
-db.sismember("mts","mt:rest", (err,res) ->
-   if !res
-      db.hmset("mt:rest",{code: "rest", label: "Restaurant/Bar"}, ->
-          db.sadd("mts","mt:rest")
-      )	  
-      db.hmset("mt:coff",{code: "rest", label: "Coffee Shop"}, ->
-          db.sadd("mts","mt:coff")
-      )	        
-      console.log("Added merchant types")
-)
-

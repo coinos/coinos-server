@@ -1,7 +1,11 @@
 (function() {
-  var RedisStore, app, authorize, calculator, engines, express, passport, path, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, calculator, cookieParser, engines, express, passport, path, session, sessionStore, sessions, transactions, users;
 
   express = require('express');
+
+  bodyParser = require('body-parser');
+
+  cookieParser = require('cookie-parser');
 
   path = require('path');
 
@@ -17,7 +21,9 @@
 
   users = require("./routes/users")(sessions);
 
-  RedisStore = require('connect-redis')(express);
+  session = require('express-session');
+
+  RedisStore = require('connect-redis')(session);
 
   sessionStore = new RedisStore(require('./redis').host, {
     ttl: 172800
@@ -39,11 +45,21 @@
     src: 'public'
   }));
 
-  app.use(express.bodyParser());
+  app.use(bodyParser.urlencoded({
+    extended: true
+  }));
 
-  app.use(express.cookieParser());
+  app.use(bodyParser.json());
 
-  app.use(express.session({
+  app.use(bodyParser.json({
+    type: 'application/vnd.api+json'
+  }));
+
+  app.use(cookieParser('weareallmadeofstars'));
+
+  app.use(session({
+    resave: true,
+    saveUninitialized: true,
     secret: 'weareallmadeofstars',
     store: sessionStore,
     cookie: {
@@ -55,8 +71,6 @@
   app.use(passport.initialize());
 
   app.use(passport.session());
-
-  app.use(app.router);
 
   authorize = function(req, res, next) {
     var _ref, _ref1, _ref2;
