@@ -159,6 +159,7 @@
           $('#amount').blur();
           $('#payment').hide();
           $('#received').fadeIn('slow');
+          $('#chaching')[0].play();
         }
         if (g.user) {
           return $.post("/" + g.user + "/transactions", {
