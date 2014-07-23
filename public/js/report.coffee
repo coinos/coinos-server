@@ -59,7 +59,6 @@ display = (transactions) ->
     exchange = parseFloat(this.exchange)
     received = parseFloat(this.received)
     amount = received * exchange
-    received *= 1000
 
     $('.report tbody').append("""
       <tr>

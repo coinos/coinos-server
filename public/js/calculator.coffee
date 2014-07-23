@@ -166,7 +166,7 @@ setupSocket = ->
 
 updateTotal = ->
   amount = parseFloat($('#amount').val() * tip)
-  total = (amount * 1000 / g.exchange).toFixed(5)
+  total = (amount / g.exchange).toFixed(5)
   g.receivable = (amount / g.exchange).toFixed(8)
 
   unless $.isNumeric(total)
