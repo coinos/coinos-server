@@ -35,11 +35,18 @@
             return $("#symbol option[value='bitstamp']").attr('selected', 'selected');
         }
       }).change();
-      $('#address').change(function() {
-        if (check_address($(this).val())) {
-          return $(this).css('color', 'black');
+      $('#title').blur(function() {
+        if ($(this).val() === '') {
+          return $(this).parent().addClass('has-error');
         } else {
-          return $(this).css('color', 'red');
+          return $(this).parent().removeClass('has-error');
+        }
+      });
+      $('#address').blur(function() {
+        if (check_address($(this).val())) {
+          return $(this).parent().removeClass('has-error');
+        } else {
+          return $(this).parent().addClass('has-error');
         }
       });
       $('#confirm').blur(function() {
@@ -52,7 +59,9 @@
         }
       });
       $('#setup').submit(function() {
-        if ($('.has-error').length()) {
+        $('.form-control').blur();
+        if ($('.has-error').length > 0) {
+          $('.has-error').effect('shake', 500);
           return false;
         }
       });
