@@ -1,18 +1,7 @@
 (function() {
-  exports["new"] = function(req, res) {
-    return res.render('calculator/setup');
-  };
-
   exports.sweep = function(req, res) {
     return res.render('calculator/sweep', {
       layout: 'layout'
-    });
-  };
-
-  exports.show = function(req, res) {
-    return res.render('calculator/show', {
-      layout: 'layout',
-      x: 'meow'
     });
   };
 

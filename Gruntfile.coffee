@@ -13,11 +13,17 @@ module.exports = (grunt) ->
           ext: '.css'
         ]
     coffee:
-      glob_to_multiple: 
+      server: 
         expand: true
         cwd: 'src'
         src: '**/*.coffee'
         dest: '.'
+        ext: '.js'
+      client: 
+        expand: true
+        cwd: 'public/js'
+        src: '*.coffee'
+        dest: 'public/js'
         ext: '.js'
     watch: 
       less: 

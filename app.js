@@ -106,7 +106,7 @@
 
   app.get('/:user/edit', authorize, users.edit);
 
-  app.post('/:user/update', authorize, users.update);
+  app.post('/:user', users.update);
 
   app.get('/:user/transactions.json', authorize, transactions.json);
 

@@ -57,7 +57,7 @@
         }
       });
       if (user) {
-        $('#setup').attr('action', "/" + user + "/update").attr('method', 'post');
+        $('#setup').attr('action', "/" + user).attr('method', 'post');
         return $.getJSON("/" + user + ".json", function(data) {
           $('#title').val(data.title);
           $('#logo').val(data.logo);

@@ -31,7 +31,7 @@ module.exports = (sessions) ->
   show: (req, res) ->
     db.hgetall("user:"+req.params.user, (err, obj) ->
       if obj 
-        res.render('calculator/show', 
+        res.render('users/show', 
           user: req.params.user, 
           layout: 'layout'
         )
@@ -76,14 +76,14 @@ module.exports = (sessions) ->
     )
 
   edit: (req, res) ->
-    res.render('calculator/setup', 
+    res.render('users/edit', 
       user: req.params.user, 
       layout: 'layout'
     )
 
   update: (req, res) ->
     return unless req.params.user is req.user.username or 
-    req.user.username is 'admin' or req.user.username is 'ben'
+    req.user.username is 'admin'
     if req.body.password is ''
       delete req.body.password
     db.hmset("user:"+req.params.user, req.body, ->

@@ -8,7 +8,7 @@
 <script src='/js/setup.js'></script>
 {{/yield-scripts}}
 
-<form id="setup" action="/calculator" method="get">
+<form id="setup" action="/{{user}}" method="post">
   <h1>Settings</h1>
 
   <input type="hidden" id="username" name="username" value="{{user}}" />

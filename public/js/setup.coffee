@@ -59,7 +59,7 @@ $(->
     )
 
     if user
-      $('#setup').attr('action', "/#{user}/update").attr('method', 'post')
+      $('#setup').attr('action', "/#{user}").attr('method', 'post')
       $.getJSON("/#{user}.json", (data) ->
         $('#title').val(data.title)
         $('#logo').val(data.logo)

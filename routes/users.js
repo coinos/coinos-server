@@ -42,7 +42,7 @@
       show: function(req, res) {
         return db.hgetall("user:" + req.params.user, function(err, obj) {
           if (obj) {
-            return res.render('calculator/show', {
+            return res.render('users/show', {
               user: req.params.user,
               layout: 'layout'
             });
@@ -98,13 +98,13 @@
         });
       },
       edit: function(req, res) {
-        return res.render('calculator/setup', {
+        return res.render('users/edit', {
           user: req.params.user,
           layout: 'layout'
         });
       },
       update: function(req, res) {
-        if (!(req.params.user === req.user.username || req.user.username === 'admin' || req.user.username === 'ben')) {
+        if (!(req.params.user === req.user.username || req.user.username === 'admin')) {
           return;
         }
         if (req.body.password === '') {
