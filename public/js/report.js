@@ -63,15 +63,15 @@
       received = parseFloat(this.received);
       amount = received * exchange;
       received *= 1000;
-      return $('.report tbody').append("<tr>\n  <td>" + this.date + "</td>\n  <td>" + this.address + "</td>\n  <td>" + (exchange.toFixed(2)) + "</td>\n  <td>" + (received.toFixed(5)) + "</td>\n  <td>" + (amount.toFixed(2)) + "</td>\n</tr>");
+      return $('.report tbody').append("<tr>\n  <td>" + (moment(this.date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')) + "</td>\n  <td>" + (exchange.toFixed(2)) + "</td>\n  <td>" + (received.toFixed(5)) + "</td>\n  <td>" + (amount.toFixed(2)) + "</td>\n</tr>");
     });
     btc = 0;
-    $('table.report td:nth-child(4)').each(function() {
+    $('table.report tbody td:nth-child(3)').each(function() {
       return btc += parseFloat($(this).html());
     });
     $('#btc').html(btc.toFixed(5));
     cad = 0;
-    $('table.report td:nth-child(5)').each(function() {
+    $('table.report tbody td:nth-child(4)').each(function() {
       return cad += parseFloat($(this).html());
     });
     return $('#cad').html(cad.toFixed(2));
