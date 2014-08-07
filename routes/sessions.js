@@ -19,7 +19,7 @@
             if (err) {
               return next(err);
             }
-            url = "/" + user.username + "/edit";
+            url = "/" + user.username;
             return res.redirect(url);
           });
         })(req, res, next);
