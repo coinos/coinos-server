@@ -57,7 +57,7 @@
     secret: 'weareallmadeofstars',
     store: sessionStore,
     cookie: {
-      maxAge: 25920000000
+      maxAge: 1209600000
     },
     key: 'vanbtc.sid'
   }));

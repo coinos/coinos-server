@@ -24,7 +24,7 @@ app.use(bodyParser.urlencoded({ extended: true}))
 app.use(bodyParser.json())
 app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
 app.use(cookieParser('weareallmadeofstars'))
-app.use(session(resave: true, saveUninitialized: true, secret: 'weareallmadeofstars', store: sessionStore, cookie: { maxAge: 25920000000 }, key: 'vanbtc.sid'))
+app.use(session(resave: true, saveUninitialized: true, secret: 'weareallmadeofstars', store: sessionStore, cookie: { maxAge: 1209600000 }, key: 'vanbtc.sid'))
 app.use(passport.initialize())
 app.use(passport.session())
 
