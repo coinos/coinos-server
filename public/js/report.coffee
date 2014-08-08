@@ -1,6 +1,7 @@
-#= require jquery-1.8.2.min.js
-#= require jquery-ui-1.9.0.custom.min.js
-#= require moment.min.js
+#= require ../js/jquery-1.8.2.min.js
+#= require ../js/jquery-ui.min.js
+#= require ../js/bootstrap.min.js
+#= require ../js/moment.min.js
 
 g = exports ? this
 
@@ -62,8 +63,7 @@ display = (transactions) ->
 
     $('.report tbody').append("""
       <tr>
-        <td>#{this.date}</td>
-        <td>#{this.address}</td>
+        <td>#{moment(this.date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')}</td>
         <td>#{exchange.toFixed(2)}</td>
         <td>#{received.toFixed(5)}</td>
         <td>#{amount.toFixed(2)}</td>
@@ -72,13 +72,13 @@ display = (transactions) ->
   )
 
   btc = 0
-  $('table.report td:nth-child(4)').each(->
+  $('table.report tbody td:nth-child(3)').each(->
     btc += parseFloat($(this).html())
   )
   $('#btc').html(btc.toFixed(5))
 
   cad = 0
-  $('table.report td:nth-child(5)').each(->
+  $('table.report tbody td:nth-child(4)').each(->
     cad += parseFloat($(this).html())
   )
   $('#cad').html(cad.toFixed(2))

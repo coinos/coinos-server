@@ -1,8 +1,10 @@
-#= require jquery-1.8.2.min.js
-#= require 2.5.3-crypto-sha256.js
-#= require jsbn.js
-#= require jsbn2.js
-#= require check_address.js
+#= require ../js/jquery-1.8.2.min.js
+#= require ../js/jquery-ui.min.js
+#= require ../js/bootstrap.min.js
+#= require ../js/2.5.3-crypto-sha256.js
+#= require ../js/jsbn.js
+#= require ../js/jsbn2.js
+#= require ../js/check_address.js
 
 g = exports ? this
 g.proceed = false
@@ -38,11 +40,18 @@ $(->
 
     ).change()
 
-    $('#address').change(->
-      if check_address($(this).val())
-        $(this).css('color', 'black')
+    $('#title').blur(->
+      if $(this).val() == ''
+        $(this).parent().addClass('has-error')
       else
-        $(this).css('color', 'red')
+          $(this).parent().removeClass('has-error')
+    )
+
+    $('#address').blur(->
+      if check_address($(this).val())
+        $(this).parent().removeClass('has-error')
+      else
+        $(this).parent().addClass('has-error')
     )
 
     $('#confirm').blur(->
@@ -55,11 +64,14 @@ $(->
     )
 
     $('#setup').submit(->
-      return false if $('.has-error').length()
+      $('.form-control').blur()
+      if $('.has-error').length > 0
+        $('.has-error').effect('shake', 500)
+        return false
     )
 
     if user
-      $('#setup').attr('action', "/#{user}/update").attr('method', 'post')
+      $('#setup').attr('action', "/#{user}").attr('method', 'post')
       $.getJSON("/#{user}.json", (data) ->
         $('#title').val(data.title)
         $('#logo').val(data.logo)

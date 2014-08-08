@@ -27,34 +27,37 @@
           return res.end();
         });
       },
-      index: function(req, res) {
-        return;
-        return db.keys('*', function(err, obj) {
-          res.write(JSON.stringify(obj));
-          return res.end();
-        });
-      },
-      list: function(req, res) {
-        return res.render('users/index', {
-          layout: 'layout'
-        });
-      },
       show: function(req, res) {
         return db.hgetall("user:" + req.params.user, function(err, obj) {
           if (obj) {
-            return res.render('calculator/show', {
+            return res.render('users/show', {
               user: req.params.user,
-              layout: 'layout'
+              layout: 'layout',
+              navigation: true,
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              })
             });
           } else {
             return res.render('sessions/new', {
-              notice: true
+              notice: true,
+              layout: 'layout',
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              })
             });
           }
         });
       },
       "new": function(req, res) {
         return res.render('users/new', {
+          layout: 'layout',
           js: (function() {
             return global.js;
           }),
@@ -74,6 +77,7 @@
             if (req.body.confirm !== req.body.password) {
               errormsg += "Passwords must match";
               return res.render('users/new', {
+                layout: 'layout',
                 js: (function() {
                   return global.js;
                 }),
@@ -98,13 +102,20 @@
         });
       },
       edit: function(req, res) {
-        return res.render('calculator/setup', {
+        return res.render('users/edit', {
           user: req.params.user,
-          layout: 'layout'
+          layout: 'layout',
+          navigation: true,
+          js: (function() {
+            return global.js;
+          }),
+          css: (function() {
+            return global.css;
+          })
         });
       },
       update: function(req, res) {
-        if (!(req.params.user === req.user.username || req.user.username === 'admin' || req.user.username === 'ben')) {
+        if (!(req.params.user === req.user.username || req.user.username === 'admin')) {
           return;
         }
         if (req.body.password === '') {

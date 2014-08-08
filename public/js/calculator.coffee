@@ -1,12 +1,11 @@
-#= require jquery-1.8.2.min.js
-#= require moment.min.js
-#= require qrcode.js
-#= require bootstrap.min.js
-#= require 2.5.3-crypto-sha256.js
-#= require jsbn.js
-#= require jsbn2.js
-#= require check_address.js
-#= require socket.io.js
+#= require js/jquery-1.8.2.min.js
+#= require js/moment.min.js
+#= require js/qrcode.js
+#= require js/bootstrap.min.js
+#= require js/2.5.3-crypto-sha256.js
+#= require js/jsbn.js
+#= require js/jsbn2.js
+#= require js/check_address.js
 
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
@@ -92,7 +91,7 @@ setup = ->
   $('#currency').html(g.currency)
   $('#received').hide()
 
-  # setupSocket()
+  setupSocket()
   fetchExchangeRate()
 
 fetchExchangeRate = ->
@@ -126,14 +125,18 @@ setupSocket = ->
     g.websocket = new WebSocket("wss://ws.blockchain.info/inv")
 
     g.websocket.onopen = -> 
+      $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
       g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
     
     g.websocket.onerror =  ->
+      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
       g.websocket = null
       fail(SOCKET_FAIL)
 
     g.websocket.onclose = ->
-      setupSocket()
+      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
+      g.websocket = null
+      fail(SOCKET_FAIL)
 
     g.websocket.onmessage = (e) ->
       results = eval('(' + e.data + ')')
@@ -155,6 +158,7 @@ setupSocket = ->
         $('#amount').blur()
         $('#payment').hide()
         $('#received').fadeIn('slow')
+        $('#chaching')[0].play()
 
       if g.user
         $.post("/#{g.user}/transactions",

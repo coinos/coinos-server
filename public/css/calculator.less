@@ -1,10 +1,8 @@
-@import "bootstrap.min.css";
-@import "bootstrap-responsive.min.css";
-@import "jquery-ui.min.css";
-@import "jquery-ui.theme.min.css";
+//= require css/bootstrap.min
+//= require css/bootstrap-responsive.min
+//= require css/jquery-ui.min
+//= require css/jquery-ui.theme.min
 
-body { text-align: center; }
-body { line-height: 100%; }
 h1 { margin-top: 0; }
 	
 div.container-fluid {
@@ -16,11 +14,12 @@ div.container-fluid {
 }
 
 .navbar-toggle { background-color: #428bca; width: 100%; position: absolute; top: 0px; height: 30px; margin: 0; float: none; z-index: 1; }
-.navbar-toggle .glyphicon { margin-top: -5px; }
+.navbar-toggle .glyphicon { margin-top: -5px; padding-left: 10px; }
 .navbar { margin: 0; }
 .navbar-collapse.in { overflow-y: visible; }
 .nav { margin-top: 30px; }
 .nav li a { padding: 10px 0 10px 10px; }
+#connection { display: none; }
 
 .form-group {
   label { font-weight: normal; font-size: 14px; display: block; }
@@ -31,7 +30,7 @@ div.container-fluid {
 
 div#calculator {
   #exchange, #amount { width: 5em; }
-  span.btn { font-size: 1.4em; width: 80%; }
+  span.btn { font-size: 16px; width: 100%; }
   strong#total { font-size: 30px; }
   p#address { padding-top: 10px; }
   #title { display: none; }

@@ -1,11 +1,10 @@
-exports.new = (req, res) ->
-  res.render('calculator/setup')
-
 exports.sweep = (req, res) ->
-  res.render('calculator/sweep', layout: 'layout')
-
-exports.show = (req, res) ->
-  res.render('calculator/show', layout: 'layout', x: 'meow')
+  res.render('calculator/sweep', 
+    layout: 'layout',
+    navigation: true,
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
 
 exports.ticker = (req, res) ->
   fs = require('fs')

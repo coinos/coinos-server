@@ -4,15 +4,17 @@
 		<meta name="viewport" content="width=device-width, height=752, user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1" />
     <title>CoinOS</title>
     <link href="img/favicon.ico" rel="shortcut icon" />
-    <link rel='stylesheet' href='/css/calculator.css'>
+    {{#css}}css/calculator{{/css}}
     {{{yield-styles}}}
     {{{yield-scripts}}}
   </head>
   <body>
     <div class="container-fluid">
+      {{#navigation}}
       <nav class="navbar" role="navigation">
         <button type="button" class="btn btn-primary navbar-toggle" data-toggle="collapse" data-target="#nav">
-          <span class="glyphicon glyphicon-list"></span>
+          <span class="pull-right glyphicon glyphicon-list"></span>
+          <span id="connection" class="pull-right glyphicon glyphicon-exclamation-sign"></span>
         </button>
         <div id="nav" class="collapse navbar-collapse">
           <div class="navbar">
@@ -31,6 +33,7 @@
           </div>
         </div>
       </nav>
+      {{/navigation}}
 
       {{{yield}}}
     </div>

@@ -1,13 +1,5 @@
 {{#yield-scripts}}
-<script src='/js/jquery-1.8.2.min.js'></script>
-<script src='/js/moment.min.js'></script>
-<script src='/js/qrcode.js'></script>
-<script src='/js/bootstrap.min.js'></script>
-<script src='/js/2.5.3-crypto-sha256.js'></script>
-<script src='/js/jsbn.js'></script>
-<script src='/js/jsbn2.js'></script>
-<script src='/js/check_address.js'></script>
-<script src='/js/calculator.js'></script>
+  {{#js}}js/calculator{{/js}}
 {{/yield-scripts}}
 
 <div id="calculator" style="display: none">
@@ -50,6 +42,7 @@
     </div>
 
     <span id="received" class="btn btn-success">Payment Received.  Thank you!</span>
+    <audio id="chaching" src="/cash_register.wav" hidden="true" enablejavascript="true">
   </div>
 </form>
 

@@ -1,8 +1,9 @@
 public/bitcoins.pdf
 node_modules
-config.js
 builtAssets
 database.json
 sequelize.coffee
 npm-debug.log
 public/js/rates.json
+src/config.coffee
+config.js

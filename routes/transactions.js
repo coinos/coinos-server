@@ -40,7 +40,14 @@
     index: function(req, res) {
       return res.render('transactions/index', {
         user: req.params.user,
-        layout: 'layout'
+        layout: 'layout',
+        navigation: true,
+        js: (function() {
+          return global.js;
+        }),
+        css: (function() {
+          return global.css;
+        })
       });
     }
   };

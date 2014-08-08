@@ -1,41 +1,30 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <title>Bitcoin Payment Calculator</title>
-    <link href="img/favicon.ico" rel="shortcut icon" />
-    {{#css}}calculator{{/css}}
-    {{#js}}register{{/js}}
-  </head>
-  <body>
-    <div class="container-fluid">
-      <form id="register" action="/users" method="post">
-        <h1>Register</h1>
-        {{#error}}
-        <div class="alert alert-danger">{{error}}</div>
-        {{/error}}
-        <div class="form-group">
-          <label for="username">Username:</label>
-          <input type="text" id="username" name="username" class="form-control" />
-        </div>
-  
-        <div class="form-group">
-          <label for="password">Password:</label>
-          <input type="password" id="password" name="password" class="form-control" />
-        </div>
+{{#yield-scripts}}
+  {{#js}}js/register{{/js}}
+{{/yield-scripts}}
 
-        <div class="form-group">
-          <label for="confirm">Confirm Password:</label>
-          <input type="password" id="confirm" name="confirm" class="form-control" />
-        </div>
-  
-        <div class="form-group">
-          <label for="email">Email:</label>
-          <input type="email" id="email" name="email" class="form-control" />
-        </div>
-        <input class="btn btn-primary" type="submit" value="Register" />
-      </form>
-    </div>
-  </body>
-</html>
+<form id="register" action="/users" method="post">
+  <h1>Register</h1>
+  {{#error}}
+  <div class="alert alert-danger">{{error}}</div>
+  {{/error}}
+  <div class="form-group">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" class="form-control" />
+  </div>
+
+  <div class="form-group">
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" class="form-control" />
+  </div>
+
+  <div class="form-group">
+    <label for="confirm">Confirm Password:</label>
+    <input type="password" id="confirm" name="confirm" class="form-control" />
+  </div>
+
+  <div class="form-group">
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" class="form-control" />
+  </div>
+  <input class="btn btn-primary" type="submit" value="Register" />
+</form>

@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, calculator, cookieParser, engines, express, passport, path, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, calculator, config, cookieParser, express, passport, path, session, sessionStore, sessions, transactions, users;
 
   express = require('express');
 
@@ -9,9 +9,9 @@
 
   path = require('path');
 
-  engines = require('consolidate');
-
   passport = require('./passport');
+
+  config = require('./config');
 
   calculator = require("./routes/calculator");
 
@@ -41,10 +41,6 @@
 
   app.use(express["static"](__dirname + '/public'));
 
-  app.use(require('connect-assets')({
-    src: 'public'
-  }));
-
   app.use(bodyParser.urlencoded({
     extended: true
   }));
@@ -55,15 +51,15 @@
     type: 'application/vnd.api+json'
   }));
 
-  app.use(cookieParser('weareallmadeofstars'));
+  app.use(cookieParser(config.secret));
 
   app.use(session({
     resave: true,
     saveUninitialized: true,
-    secret: 'weareallmadeofstars',
+    secret: config.secret,
     store: sessionStore,
     cookie: {
-      maxAge: 25920000000
+      maxAge: 1209600000
     },
     key: 'vanbtc.sid'
   }));
@@ -73,8 +69,8 @@
   app.use(passport.session());
 
   authorize = function(req, res, next) {
-    var _ref, _ref1, _ref2;
-    if (req.params.user === ((_ref = req.user) != null ? _ref.username : void 0) || ((_ref1 = req.user) != null ? _ref1.username : void 0) === 'admin' || ((_ref2 = req.user) != null ? _ref2.username : void 0) === 'ben') {
+    var _ref, _ref1;
+    if (req.params.user === ((_ref = req.user) != null ? _ref.username : void 0) || ((_ref1 = req.user) != null ? _ref1.username : void 0) === 'admin') {
       return next();
     }
     return res.redirect('/login');
@@ -94,32 +90,33 @@
 
   app.get('/logout', sessions.destroy);
 
-  app.get('/:user/exists', users.exists);
-
-  app.get('/:user.json', users.json);
-
-  app.get('/users', users.index);
-
   app.get('/users/new', users["new"]);
 
   app.post('/users', users.create);
 
   app.get('/:user/edit', authorize, users.edit);
 
-  app.post('/:user/update', authorize, users.update);
+  app.post('/:user', authorize, users.update);
 
   app.get('/:user/transactions.json', authorize, transactions.json);
 
-  app.post('/:user/transactions', transactions.create);
+  app.post('/:user/transactions', authorize, transactions.create);
 
   app.get('/:user/report', authorize, transactions.index);
 
-  app.get('/:user', users.show);
+  app.get('/:user.json', authorize, users.json);
+
+  app.get('/:user', authorize, users.show);
+
+  app.use(require('connect-assets')({
+    src: 'public',
+    servePath: '/'
+  }));
 
   app.use(function(err, req, res, next) {
     res.status(500);
     res.send('An error occurred');
-    console.log(err);
+    console.error(err.stack);
     return res.end();
   });
 
