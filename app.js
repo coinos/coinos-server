@@ -88,25 +88,23 @@
 
   app.get('/logout', sessions.destroy);
 
-  app.get('/:user/exists', users.exists);
-
-  app.get('/:user.json', users.json);
-
   app.get('/users/new', users["new"]);
 
   app.post('/users', users.create);
 
   app.get('/:user/edit', authorize, users.edit);
 
-  app.post('/:user', users.update);
+  app.post('/:user', authorize, users.update);
 
   app.get('/:user/transactions.json', authorize, transactions.json);
 
-  app.post('/:user/transactions', transactions.create);
+  app.post('/:user/transactions', authorize, transactions.create);
 
   app.get('/:user/report', authorize, transactions.index);
 
-  app.get('/:user', users.show);
+  app.get('/:user', authorize, users.show);
+
+  app.get('/:user.json', authorize, users.json);
 
   app.use(require('connect-assets')({
     src: 'public',
