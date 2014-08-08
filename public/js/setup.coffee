@@ -1,5 +1,6 @@
 #= require ../js/jquery-1.8.2.min.js
 #= require ../js/jquery-ui.min.js
+#= require ../js/bootstrap.min.js
 #= require ../js/2.5.3-crypto-sha256.js
 #= require ../js/jsbn.js
 #= require ../js/jsbn2.js
