@@ -16,33 +16,28 @@ module.exports = (sessions) ->
       res.end()
     )
 
-  index: (req, res) -> 
-    return
-    db.keys('*', (err, obj) ->
-      res.write(JSON.stringify(obj))
-      res.end()
-    )
-
-  list: (req, res) ->
-    res.render('users/index', 
-      layout: 'layout'
-    )
-
   show: (req, res) ->
     db.hgetall("user:"+req.params.user, (err, obj) ->
       if obj 
         res.render('users/show', 
           user: req.params.user, 
-          layout: 'layout'
+          layout: 'layout',
+          navigation: true,
+          js: (-> global.js), 
+          css: (-> global.css)
         )
       else 
         res.render('sessions/new', 
-          notice: true
+          notice: true,
+          layout: 'layout',
+          js: (-> global.js), 
+          css: (-> global.css)
         )
     )
 
   new: (req, res) ->
     res.render('users/new', 
+      layout: 'layout',
       js: (-> global.js), 
       css: (-> global.css)
     )
@@ -57,6 +52,7 @@ module.exports = (sessions) ->
         if req.body.confirm != req.body.password
           errormsg += "Passwords must match"
           return res.render('users/new',
+            layout: 'layout',
             js: (-> global.js), 
             css: (-> global.css),
             error: errormsg
@@ -78,7 +74,10 @@ module.exports = (sessions) ->
   edit: (req, res) ->
     res.render('users/edit', 
       user: req.params.user, 
-      layout: 'layout'
+      layout: 'layout',
+      navigation: true,
+      js: (-> global.js), 
+      css: (-> global.css)
     )
 
   update: (req, res) ->

@@ -1,7 +1,14 @@
 (function() {
   exports.sweep = function(req, res) {
     return res.render('calculator/sweep', {
-      layout: 'layout'
+      layout: 'layout',
+      navigation: true,
+      js: (function() {
+        return global.js;
+      }),
+      css: (function() {
+        return global.css;
+      })
     });
   };
 

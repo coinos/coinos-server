@@ -1,5 +1,10 @@
 exports.sweep = (req, res) ->
-  res.render('calculator/sweep', layout: 'layout')
+  res.render('calculator/sweep', 
+    layout: 'layout',
+    navigation: true,
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
 
 exports.ticker = (req, res) ->
   fs = require('fs')

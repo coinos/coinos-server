@@ -1,29 +1,12 @@
 module.exports = (grunt) ->
   grunt.initConfig(
     pkg: grunt.file.readJSON('package.json')
-    less: 
-      css: 
-        options: 
-          paths: ["public/css"]
-        files: [
-          expand: true
-          cwd: 'public/css'
-          src: ['*.less']
-          dest: 'public/css'
-          ext: '.css'
-        ]
     coffee:
       server: 
         expand: true
         cwd: 'src'
         src: '**/*.coffee'
         dest: '.'
-        ext: '.js'
-      client: 
-        expand: true
-        cwd: 'public/js'
-        src: '*.coffee'
-        dest: 'public/js'
         ext: '.js'
     watch: 
       less: 

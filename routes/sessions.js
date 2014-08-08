@@ -2,7 +2,15 @@
   module.exports = function(passport) {
     return {
       "new": function(req, res) {
-        return res.render('sessions/new');
+        return res.render('sessions/new', {
+          layout: 'layout',
+          js: (function() {
+            return global.js;
+          }),
+          css: (function() {
+            return global.css;
+          })
+        });
       },
       create: function(req, res, next) {
         return passport.authenticate('local', function(err, user, info) {
@@ -11,6 +19,13 @@
           }
           if (!user) {
             return res.render('sessions/new', {
+              layout: 'layout',
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              }),
               badpw: true
             });
           }

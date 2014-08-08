@@ -1,12 +1,11 @@
-#= require jquery-1.8.2.min.js
-#= require moment.min.js
-#= require qrcode.js
-#= require bootstrap.min.js
-#= require 2.5.3-crypto-sha256.js
-#= require jsbn.js
-#= require jsbn2.js
-#= require check_address.js
-#= require socket.io.js
+#= require js/jquery-1.8.2.min.js
+#= require js/moment.min.js
+#= require js/qrcode.js
+#= require js/bootstrap.min.js
+#= require js/2.5.3-crypto-sha256.js
+#= require js/jsbn.js
+#= require js/jsbn2.js
+#= require js/check_address.js
 
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"

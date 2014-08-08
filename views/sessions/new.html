@@ -1,46 +1,30 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-		<meta name="viewport" content="width=480, height=752, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0" />
-    <title>CoinOS</title>
-    <link href="img/favicon.ico?v2" rel="shortcut icon" />
-    <link rel='stylesheet' href='/css/calculator.css'>
-    <link rel='stylesheet' href='/css/signin.css'>
-    <script src='/js/modernizr-2.6.2-respond-1.1.0.min.js'></script>
-    <script src='/js/jquery-1.8.2.min.js'></script>
-    <script src='/js/signin.js'></script>
-  </head>
-  <body>
-    <div class="container-fluid">
-      <div id="main-logo"></div>
+{{#yield-scripts}}
+  {{#css}}css/signin{{/css}}
+  {{#js}}js/signin{{/js}}
+{{/yield-scripts}}
 
-      {{#notice}}
-        <div class="notice">
-        <h2>Your Account Needs To Be Recreated</h2>
-        <p>On May 3, 2014, our hosting provider accidentally wiped out our server and database backups, causing us to lose all of our account data.  Please contact us at <a href="mailto:info@bitcoincoop.org">info@bitcoincoop.org</a> and we'll help you get up and running again. Sorry for the inconvenience.  We appreciate all the merchants who have been using our system and we've taken measures to ensure that this kind of catastrophe won't happen again.</p>
+<div id="main-logo"></div>
+
+{{#notice}}
+  <div class="alert alert-danger">
+  <p>Looks like you're trying to access a page or account that doesn't exist.  We had an issue with our server in May that caused us to lose account data.  Please feel free to contact us at <a href="mailto:info@coinos.io">info@coinos.io</a> and we can help you get set up again or find what you're looking for.</p>
+  </div>
+{{/notice}}
+
+{{#badpw}}
+<p class="alert alert-danger">Cannot find username/password on file, please try again.</p>
+{{/badpw}}
+
+<form class="form-signin" action="login" method="post">
+  <input name="username" type="text" class="form-control" placeholder="Username" value="{{user}}" required autofocus>
+  <br />
+  <input name="password" type="password" class="form-control" placeholder="Password" required>
+  <br />
+  <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+</form>
+
+<p>
+  <button id="register" class="btn btn-lg btn-secondary btn-block">Register</button>
 </p>
-<p>The Bitcoin Co-op</p>
-        </div>
-      {{/notice}}
 
-      {{#badpw}}
-      <p class="alert alert-danger">Cannot find username/password on file, please try again.</p>
-      {{/badpw}}
-
-      <form class="form-signin" action="login" method="post">
-        <input name="username" type="text" class="form-control" placeholder="Username" value="{{user}}" required autofocus>
-        <br />
-        <input name="password" type="password" class="form-control" placeholder="Password" required>
-        <br />
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
-      </form>
-
-      <p>
-        <button id="register" class="btn btn-lg btn-secondary btn-block">Register</button>
-      </p>
-
-      <p><a href="http://bitcoincoop.org/coinos">What is this?</a></p>
-    </div>
-  </body>
-</html> 
+<p><a href="http://bitcoincoop.org/coinos">What is this?</a></p>

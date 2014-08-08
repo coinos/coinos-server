@@ -1,9 +1,9 @@
-#= require jquery-1.8.2.min.js
-#= require jqiery-ui.min.js
-#= require 2.5.3-crypto-sha256.js
-#= require jsbn.js
-#= require jsbn2.js
-#= require check_address.js
+#= require ../js/jquery-1.8.2.min.js
+#= require ../js/jquery-ui.min.js
+#= require ../js/2.5.3-crypto-sha256.js
+#= require ../js/jsbn.js
+#= require ../js/jsbn2.js
+#= require ../js/check_address.js
 
 g = exports ? this
 g.proceed = false

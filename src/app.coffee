@@ -2,7 +2,6 @@ express = require('express')
 bodyParser = require('body-parser')
 cookieParser = require('cookie-parser')
 path = require('path')
-engines = require('consolidate')
 passport = require('./passport')
 
 calculator = require("./routes/calculator")
@@ -21,7 +20,6 @@ app.engine('html', require('hogan-express'))
 app.set('view engine', 'html')
 app.set('views', __dirname + '/views')
 app.use(express.static(__dirname + '/public'))
-app.use(require('connect-assets')(src: 'public'))
 app.use(bodyParser.urlencoded({ extended: true}))
 app.use(bodyParser.json())
 app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
@@ -31,10 +29,8 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 authorize = (req, res, next) ->
-
   if req.params.user is req.user?.username or
-    req.user?.username is 'admin' or
-    req.user?.username is 'ben'
+    req.user?.username is 'admin'
       return next() 
   res.redirect('/login')
 
@@ -50,7 +46,6 @@ app.get('/logout', sessions.destroy)
 app.get('/:user/exists', users.exists)
 app.get('/:user.json', users.json)
 
-app.get('/users', users.index)
 app.get('/users/new', users.new)
 app.post('/users', users.create)
 
@@ -62,10 +57,12 @@ app.post('/:user/transactions', transactions.create)
 app.get('/:user/report', authorize, transactions.index)
 app.get('/:user', users.show)
 
+app.use(require('connect-assets')(src: 'public', servePath: '/'))
+
 app.use((err, req, res, next) ->
   res.status(500)
   res.send('An error occurred');
-  console.log(err)
+  console.error(err.stack)
   res.end()
 )
 

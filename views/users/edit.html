@@ -1,12 +1,5 @@
 {{#yield-scripts}}
-<script src='/js/jquery-1.8.2.min.js'></script>
-<script src='/js/jquery-ui.min.js'></script>
-<script src='/js/bootstrap.min.js'></script>
-<script src='/js/2.5.3-crypto-sha256.js'></script>
-<script src='/js/jsbn.js'></script>
-<script src='/js/jsbn2.js'></script>
-<script src='/js/check_address.js'></script>
-<script src='/js/setup.js'></script>
+  {{#js}}js/setup{{/js}}
 {{/yield-scripts}}
 
 <form id="setup" action="/{{user}}" method="post">

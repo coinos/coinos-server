@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, calculator, cookieParser, engines, express, passport, path, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, calculator, cookieParser, express, passport, path, session, sessionStore, sessions, transactions, users;
 
   express = require('express');
 
@@ -8,8 +8,6 @@
   cookieParser = require('cookie-parser');
 
   path = require('path');
-
-  engines = require('consolidate');
 
   passport = require('./passport');
 
@@ -41,10 +39,6 @@
 
   app.use(express["static"](__dirname + '/public'));
 
-  app.use(require('connect-assets')({
-    src: 'public'
-  }));
-
   app.use(bodyParser.urlencoded({
     extended: true
   }));
@@ -73,8 +67,8 @@
   app.use(passport.session());
 
   authorize = function(req, res, next) {
-    var _ref, _ref1, _ref2;
-    if (req.params.user === ((_ref = req.user) != null ? _ref.username : void 0) || ((_ref1 = req.user) != null ? _ref1.username : void 0) === 'admin' || ((_ref2 = req.user) != null ? _ref2.username : void 0) === 'ben') {
+    var _ref, _ref1;
+    if (req.params.user === ((_ref = req.user) != null ? _ref.username : void 0) || ((_ref1 = req.user) != null ? _ref1.username : void 0) === 'admin') {
       return next();
     }
     return res.redirect('/login');
@@ -98,8 +92,6 @@
 
   app.get('/:user.json', users.json);
 
-  app.get('/users', users.index);
-
   app.get('/users/new', users["new"]);
 
   app.post('/users', users.create);
@@ -116,10 +108,15 @@
 
   app.get('/:user', users.show);
 
+  app.use(require('connect-assets')({
+    src: 'public',
+    servePath: '/'
+  }));
+
   app.use(function(err, req, res, next) {
     res.status(500);
     res.send('An error occurred');
-    console.log(err);
+    console.error(err.stack);
     return res.end();
   });
 

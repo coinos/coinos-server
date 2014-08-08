@@ -1,6 +1,7 @@
-#= require jquery-1.8.2.min.js
-#= require jquery-ui-1.9.0.custom.min.js
-#= require moment.min.js
+#= require ../js/jquery-1.8.2.min.js
+#= require ../js/jquery-ui.min.js
+#= require ../js/bootstrap.min.js
+#= require ../js/moment.min.js
 
 g = exports ? this
 
