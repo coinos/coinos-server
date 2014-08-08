@@ -3,6 +3,7 @@ bodyParser = require('body-parser')
 cookieParser = require('cookie-parser')
 path = require('path')
 passport = require('./passport')
+config = require('./config')
 
 calculator = require("./routes/calculator")
 sessions = require("./routes/sessions")(passport)
@@ -23,8 +24,8 @@ app.use(express.static(__dirname + '/public'))
 app.use(bodyParser.urlencoded({ extended: true}))
 app.use(bodyParser.json())
 app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
-app.use(cookieParser('weareallmadeofstars'))
-app.use(session(resave: true, saveUninitialized: true, secret: 'weareallmadeofstars', store: sessionStore, cookie: { maxAge: 1209600000 }, key: 'vanbtc.sid'))
+app.use(cookieParser(config.secret))
+app.use(session(resave: true, saveUninitialized: true, secret: config.secret, store: sessionStore, cookie: { maxAge: 1209600000 }, key: 'vanbtc.sid'))
 app.use(passport.initialize())
 app.use(passport.session())
 
@@ -53,8 +54,8 @@ app.get('/:user/transactions.json', authorize, transactions.json)
 app.post('/:user/transactions', authorize, transactions.create)
 app.get('/:user/report', authorize, transactions.index)
 
-app.get('/:user', authorize, users.show)
 app.get('/:user.json', authorize, users.json)
+app.get('/:user', authorize, users.show)
 
 app.use(require('connect-assets')(src: 'public', servePath: '/'))
 

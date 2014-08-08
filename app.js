@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, calculator, cookieParser, express, passport, path, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, calculator, config, cookieParser, express, passport, path, session, sessionStore, sessions, transactions, users;
 
   express = require('express');
 
@@ -10,6 +10,8 @@
   path = require('path');
 
   passport = require('./passport');
+
+  config = require('./config');
 
   calculator = require("./routes/calculator");
 
@@ -49,12 +51,12 @@
     type: 'application/vnd.api+json'
   }));
 
-  app.use(cookieParser('weareallmadeofstars'));
+  app.use(cookieParser(config.secret));
 
   app.use(session({
     resave: true,
     saveUninitialized: true,
-    secret: 'weareallmadeofstars',
+    secret: config.secret,
     store: sessionStore,
     cookie: {
       maxAge: 1209600000
@@ -102,9 +104,9 @@
 
   app.get('/:user/report', authorize, transactions.index);
 
-  app.get('/:user', authorize, users.show);
-
   app.get('/:user.json', authorize, users.json);
+
+  app.get('/:user', authorize, users.show);
 
   app.use(require('connect-assets')({
     src: 'public',
