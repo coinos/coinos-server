@@ -1,0 +1,4 @@
+(function() {
+  module.exports.secret = 'weareallmadeofstars';
+
+}).call(this);
