@@ -1,5 +1,5 @@
-#= require jquery-1.8.2.min.js
-#= require bootstrap.js
+#= require js/jquery-1.8.2.min.js
+#= require js/bootstrap.min.js
 
 g = exports ? this
 

@@ -75,12 +75,12 @@ setup = ->
   if g.logo
     $('#logo').attr('src', g.logo).show()
   else unless g.title
-    $('#logo').attr('src', 'img/bitcoin.png').show()
+    $('#logo').attr('src', '/assets/img/bitcoin.png').show()
 
   $('#logo').click -> $(location).attr("href","/#{g.user}/edit")
   address = g.address
   if g.user? and g.user
-    address = "#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/img/blockchain.png' /></a>"
+    address = "#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>"
 
   if check_address(g.address)
     $('#address').html(address)

@@ -109,8 +109,7 @@
   app.get('/:user', authorize, users.show);
 
   app.use(require('connect-assets')({
-    src: 'public',
-    servePath: '/'
+    src: 'public'
   }));
 
   app.use(function(err, req, res, next) {

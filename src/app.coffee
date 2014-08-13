@@ -57,7 +57,7 @@ app.get('/:user/report', authorize, transactions.index)
 app.get('/:user.json', authorize, users.json)
 app.get('/:user', authorize, users.show)
 
-app.use(require('connect-assets')(src: 'public', servePath: '/'))
+app.use(require('connect-assets')(src: 'public'))
 
 app.use((err, req, res, next) ->
   res.status(500)
