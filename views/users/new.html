@@ -2,8 +2,9 @@
   {{#js}}js/register{{/js}}
 {{/yield-scripts}}
 
+<div id="main-logo"></div>
+
 <form id="register" action="/users" method="post">
-  <h1>Register</h1>
   {{#error}}
   <div class="alert alert-danger">{{error}}</div>
   {{/error}}
