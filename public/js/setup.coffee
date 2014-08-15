@@ -78,6 +78,7 @@ $(->
         $('#address').val(data.address)
         $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
         $('#commission').val(data.commission)
+        $('#setup').fadeIn()
       )
   )
 )
