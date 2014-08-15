@@ -35,27 +35,31 @@ authorize = (req, res, next) ->
       return next() 
   res.redirect('/login')
 
-app.get('/', sessions.new)
-app.get('/register', users.new)
-app.get('/ticker', calculator.ticker)
+cache = (req, res, next) ->
+  res.setHeader "Cache-Control", "public, max-age=900"
+  next()
+
+app.get('/', cache, sessions.new)
+app.get('/register', cache, users.new)
+app.get('/ticker', cache, calculator.ticker)
 app.get('/sweep', calculator.sweep)
 
-app.get('/login', sessions.new)
+app.get('/login', cache, sessions.new)
 app.post('/login', sessions.create)
 app.get('/logout', sessions.destroy)
 
-app.get('/users/new', users.new)
+app.get('/users/new', cache, users.new)
 app.post('/users', users.create)
 
-app.get('/:user/edit', authorize, users.edit)
+app.get('/:user/edit', cache, authorize, users.edit)
 app.post('/:user', authorize, users.update)
 
 app.get('/:user/transactions.json', authorize, transactions.json)
 app.post('/:user/transactions', authorize, transactions.create)
-app.get('/:user/report', authorize, transactions.index)
+app.get('/:user/report', cache, authorize, transactions.index)
 
 app.get('/:user.json', authorize, users.json)
-app.get('/:user', authorize, users.show)
+app.get('/:user', cache, authorize, users.show)
 
 app.use(require('connect-assets')(src: 'public'))
 
