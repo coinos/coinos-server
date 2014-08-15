@@ -48,37 +48,38 @@ filterDates = ->
   display(transactions)   
 
 display = (transactions) ->
-  $('.alert').remove()
   $('.report tbody tr').remove()
-  $('.report').show()
 
   if transactions.length is 0
-    $('.report').before("<p class='alert alert-warning'>No transactions were found for the specified time period</p>")
     $('.report').hide()
+    $('.alert').fadeIn()
+  else
+    $('.alert').hide()
+    $.each(transactions, ->
+      exchange = parseFloat(this.exchange)
+      received = parseFloat(this.received)
+      amount = received * exchange
 
-  $.each(transactions, ->
-    exchange = parseFloat(this.exchange)
-    received = parseFloat(this.received)
-    amount = received * exchange
+      $('.report tbody').append("""
+        <tr>
+          <td>#{moment(this.date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')}</td>
+          <td>#{exchange.toFixed(2)}</td>
+          <td>#{received.toFixed(5)}</td>
+          <td>#{amount.toFixed(2)}</td>
+        </tr>
+      """)
+    )
 
-    $('.report tbody').append("""
-      <tr>
-        <td>#{moment(this.date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')}</td>
-        <td>#{exchange.toFixed(2)}</td>
-        <td>#{received.toFixed(5)}</td>
-        <td>#{amount.toFixed(2)}</td>
-      </tr>
-    """)
-  )
+    btc = 0
+    $('table.report tbody td:nth-child(3)').each(->
+      btc += parseFloat($(this).html())
+    )
+    $('#btc').html(btc.toFixed(5))
 
-  btc = 0
-  $('table.report tbody td:nth-child(3)').each(->
-    btc += parseFloat($(this).html())
-  )
-  $('#btc').html(btc.toFixed(5))
+    cad = 0
+    $('table.report tbody td:nth-child(4)').each(->
+      cad += parseFloat($(this).html())
+    )
+    $('#cad').html(cad.toFixed(2))
 
-  cad = 0
-  $('table.report tbody td:nth-child(4)').each(->
-    cad += parseFloat($(this).html())
-  )
-  $('#cad').html(cad.toFixed(2))
+    $('.report').fadeIn()
