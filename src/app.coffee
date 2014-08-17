@@ -41,7 +41,7 @@ cache = (req, res, next) ->
   res.setHeader "Cache-Control", "public, max-age=900"
   next()
 
-setInterval(->
+fetchRates = ->
   file = 'public/js/rates.json'
   fs.truncate(file, 0, ->
     stream = fs.createWriteStream(file)
@@ -51,7 +51,8 @@ setInterval(->
       stream.write(chunk)
     )
   )
-, 120000)
+
+  setTimeout(fetchRates, 120000)
 
 app.get('/', cache, sessions.new)
 app.get('/register', cache, users.new)

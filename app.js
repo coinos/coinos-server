@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
 
   request = require('request');
 
@@ -85,10 +85,10 @@
     return next();
   };
 
-  setInterval(function() {
+  fetchRates = function() {
     var file;
     file = 'public/js/rates.json';
-    return fs.truncate(file, 0, function() {
+    fs.truncate(file, 0, function() {
       var r, stream;
       stream = fs.createWriteStream(file);
       r = request("https://api.bitcoinaverage.com/exchanges/all");
@@ -96,7 +96,8 @@
         return stream.write(chunk);
       });
     });
-  }, 120000);
+    return setTimeout(fetchRates, 120000);
+  };
 
   app.get('/', cache, sessions["new"]);
 
