@@ -70,10 +70,7 @@ setup = ->
     $('#logo').attr('src', '/assets/img/bitcoin.png').show()
 
   $('#logo').click -> $(location).attr("href","/#{g.user}/edit")
-  address = g.address
-  if g.user? and g.user
-    address = "#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>"
-
+  $('#address').html("#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
   $('#symbol').html(g.symbol + " bid")
   $('#currency').html(g.currency)
   $('#received').hide()
