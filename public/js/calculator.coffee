@@ -5,26 +5,18 @@
 #= require js/2.5.3-crypto-sha256.js
 #= require js/jsbn.js
 #= require js/jsbn2.js
-#= require js/check_address.js
 
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
 ADDRESS_FAIL = "Invalid address"
 
-tip = 1
-
 g = exports ? this
 
 $(->
   g.user = $('#user').val()
-  g.title = get('title')
-  g.address = get('address')
-  g.symbol = get('symbol')
-  g.currency = get('currency')
-  g.commission = parseFloat(get('commission'))
-  g.logo = get('logo')
   g.errors = []
-  g.receivable = 0
+  g.amount_requested = 0
+  g.tip = 1
 
   if g.user
     $.ajax(
@@ -47,7 +39,7 @@ $(->
     value = $(this).html().slice(0, -1)
     $(this).siblings().css('font-weight','normal').removeClass('active')
     $(this).css('font-weight','bold')
-    tip = 1 + (parseFloat(value)/100)
+    g.tip = 1 + (parseFloat(value)/100)
     updateTotal()
   )
 
@@ -82,11 +74,6 @@ setup = ->
   if g.user? and g.user
     address = "#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>"
 
-  if check_address(g.address)
-    $('#address').html(address)
-  else
-    fail(ADDRESS_FAIL)
-    
   $('#symbol').html(g.symbol + " bid")
   $('#currency').html(g.currency)
   $('#received').hide()
@@ -121,64 +108,62 @@ finalize = ->
 setupSocket = ->
   setTimeout(setupSocket, 10000)
 
-  unless g.websocket and g.websocket.readyState is 1
-    g.websocket = new WebSocket("wss://ws.blockchain.info/inv")
+  unless g.btcd and g.btcd.readyState is 1
+    g.btcd = new WebSocket("wss://coinos.io/ws")
 
-    g.websocket.onopen = -> 
+    g.btcd.onopen = -> 
       $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
-      g.websocket.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
+      msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'notifyreceived', params: [[g.address]] }
+      g.btcd.send(msg)
     
-    g.websocket.onerror =  ->
+    g.btcd.onerror =  ->
       $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
-      g.websocket = null
-      fail(SOCKET_FAIL)
+      g.btcd = null
 
-    g.websocket.onclose = ->
+    g.btcd.onclose = ->
       $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
-      g.websocket = null
-      fail(SOCKET_FAIL)
+      g.btcd = null
 
-    g.websocket.onmessage = (e) ->
-      results = eval('(' + e.data + ')')
-      from_address = ''
-      received = 0
-      
-      $.each(results.x.out, (i, v) ->
-        if (v.addr == g.address) 
-          received += v.value / 100000000
-      )
+    g.btcd.onmessage = (e) ->
+      data = JSON.parse(e.data)
+      amount_received = 0
 
-      $.each(results.x.inputs, (i, v) ->
-        from_address = v.prev_out.addr
-        if (v.prev_out.addr == g.address) 
-          input -= v.prev_out.value / 100000000
-      )
+      if data.result
+        for output in data.result.vout
+          if g.address in output.scriptPubKey.addresses
+            amount_received += parseFloat(output.value)
 
-      if (g.receivable <= received) 
-        $('#amount').blur()
-        $('#payment').hide()
-        $('#received').fadeIn('slow')
-        $('#chaching')[0].play()
+        if g.user
+          $.post("/#{g.user}/transactions",
+            txid: data.result.txid,
+            date: moment().format("YYYY-MM-DD HH:mm:ss"),
+            received: amount_received,
+            tip: g.tip,
+            exchange: g.exchange
+          )
 
-      if g.user
-        $.post("/#{g.user}/transactions",
-          address: from_address,
-          date: moment().format("YYYY-MM-DD HH:mm:ss"),
-          received: received,
-          exchange: g.exchange
-        )
+        if amount_received >= g.amount_requested
+          $('#amount').blur()
+          $('#payment').hide()
+          $('#received').fadeIn('slow')
+          $('#chaching')[0].play()
+            
+
+      if data.method and data.method is 'recvtx' and data.params.length is 1
+        msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'decoderawtransaction', params: [data.params[0]] }
+        g.btcd.send(msg)
 
 updateTotal = ->
-  amount = parseFloat($('#amount').val() * tip)
-  total = (amount / g.exchange).toFixed(5)
-  g.receivable = (amount / g.exchange).toFixed(8)
+  amount = parseFloat($('#amount').val() * g.tip)
+  total = (amount / g.exchange).toFixed(8)
+  g.amount_requested = (amount / g.exchange).toFixed(8)
 
   unless $.isNumeric(total)
     total = ''
 
   $('#total').html(total.toString())
   $('#qr').html('')
-  new QRCode('qr', "bitcoin:#{g.address}?amount=#{g.receivable.toString()}")
+  new QRCode('qr', "bitcoin:#{g.address}?amount=#{g.amount_requested.toString()}")
 
 
 fail = (msg) ->
@@ -195,17 +180,6 @@ clear = (msg) ->
   else
     $('#error').hide()
     $('#calculator').fadeIn('slow')
-
-get = (name) ->
-  name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]")
-  regexS = "[\\?&]" + name + "=([^&#]*)"
-  regex = new RegExp(regexS)
-  results = regex.exec(window.location.search)
-
-  if (results == null)
-    return ""
-  else
-    return decodeURIComponent(results[1].replace(/\+/g, " "))
 
 Array::uniq = ->
   output = {}
