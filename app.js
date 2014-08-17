@@ -1,5 +1,7 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, passport, path, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
+
+  request = require('request');
 
   express = require('express');
 
@@ -12,6 +14,8 @@
   passport = require('./passport');
 
   config = require('./config');
+
+  fs = require('fs');
 
   calculator = require("./routes/calculator");
 
@@ -80,6 +84,19 @@
     res.setHeader("Cache-Control", "public, max-age=900");
     return next();
   };
+
+  setInterval(function() {
+    var file;
+    file = 'public/js/rates.json';
+    return fs.truncate(file, 0, function() {
+      var r, stream;
+      stream = fs.createWriteStream(file);
+      r = request("https://api.bitcoinaverage.com/exchanges/all");
+      return r.on('data', function(chunk) {
+        return stream.write(chunk);
+      });
+    });
+  }, 120000);
 
   app.get('/', cache, sessions["new"]);
 

@@ -1,9 +1,11 @@
+request = require('request')
 express = require('express')
 bodyParser = require('body-parser')
 cookieParser = require('cookie-parser')
 path = require('path')
 passport = require('./passport')
 config = require('./config')
+fs = require('fs')
 
 calculator = require("./routes/calculator")
 sessions = require("./routes/sessions")(passport)
@@ -38,6 +40,18 @@ authorize = (req, res, next) ->
 cache = (req, res, next) ->
   res.setHeader "Cache-Control", "public, max-age=900"
   next()
+
+setInterval(->
+  file = 'public/js/rates.json'
+  fs.truncate(file, 0, ->
+    stream = fs.createWriteStream(file)
+
+    r = request("https://api.bitcoinaverage.com/exchanges/all")
+    r.on('data', (chunk) ->
+      stream.write(chunk)
+    )
+  )
+, 120000)
 
 app.get('/', cache, sessions.new)
 app.get('/register', cache, users.new)
