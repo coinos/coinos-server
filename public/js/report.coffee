@@ -64,7 +64,7 @@ display = (transactions) ->
         <tr>
           <td>#{moment(this.date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')}</td>
           <td>#{exchange.toFixed(2)}</td>
-          <td>#{received.toFixed(5)}</td>
+          <td>#{received.toFixed(8)}</td>
           <td>#{amount.toFixed(2)}</td>
         </tr>
       """)
@@ -74,7 +74,7 @@ display = (transactions) ->
     $('table.report tbody td:nth-child(3)').each(->
       btc += parseFloat($(this).html())
     )
-    $('#btc').html(btc.toFixed(5))
+    $('#btc').html(btc.toFixed(8))
 
     cad = 0
     $('table.report tbody td:nth-child(4)').each(->

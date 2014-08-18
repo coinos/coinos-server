@@ -40,6 +40,11 @@ $(->
 
     ).change()
 
+    units = ['BTC', 'mBTC', '&micro;BTC', 'satoshis']
+    $.each(units, (i, v) ->
+      $('#unit').append("<option value='#{v}'>#{v}</option>")
+    )
+
     $('#title').blur(->
       if $(this).val() == ''
         $(this).parent().addClass('has-error')
@@ -74,10 +79,10 @@ $(->
       $('#setup').attr('action', "/#{user}").attr('method', 'post')
       $.getJSON("/#{user}.json", (data) ->
         $('#title').val(data.title)
-        $('#logo').val(data.logo)
         $('#address').val(data.address)
         $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
         $('#commission').val(data.commission)
+        $('#unit').val(data.unit)
         $('#setup').fadeIn()
       )
   )

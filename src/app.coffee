@@ -16,7 +16,6 @@ session = require('express-session')
 RedisStore = require('connect-redis')(session)
 sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
 
-
 app = express()
 app.enable('trust proxy')
 app.engine('html', require('hogan-express'))

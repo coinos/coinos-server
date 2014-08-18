@@ -17,23 +17,22 @@ $(->
   g.errors = []
   g.amount_requested = 0
   g.tip = 1
+  g.unit = 'BTC'
 
-  if g.user
-    $.ajax(
-      url: g.user + '.json', 
-      dataType: 'json',
-      success: (data) ->
-        if data?
-          g.title = data.title
-          g.address = data.address 
-          g.currency = data.currency
-          g.symbol = data.symbol
-          g.commission = data.commission 
-          g.logo = data.logo 
-        setup()
-    )
-  else 
-    setup()
+  $.ajax(
+    url: g.user + '.json', 
+    dataType: 'json',
+    success: (data) ->
+      if data?
+        g.title = data.title
+        g.address = data.address 
+        g.currency = data.currency
+        g.symbol = data.symbol
+        g.commission = data.commission 
+        g.logo = data.logo 
+        g.unit = data.unit
+      setup()
+  )
 
   $('#tip button').click(->
     value = $(this).html().slice(0, -1)
@@ -54,8 +53,6 @@ $(->
   )
 )
 
-activateTip = (p) ->
-
 setup = ->
   g.address or= ''
   g.commission or= 0
@@ -73,6 +70,7 @@ setup = ->
   $('#address').html("#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
   $('#symbol').html(g.symbol + " bid")
   $('#currency').html(g.currency)
+  $('#unit').html(g.unit)
   $('#received').hide()
 
   setupSocket()
@@ -144,16 +142,16 @@ setupSocket = ->
           $('#payment').hide()
           $('#received').fadeIn('slow')
           $('#chaching')[0].play()
-            
 
       if data.method and data.method is 'recvtx' and data.params.length is 1
         msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'decoderawtransaction', params: [data.params[0]] }
         g.btcd.send(msg)
 
 updateTotal = ->
+  precision = 9 - multiplier().toString().length
   amount = parseFloat($('#amount').val() * g.tip)
-  total = (amount / g.exchange).toFixed(8)
-  g.amount_requested = (amount / g.exchange).toFixed(8)
+  total = (amount * multiplier() / g.exchange).toFixed(precision)
+  g.amount_requested = total
 
   unless $.isNumeric(total)
     total = ''
@@ -161,7 +159,6 @@ updateTotal = ->
   $('#total').html(total.toString())
   $('#qr').html('')
   new QRCode('qr', "bitcoin:#{g.address}?amount=#{g.amount_requested.toString()}")
-
 
 fail = (msg) ->
   g.errors.push(msg)
@@ -182,3 +179,12 @@ Array::uniq = ->
   output = {}
   output[@[key]] = @[key] for key in [0...@length]
   value for key, value of output
+
+multiplier = ->
+  switch g.unit
+    when 'BTC' then 1
+    when 'mBTC' then 1000
+    when 'µBTC' then 1000000
+    when 'satoshis' then 100000000
+
+
