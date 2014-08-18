@@ -151,7 +151,7 @@ updateTotal = ->
   precision = 9 - multiplier().toString().length
   amount = parseFloat($('#amount').val() * g.tip)
   total = (amount * multiplier() / g.exchange).toFixed(precision)
-  g.amount_requested = total
+  g.amount_requested = (amount / g.exchange).toFixed(8)
 
   unless $.isNumeric(total)
     total = ''
