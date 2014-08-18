@@ -99,6 +99,8 @@
     return setTimeout(fetchRates, 120000);
   };
 
+  fetchRates();
+
   app.get('/', cache, sessions["new"]);
 
   app.get('/register', cache, users["new"]);
