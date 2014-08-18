@@ -29,6 +29,7 @@ $(->
   )
 
   $('#confirm').blur(->
+    return if $(this).val() == ''
     $(this).parent().next('.alert').remove()
 
     if $('#password').val() == $('#confirm').val()
@@ -39,6 +40,7 @@ $(->
   )
 
   $('#email').blur(->
+    return if $(this).val() == ''
     $(this).parent().next('.alert').remove()
     if validateEmail($(this).val())
       $(this).parent().removeClass('has-error')
