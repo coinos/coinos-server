@@ -103,6 +103,47 @@ finalize = ->
 setupSocket = ->
   setTimeout(setupSocket, 10000)
 
+  unless g.blockchain and g.blockchain.readyState is 1
+    g.blockchain = new WebSocket("wss://ws.blockchain.info/inv")
+
+    g.blockchain.onopen = -> 
+      $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
+      g.blockchain.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
+    
+    g.blockchain.onerror =  ->
+      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
+      g.blockchain = null
+      fail(SOCKET_FAIL)
+
+    g.blockchain.onclose = ->
+      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
+      g.blockchain = null
+      fail(SOCKET_FAIL)
+
+    g.blockchain.onmessage = (e) ->
+      results = eval('(' + e.data + ')')
+      from_address = ''
+      received = 0
+      
+      $.each(results.x.out, (i, v) ->
+        if (v.addr == g.address) 
+          received += v.value / 100000000
+      )
+
+      if $('#received').is(":hidden") and g.amount_requested <= received 
+        $('#amount').blur()
+        $('#payment').hide()
+        $('#received').fadeIn('slow')
+        $('#chaching')[0].play()
+
+      if g.user
+        $.post("/#{g.user}/transactions",
+          address: from_address,
+          date: moment().format("YYYY-MM-DD HH:mm:ss"),
+          received: received,
+          exchange: g.exchange
+        )
+
   unless g.btcd and g.btcd.readyState is 1
     g.btcd = new WebSocket("wss://coinos.io/ws")
 
@@ -137,7 +178,7 @@ setupSocket = ->
             exchange: g.exchange
           )
 
-        if amount_received >= g.amount_requested
+        if $('#received').is(":hidden") and amount_received >= g.amount_requested
           $('#amount').blur()
           $('#payment').hide()
           $('#received').fadeIn('slow')

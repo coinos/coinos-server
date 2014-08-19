@@ -49,6 +49,9 @@ fetchRates = ->
     r.on('data', (chunk) ->
       stream.write(chunk)
     )
+    r.on('error', (error) ->
+      console.log(error)
+    )
   )
 
   setTimeout(fetchRates, 120000)

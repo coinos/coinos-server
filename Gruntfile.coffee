@@ -9,15 +9,11 @@ module.exports = (grunt) ->
         dest: '.'
         ext: '.js'
     watch: 
-      less: 
-        files: ['public/css/**/*.less']
-        tasks: ['less']
       coffee:
         files: ['**/*.coffee']
         tasks: ['coffee']
   )
 
   grunt.loadNpmTasks('grunt-contrib-coffee')
-  grunt.loadNpmTasks('grunt-contrib-less')
   grunt.loadNpmTasks('grunt-contrib-watch')
-  grunt.registerTask('default', ['less', 'coffee']);
+  grunt.registerTask('default', ['coffee']);

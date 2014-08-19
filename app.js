@@ -92,8 +92,11 @@
       var r, stream;
       stream = fs.createWriteStream(file);
       r = request("https://api.bitcoinaverage.com/exchanges/all");
-      return r.on('data', function(chunk) {
+      r.on('data', function(chunk) {
         return stream.write(chunk);
+      });
+      return r.on('error', function(error) {
+        return console.log(error);
       });
     });
     return setTimeout(fetchRates, 120000);
