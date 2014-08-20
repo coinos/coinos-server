@@ -6,7 +6,7 @@
   <input id="user" type="hidden" value="{{user}}" />
 
   <h1 id="title"></h1>
-  <img id="logo" src="/assets/img/bitcoin.png" alt="Logo" />
+  <a href="/{{user}}/edit"><img id="logo" src="/assets/img/bitcoin.png" alt="Logo" /></a>
 
   <form role="form">
     <div class="form-group">
@@ -37,7 +37,7 @@
 
     <div id="payment">
       <p>Please send <strong id="total">0.0</strong> <span id="unit"></span> to</p>
-      <div id="qr"></div>
+      <a href="/{{user}}/report"><div id="qr"></div></a>
       <p id="address"></p>
     </div>
 

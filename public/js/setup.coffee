@@ -80,6 +80,7 @@ $(->
       $.getJSON("/#{user}.json", (data) ->
         $('#title').val(data.title)
         $('#address').val(data.address)
+        $('#logo').val(data.logo)
         $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
         $('#commission').val(data.commission)
         $('#unit').val(data.unit)

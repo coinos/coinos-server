@@ -58,16 +58,12 @@ setup = ->
   g.commission or= 0
   g.symbol or= 'quadrigacx'
 
-  if g.title 
-    $('#title').html(g.title).show()
-
   if g.logo
     $('#logo').attr('src', g.logo).show()
-  else unless g.title
-    $('#logo').attr('src', '/assets/img/bitcoin.png').show()
+  else if g.title 
+    $('#title').html("<a href='/#{g.user}/edit'>#{g.title}</a>").show()
 
-  $('#logo').click -> $(location).attr("href","/#{g.user}/edit")
-  $('#address').html("#{address} <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
+  $('#address').html("<a href='/#{g.user}/report'>#{address}</a> <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
   $('#symbol').html(g.symbol + " bid")
   $('#currency').html(g.currency)
   $('#unit').html(g.unit)
