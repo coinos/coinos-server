@@ -161,20 +161,21 @@ setupSocket = ->
 
     g.btcd.onmessage = (e) ->
       data = JSON.parse(e.data)
-      txid = data.result.txid
-      return if txid == g.last
-      g.last = txid
 
       amount_received = 0
 
       if data.result
+        txid = data.result.txid
+        return if txid == g.last
+        g.last = txid
+
         for output in data.result.vout
           if g.address in output.scriptPubKey.addresses
             amount_received += parseFloat(output.value)
 
         if g.user
           $.post("/#{g.user}/transactions",
-            txid: data.result.txid,
+            txid: txid,
             date: moment().format("YYYY-MM-DD HH:mm:ss"),
             received: amount_received,
             tip: g.tip,
