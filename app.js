@@ -132,7 +132,7 @@
 
   app.get('/:user/report', cache, authorize, transactions.index);
 
-  app.get('/:user.json', authorize, users.json);
+  app.get('/:user.json', users.json);
 
   app.get('/:user', cache, users.show);
 
