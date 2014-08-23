@@ -118,15 +118,18 @@ setupSocket = ->
 
     g.blockchain.onmessage = (e) ->
       results = eval('(' + e.data + ')')
-      from_address = ''
-      received = 0
+      amount_received = 0
+      txid = results.x.hash
+
+      return if txid == g.last
+      g.last = txid
       
       $.each(results.x.out, (i, v) ->
         if (v.addr == g.address) 
-          received += v.value / 100000000
+          amount_received += v.value / 100000000
       )
 
-      if $('#received').is(":hidden") and g.amount_requested <= received 
+      if $('#received').is(":hidden") and g.amount_requested <= amount_received 
         $('#amount').blur()
         $('#payment').hide()
         $('#received').fadeIn('slow')
@@ -134,9 +137,9 @@ setupSocket = ->
 
       if g.user
         $.post("/#{g.user}/transactions",
-          address: from_address,
+          txid: txid,
           date: moment().format("YYYY-MM-DD HH:mm:ss"),
-          received: received,
+          received: amount_received,
           exchange: g.exchange
         )
 
@@ -158,6 +161,10 @@ setupSocket = ->
 
     g.btcd.onmessage = (e) ->
       data = JSON.parse(e.data)
+      txid = data.result.txid
+      return if txid == g.last
+      g.last = txid
+
       amount_received = 0
 
       if data.result

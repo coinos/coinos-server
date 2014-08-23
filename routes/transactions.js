@@ -11,29 +11,48 @@
         'transactions': []
       };
       return db.lrange("" + user + ":transactions", 0, -1, function(err, transactions) {
-        var i, process;
-        process = function(err, t) {
+        var cb, i, txid;
+        cb = function(err, t) {
+          var txid;
           r.transactions.push(t);
           if (i >= transactions.length) {
             res.write(JSON.stringify(r));
             return res.end();
           } else {
-            return db.hgetall("" + user + ":transactions:" + transactions[i++], process);
+            txid = transactions[i++];
+            if (parseInt(txid)) {
+              txid = user + ":transactions:" + txid;
+            }
+            return db.hgetall(txid, cb);
           }
         };
         i = 0;
-        return db.hgetall("" + user + ":transactions:" + transactions[i++], process);
+        txid = transactions[i++];
+        if (parseInt(txid)) {
+          txid = user + ":transactions:" + txid;
+        }
+        return db.hgetall(txid, cb);
       });
     },
     create: function(req, res) {
-      var user;
+      var finish, user;
       user = req.params.user;
-      return db.incr('transactions', function(err, id) {
-        return db.hmset("" + user + ":transactions:" + id, req.body, function() {
-          return db.rpush("" + user + ":transactions", id, function() {
-            res.write(JSON.stringify(req.body));
-            return res.end();
-          });
+      finish = function() {
+        res.write(JSON.stringify(req.body));
+        return res.end();
+      };
+      db.watch(req.body.txid);
+      return db.exists(req.body.txid, function(err, result) {
+        var multi;
+        if (result) {
+          finish();
+          return;
+        }
+        multi = db.multi();
+        multi.hmset(req.body.txid, req.body);
+        multi.rpush("" + user + ":transactions", req.body.txid);
+        return multi.exec(function(err, replies) {
+          return finish();
         });
       });
     },

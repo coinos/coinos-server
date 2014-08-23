@@ -128,13 +128,13 @@
 
   app.get('/:user/transactions.json', authorize, transactions.json);
 
-  app.post('/:user/transactions', authorize, transactions.create);
+  app.post('/:user/transactions', transactions.create);
 
   app.get('/:user/report', cache, authorize, transactions.index);
 
   app.get('/:user.json', authorize, users.json);
 
-  app.get('/:user', cache, authorize, users.show);
+  app.get('/:user', cache, users.show);
 
   app.use(require('connect-assets')({
     src: 'public'
