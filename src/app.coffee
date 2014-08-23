@@ -69,12 +69,12 @@ app.get('/logout', sessions.destroy)
 app.get('/users/new', cache, users.new)
 app.post('/users', users.create)
 
-app.get('/:user/edit', cache, authorize, users.edit)
+app.get('/:user/edit', authorize, cache, users.edit)
 app.post('/:user', authorize, users.update)
 
 app.get('/:user/transactions.json', authorize, transactions.json)
 app.post('/:user/transactions', transactions.create)
-app.get('/:user/report', cache, authorize, transactions.index)
+app.get('/:user/report', authorize, cache, transactions.index)
 
 app.get('/:user.json', users.json)
 app.get('/:user', cache, users.show)
