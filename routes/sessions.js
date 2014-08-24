@@ -34,11 +34,13 @@
             if (err) {
               return next(err);
             }
-            if (/edit/.test(req.headers['referer'])) {
-              url = "/" + user.username + "/edit";
-            } else {
+            if (req.session.redirect != null) {
+              url = req.session.redirect;
+            }
+            if (url == null) {
               url = "/" + user.username;
             }
+            delete req.session.redirect;
             return res.redirect(url);
           });
         })(req, res, next);
