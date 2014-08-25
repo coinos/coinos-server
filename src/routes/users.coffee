@@ -65,7 +65,7 @@ module.exports = (sessions) ->
              password: hash,
              email: req.body.email
             , ->
-              req.headers['referer'] = "/#{req.body.username}/edit"
+              req.session.redirect = "/#{req.body.username}/edit"
               sessions.create(req, res)
            )
         )
