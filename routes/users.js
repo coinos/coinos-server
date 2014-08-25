@@ -115,9 +115,6 @@
         });
       },
       update: function(req, res) {
-        if (!(req.params.user === req.user.username || req.user.username === 'admin')) {
-          return;
-        }
         if (req.body.password === '') {
           delete req.body.password;
         }

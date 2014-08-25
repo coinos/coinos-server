@@ -56,19 +56,56 @@ display = (transactions) ->
   else
     $('.alert').hide()
     $.each(transactions, ->
-      exchange = parseFloat(this.exchange)
-      received = parseFloat(this.received)
+      exchange = parseFloat(@exchange)
+      received = parseFloat(@received)
       amount = received * exchange
+      notes = @notes
+      txid = @txid
+      date = moment(@date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')
 
-      $('.report tbody').append("""
-        <tr>
-          <td>#{moment(this.date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')}</td>
+      row = $("""
+        <tr id='#{@txid}'>
+          <td>#{date}&nbsp;&nbsp;<span class='glyphicon glyphicon-tag hidden'></span></td>
           <td>#{exchange.toFixed(2)}</td>
           <td>#{received.toFixed(8)}</td>
           <td>#{amount.toFixed(2)}</td>
         </tr>
       """)
+
+      if notes
+        row.attr('data-notes', notes)
+        row.find('span').removeClass('hidden')
+
+      $('.report tbody').append(row) 
+      
+      row.click(-> 
+        notes = $(this).attr('data-notes')
+
+        $('#modal').modal()
+        $('#modal textarea').val('')
+
+        $('#modal .btn-danger').off().click(->
+          $.ajax(type: 'delete', url: "/#{$('#user').val()}/transactions/#{txid}")
+          $('#modal').modal('hide')
+          row.remove()
+        )
+
+        $('#modal textarea').off().change(->
+          notes = $(this).val()
+          $.post("/transactions/#{txid}", notes: $(this).val()) if txid
+
+          row.find('span').addClass('hidden')
+          if notes
+            row.find('span').removeClass('hidden')
+
+          row.attr('data-notes', $(this).val())
+        )
+
+        if notes
+          $('#modal textarea').val(notes) 
+      )
     )
+
 
     btc = 0
     $('table.report tbody td:nth-child(3)').each(->

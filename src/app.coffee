@@ -77,6 +77,8 @@ app.post('/:user', authorize, users.update)
 
 app.get('/:user/transactions.json', authorize, transactions.json)
 app.post('/:user/transactions', transactions.create)
+app.post('/transactions/:txid', transactions.update)
+app.delete('/:user/transactions/:txid', transactions.delete)
 app.get('/:user/report', authorize, transactions.index)
 
 app.get('/:user.json', users.json)

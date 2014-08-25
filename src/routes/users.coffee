@@ -81,8 +81,6 @@ module.exports = (sessions) ->
     )
 
   update: (req, res) ->
-    return unless req.params.user is req.user.username or 
-    req.user.username is 'admin'
     if req.body.password is ''
       delete req.body.password
     db.hmset("user:"+req.params.user, req.body, ->

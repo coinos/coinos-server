@@ -1,11 +1,25 @@
 db = require('../redis')
 
 module.exports =
+  index: (req, res) ->
+    res.render('transactions/index',  
+      user: req.params.user,
+      layout: 'layout',
+      navigation: true,
+      js: (-> global.js), 
+      css: (-> global.css)
+    )
+
   json: (req, res) ->
     user = req.params.user
     r = 'transactions': []
 
     db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
+      txid = ->
+        x = transactions[i++]
+        return x if typeof x != "number"
+        return user + ":transactions:" + x
+
       cb = (err, t) ->
         r.transactions.push t
 
@@ -13,19 +27,10 @@ module.exports =
           res.write(JSON.stringify(r))
           res.end()
         else
-          txid = transactions[i++]
-          if parseInt(txid)
-            txid = user + ":transactions:" + txid
-      
-          db.hgetall(txid, cb)
+          db.hgetall(txid(), cb)
       
       i = 0
-
-      txid = transactions[i++]
-      if parseInt(txid)
-        txid = user + ":transactions:" + txid
-
-      db.hgetall(txid, cb)
+      db.hgetall(txid(), cb)
     )
 
   create: (req, res) ->
@@ -48,12 +53,14 @@ module.exports =
       )
     )
 
-  index: (req, res) ->
-    res.render('transactions/index',  
-      user: req.params.user,
-      layout: 'layout',
-      navigation: true,
-      js: (-> global.js), 
-      css: (-> global.css)
+  update: (req, res) ->
+    db.hset(req.params.txid, 'notes', req.body.notes, ->
+      res.end()
     )
 
+  delete: (req, res) ->
+    db.del(req.params.txid, ->
+      db.lrem(req.params.user + ":transactions", 0, req.params.txid, ->
+        res.end()
+      )
+    )

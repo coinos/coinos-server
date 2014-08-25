@@ -4,6 +4,19 @@
   db = require('../redis');
 
   module.exports = {
+    index: function(req, res) {
+      return res.render('transactions/index', {
+        user: req.params.user,
+        layout: 'layout',
+        navigation: true,
+        js: (function() {
+          return global.js;
+        }),
+        css: (function() {
+          return global.css;
+        })
+      });
+    },
     json: function(req, res) {
       var r, user;
       user = req.params.user;
@@ -12,26 +25,25 @@
       };
       return db.lrange("" + user + ":transactions", 0, -1, function(err, transactions) {
         var cb, i, txid;
+        txid = function() {
+          var x;
+          x = transactions[i++];
+          if (typeof x !== "number") {
+            return x;
+          }
+          return user + ":transactions:" + x;
+        };
         cb = function(err, t) {
-          var txid;
           r.transactions.push(t);
           if (i >= transactions.length) {
             res.write(JSON.stringify(r));
             return res.end();
           } else {
-            txid = transactions[i++];
-            if (parseInt(txid)) {
-              txid = user + ":transactions:" + txid;
-            }
-            return db.hgetall(txid, cb);
+            return db.hgetall(txid(), cb);
           }
         };
         i = 0;
-        txid = transactions[i++];
-        if (parseInt(txid)) {
-          txid = user + ":transactions:" + txid;
-        }
-        return db.hgetall(txid, cb);
+        return db.hgetall(txid(), cb);
       });
     },
     create: function(req, res) {
@@ -56,17 +68,16 @@
         });
       });
     },
-    index: function(req, res) {
-      return res.render('transactions/index', {
-        user: req.params.user,
-        layout: 'layout',
-        navigation: true,
-        js: (function() {
-          return global.js;
-        }),
-        css: (function() {
-          return global.css;
-        })
+    update: function(req, res) {
+      return db.hset(req.params.txid, 'notes', req.body.notes, function() {
+        return res.end();
+      });
+    },
+    "delete": function(req, res) {
+      return db.del(req.params.txid, function() {
+        return db.lrem(req.params.user + ":transactions", 0, req.params.txid, function() {
+          return res.end();
+        });
       });
     }
   };
