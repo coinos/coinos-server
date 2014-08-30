@@ -26,7 +26,14 @@ app.use(bodyParser.urlencoded({ extended: true}))
 app.use(bodyParser.json())
 app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
 app.use(cookieParser(config.secret))
-app.use(session(resave: true, saveUninitialized: true, secret: config.secret, store: sessionStore, cookie: { maxAge: 1209600000 }, key: 'vanbtc.sid'))
+app.use(session(
+  resave: true
+  saveUninitialized: true
+  secret: config.secret
+  store: sessionStore
+  cookie: maxAge: 1209600000
+  key: 'vanbtc.sid'
+))
 app.use(passport.initialize())
 app.use(passport.session())
 
@@ -43,22 +50,17 @@ cache = (req, res, next) ->
     res.setHeader "Cache-Control", "public, max-age=900"
   next()
 
-fetchRates = ->
-  file = 'public/js/rates.json'
-  fs.truncate(file, 0, ->
-    stream = fs.createWriteStream(file)
-
-    r = request("https://api.bitcoinaverage.com/exchanges/all")
-    r.on('data', (chunk) ->
-      stream.write(chunk)
-    )
-    r.on('error', (error) ->
-      console.log(error)
-    )
+do fetchRates = ->
+  request("https://api.bitcoinaverage.com/exchanges/all", (error, response, body) ->
+    try 
+      require('util').isDate(JSON.parse(body).timestamp)
+      file = 'public/js/rates.json'
+      stream = fs.createWriteStream(file)
+      fs.truncate(file, 0, ->
+        stream.write(body)
+      )
   )
-
   setTimeout(fetchRates, 120000)
-fetchRates()
 
 app.get('/', cache, sessions.new)
 app.get('/register', cache, users.new)

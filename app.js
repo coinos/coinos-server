@@ -88,24 +88,20 @@
     return next();
   };
 
-  fetchRates = function() {
-    var file;
-    file = 'public/js/rates.json';
-    fs.truncate(file, 0, function() {
-      var r, stream;
-      stream = fs.createWriteStream(file);
-      r = request("https://api.bitcoinaverage.com/exchanges/all");
-      r.on('data', function(chunk) {
-        return stream.write(chunk);
-      });
-      return r.on('error', function(error) {
-        return console.log(error);
-      });
+  (fetchRates = function() {
+    request("https://api.bitcoinaverage.com/exchanges/all", function(error, response, body) {
+      var file, stream;
+      try {
+        require('util').isDate(JSON.parse(body).timestamp);
+        file = 'public/js/rates.json';
+        stream = fs.createWriteStream(file);
+        return fs.truncate(file, 0, function() {
+          return stream.write(body);
+        });
+      } catch (_error) {}
     });
     return setTimeout(fetchRates, 120000);
-  };
-
-  fetchRates();
+  })();
 
   app.get('/', cache, sessions["new"]);
 
