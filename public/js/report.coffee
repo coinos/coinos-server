@@ -61,6 +61,7 @@ display = (transactions) ->
       amount = received * exchange
       notes = @notes
       txid = @txid
+      address = @address
       date = moment(@date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')
 
       row = $("""
@@ -79,15 +80,28 @@ display = (transactions) ->
       $('.report tbody').append(row) 
       
       row.click(-> 
+        $('#confirm, #yousure').hide()
+        $('#buttons, #modal textarea').show()
         notes = $(this).attr('data-notes')
 
         $('#modal').modal()
         $('#modal textarea').val('')
+        $('#modal .btn-primary').toggle(address?) 
 
         $('#modal .btn-danger').off().click(->
+          $('#yousure, #confirm').show()
+          $('#buttons, #modal textarea').hide()
+        )
+
+        $('#confirm .btn-danger').click(->
           $.ajax(type: 'delete', url: "/#{$('#user').val()}/transactions/#{txid}")
           $('#modal').modal('hide')
           row.remove()
+        )
+
+        $('#modal .btn-primary').off().click(->
+          window.open("https://blockchain.info/address/#{address}", '_blank')
+          $('#modal').modal('hide')
         )
 
         $('#modal textarea').off().change(->
