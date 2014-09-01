@@ -58,17 +58,10 @@ setup = ->
     $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
   if g.user.bip32
-    i = g.user.index
-    bip32 = new BIP32(g.user.bip32)
-    result = bip32.derive("m/0/#{i}")
-    hash160 = result.eckey.pubKeyHash
-    addr = new Bitcoin.Address(hash160)
-    g.user.address = addr.toString()
+    getAddress()
   else
     $('#bip32_notice').show()
 
-
-  $('#address').html("<a href='/#{g.user.username}/report'>#{g.user.address}</a> <a href='http://blockchain.info/address/#{g.user.address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
   $('#symbol').html(g.user.symbol + " bid")
   $('#currency').html(g.user.currency)
   $('#unit').html(g.user.unit)
@@ -135,7 +128,7 @@ listen = ->
 
     g.blockchain.onmessage = (e) ->
       results = eval('(' + e.data + ')')
-      amount_received = 0
+      amount = 0
       txid = results.x.hash
 
       return if txid == g.last
@@ -143,21 +136,10 @@ listen = ->
       
       $.each(results.x.out, (i, v) ->
         if (v.addr == g.user.address) 
-          amount_received += v.value / 100000000
+          amount += v.value / 100000000
       )
 
-      if $('#received').is(":hidden") and g.amount_requested <= amount_received 
-        $('#amount').blur()
-        $('#payment').hide()
-        $('#received').fadeIn('slow')
-        $('#chaching')[0].play()
-
-      $.post("/#{g.user.username}/transactions",
-        txid: txid,
-        date: moment().format("YYYY-MM-DD HH:mm:ss"),
-        received: amount_received,
-        exchange: g.exchange
-      )
+      logTransaction(txid, amount)
 
   unless g.btcd and g.btcd.readyState is 1
     g.btcd = new WebSocket("wss://coinos.io/ws")
@@ -177,8 +159,7 @@ listen = ->
 
     g.btcd.onmessage = (e) ->
       data = JSON.parse(e.data)
-
-      amount_received = 0
+      amount = 0
 
       if data.result
         txid = data.result.txid
@@ -187,25 +168,45 @@ listen = ->
 
         for output in data.result.vout
           if g.user.address in output.scriptPubKey.addresses
-            amount_received += parseFloat(output.value)
+            amount += parseFloat(output.value)
 
-        $.post("/#{g.user.username}/transactions",
-          txid: txid,
-          date: moment().format("YYYY-MM-DD HH:mm:ss"),
-          received: amount_received,
-          tip: g.tip,
-          exchange: g.exchange
-        )
-
-        if $('#received').is(":hidden") and amount_received >= g.amount_requested
-          $('#amount').blur()
-          $('#payment').hide()
-          $('#received').fadeIn('slow')
-          $('#chaching')[0].play()
+        logTransaction(txid, amount)
 
       if data.method and data.method is 'recvtx' and data.params.length is 1
         msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'decoderawtransaction', params: [data.params[0]] }
         g.btcd.send(msg)
+
+logTransaction = (txid, amount) ->
+  if $('#received').is(":hidden") and amount >= g.amount_requested
+    $('#amount').blur()
+    $('#payment').hide()
+    $('#received').fadeIn('slow')
+    $('#chaching')[0].play()
+    g.user.index++
+
+    $.post("/#{g.user.username}/transactions",
+      txid: txid,
+      address: g.user.address,
+      date: moment().format("YYYY-MM-DD HH:mm:ss"),
+      received: amount,
+      exchange: g.exchange
+    )
+
+    getAddress()
+
+getAddress = ->
+  i = g.user.index
+  bip32 = new BIP32(g.user.bip32)
+  result = bip32.derive("m/0/#{i}")
+  hash160 = result.eckey.pubKeyHash
+  g.user.address = (new Bitcoin.Address(hash160)).toString()
+  s = """
+    <a href='/#{g.user.username}/report'>#{g.user.address}</a> 
+    <a href='http://blockchain.info/address/#{g.user.address}' target='_blank'>
+      <img src='/assets/img/blockchain.png' />
+    </a>
+  """
+  $('#address').html(s)
 
 fail = (msg) ->
   g.errors.push(msg)
