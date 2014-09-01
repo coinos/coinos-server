@@ -5,6 +5,15 @@
 <div id="calculator" style="display: none">
   <input id="user" type="hidden" value="{{user}}" />
 
+  <div id="bip32_notice" class="panel panel-warning" style="display: none">
+    <div class="panel-heading">
+      <h3 class="panel-title">September 1, 2014</h3>
+    </div>
+    <div class="panel-body">
+      We recently switched to using Bitcoin extended keys rather than single addresses to receive payments.  Your account does not yet have an extended key associated with it.  Please visit the <a href="/{{user}}/edit">Settings</a> page to create one now.
+    </div>
+  </div>
+
   <h1 id="title"></h1>
   <a href="/{{user}}/edit"><img id="logo" src="/assets/img/bitcoin.png" alt="Logo" /></a>
 

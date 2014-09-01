@@ -12,14 +12,19 @@
     <input type="text" id="title" name="title" class="form-control" />
   </div>
 
-<div class="form-group">
+  <div class="form-group">
     <label for="logo">Logo:</label>
     <input type="text" id="logo" name="logo" class="form-control" />
   </div>
 
   <div class="form-group">
-    <label for="address">Bitcoin Address:</label>
-    <input type="text" id="address" name="address" class="form-control" />
+    <label for="bip32">Extended key:</label>
+    <div class="input-group">
+      <input type="text" id="bip32" name="bip32" class="form-control" placeholder="xpub..." />
+      <span class="input-group-btn">
+        <button id="generate" type="button" class="btn">Generate</button>
+      </span>
+    </div>
   </div>
 
   <div class="form-group">
@@ -35,16 +40,16 @@
   </div>
 
   <div class="form-group">
-    <label for="unit">Bitcoin Display Units:</label>
-    <select id="unit" name="unit" class="form-control">
-    </select>
-  </div>
-  
-  <div class="form-group">
     <label for="commission">Commission/Discount <small>(optional %)</small>:</label>
     <input type="text" id="commission" name="commission" class="form-control" />
   </div>
 
+  <div class="form-group">
+    <label for="unit">Bitcoin Display Units:</label>
+    <select id="unit" name="unit" class="form-control">
+    </select>
+  </div>
+ 
   <div class="form-group">
     <label for="password">New Password <small>(blank = no change)</small>:</label>
     <input type="password" id="password" name="password" class="form-control" />
@@ -58,3 +63,72 @@
   <br />
   <input class="btn btn-primary" type="submit" value="Done" />
 </form>
+
+<div class="modal fade" id="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title">New Extended Key</h4>
+      </div>
+
+      <div class="modal-body">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="active"><a href="#step1" role="tab" data-toggle="tab">Info</a></li>
+          <li><a href="#step2" role="tab" data-toggle="tab">Key</a></li>
+          <li><a href="#step3" role="tab" data-toggle="tab">Agreement</a></li>
+        </ul>
+        <div class="tab-content">
+          <div id="step1" class="tab-pane active">
+            <p>In Bitcoin parlance, an extended key, also known as a <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"><abbr title="Bitcoin Improvement Proposal Number 32">BIP32</abbr></a> or <abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr> key, is a master key that can be used to derive multiple bitcoin addresses.</p>
+            <p>The <b>public</b> portion of the key will be stored and used by CoinOS to generate a separate receiving address for every payment to your account.  This will preserve your and your customers' privacy by preventing people from seeing or tracking transactions to your account other than their own.</p>
+            <p>The <b>private</b> portion of the key will be generated here but we will not store it after you close this window.  You will be responsible for saving it and making copies of it.  If you lose access to it, any funds sent to your account will be unspendable.  If someone other than you gains access to it, your funds could be stolen.</p>
+          </div>
+
+          <div id="step2" class="tab-pane">
+            <div class="form-group">
+              <label for="encryption-password">Encryption Password:</label>
+              <input type="password" id="encryption-password" name="encryption-password" class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label for="encryption-confirm">Confirm Password:</label>
+              <input type="password" id="encryption-confirm" name="encryption-confirm" class="form-control" />
+            </div>
+
+            <div id="key-dialog" class="alert alert-danger">
+              Extended Private Key <span id="status">(Unencrypted)</span>
+              <pre id="privkey"></pre>
+              <div id="qr"></div>
+            </div>
+
+            <div id="buttons" class="pull-right">
+              <button id="print" class="btn btn-primary">
+                <span class="glyphicon glyphicon-print"></span> Print
+              </button>
+            </div>
+            <br class="clearfix">
+          </div>
+
+          <div id="step3" class="tab-pane">
+            <div class="form-group">
+              <input type="checkbox" checked> I've emailed, written down, printed out, screenshotted or otherwise saved and backed up to multiple places the extended private key from the previous page.
+            </div>
+
+            <div class="form-group">
+              <input type="checkbox" checked> I'm confident that no one but me will ever gain access to any of the copies of it by breaking into my computer or email account or through physical theft or extortion.  I will always have access to at least one copy of the key even in case of hardware failure, natural disaster or memory lapse.
+            </div>
+
+            <div class="form-group">
+              <input type="checkbox" checked> I understand that there's no way for CoinOS to recover or reset the password I used to encrypt the private key so I've written it down somewhere safe, separate from the key itself.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" style="display: none">Back</button>
+        <button type="button" class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+</div>

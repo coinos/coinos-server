@@ -9,11 +9,14 @@ module.exports = (sessions) ->
     )
   
   json: (req, res) ->
-    db.hgetall("user:"+req.params.user, (err, obj) ->
-      delete obj['password']
-      res.writeHead(200, {"Content-Type": "application/json"});
-      res.write(JSON.stringify(obj))
-      res.end()
+    db.llen("#{req.params.user}:transactions", (err, len) ->
+      db.hgetall("user:#{req.params.user}", (err, obj) ->
+        delete obj['password']
+        obj['index'] = len
+        res.writeHead(200, {"Content-Type": "application/json"});
+        res.write(JSON.stringify(obj))
+        res.end()
+      )
     )
 
   show: (req, res) ->

@@ -5,6 +5,11 @@
 #= require js/2.5.3-crypto-sha256.js
 #= require js/jsbn.js
 #= require js/jsbn2.js
+#= require js/bitcoinjs-min.js
+#= require js/sha512.js
+#= require js/modsqrt.js
+#= require js/rfc1751.js
+#= require js/bip32.js
 
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
@@ -13,24 +18,11 @@ ADDRESS_FAIL = "Invalid address"
 g = exports ? this
 
 $(->
-  g.user = $('#user').val()
-  g.errors = []
-  g.amount_requested = 0
-  g.tip = 1
-  g.unit = 'BTC'
-
   $.ajax(
-    url: g.user + '.json', 
+    url: $('#user').val() + '.json', 
     dataType: 'json',
     success: (data) ->
-      if data?
-        g.title = data.title
-        g.address = data.address 
-        g.currency = data.currency
-        g.symbol = data.symbol
-        g.commission = data.commission 
-        g.logo = data.logo 
-        g.unit = data.unit
+      g.user = data
       setup()
   )
 
@@ -42,8 +34,6 @@ $(->
     updateTotal()
   )
 
-  $('#tip button').first().click()
-
   $('#amount').keyup(updateTotal)
   $('#amount').focus(->
     $('#received').hide()
@@ -54,27 +44,43 @@ $(->
 )
 
 setup = ->
-  g.address or= ''
-  g.commission or= 0
-  g.symbol or= 'quadrigacx'
+  g.errors = []
+  g.amount_requested = 0
+  g.tip = 1
+  g.user.address or= ''
+  g.user.commission or= 0
+  g.user.symbol or= 'quadrigacx'
+  g.user.unit or= 'BTC'
 
-  if g.logo
-    $('#logo').attr('src', g.logo).show()
-  else if g.title 
-    $('#title').html("<a href='/#{g.user}/edit'>#{g.title}</a>").show()
+  if g.user.logo
+    $('#logo').attr('src', g.user.logo).show()
+  else if g.user.title 
+    $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
-  $('#address').html("<a href='/#{g.user}/report'>#{address}</a> <a href='http://blockchain.info/address/#{address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
-  $('#symbol').html(g.symbol + " bid")
-  $('#currency').html(g.currency)
-  $('#unit').html(g.unit)
+  if g.user.bip32
+    i = g.user.index
+    bip32 = new BIP32(g.user.bip32)
+    result = bip32.derive("m/0/#{i}")
+    hash160 = result.eckey.pubKeyHash
+    addr = new Bitcoin.Address(hash160)
+    g.user.address = addr.toString()
+  else
+    $('#bip32_notice').show()
+
+
+  $('#address').html("<a href='/#{g.user.username}/report'>#{g.user.address}</a> <a href='http://blockchain.info/address/#{g.user.address}' target='_blank'><img src='/assets/img/blockchain.png' /></a>")
+  $('#symbol').html(g.user.symbol + " bid")
+  $('#currency').html(g.user.currency)
+  $('#unit').html(g.user.unit)
   $('#received').hide()
+  $('#tip button').first().click()
 
-  setupSocket()
   fetchExchangeRate()
+  listen()
 
 fetchExchangeRate = ->
   $.ajax(
-    url: "ticker?currency=#{g.currency}&symbol=#{g.symbol}&type=bid",
+    url: "ticker?currency=#{g.user.currency}&symbol=#{g.user.symbol}&type=bid",
     success: (exchange) -> 
       if exchange?
         clear(EXCHANGE_FAIL)
@@ -82,29 +88,40 @@ fetchExchangeRate = ->
         fail(EXCHANGE_FAIL)
         return
 
-      unless g.setupComplete
-        finalize() 
-
-      g.exchange = exchange - exchange * g.commission * 0.01
+      g.exchange = exchange - exchange * g.user.commission * 0.01
       $('#exchange').val(g.exchange.toFixed(2))
       updateTotal()
+
+      unless g.setupComplete
+        $('#amount').focus()
+        g.setupComplete = true
+
     error: -> fail(EXCHANGE_FAIL)
   )
   setTimeout(fetchExchangeRate, 900000)
 
-finalize = ->
-  $('#amount').focus()
-  g.setupComplete = true
+updateTotal = ->
+  precision = 9 - multiplier().toString().length
+  amount = parseFloat($('#amount').val() * g.tip)
+  total = (amount * multiplier() / g.exchange).toFixed(precision)
+  g.amount_requested = (amount / g.exchange).toFixed(8)
 
-setupSocket = ->
-  setTimeout(setupSocket, 10000)
+  unless $.isNumeric(total)
+    total = ''
+
+  $('#total').html(total.toString())
+  $('#qr').html('')
+  new QRCode('qr', text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}", width: 320, height: 320)
+
+listen = ->
+  setTimeout(listen, 10000)
 
   unless g.blockchain and g.blockchain.readyState is 1
     g.blockchain = new WebSocket("wss://ws.blockchain.info/inv")
 
     g.blockchain.onopen = -> 
       $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
-      g.blockchain.send('{"op":"addr_sub", "addr":"' + g.address + '"}')
+      g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
     
     g.blockchain.onerror =  ->
       $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
@@ -125,7 +142,7 @@ setupSocket = ->
       g.last = txid
       
       $.each(results.x.out, (i, v) ->
-        if (v.addr == g.address) 
+        if (v.addr == g.user.address) 
           amount_received += v.value / 100000000
       )
 
@@ -135,20 +152,19 @@ setupSocket = ->
         $('#received').fadeIn('slow')
         $('#chaching')[0].play()
 
-      if g.user
-        $.post("/#{g.user}/transactions",
-          txid: txid,
-          date: moment().format("YYYY-MM-DD HH:mm:ss"),
-          received: amount_received,
-          exchange: g.exchange
-        )
+      $.post("/#{g.user.username}/transactions",
+        txid: txid,
+        date: moment().format("YYYY-MM-DD HH:mm:ss"),
+        received: amount_received,
+        exchange: g.exchange
+      )
 
   unless g.btcd and g.btcd.readyState is 1
     g.btcd = new WebSocket("wss://coinos.io/ws")
 
     g.btcd.onopen = -> 
       $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
-      msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'notifyreceived', params: [[g.address]] }
+      msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'notifyreceived', params: [[g.user.address]] }
       g.btcd.send(msg)
     
     g.btcd.onerror =  ->
@@ -170,17 +186,16 @@ setupSocket = ->
         g.last = txid
 
         for output in data.result.vout
-          if g.address in output.scriptPubKey.addresses
+          if g.user.address in output.scriptPubKey.addresses
             amount_received += parseFloat(output.value)
 
-        if g.user
-          $.post("/#{g.user}/transactions",
-            txid: txid,
-            date: moment().format("YYYY-MM-DD HH:mm:ss"),
-            received: amount_received,
-            tip: g.tip,
-            exchange: g.exchange
-          )
+        $.post("/#{g.user.username}/transactions",
+          txid: txid,
+          date: moment().format("YYYY-MM-DD HH:mm:ss"),
+          received: amount_received,
+          tip: g.tip,
+          exchange: g.exchange
+        )
 
         if $('#received').is(":hidden") and amount_received >= g.amount_requested
           $('#amount').blur()
@@ -191,19 +206,6 @@ setupSocket = ->
       if data.method and data.method is 'recvtx' and data.params.length is 1
         msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'decoderawtransaction', params: [data.params[0]] }
         g.btcd.send(msg)
-
-updateTotal = ->
-  precision = 9 - multiplier().toString().length
-  amount = parseFloat($('#amount').val() * g.tip)
-  total = (amount * multiplier() / g.exchange).toFixed(precision)
-  g.amount_requested = (amount / g.exchange).toFixed(8)
-
-  unless $.isNumeric(total)
-    total = ''
-
-  $('#total').html(total.toString())
-  $('#qr').html('')
-  new QRCode('qr', "bitcoin:#{g.address}?amount=#{g.amount_requested.toString()}")
 
 fail = (msg) ->
   g.errors.push(msg)
@@ -226,7 +228,7 @@ Array::uniq = ->
   value for key, value of output
 
 multiplier = ->
-  switch g.unit
+  switch g.user.unit
     when 'BTC' then 1
     when 'mBTC' then 1000
     when 'µBTC' then 1000000

@@ -18,13 +18,16 @@
         });
       },
       json: function(req, res) {
-        return db.hgetall("user:" + req.params.user, function(err, obj) {
-          delete obj['password'];
-          res.writeHead(200, {
-            "Content-Type": "application/json"
+        return db.llen("" + req.params.user + ":transactions", function(err, len) {
+          return db.hgetall("user:" + req.params.user, function(err, obj) {
+            delete obj['password'];
+            obj['index'] = len;
+            res.writeHead(200, {
+              "Content-Type": "application/json"
+            });
+            res.write(JSON.stringify(obj));
+            return res.end();
           });
-          res.write(JSON.stringify(obj));
-          return res.end();
         });
       },
       show: function(req, res) {

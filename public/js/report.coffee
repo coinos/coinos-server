@@ -106,7 +106,6 @@ display = (transactions) ->
       )
     )
 
-
     btc = 0
     $('table.report tbody td:nth-child(3)').each(->
       btc += parseFloat($(this).html())

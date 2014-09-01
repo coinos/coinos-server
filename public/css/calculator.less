@@ -17,9 +17,12 @@ div.container-fluid {
 .navbar-toggle .glyphicon { margin-top: -5px; padding-left: 10px; }
 .navbar { margin: 0; min-height: 40px; }
 .navbar-collapse.in { overflow-y: visible; }
-.nav { margin-top: 30px; }
-.nav li a { padding: 10px 0 10px 10px; }
 #connection { display: none; }
+
+#nav {
+  .nav { margin-top: 30px; }
+  .nav li a { padding: 10px 0 10px 10px; }
+}
 
 .form-group {
   label { font-weight: normal; font-size: 14px; display: block; }
@@ -54,8 +57,16 @@ td#total { font-weight: bold; text-align: right; }
   background-size: 300px 80px;
 }
 
+#modal .tab-pane { padding-top: 15px; }
+
 @media screen and (min-width: 768px) {
-    .modal-dialog {
-        width: 400px; /* either % (e.g. 60%) or px (400px) */
-    }
+  .modal-dialog {
+      width: 400px; /* either % (e.g. 60%) or px (400px) */
+  }
+
+  #modal #qr { padding-left: 40px; }
+}
+
+@page {
+   margin: 0;
 }
