@@ -152,6 +152,19 @@
           })
         });
       },
+      profile: function(req, res) {
+        return res.render('users/profile', {
+          user: req.params.user,
+          layout: 'layout',
+          navigation: true,
+          js: (function() {
+            return global.js;
+          }),
+          css: (function() {
+            return global.css;
+          })
+        });
+      },
       update: function(req, res) {
         if (req.body.password === '') {
           delete req.body.password;

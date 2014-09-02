@@ -123,6 +123,8 @@
 
   app.get('/verify/:token', users.verify);
 
+  app.get('/:user/profile', authorize, users.profile);
+
   app.get('/:user/edit', authorize, users.edit);
 
   app.post('/:user', authorize, users.update);

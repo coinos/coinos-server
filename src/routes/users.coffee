@@ -114,6 +114,15 @@ module.exports = (sessions) ->
       css: (-> global.css)
     )
 
+  profile: (req, res) ->
+    res.render('users/profile', 
+      user: req.params.user, 
+      layout: 'layout',
+      navigation: true,
+      js: (-> global.js), 
+      css: (-> global.css)
+    )
+
   update: (req, res) ->
     if req.body.password is ''
       delete req.body.password
