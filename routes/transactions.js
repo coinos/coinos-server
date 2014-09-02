@@ -28,7 +28,7 @@
         txid = function() {
           var x;
           x = transactions[i++];
-          if (typeof x !== "number") {
+          if (isNaN(parseInt(x))) {
             return x;
           }
           return user + ":transactions:" + x;

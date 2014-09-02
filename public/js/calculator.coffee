@@ -41,6 +41,8 @@ $(->
     $(this).val('')
     updateTotal()
   )
+
+  $('#received').click(-> window.location = "/#{g.user.username}/report")
 )
 
 setup = ->

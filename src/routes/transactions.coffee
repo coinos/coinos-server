@@ -17,7 +17,7 @@ module.exports =
     db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
       txid = ->
         x = transactions[i++]
-        return x if typeof x != "number"
+        return x if isNaN(parseInt(x))
         return user + ":transactions:" + x
 
       cb = (err, t) ->

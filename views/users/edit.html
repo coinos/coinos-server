@@ -82,7 +82,8 @@
           <div id="step1" class="tab-pane active">
             <p>In Bitcoin parlance, an extended key, also known as a <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"><abbr title="Bitcoin Improvement Proposal Number 32">BIP32</abbr></a> or <abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr> key, is a master key that can be used to derive multiple bitcoin addresses.</p>
             <p>The <b>public</b> portion of the key will be stored and used by CoinOS to generate a separate receiving address for every payment to your account.  This will preserve your and your customers' privacy by preventing people from seeing or tracking transactions to your account other than their own.</p>
-            <p>The <b>private</b> portion of the key will be generated here but we will not store it after you close this window.  You will be responsible for saving it and making copies of it.  If you lose access to it, any funds sent to your account will be unspendable.  If someone other than you gains access to it, your funds could be stolen.</p>
+            <p>The <b>private</b> portion of the key will be generated here but will not be stored after you close this window.  You will be responsible for saving it and making copies of it.  If you lose it, any funds sent to your account will be unspendable.</p>
+            <p>We'll ask you to encrypt the key with a password of your choosing.  It's a good idea to choose a strong password and keep it written down and backed up seoarately from the key itself.  You and any would-be attackers will need access to both the encrypted private key and the password that was used to encrypt it in order to spend funds received.</p>
           </div>
 
           <div id="step2" class="tab-pane">
@@ -116,7 +117,7 @@
             </div>
 
             <div class="form-group">
-              <input type="checkbox" checked> I'm confident that no one but me will ever gain access to any of the copies of it by breaking into my computer or email account or through physical theft or extortion.  I will always have access to at least one copy of the key even in case of hardware failure, natural disaster or memory lapse.
+              <input type="checkbox" checked> I'm confident that no one but me will ever gain access to any of the copies of it by breaking into my computer or email account or through physical theft or extortion and that I will always have access to at least one copy of the key even in case of hardware failure, natural disaster or memory lapse.
             </div>
 
             <div class="form-group">

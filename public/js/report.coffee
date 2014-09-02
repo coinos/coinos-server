@@ -86,7 +86,7 @@ display = (transactions) ->
 
         $('#modal').modal()
         $('#modal textarea').val('')
-        $('#modal .btn-primary').toggle(address?) 
+        $('#modal .btn-primary').toggle(txid? and txid.length > 5) 
 
         $('#modal .btn-danger').off().click(->
           $('#yousure, #confirm').show()
@@ -96,11 +96,11 @@ display = (transactions) ->
         $('#confirm .btn-danger').click(->
           $.ajax(type: 'delete', url: "/#{$('#user').val()}/transactions/#{txid}")
           $('#modal').modal('hide')
-          row.remove()
+          row.fadeOut('slow')
         )
 
         $('#modal .btn-primary').off().click(->
-          window.open("https://blockchain.info/address/#{address}", '_blank')
+          window.open("https://blockchain.info/tx/#{txid}", '_blank')
           $('#modal').modal('hide')
         )
 
