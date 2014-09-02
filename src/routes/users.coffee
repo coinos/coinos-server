@@ -1,4 +1,5 @@
 db = require("../redis")
+config = require("../config")
 bcrypt = require('bcrypt')
 
 module.exports = (sessions) ->
@@ -22,13 +23,18 @@ module.exports = (sessions) ->
   show: (req, res) ->
     db.hgetall("user:"+req.params.user, (err, obj) ->
       if obj 
-        res.render('users/show', 
+        options = 
           user: req.params.user, 
           layout: 'layout',
           navigation: true,
           js: (-> global.js), 
           css: (-> global.css)
-        )
+
+        if req.session.verified?
+          options.verified = true
+
+        res.render('users/show', options)
+        delete req.session.verified
       else 
         res.render('sessions/new', 
           notice: true,
@@ -72,6 +78,31 @@ module.exports = (sessions) ->
               sessions.create(req, res)
            )
         )
+
+        require('crypto').randomBytes(48, (ex, buf) ->
+          token = buf.toString('base64').replace(/\//g,'').replace(/\+/g,'')
+          db.set(token, req.body.username)
+          url = "#{req.protocol}://#{req.hostname}:3000/verify/#{token}"
+
+          res.render('users/welcome', 
+            user: req.params.user, 
+            layout: 'mail',
+            url: url,
+            js: (-> global.js), 
+            css: (-> global.css),
+            (err, html) ->
+              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
+
+              email = new sendgrid.Email(
+                to: req.body.email
+                from: 'adam@coinos.io'
+                subject: 'Welcome to CoinOS'
+                html: html
+              )
+
+              sendgrid.send(email)
+          )
+        )
     )
 
   edit: (req, res) ->
@@ -94,5 +125,17 @@ module.exports = (sessions) ->
           db.hmset("user:"+req.params.user,password: hash, ->
             res.redirect("/#{req.params.user}")
           )
+        )
+    )
+
+  verify: (req, res) ->
+    db.get(req.params.token, (err, reply) ->
+      if err or !reply
+        res.write('Invalid token')
+        res.end()
+      else
+        db.hset("user:#{reply.toString()}", "verified", "true", ->
+          req.session.verified = true
+          res.redirect("/#{reply.toString()}")
         )
     )

@@ -73,6 +73,7 @@ app.get('/logout', sessions.destroy)
 
 app.get('/users/new', cache, users.new)
 app.post('/users', users.create)
+app.get('/verify/:token', users.verify)
 
 app.get('/:user/edit', authorize, users.edit)
 app.post('/:user', authorize, users.update)

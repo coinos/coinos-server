@@ -1,7 +1,9 @@
 (function() {
-  var bcrypt, db;
+  var bcrypt, config, db;
 
   db = require("../redis");
+
+  config = require("../config");
 
   bcrypt = require('bcrypt');
 
@@ -32,8 +34,9 @@
       },
       show: function(req, res) {
         return db.hgetall("user:" + req.params.user, function(err, obj) {
+          var options;
           if (obj) {
-            return res.render('users/show', {
+            options = {
               user: req.params.user,
               layout: 'layout',
               navigation: true,
@@ -43,7 +46,12 @@
               css: (function() {
                 return global.css;
               })
-            });
+            };
+            if (req.session.verified != null) {
+              options.verified = true;
+            }
+            res.render('users/show', options);
+            return delete req.session.verified;
           } else {
             return res.render('sessions/new', {
               notice: true,
@@ -90,7 +98,7 @@
                 error: errormsg
               });
             }
-            return bcrypt.hash(req.body.password, 12, function(err, hash) {
+            bcrypt.hash(req.body.password, 12, function(err, hash) {
               db.sadd("users", userkey);
               return db.hmset(userkey, {
                 username: req.body.username,
@@ -99,6 +107,33 @@
               }, function() {
                 req.session.redirect = "/" + req.body.username + "/edit";
                 return sessions.create(req, res);
+              });
+            });
+            return require('crypto').randomBytes(48, function(ex, buf) {
+              var token, url;
+              token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '');
+              db.set(token, req.body.username);
+              url = "" + req.protocol + "://" + req.hostname + ":3000/verify/" + token;
+              return res.render('users/welcome', {
+                user: req.params.user,
+                layout: 'mail',
+                url: url,
+                js: (function() {
+                  return global.js;
+                }),
+                css: (function() {
+                  return global.css;
+                })
+              }, function(err, html) {
+                var email, sendgrid;
+                sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
+                email = new sendgrid.Email({
+                  to: req.body.email,
+                  from: 'adam@coinos.io',
+                  subject: 'Welcome to CoinOS',
+                  html: html
+                });
+                return sendgrid.send(email);
               });
             });
           }
@@ -131,6 +166,19 @@
               }, function() {
                 return res.redirect("/" + req.params.user);
               });
+            });
+          }
+        });
+      },
+      verify: function(req, res) {
+        return db.get(req.params.token, function(err, reply) {
+          if (err || !reply) {
+            res.write('Invalid token');
+            return res.end();
+          } else {
+            return db.hset("user:" + (reply.toString()), "verified", "true", function() {
+              req.session.verified = true;
+              return res.redirect("/" + (reply.toString()));
             });
           }
         });

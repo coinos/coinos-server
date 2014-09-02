@@ -59,10 +59,7 @@ setup = ->
   else if g.user.title 
     $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
-  if g.user.bip32
-    getAddress()
-  else
-    $('#bip32_notice').show()
+  getAddress() if g.user.bip32
 
   $('#symbol').html(g.user.symbol + " bid")
   $('#currency').html(g.user.currency)

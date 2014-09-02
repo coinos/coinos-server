@@ -21,7 +21,9 @@
     "passport": "0.2.0",
     "passport-local": "1.0.0",
     "redis": "0.11.0",
-    "request": "~2.40.0"
+    "request": "~2.40.0",
+    "nodemailer": "~1.2.1",
+    "sendgrid": "~1.2.0"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
