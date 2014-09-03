@@ -20,9 +20,6 @@ g = exports ? this
 g.proceed = false
 
 $(->
-  $('[data-toggle=popover]').popover()
-  $('#title').focus()
-
   $.getJSON("/js/rates.json", (data) ->
     currencies = Object.keys(data)
     currencies = currencies.sort()
@@ -39,7 +36,8 @@ $(->
       return unless symbol
       symbols = Object.keys(data[symbol])
       $.each(symbols, (i, v) ->
-        $('#symbol').append("<option value='#{v}'>#{v} bid price</option>")
+        return if v == 'localbitcoins'
+        $('#symbol').append("<option value='#{v}'>#{v}</option>")
       )
 
       switch $(this).val()
@@ -60,10 +58,11 @@ $(->
       $('#unit').val(data.unit)
       $('#currency').change()
       $('#setup').fadeIn()
+      $('#title').focus()
     )
   )
 
-  units = ['BTC', 'mBTC', '&micro;BTC', 'satoshis']
+  units = ['BTC', 'mBTC', '&micro;BTC', 'bits', 'satoshis']
   $.each(units, (i, v) ->
     $('#unit').append("<option value='#{v}'>#{v}</option>")
   )
@@ -196,4 +195,5 @@ $(->
       $('#setup .has-error').effect('shake', 500)
       return false
   )
+
 )

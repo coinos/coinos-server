@@ -170,9 +170,7 @@
           delete req.body.password;
         }
         return db.hmset("user:" + req.params.user, req.body, function() {
-          if (req.body.password == null) {
-            return res.redirect("/" + req.params.user);
-          } else {
+          if (req.body.password != null) {
             return bcrypt.hash(req.body.password, 12, function(err, hash) {
               return db.hmset("user:" + req.params.user, {
                 password: hash
@@ -180,6 +178,8 @@
                 return res.redirect("/" + req.params.user);
               });
             });
+          } else {
+            return res.redirect("/" + req.params.user);
           }
         });
       },

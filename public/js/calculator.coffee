@@ -54,14 +54,15 @@ setup = ->
   g.user.symbol or= 'quadrigacx'
   g.user.unit or= 'BTC'
 
+  if g.user.title 
+    $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
+
   if g.user.logo
     $('#logo').attr('src', g.user.logo).show()
-  else if g.user.title 
-    $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
   getAddress() if g.user.bip32
 
-  $('#symbol').html(g.user.symbol + " bid")
+  $('#symbol').html(g.user.currency)
   $('#currency').html(g.user.currency)
   $('#unit').html(g.user.unit)
   $('#received').hide()
@@ -80,8 +81,8 @@ fetchExchangeRate = ->
         fail(EXCHANGE_FAIL)
         return
 
-      g.exchange = exchange - exchange * g.user.commission * 0.01
-      $('#exchange').val(g.exchange.toFixed(2))
+      g.exchange = (exchange - exchange * g.user.commission * 0.01).toFixed(2)
+      $('#exchange').html(g.exchange)
       updateTotal()
 
       unless g.setupComplete
@@ -232,6 +233,7 @@ multiplier = ->
     when 'BTC' then 1
     when 'mBTC' then 1000
     when 'µBTC' then 1000000
+    when 'bits' then 1000000
     when 'satoshis' then 100000000
 
 
