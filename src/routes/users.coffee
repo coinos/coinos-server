@@ -30,7 +30,7 @@ module.exports = (sessions) ->
           js: (-> global.js), 
           css: (-> global.css)
 
-        if req.session.verified?
+        if req.query.verified?
           options.verified = true
 
         res.render('users/show', options)
@@ -144,7 +144,6 @@ module.exports = (sessions) ->
         res.end()
       else
         db.hset("user:#{reply.toString()}", "verified", "true", ->
-          req.session.verified = true
-          res.redirect("/#{reply.toString()}")
+          res.redirect("/#{reply.toString()}?verified")
         )
     )

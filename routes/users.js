@@ -47,7 +47,7 @@
                 return global.css;
               })
             };
-            if (req.session.verified != null) {
+            if (req.query.verified != null) {
               options.verified = true;
             }
             res.render('users/show', options);
@@ -190,8 +190,7 @@
             return res.end();
           } else {
             return db.hset("user:" + (reply.toString()), "verified", "true", function() {
-              req.session.verified = true;
-              return res.redirect("/" + (reply.toString()));
+              return res.redirect("/" + (reply.toString()) + "?verified");
             });
           }
         });
