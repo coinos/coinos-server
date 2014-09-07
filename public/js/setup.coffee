@@ -8,6 +8,7 @@
 #= require ../js/2.5.3-crypto-sha256.js
 #= require ../js/sha512.js
 #= require ../js/rfc1751.js
+#= require ../js/bitcoinjs-min-1.0.2.js
 #= require ../js/bitcoinjs-min.js
 #= require ../js/modsqrt.js
 #= require ../js/bip32.js
@@ -75,10 +76,9 @@ $(->
   )
 
   $('#pubkey').blur(->
-    try
-      new BIP32($(this).val())
+    if check_address($(this).val())
       $(this).parent().removeClass('has-error')
-    catch
+    else 
       $(this).parent().addClass('has-error')
   )
 
@@ -169,5 +169,18 @@ $(->
       $('#setup .has-error').effect('shake', 500)
       return false
   )
-
 )
+
+check_address = (address) ->
+  try
+    bitcoin.Address.fromBase58Check(address)
+    return true
+  catch
+    return isBip32(address)
+
+isBip32 = (address) ->
+  try
+    new BIP32(address)
+    return true
+  catch
+    return false

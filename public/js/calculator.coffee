@@ -6,6 +6,7 @@
 #= require js/jsbn.js
 #= require js/jsbn2.js
 #= require js/bitcoinjs-min.js
+#= require js/bitcoinjs-min-1.0.2.js
 #= require js/sha512.js
 #= require js/modsqrt.js
 #= require js/rfc1751.js
@@ -60,7 +61,7 @@ setup = ->
   if g.user.logo
     $('#logo').attr('src', g.user.logo).show()
 
-  getAddress() if g.user.pubkey
+  getAddress()
 
   $('#symbol').html(g.user.currency)
   $('#currency').html(g.user.currency)
@@ -195,11 +196,19 @@ logTransaction = (txid, amount) ->
     getAddress()
 
 getAddress = ->
-  i = g.user.index
-  bip32 = new BIP32(g.user.pubkey)
-  result = bip32.derive("m/0/#{i}")
-  hash160 = result.eckey.pubKeyHash
-  g.user.address = (new Bitcoin.Address(hash160)).toString()
+  try
+    bitcoin.Address.fromBase58Check(g.user.pubkey)
+    g.user.address = g.user.pubkey
+  catch
+    try
+      bip32 = new BIP32(g.user.pubkey)
+      i = g.user.index
+      result = bip32.derive("m/0/#{i}")
+      hash160 = result.eckey.pubKeyHash
+      g.user.address = (new Bitcoin.Address(hash160)).toString()
+    catch
+      fail(ADDRESS_FAIL)
+
   s = """
     <a href='/#{g.user.username}/report'>#{g.user.address}</a> 
     <a href='http://blockchain.info/address/#{g.user.address}' target='_blank'>
@@ -211,7 +220,6 @@ getAddress = ->
 fail = (msg) ->
   g.errors.push(msg)
   g.errors = g.errors.uniq()
-  $('#calculator').hide()
   $('#error').show().html(g.errors.toString())
   
 clear = (msg) ->
