@@ -2,19 +2,19 @@
 #= require ../js/jquery-ui.min.js
 #= require ../js/jquery.printElement.min.js
 #= require ../js/bootstrap.min.js
-#= require ../js/crypto-min.js
-#= require ../js/2.5.3-crypto-sha256.js
 #= require ../js/jsbn.js
 #= require ../js/jsbn2.js
-#= require ../js/check_address.js
-#= require ../js/bitcoinjs-min.js
+#= require ../js/crypto-min.js
+#= require ../js/2.5.3-crypto-sha256.js
 #= require ../js/sha512.js
-#= require ../js/modsqrt.js
 #= require ../js/rfc1751.js
+#= require ../js/bitcoinjs-min.js
+#= require ../js/modsqrt.js
 #= require ../js/bip32.js
 #= require ../js/secure_random.js
 #= require ../js/qrcode.js
 #= require ../js/aes.js
+#= require ../js/key.js
 
 g = exports ? this
 g.proceed = false
@@ -51,7 +51,7 @@ $(->
     $.getJSON("/#{user}.json", (data) ->
       $('#title').val(data.title)
       $('#logo').val(data.logo)
-      $('#bip32').val(data.bip32)
+      $('#pubkey').val(data.pubkey)
       $('#address').val(data.address)
       $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
       $('#commission').val(data.commission)
@@ -74,7 +74,7 @@ $(->
         $(this).parent().removeClass('has-error')
   )
 
-  $('#bip32').blur(->
+  $('#pubkey').blur(->
     try
       new BIP32($(this).val())
       $(this).parent().removeClass('has-error')
@@ -83,33 +83,7 @@ $(->
   )
 
   $('#generate').click(->
-    rng = new SecureRandom()
-    bytes = new Array(256)
-    rng.nextBytes(bytes)
-
-    hasher = new jsSHA(bytes.toString(), 'TEXT')   
-    rng.nextBytes(bytes)
-
-    I = hasher.getHMAC(bytes.toString(), "TEXT", "SHA-512", "HEX")
-    il = Crypto.util.hexToBytes(I.slice(0, 64))
-    ir = Crypto.util.hexToBytes(I.slice(64, 128))
-
-    key = new BIP32()
-    key.eckey = new Bitcoin.ECKey(il)
-    key.eckey.pub = key.eckey.getPubPoint()
-    key.eckey.setCompressed(true)
-    key.eckey.pubKeyHash = Bitcoin.Util.sha256ripe160(key.eckey.pub.getEncoded(true))
-    key.has_private_key = true
-
-    key.chain_code = ir
-    key.child_index = 0
-    key.parent_fingerprint = Bitcoin.Util.hexToBytes("00000000")
-    key.version = BITCOIN_MAINNET_PRIVATE
-    key.depth = 0
-
-    key.build_extended_public_key()
-    key.build_extended_private_key()
-
+    key = new Key()
     g.pubkey = key.extended_public_key_string()
     g.privkey = key.extended_private_key_string()
 
@@ -186,7 +160,7 @@ $(->
     if $('.tab-pane:eq(2)').hasClass('active')
       $('a[data-toggle="tab"]:eq(1)').click()
   ).on('hidden.bs.modal', ->
-    $('#bip32').val(g.pubkey) if g.update_pub_key
+    $('#pubkey').val(g.pubkey) if g.update_pub_key
   )
 
   $('#setup').submit(->

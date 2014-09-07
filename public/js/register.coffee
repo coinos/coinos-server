@@ -1,10 +1,35 @@
 #= require js/jquery-1.8.2.min.js
 #= require js/jquery-ui.min.js
-#= require js/score_password.js
 #= require js/check_email.js
+#= require js/check_password.js
+#= require js/jsbn.js
+#= require js/jsbn2.js
+#= require js/crypto-min.js
+#= require js/2.5.3-crypto-sha256.js
+#= require js/sha512.js
+#= require js/rfc1751.js
+#= require js/bitcoinjs-min.js
+#= require js/modsqrt.js
+#= require js/bip32.js
+#= require js/secure_random.js
+#= require js/key.js
+#= require js/aes.js
 
+g = this
 $(->
   $('#username').focus()
+  $('#password').pwstrength(showVerdicts: false)
+
+  key = new Key()
+  $('#pubkey').val(key.extended_public_key_string())
+  privkey = key.extended_private_key_string()
+
+  $('#password').keyup((e) ->
+    return if e.keyCode is 9 or e.keyCode is 16
+    enc_privkey = CryptoJS.AES.encrypt(privkey, $(this).val()).toString()
+    enc_privkey = privkey if $(this).val() == ''
+    $('#privkey').val(enc_privkey)
+  )
 
   $('#username').blur(->
     $(this).parent().next('.alert').remove()
@@ -19,13 +44,11 @@ $(->
   $('#password').blur(->
     $('#confirm').blur()
     $(this).parent().next('.alert').remove()
-    score = scorePassword($(this).val())
 
-    if score > 40
+    if $('.progress-bar-success').length > 0
       $(this).parent().removeClass('has-error')
     else
       $(this).parent().addClass('has-error')
-      $(this).parent().after('<div class="alert alert-danger">Weak password</div>')
   )
 
   $('#confirm').blur(->

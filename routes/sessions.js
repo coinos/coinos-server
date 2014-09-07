@@ -30,11 +30,12 @@
             });
           }
           return req.login(user, function(err) {
-            var url;
+            var re, url;
             if (err) {
               return next(err);
             }
-            if (req.session.redirect != null) {
+            re = new RegExp(user.username, 'g');
+            if ((req.session.redirect != null) && re.test(req.session.redirect)) {
               url = req.session.redirect;
             }
             if (url == null) {

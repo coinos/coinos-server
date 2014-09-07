@@ -83,60 +83,63 @@
         userkey = "user:" + req.body.username;
         return db.hgetall(userkey, function(err, obj) {
           if (obj) {
-            return res.redirect(req.body.username);
-          } else {
-            if (req.body.confirm !== req.body.password) {
-              errormsg += "Passwords must match";
-              return res.render('users/new', {
-                layout: 'layout',
-                js: (function() {
-                  return global.js;
-                }),
-                css: (function() {
-                  return global.css;
-                }),
-                error: errormsg
-              });
-            }
-            bcrypt.hash(req.body.password, 12, function(err, hash) {
-              db.sadd("users", userkey);
-              return db.hmset(userkey, {
-                username: req.body.username,
-                password: hash,
-                email: req.body.email
-              }, function() {
-                req.session.redirect = "/" + req.body.username + "/edit";
-                return sessions.create(req, res);
-              });
-            });
-            return require('crypto').randomBytes(48, function(ex, buf) {
-              var token, url;
-              token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '');
-              db.set(token, req.body.username);
-              url = "" + req.protocol + "://" + req.hostname + ":3000/verify/" + token;
-              return res.render('users/welcome', {
-                user: req.params.user,
-                layout: 'mail',
-                url: url,
-                js: (function() {
-                  return global.js;
-                }),
-                css: (function() {
-                  return global.css;
-                })
-              }, function(err, html) {
-                var email, sendgrid;
-                sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
-                email = new sendgrid.Email({
-                  to: req.body.email,
-                  from: 'adam@coinos.io',
-                  subject: 'Welcome to CoinOS',
-                  html: html
-                });
-                return sendgrid.send(email);
-              });
+            errormsg += "Username exists";
+          }
+          if (req.body.confirm !== req.body.password) {
+            errormsg += "Passwords must match";
+          }
+          if (errormsg) {
+            return res.render('users/new', {
+              layout: 'layout',
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              }),
+              error: errormsg
             });
           }
+          bcrypt.hash(req.body.password, 12, function(err, hash) {
+            db.sadd("users", userkey);
+            return db.hmset(userkey, {
+              username: req.body.username,
+              password: hash,
+              email: req.body.email,
+              pubkey: req.body.pubkey,
+              privkey: req.body.privkey
+            }, function() {
+              req.session.redirect = "/" + req.body.username + "/edit";
+              return sessions.create(req, res);
+            });
+          });
+          return require('crypto').randomBytes(48, function(ex, buf) {
+            var token, url;
+            token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '');
+            db.set(token, req.body.username);
+            url = "" + req.protocol + "://" + req.hostname + ":3000/verify/" + token;
+            return res.render('users/welcome', {
+              user: req.params.user,
+              layout: 'mail',
+              url: url,
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              })
+            }, function(err, html) {
+              var email, sendgrid;
+              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
+              email = new sendgrid.Email({
+                to: req.body.email,
+                from: 'adam@coinos.io',
+                subject: 'Welcome to CoinOS',
+                html: html
+              });
+              return sendgrid.send(email);
+            });
+          });
         });
       },
       edit: function(req, res) {

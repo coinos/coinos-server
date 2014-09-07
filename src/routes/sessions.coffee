@@ -21,7 +21,10 @@ module.exports = (passport) ->
         if (err) 
           return next(err)
 
-        url = req.session.redirect if req.session.redirect? 
+        re = new RegExp(user.username, 'g')
+        if req.session.redirect? and re.test(req.session.redirect)
+          url = req.session.redirect 
+
         url ?= "/#{user.username}"
         delete req.session.redirect
         return res.redirect(url)

@@ -56,53 +56,57 @@ module.exports = (sessions) ->
     userkey = "user:"+req.body.username
     db.hgetall(userkey, (err, obj) ->
       if obj
-        res.redirect(req.body.username)
-      else
-        if req.body.confirm != req.body.password
-          errormsg += "Passwords must match"
-          return res.render('users/new',
-            layout: 'layout',
-            js: (-> global.js), 
-            css: (-> global.css),
-            error: errormsg
-          )
+        errormsg += "Username exists"
 
-        bcrypt.hash(req.body.password, 12, (err, hash) ->
-           db.sadd("users",userkey)
-           db.hmset(userkey,
-             username: req.body.username,
-             password: hash,
-             email: req.body.email
-            , ->
-              req.session.redirect = "/#{req.body.username}/edit"
-              sessions.create(req, res)
-           )
+      if req.body.confirm != req.body.password
+        errormsg += "Passwords must match"
+
+      if errormsg
+        return res.render('users/new',
+          layout: 'layout',
+          js: (-> global.js), 
+          css: (-> global.css),
+          error: errormsg
         )
 
-        require('crypto').randomBytes(48, (ex, buf) ->
-          token = buf.toString('base64').replace(/\//g,'').replace(/\+/g,'')
-          db.set(token, req.body.username)
-          url = "#{req.protocol}://#{req.hostname}:3000/verify/#{token}"
+      bcrypt.hash(req.body.password, 12, (err, hash) ->
+         db.sadd("users",userkey)
+         db.hmset(userkey,
+           username: req.body.username,
+           password: hash,
+           email: req.body.email,
+           pubkey: req.body.pubkey,
+           privkey: req.body.privkey
+          , ->
+            req.session.redirect = "/#{req.body.username}/edit"
+            sessions.create(req, res)
+         )
+      )
 
-          res.render('users/welcome', 
-            user: req.params.user, 
-            layout: 'mail',
-            url: url,
-            js: (-> global.js), 
-            css: (-> global.css),
-            (err, html) ->
-              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
+      require('crypto').randomBytes(48, (ex, buf) ->
+        token = buf.toString('base64').replace(/\//g,'').replace(/\+/g,'')
+        db.set(token, req.body.username)
+        url = "#{req.protocol}://#{req.hostname}:3000/verify/#{token}"
 
-              email = new sendgrid.Email(
-                to: req.body.email
-                from: 'adam@coinos.io'
-                subject: 'Welcome to CoinOS'
-                html: html
-              )
+        res.render('users/welcome', 
+          user: req.params.user, 
+          layout: 'mail',
+          url: url,
+          js: (-> global.js), 
+          css: (-> global.css),
+          (err, html) ->
+            sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
 
-              sendgrid.send(email)
-          )
+            email = new sendgrid.Email(
+              to: req.body.email
+              from: 'adam@coinos.io'
+              subject: 'Welcome to CoinOS'
+              html: html
+            )
+
+            sendgrid.send(email)
         )
+      )
     )
 
   edit: (req, res) ->

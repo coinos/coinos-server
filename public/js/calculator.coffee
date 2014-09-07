@@ -60,7 +60,7 @@ setup = ->
   if g.user.logo
     $('#logo').attr('src', g.user.logo).show()
 
-  getAddress() if g.user.bip32
+  getAddress() if g.user.pubkey
 
   $('#symbol').html(g.user.currency)
   $('#currency').html(g.user.currency)
@@ -196,7 +196,7 @@ logTransaction = (txid, amount) ->
 
 getAddress = ->
   i = g.user.index
-  bip32 = new BIP32(g.user.bip32)
+  bip32 = new BIP32(g.user.pubkey)
   result = bip32.derive("m/0/#{i}")
   hash160 = result.eckey.pubKeyHash
   g.user.address = (new Bitcoin.Address(hash160)).toString()
