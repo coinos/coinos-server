@@ -1,6 +1,7 @@
 #= require ../js/jquery-1.8.2.min.js
 #= require ../js/jquery-ui.min.js
 #= require ../js/jquery.printElement.min.js
+#= require ../js/check_password.js
 #= require ../js/bootstrap.min.js
 #= require ../js/jsbn.js
 #= require ../js/jsbn2.js
@@ -105,6 +106,8 @@ $(->
       $('#status').html('(Encrypted)')
     else
       $('#status').html('(Unencrypted Plaintext)')
+
+
   )
 
   $('#confirm').blur(->
@@ -127,38 +130,32 @@ $(->
       $('#encryption-password, #encryption-confirm').parent().removeClass('has-error')
       $('#modal .alert').removeClass('alert-danger').addClass('alert-success')
 
+    if $('.progress-bar-success').length > 0
+      $('#encryption-password').parent().removeClass('has-error')
+    else
+      $('#encryption-password').parent().addClass('has-error')
+
   $('#print').click(->
     $('#key-dialog').printElement(printMode: 'popup')
   )
 
   $('a[data-toggle="tab"]').on('shown.bs.tab', (e) ->
-    $('#encryption-password').focus()
-    switch e.target.attributes.href.value
-      when '#step1'
-        $('.modal-footer button:first').hide()
-        $('.modal-footer button:last').html('Next').off().on('click', -> $('a[data-toggle="tab"]:eq(1)').click())
-      when '#step2'
-        $('.modal-footer button:first').show().html('Back').off().on('click', -> $('a[data-toggle="tab"]:eq(0)').click())
-        $('.modal-footer button:last').html('Next').off().on('click', -> $('a[data-toggle="tab"]:eq(2)').click())
-      when '#step3'
-        $('.modal-footer button:first').show().html('Back').off().on('click', -> $('a[data-toggle="tab"]:eq(1)').click())
-        $('.modal-footer button:last').html('Got it!').off().on('click', -> 
-          $('#modal .form-control').blur()
-          if $('#modal .has-error').length > 0
-            $('a[data-toggle="tab"]:eq(1)').click()
-            $('#modal .has-error').effect('shake', 500)
-          else
-            g.update_pub_key = true
-            $('#modal').modal('hide')
-        )
+    $('#print').toggle(e.target.attributes.href.value == '#step1')
   )
 
-  $('.modal-footer button:last').on('click', -> $('a[data-toggle="tab"]:eq(1)').click())
+  $('#close').click(-> 
+    $('#modal .form-control').blur()
+    if $('#modal .has-error').length > 0
+      $('#modal .has-error').effect('shake', 500)
+    else
+      g.update_pub_key = true
+      $('#modal').modal('hide')
+  )
+
   $('#modal').on('shown.bs.modal', -> 
     g.update_pub_key = false
     $('#encryption-password, #encryption-confirm').val('').blur()
-    if $('.tab-pane:eq(2)').hasClass('active')
-      $('a[data-toggle="tab"]:eq(1)').click()
+    $('#encryption-password').pwstrength(showVerdicts: false)
   ).on('hidden.bs.modal', ->
     $('#pubkey').val(g.pubkey) if g.update_pub_key
   )

@@ -66,6 +66,7 @@ app.get('/', cache, sessions.new)
 app.get('/register', cache, users.new)
 app.get('/ticker', cache, calculator.ticker)
 app.get('/sweep', calculator.sweep)
+app.get('/address', cache, calculator.address)
 
 app.get('/login', cache, sessions.new)
 app.post('/login', sessions.create)

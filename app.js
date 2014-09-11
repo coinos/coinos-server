@@ -111,6 +111,8 @@
 
   app.get('/sweep', calculator.sweep);
 
+  app.get('/address', cache, calculator.address);
+
   app.get('/login', cache, sessions["new"]);
 
   app.post('/login', sessions.create);

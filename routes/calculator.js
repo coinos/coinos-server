@@ -1,4 +1,16 @@
 (function() {
+  exports.address = function(req, res) {
+    return res.render('calculator/address', {
+      layout: 'layout',
+      js: (function() {
+        return global.js;
+      }),
+      css: (function() {
+        return global.css;
+      })
+    });
+  };
+
   exports.sweep = function(req, res) {
     return res.render('calculator/sweep', {
       layout: 'layout',

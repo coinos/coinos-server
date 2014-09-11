@@ -1,3 +1,10 @@
+exports.address = (req, res) ->
+  res.render('calculator/address', 
+    layout: 'layout',
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
+
 exports.sweep = (req, res) ->
   res.render('calculator/sweep', 
     layout: 'layout',

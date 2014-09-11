@@ -63,19 +63,11 @@
 
       <div class="modal-body">
         <ul class="nav nav-tabs" role="tablist">
-          <li class="active"><a href="#step1" role="tab" data-toggle="tab">Info</a></li>
-          <li><a href="#step2" role="tab" data-toggle="tab">Key</a></li>
-          <li><a href="#step3" role="tab" data-toggle="tab">Agreement</a></li>
+          <li class="active"><a href="#step1" role="tab" data-toggle="tab">Key</a></li>
+          <li><a href="#step2" role="tab" data-toggle="tab">What's this?</a></li>
         </ul>
         <div class="tab-content">
           <div id="step1" class="tab-pane active">
-            <p>In Bitcoin parlance, an extended key, also known as a <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"><abbr title="Bitcoin Improvement Proposal Number 32">BIP32</abbr></a> or <abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr> key, is a master key that can be used to derive multiple bitcoin addresses.</p>
-            <p>The <b>public</b> portion of the key will be stored and used by CoinOS to generate a separate receiving address for every payment to your account.  This will preserve your and your customers' privacy by preventing people from seeing or tracking transactions to your account other than their own.</p>
-            <p>The <b>private</b> portion of the key will be generated here but will not be stored after you close this window.  You will be responsible for saving it and making copies of it.  If you lose it, any funds sent to your account will be unspendable.</p>
-            <p>We'll ask you to encrypt the key with a password of your choosing.  It's a good idea to choose a strong password and keep it written down and backed up seoarately from the key itself.  You and any would-be attackers will need access to both the encrypted private key and the password that was used to encrypt it in order to spend funds received.</p>
-          </div>
-
-          <div id="step2" class="tab-pane">
             <div class="form-group">
               <label for="encryption-password">Encryption Password:</label>
               <input type="password" id="encryption-password" name="encryption-password" class="form-control" />
@@ -91,33 +83,21 @@
               <pre id="privkey"></pre>
               <div id="qr"></div>
             </div>
+          </div>
+          <div id="step2" class="tab-pane">
+            <p>This is an extended key, or <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"><abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr></a>.</p>
+            <p>The <b>public</b> portion of the key is stored and used by CoinOS to generate a separate receiving address for every payment to your account.  This prevents people from seeing transactions to your account other than their own.</p>
+            <p>The <b>private</b> portion of the key currently displayed in the 'Key' tab will not be accessible after you close this window.  You are responsible for saving it and making copies of it.</p>
+            <p>Encrypting the key with a strong password prevents people from using the key if they get ahold of one of your copies.   Keep the password written down and backed up separately from the key itself.  <span class="text-danger"><b>We cannot reset your password</b> -- if you lose it or forget it, your funds will be lost forever.</span></p>
 
-            <div id="buttons" class="pull-right">
-              <button id="print" class="btn btn-primary">
-                <span class="glyphicon glyphicon-print"></span> Print
-              </button>
-            </div>
-            <br class="clearfix">
+            <img src="/assets/img/forever.gif" width="370px" />
           </div>
 
-          <div id="step3" class="tab-pane">
-            <div class="form-group">
-              <input type="checkbox" checked> I've emailed, written down, printed out, screenshotted or otherwise saved and backed up to multiple places the extended private key from the previous page.
-            </div>
-
-            <div class="form-group">
-              <input type="checkbox" checked> I'm confident that no one but me will ever gain access to any of the copies of it by breaking into my computer or email account or through physical theft or extortion and that I will always have access to at least one copy of the key even in case of hardware failure, natural disaster or memory lapse.
-            </div>
-
-            <div class="form-group">
-              <input type="checkbox" checked> I understand that there's no way for CoinOS to recover or reset the password I used to encrypt the private key so I've written it down somewhere safe, separate from the key itself.
-            </div>
-          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" style="display: none">Back</button>
-        <button type="button" class="btn btn-primary">Next</button>
+        <button type="button" id="print" class="btn btn-primary"><span class="glyphicon glyphicon-print"></span> Print</button>
+        <button type="button" id="close" class="btn btn-primary">Got it!</button>
       </div>
     </div>
   </div>
