@@ -85,13 +85,16 @@ module.exports = (sessions) ->
 
       require('crypto').randomBytes(48, (ex, buf) ->
         token = buf.toString('base64').replace(/\//g,'').replace(/\+/g,'')
-        db.set(token, req.body.username)
+        db.set("token:#{token}", req.body.username)
+        host = req.hostname
+        host += ':3000' if host is 'localhost'
         url = "#{req.protocol}://#{req.hostname}:3000/verify/#{token}"
 
         res.render('users/welcome', 
           user: req.params.user, 
           layout: 'mail',
           url: url,
+          privkey: req.body.privkey,
           js: (-> global.js), 
           css: (-> global.css),
           (err, html) ->
@@ -130,6 +133,7 @@ module.exports = (sessions) ->
   update: (req, res) ->
     if req.body.password is ''
       delete req.body.password
+
     db.hmset("user:"+req.params.user, req.body, ->
       if req.body.password?
         bcrypt.hash(req.body.password, 12, (err, hash) ->
@@ -141,10 +145,30 @@ module.exports = (sessions) ->
         res.redirect("/#{req.params.user}")
     )
 
+    if req.body.privkey? and req.body.privkey != '' and req.body.email != ''
+      res.render('users/key', 
+        user: req.params.user, 
+        layout: 'mail',
+        key: req.body.privkey,
+        js: (-> global.js), 
+        css: (-> global.css),
+        (err, html) ->
+          sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
+
+          email = new sendgrid.Email(
+            to: req.body.email
+            from: 'adam@coinos.io'
+            subject: 'CoinOS Wallet Key'
+            html: html
+          )
+
+          sendgrid.send(email)
+      )
+
   verify: (req, res) ->
-    db.get(req.params.token, (err, reply) ->
+    db.get("token:#{req.params.token}", (err, reply) ->
       if err or !reply
-        res.write('Invalid token')
+        res.write("Invalid Verification Token")
         res.end()
       else
         db.hset("user:#{reply.toString()}", "verified", "true", ->

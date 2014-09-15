@@ -10,7 +10,7 @@ var webkit=false;
 var moz=false;
 var v=null;
 
-var vidhtml = '<video id="v" width="480" height="480" style="margin-top: -80px; padding: 0;" autoplay></video>';
+var vidhtml = '<video id="v" width="450" height="450" style="margin-top: -50px; padding: 0;" autoplay></video>';
 
 $(function() {
   load();

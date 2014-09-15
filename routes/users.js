@@ -114,14 +114,19 @@
             });
           });
           return require('crypto').randomBytes(48, function(ex, buf) {
-            var token, url;
+            var host, token, url;
             token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '');
-            db.set(token, req.body.username);
+            db.set("token:" + token, req.body.username);
+            host = req.hostname;
+            if (host === 'localhost') {
+              host += ':3000';
+            }
             url = "" + req.protocol + "://" + req.hostname + ":3000/verify/" + token;
             return res.render('users/welcome', {
               user: req.params.user,
               layout: 'mail',
               url: url,
+              privkey: req.body.privkey,
               js: (function() {
                 return global.js;
               }),
@@ -172,7 +177,7 @@
         if (req.body.password === '') {
           delete req.body.password;
         }
-        return db.hmset("user:" + req.params.user, req.body, function() {
+        db.hmset("user:" + req.params.user, req.body, function() {
           if (req.body.password != null) {
             return bcrypt.hash(req.body.password, 12, function(err, hash) {
               return db.hmset("user:" + req.params.user, {
@@ -185,11 +190,34 @@
             return res.redirect("/" + req.params.user);
           }
         });
+        if ((req.body.privkey != null) && req.body.privkey !== '' && req.body.email !== '') {
+          return res.render('users/key', {
+            user: req.params.user,
+            layout: 'mail',
+            key: req.body.privkey,
+            js: (function() {
+              return global.js;
+            }),
+            css: (function() {
+              return global.css;
+            })
+          }, function(err, html) {
+            var email, sendgrid;
+            sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
+            email = new sendgrid.Email({
+              to: req.body.email,
+              from: 'adam@coinos.io',
+              subject: 'CoinOS Wallet Key',
+              html: html
+            });
+            return sendgrid.send(email);
+          });
+        }
       },
       verify: function(req, res) {
-        return db.get(req.params.token, function(err, reply) {
+        return db.get("token:" + req.params.token, function(err, reply) {
           if (err || !reply) {
-            res.write('Invalid token');
+            res.write("Invalid Verification Token");
             return res.end();
           } else {
             return db.hset("user:" + (reply.toString()), "verified", "true", function() {

@@ -52,6 +52,7 @@ setup = ->
   g.tip = 1
   g.user.address or= ''
   g.user.commission or= 0
+  g.user.currency or= 'CAD'
   g.user.symbol or= 'quadrigacx'
   g.user.unit or= 'BTC'
 

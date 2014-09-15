@@ -22,6 +22,8 @@ g = exports ? this
 g.proceed = false
 
 $(->
+  $('#encryption-password').pwstrength(showVerdicts: false)
+
   $.getJSON("/js/rates.json", (data) ->
     currencies = Object.keys(data)
     currencies = currencies.sort()
@@ -51,6 +53,7 @@ $(->
 
     user = $('#username').val()
     $.getJSON("/#{user}.json", (data) ->
+      $('#email').val(data.email)
       $('#title').val(data.title)
       $('#logo').val(data.logo)
       $('#pubkey').val(data.pubkey)
@@ -69,13 +72,6 @@ $(->
     $('#unit').append("<option value='#{v}'>#{v}</option>")
   )
 
-  $('#title').blur(->
-    if $(this).val() == '' and $('#logo').val() == ''
-      $(this).parent().addClass('has-error')
-    else
-        $(this).parent().removeClass('has-error')
-  )
-
   $('#pubkey').blur(->
     if check_address($(this).val())
       $(this).parent().removeClass('has-error')
@@ -89,25 +85,23 @@ $(->
     g.privkey = key.extended_private_key_string()
 
     $('#modal').modal()
-    $('#privkey').html(g.privkey)
+    $('#privkey_text').html(g.privkey)
     $('#qr').html('')
     new QRCode('qr', text: g.privkey, width: 260, height: 260)
   )
 
   $('#encryption-password').keyup((e) ->
     return if e.keyCode is 9 or e.keyCode is 16
-    enc_privkey = CryptoJS.AES.encrypt(g.privkey, $(this).val()).toString()
-    enc_privkey = g.privkey if $(this).val() == ''
-    $('#privkey').html(enc_privkey)
+    g.enc_privkey = CryptoJS.AES.encrypt(g.privkey, $(this).val()).toString()
+    g.enc_privkey = g.privkey if $(this).val() == ''
+    $('#privkey_text').html(g.enc_privkey)
     $('#qr').html('')
-    new QRCode('qr', text: enc_privkey, width: 260, height: 260)
+    new QRCode('qr', text: g.enc_privkey, width: 260, height: 260)
 
     if $(this).val()
       $('#status').html('(Encrypted)')
     else
-      $('#status').html('(Unencrypted Plaintext)')
-
-
+      $('#status').html('(Unencrypted)')
   )
 
   $('#confirm').blur(->
@@ -146,18 +140,26 @@ $(->
   $('#close').click(-> 
     $('#modal .form-control').blur()
     if $('#modal .has-error').length > 0
+      $('#step1_link').click()
       $('#modal .has-error').effect('shake', 500)
     else
-      g.update_pub_key = true
+      g.update_key = true
       $('#modal').modal('hide')
+  )
+  $('#encrypt').submit(-> $('#close').click(); return false)
+
+  $('#modal').on('show.bs.modal', -> 
+    $('#encryption-password, #encryption-confirm').val('').keyup().parent().removeClass('has-error')
+    $('#modal .alert').removeClass('alert-success').addClass('alert-danger')
   )
 
   $('#modal').on('shown.bs.modal', -> 
-    g.update_pub_key = false
-    $('#encryption-password, #encryption-confirm').val('').blur()
-    $('#encryption-password').pwstrength(showVerdicts: false)
+    g.update_key = false
+    $('#encryption-password').focus()
   ).on('hidden.bs.modal', ->
-    $('#pubkey').val(g.pubkey) if g.update_pub_key
+    if g.update_key
+      $('#pubkey').val(g.pubkey) 
+      $('#privkey').val(g.enc_privkey)
   )
 
   $('#setup').submit(->
