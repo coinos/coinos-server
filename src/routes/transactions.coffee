@@ -15,6 +15,10 @@ module.exports =
     r = 'transactions': []
 
     db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
+      if err or not transactions.length
+        res.write(JSON.stringify(r)) 
+        return res.end()
+      
       txid = ->
         x = transactions[i++]
         return x if x.match(/[a-z]/i)

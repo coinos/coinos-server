@@ -88,7 +88,7 @@ module.exports = (sessions) ->
         db.set("token:#{token}", req.body.username)
         host = req.hostname
         host += ':3000' if host is 'localhost'
-        url = "#{req.protocol}://#{req.hostname}:3000/verify/#{token}"
+        url = "#{req.protocol}://#{host}/verify/#{token}"
 
         res.render('users/welcome', 
           user: req.params.user, 

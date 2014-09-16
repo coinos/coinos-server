@@ -25,6 +25,10 @@
       };
       return db.lrange("" + user + ":transactions", 0, -1, function(err, transactions) {
         var cb, i, txid;
+        if (err || !transactions.length) {
+          res.write(JSON.stringify(r));
+          return res.end();
+        }
         txid = function() {
           var x;
           x = transactions[i++];

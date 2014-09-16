@@ -121,7 +121,7 @@
             if (host === 'localhost') {
               host += ':3000';
             }
-            url = "" + req.protocol + "://" + req.hostname + ":3000/verify/" + token;
+            url = "" + req.protocol + "://" + host + "/verify/" + token;
             return res.render('users/welcome', {
               user: req.params.user,
               layout: 'mail',
