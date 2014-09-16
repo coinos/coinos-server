@@ -28,7 +28,7 @@
         txid = function() {
           var x;
           x = transactions[i++];
-          if (isNaN(parseInt(x))) {
+          if (x.match(/[a-z]/i)) {
             return x;
           }
           return user + ":transactions:" + x;
@@ -47,8 +47,7 @@
       });
     },
     create: function(req, res) {
-      var finish, user;
-      user = req.params.user;
+      var finish;
       finish = function() {
         res.write(JSON.stringify(req.body));
         return res.end();
@@ -57,12 +56,11 @@
       return db.exists(req.body.txid, function(err, result) {
         var multi;
         if (result) {
-          finish();
-          return;
+          return finish();
         }
         multi = db.multi();
         multi.hmset(req.body.txid, req.body);
-        multi.rpush("" + user + ":transactions", req.body.txid);
+        multi.rpush("" + req.params.user + ":transactions", req.body.txid);
         return multi.exec(function(err, replies) {
           return finish();
         });

@@ -134,10 +134,13 @@ module.exports = (sessions) ->
     if req.body.password is ''
       delete req.body.password
 
+    if req.body.privkey is ''
+      delete req.body.privkey
+
     db.hmset("user:"+req.params.user, req.body, ->
       if req.body.password?
         bcrypt.hash(req.body.password, 12, (err, hash) ->
-          db.hmset("user:"+req.params.user,password: hash, ->
+          db.hmset("user:#{req.params.user}", password: hash, ->
             res.redirect("/#{req.params.user}")
           )
         )

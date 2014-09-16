@@ -177,6 +177,9 @@
         if (req.body.password === '') {
           delete req.body.password;
         }
+        if (req.body.privkey === '') {
+          delete req.body.privkey;
+        }
         db.hmset("user:" + req.params.user, req.body, function() {
           if (req.body.password != null) {
             return bcrypt.hash(req.body.password, 12, function(err, hash) {

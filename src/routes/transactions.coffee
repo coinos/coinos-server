@@ -17,7 +17,7 @@ module.exports =
     db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
       txid = ->
         x = transactions[i++]
-        return x if isNaN(parseInt(x))
+        return x if x.match(/[a-z]/i)
         return user + ":transactions:" + x
 
       cb = (err, t) ->
@@ -34,20 +34,17 @@ module.exports =
     )
 
   create: (req, res) ->
-    user = req.params.user
     finish = ->
       res.write(JSON.stringify(req.body))
       res.end()
 
     db.watch(req.body.txid)
     db.exists(req.body.txid, (err, result) ->
-      if result
-        finish() 
-        return
+      return finish() if result
 
       multi = db.multi()
       multi.hmset(req.body.txid, req.body)
-      multi.rpush("#{user}:transactions", req.body.txid)
+      multi.rpush("#{req.params.user}:transactions", req.body.txid)
       multi.exec((err, replies) ->
         finish()
       )
