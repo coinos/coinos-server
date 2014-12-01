@@ -21,7 +21,7 @@ Key = ->
   key.child_index = 0
   key.parent_fingerprint = Bitcoin.Util.hexToBytes("00000000")
   key.version = BITCOIN_MAINNET_PRIVATE
-  key.depth = 0
+  key.depth = 1
 
   key.build_extended_public_key()
   key.build_extended_private_key()
