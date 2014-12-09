@@ -10,13 +10,15 @@
 #= require js/sha512.js
 #= require js/modsqrt.js
 #= require js/rfc1751.js
-#= require js/bip32.js
 
 EXCHANGE_FAIL = "Error fetching exchange rate"
 SOCKET_FAIL = "Error connecting to payment server"
 ADDRESS_FAIL = "Invalid address"
 
 g = exports ? this
+g.errors = []
+g.amount_requested = 0
+g.tip = 1
 
 $(->
   $.ajax(
@@ -47,9 +49,6 @@ $(->
 )
 
 setup = ->
-  g.errors = []
-  g.amount_requested = 0
-  g.tip = 1
   g.user.address or= ''
   g.user.commission or= 0
   g.user.currency or= 'CAD'
@@ -116,6 +115,7 @@ listen = ->
 
     g.blockchain.onopen = -> 
       $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
+      clear(SOCKET_FAIL)
       g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
     
     g.blockchain.onerror =  ->
@@ -127,6 +127,7 @@ listen = ->
       $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
       g.blockchain = null
       fail(SOCKET_FAIL)
+      listen()
 
     g.blockchain.onmessage = (e) ->
       results = eval('(' + e.data + ')')
@@ -142,41 +143,6 @@ listen = ->
       )
 
       logTransaction(txid, amount)
-
-  unless g.btcd and g.btcd.readyState is 1
-    g.btcd = new WebSocket("wss://coinos.io/ws")
-
-    g.btcd.onopen = -> 
-      $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
-      msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'notifyreceived', params: [[g.user.address]] }
-      g.btcd.send(msg)
-    
-    g.btcd.onerror =  ->
-      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
-      g.btcd = null
-
-    g.btcd.onclose = ->
-      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
-      g.btcd = null
-
-    g.btcd.onmessage = (e) ->
-      data = JSON.parse(e.data)
-      amount = 0
-
-      if data.result
-        txid = data.result.txid
-        return if txid == g.last
-        g.last = txid
-
-        for output in data.result.vout
-          if g.user.address in output.scriptPubKey.addresses
-            amount += parseFloat(output.value)
-
-        logTransaction(txid, amount)
-
-      if data.method and data.method is 'recvtx' and data.params.length is 1
-        msg = JSON.stringify { jsonrpc: "1.0", id: "coinos", method: 'decoderawtransaction', params: [data.params[0]] }
-        g.btcd.send(msg)
 
 logTransaction = (txid, amount) ->
   if $('#received').is(":hidden") and amount >= g.amount_requested
@@ -202,11 +168,9 @@ getAddress = ->
     g.user.address = g.user.pubkey
   catch
     try
-      bip32 = new BIP32(g.user.pubkey)
-      i = g.user.index
-      result = bip32.derive("m/0/#{i}")
-      hash160 = result.eckey.pubKeyHash
-      g.user.address = (new Bitcoin.Address(hash160)).toString()
+      master = bitcoin.HDNode.fromBase58(g.user.pubkey)
+      child = master.derive(0).derive(g.user.index)
+      g.user.address = child.pubKey.getAddress().toString()
     catch
       fail(ADDRESS_FAIL)
 
