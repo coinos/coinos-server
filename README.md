@@ -20,13 +20,17 @@ We use the websocket payment notification API from http://blockchain.info/api/ap
 
 # Installation
 
-Install nodeJS (http://nodejs.org/) and redis (http://redis.io/) then:
+Install nodeJS (http://nodejs.org/) and redis (http://redis.io/).  On Ubuntu, this would be:
+
+    sudo apt-get install nodejs redis-server
+    sudo ln -sf /usr/bin/nodejs /usr/bin/node
+
+Download and configure CoinOS:
 
     git clone https://github.com/thebitcoincoop/coinos
     cd coinos
     npm install  
-    ./fetch_rates.sh
-    coffee app
+    node app.js
 
 Now the app should be runnning at http://localhost:3000/
 
