@@ -89,7 +89,7 @@ app.get('/:user/report', authorize, transactions.index)
 app.get('/:user.json', users.json)
 app.get('/:user', cache, users.show)
 
-app.use(require('connect-assets')(src: 'public'))
+app.use(require('connect-assets')(src: 'public', detectChanges: false))
 
 app.use((err, req, res, next) ->
   res.status(500)
