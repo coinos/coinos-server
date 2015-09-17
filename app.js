@@ -146,7 +146,8 @@
   app.get('/:user', cache, users.show);
 
   app.use(require('connect-assets')({
-    src: 'public'
+    src: 'public',
+    detectChanges: false
   }));
 
   app.use(function(err, req, res, next) {
