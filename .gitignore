@@ -7,3 +7,5 @@ npm-debug.log
 public/js/rates.json
 src/config.coffee
 config.js
+passenger*
+tmp
