@@ -105,7 +105,7 @@ updateTotal = ->
 
   $('#total').html(total.toString())
   $('#qr').html('')
-  new QRCode('qr', text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}", width: 320, height: 320)
+  new QRCode('qr', text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}", width: 280, height: 280)
 
 listen = ->
   setTimeout(listen, 10000)
