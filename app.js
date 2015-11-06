@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, tips, transactions, users;
 
   request = require('request');
 
@@ -103,7 +103,7 @@
     return setTimeout(fetchRates, 120000);
   })();
 
-  app.get('/', cache, sessions["new"]);
+  tips = app.get('/', cache, sessions["new"]);
 
   app.get('/register', cache, users["new"]);
 
@@ -112,6 +112,19 @@
   app.get('/sweep', calculator.sweep);
 
   app.get('/address', cache, calculator.address);
+
+  app.get('/tips', cache, function(req, res) {
+    return res.render('tips', {
+      notice: true,
+      layout: 'layout',
+      js: (function() {
+        return global.js;
+      }),
+      css: (function() {
+        return global.css;
+      })
+    });
+  });
 
   app.get('/login', cache, sessions["new"]);
 

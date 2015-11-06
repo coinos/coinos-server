@@ -62,11 +62,21 @@ do fetchRates = ->
   )
   setTimeout(fetchRates, 120000)
 
+tips = 
+
 app.get('/', cache, sessions.new)
 app.get('/register', cache, users.new)
 app.get('/ticker', cache, calculator.ticker)
 app.get('/sweep', calculator.sweep)
 app.get('/address', cache, calculator.address)
+app.get('/tips', cache, (req, res) ->
+  res.render('tips', 
+    notice: true,
+    layout: 'layout',
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
+)
 
 app.get('/login', cache, sessions.new)
 app.post('/login', sessions.create)
