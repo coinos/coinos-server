@@ -1,11 +1,15 @@
 (function() {
-  var bcrypt, config, db;
+  var bcrypt, config, db, fs, request;
 
   db = require("../redis");
 
   config = require("../config");
 
   bcrypt = require('bcrypt');
+
+  fs = require('fs');
+
+  request = require('request');
 
   module.exports = function(sessions) {
     return {
@@ -34,7 +38,7 @@
       },
       show: function(req, res) {
         return db.hgetall("user:" + req.params.user, function(err, obj) {
-          var options;
+          var ext, options, path;
           if (obj) {
             options = {
               user: req.params.user,
@@ -49,6 +53,15 @@
             };
             if (req.query.verified != null) {
               options.verified = true;
+            }
+            if (obj.logo.length > 3) {
+              ext = obj.logo.substr(obj.logo.length - 3);
+              path = "public/assets/img/logos/" + obj.username + "." + ext;
+              fs.lstat(path, function(err, stats) {
+                if ((ext === 'jpg' || ext === 'png' || ext === 'gif') && (err || !stats.isFile())) {
+                  return request("" + obj.logo).pipe(fs.createWriteStream(path));
+                }
+              });
             }
             res.render('users/show', options);
             return delete req.session.verified;

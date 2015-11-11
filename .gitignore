@@ -1,4 +1,3 @@
-public/bitcoins.pdf
 node_modules
 builtAssets
 database.json
@@ -9,3 +8,4 @@ src/config.coffee
 config.js
 passenger*
 tmp
+public/img/assets/logos

@@ -59,7 +59,9 @@ setup = ->
     $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
   if g.user.logo
-    $('#logo').attr('src', g.user.logo).show()
+    ext = g.user.logo.substr(g.user.logo.length - 3)
+    src = "/assets/img/logos/#{g.user.username}.#{ext}"
+    $('#logo').attr('src', src).show()
 
   getAddress()
 
