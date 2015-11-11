@@ -116,17 +116,14 @@ listen = ->
     g.blockchain = new WebSocket("wss://ws.blockchain.info/inv")
 
     g.blockchain.onopen = -> 
-      $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
       clear(SOCKET_FAIL)
       g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
     
     g.blockchain.onerror =  ->
-      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
       g.blockchain = null
       fail(SOCKET_FAIL)
 
     g.blockchain.onclose = ->
-      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
       g.blockchain = null
       fail(SOCKET_FAIL)
       listen()
@@ -151,7 +148,7 @@ logTransaction = (txid, amount) ->
     $('#amount').blur()
     $('#payment').hide()
     $('#received').fadeIn('slow')
-    $('#chaching')[0].play()
+    $('#success')[0].play()
     g.user.index++
 
     $.post("/#{g.user.username}/transactions",
