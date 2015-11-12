@@ -9,7 +9,7 @@
   <input type="hidden" id="email" name="email" />
 
   <div class="form-group">
-    <label for="pubkey">Bitcoin Public Key:</label>
+    <label for="pubkey">Bitcoin Receiving Address or HD Wallet Pubkey:</label>
     <div class="input-group">
       <input type="text" id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." />
       <input type="hidden" id="privkey" name="privkey" />
@@ -27,24 +27,24 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title">New Extended Key</h4>
+        <h4 class="modal-title">New HD Wallet</h4>
       </div>
 
       <div class="modal-body">
         <ul class="nav nav-tabs" role="tablist">
-          <li class="active"><a id="step1_link" href="#step1" role="tab" data-toggle="tab">Key</a></li>
+          <li class="active"><a id="step1_link" href="#step1" role="tab" data-toggle="tab">Wallet Keys</a></li>
           <li><a href="#step2" role="tab" data-toggle="tab">What's this?</a></li>
         </ul>
         <div class="tab-content">
           <div id="step1" class="tab-pane active">
             <form id="encrypt">
               <div class="form-group">
-                <label for="encryption-password">Encryption Password:</label>
+                <label for="encryption-password">Encryption Passphrase <small>(16+ characters)</small>:</label>
                 <input type="password" id="encryption-password" name="encryption-password" class="form-control" />
               </div>
 
               <div class="form-group">
-                <label for="encryption-confirm">Confirm Password:</label>
+                <label for="encryption-confirm">Confirm Passphrase:</label>
                 <input type="password" id="encryption-confirm" name="encryption-confirm" class="form-control" />
               </div>
 
@@ -52,17 +52,17 @@
             </form>
 
             <div id="key-dialog" class="alert alert-danger">
-              Extended Private Key <span id="status">(Unencrypted)</span>
+              Master Public Key 
+              <pre id="pubkey_text"></pre>
+              Master Private Key <span id="status">(Unencrypted)</span>
               <pre id="privkey_text"></pre>
               <div id="qr"></div>
             </div>
           </div>
           <div id="step2" class="tab-pane">
-            <p>This is a Bitcoin extended key, also known as an <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"><abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr></a>.</p>
-            <p>The <b>public</b> portion of the key is stored and used by CoinOS to generate a separate receiving address for every payment to your account.  This prevents people from seeing transactions to your account other than their own.</p>
-            <p>The <b>private</b> portion of the key (displayed on the 'Key' tab) will not be accessible after you close this window.  You are responsible for safely storing it and making copies of it, either by printing it out or saving it somewhere on your computer or online.</p>
-            <p>Encrypting the key with a strong password provides a safeguard against someone gaining access to a copy of the key.  They will need to know your password to decrypt the key.  Keep the password written down and backed up separately from the key.</p> 
-            <p class="text-danger"><b>IMPORTANT: We cannot reset your password.  If you lose it or forget it, any funds sent to your account will be lost forever.</b></p>
+            <p>An <abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr> is a master key that can be used to derive several Bitcoin addresses. CoinOS will use the master key that's generated here to derive a new address for every payment to your account so that people can't link separate payments together and invade your customers' privacy.</p>
+            <p>The master <b>pubkey</b> is what's used to derive the addresses and the master <b>private</b> key is what's needed to authorize payments out from the wallet.  CoinOS will get you to encrypt the private key with a strong passphrase before it's stored on our server so that no one but you can access your funds.  The password could be a different password from the one you use to login to your account, or it could be the same, but what's important is that you remember it.  You'll need to enter the password whenever you make a transaction out of the wallet.</p> 
+            <p class="text-danger"><b>IMPORTANT: We cannot recover or reset your password.  If you lose it or forget it, any funds sent to your account will be lost forever, so make it memorable or write it down.</b></p>
 
             <img src="/assets/img/forever.gif" width="370px" />
           </div>

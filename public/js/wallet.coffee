@@ -44,6 +44,7 @@ $(->
     g.privkey = key.extended_private_key_string()
 
     $('#modal').modal()
+    $('#pubkey_text').html(g.pubkey)
     $('#privkey_text').html(g.privkey)
     $('#qr').html('')
     new QRCode('qr', text: g.privkey, width: 260, height: 260)
