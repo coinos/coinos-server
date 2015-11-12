@@ -9,24 +9,13 @@
   <input type="hidden" id="email" name="email" />
 
   <div class="form-group">
-    <label for="title">Store Name:</label>
+    <label for="title">Store Name <small>(optional)</small>:</label>
     <input type="text" id="title" name="title" class="form-control" />
   </div>
 
   <div class="form-group">
-    <label for="logo">Logo:</label>
+    <label for="logo">Logo <small>(optional)</small>:</label>
     <input type="text" id="logo" name="logo" class="form-control" />
-  </div>
-
-  <div class="form-group">
-    <label for="pubkey">Bitcoin Public Key:</label>
-    <div class="input-group">
-      <input type="text" id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." />
-      <input type="hidden" id="privkey" name="privkey" />
-      <span class="input-group-btn">
-        <button id="generate" type="button" class="btn">New</button>
-      </span>
-    </div>
   </div>
 
   <div class="form-group">
@@ -54,58 +43,3 @@
  
   <input class="btn btn-primary" type="submit" value="Done" />
 </form>
-
-<div class="modal fade" id="modal" tabindex="-1" role="dialog">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title">New Extended Key</h4>
-      </div>
-
-      <div class="modal-body">
-        <ul class="nav nav-tabs" role="tablist">
-          <li class="active"><a id="step1_link" href="#step1" role="tab" data-toggle="tab">Key</a></li>
-          <li><a href="#step2" role="tab" data-toggle="tab">What's this?</a></li>
-        </ul>
-        <div class="tab-content">
-          <div id="step1" class="tab-pane active">
-            <form id="encrypt">
-              <div class="form-group">
-                <label for="encryption-password">Encryption Password:</label>
-                <input type="password" id="encryption-password" name="encryption-password" class="form-control" />
-              </div>
-
-              <div class="form-group">
-                <label for="encryption-confirm">Confirm Password:</label>
-                <input type="password" id="encryption-confirm" name="encryption-confirm" class="form-control" />
-              </div>
-
-              <input type="submit" style="position: absolute; left: -9999px" />
-            </form>
-
-            <div id="key-dialog" class="alert alert-danger">
-              Extended Private Key <span id="status">(Unencrypted)</span>
-              <pre id="privkey_text"></pre>
-              <div id="qr"></div>
-            </div>
-          </div>
-          <div id="step2" class="tab-pane">
-            <p>This is a Bitcoin extended key, also known as an <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"><abbr title="Hierarchical Deterministic Wallet">HD Wallet</abbr></a>.</p>
-            <p>The <b>public</b> portion of the key is stored and used by CoinOS to generate a separate receiving address for every payment to your account.  This prevents people from seeing transactions to your account other than their own.</p>
-            <p>The <b>private</b> portion of the key (displayed on the 'Key' tab) will not be accessible after you close this window.  You are responsible for safely storing it and making copies of it, either by printing it out or saving it somewhere on your computer or online.</p>
-            <p>Encrypting the key with a strong password provides a safeguard against someone gaining access to a copy of the key.  They will need to know your password to decrypt the key.  Keep the password written down and backed up separately from the key.</p> 
-            <p class="text-danger"><b>IMPORTANT: We cannot reset your password.  If you lose it or forget it, any funds sent to your account will be lost forever.</b></p>
-
-            <img src="/assets/img/forever.gif" width="370px" />
-          </div>
-
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="print" class="btn btn-primary"><span class="glyphicon glyphicon-print"></span> Print</button>
-        <button type="button" id="close" class="btn btn-primary">Got it!</button>
-      </div>
-    </div>
-  </div>
-</div>

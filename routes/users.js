@@ -54,7 +54,7 @@
             if (req.query.verified != null) {
               options.verified = true;
             }
-            if (obj.logo.length > 3) {
+            if (obj.logo && obj.logo.length > 3) {
               ext = obj.logo.substr(obj.logo.length - 3);
               path = "public/assets/img/logos/" + obj.username + "." + ext;
               fs.lstat(path, function(err, stats) {
@@ -242,6 +242,19 @@
               return res.redirect("/" + (reply.toString()) + "?verified");
             });
           }
+        });
+      },
+      wallet: function(req, res) {
+        return res.render('users/wallet', {
+          user: req.params.user,
+          layout: 'layout',
+          navigation: true,
+          js: (function() {
+            return global.js;
+          }),
+          css: (function() {
+            return global.css;
+          })
         });
       }
     };

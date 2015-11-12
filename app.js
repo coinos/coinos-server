@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, tips, transactions, users;
+  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
 
   request = require('request');
 
@@ -103,15 +103,15 @@
     return setTimeout(fetchRates, 120000);
   })();
 
-  tips = app.get('/', cache, sessions["new"]);
+  app.get('/', cache, sessions["new"]);
+
+  app.get('/address', cache, calculator.address);
 
   app.get('/register', cache, users["new"]);
 
-  app.get('/ticker', cache, calculator.ticker);
-
   app.get('/sweep', calculator.sweep);
 
-  app.get('/address', cache, calculator.address);
+  app.get('/ticker', cache, calculator.ticker);
 
   app.get('/tips', cache, function(req, res) {
     return res.render('tips', {
@@ -138,11 +138,13 @@
 
   app.get('/verify/:token', users.verify);
 
-  app.get('/:user/profile', authorize, users.profile);
+  app.post('/:user', authorize, users.update);
 
   app.get('/:user/edit', authorize, users.edit);
 
-  app.post('/:user', authorize, users.update);
+  app.get('/:user/profile', authorize, users.profile);
+
+  app.get('/:user/wallet', authorize, users.wallet);
 
   app.get('/:user/transactions.json', authorize, transactions.json);
 
