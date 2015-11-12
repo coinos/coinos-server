@@ -11,8 +11,8 @@
 #= require js/modsqrt.js
 #= require js/rfc1751.js
 
-EXCHANGE_FAIL = "Error fetching exchange rate"
-SOCKET_FAIL = "Error connecting to payment server"
+EXCHANGE_FAIL = "Problem fetching exchange rate"
+SOCKET_FAIL = "Problem connecting to payment server, notifications may not appear"
 ADDRESS_FAIL = "Invalid address"
 
 g = exports ? this
@@ -110,22 +110,29 @@ updateTotal = ->
   new QRCode('qr', text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}", width: 280, height: 280)
 
 listen = ->
-  setTimeout(listen, 10000)
-
-  unless g.blockchain and g.blockchain.readyState is 1
+  g.attempts++
+  if g.blockchain and g.blockchain.readyState is 1
+    setTimeout(listen, 12000)
+  else
+    fail(SOCKET_FAIL) if g.attempts > 3
     g.blockchain = new WebSocket("wss://ws.blockchain.info/inv")
 
     g.blockchain.onopen = -> 
-      clear(SOCKET_FAIL)
-      g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
+      if g.blockchain.readyState is 1
+        g.attempts = 0
+        clear(SOCKET_FAIL)
+        g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
+      else
+        setTimeout(g.blockchain.onopen, 12000)
     
     g.blockchain.onerror =  ->
-      g.blockchain = null
       fail(SOCKET_FAIL)
+      g.blockchain.close()
+      delete g.blockchain
+      listen()
 
     g.blockchain.onclose = ->
-      g.blockchain = null
-      fail(SOCKET_FAIL)
+      delete g.blockchain
       listen()
 
     g.blockchain.onmessage = (e) ->
@@ -170,6 +177,8 @@ getAddress = ->
       master = bitcoin.HDNode.fromBase58(g.user.pubkey)
       child = master.derive(0).derive(g.user.index)
       g.user.address = child.pubKey.getAddress().toString()
+      g.blockchain.close() if g.blockchain
+      listen()
     catch
       fail(ADDRESS_FAIL)
 
