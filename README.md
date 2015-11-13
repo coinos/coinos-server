@@ -34,6 +34,10 @@ Download and configure CoinOS:
 
 Now the app should be runnning at http://localhost:3000/
 
+# Contributors
+
+ Contributors include: Alex Millar
+
 # License
 
 Copyright (C) 2012 Adam Soltys
