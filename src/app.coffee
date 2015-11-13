@@ -63,10 +63,22 @@ do fetchRates = ->
   setTimeout(fetchRates, 120000)
 
 app.get('/', cache, sessions.new)
-app.get('/register', cache, users.new)
-app.get('/ticker', cache, calculator.ticker)
-app.get('/sweep', calculator.sweep)
 app.get('/address', cache, calculator.address)
+app.get('/register', cache, users.new)
+app.get('/sweep', calculator.sweep)
+app.get('/ticker', cache, calculator.ticker)
+app.get('/token', cache, (req, res) ->
+  res.write(config.blockcypher_token)
+  res.end()
+)
+app.get('/tips', cache, (req, res) ->
+  res.render('tips', 
+    notice: true,
+    layout: 'layout',
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
+)
 
 app.get('/login', cache, sessions.new)
 app.post('/login', sessions.create)
@@ -76,9 +88,10 @@ app.get('/users/new', cache, users.new)
 app.post('/users', users.create)
 app.get('/verify/:token', users.verify)
 
-app.get('/:user/profile', authorize, users.profile)
-app.get('/:user/edit', authorize, users.edit)
 app.post('/:user', authorize, users.update)
+app.get('/:user/edit', authorize, users.edit)
+app.get('/:user/profile', authorize, users.profile)
+app.get('/:user/wallet', authorize, users.wallet)
 
 app.get('/:user/transactions.json', authorize, transactions.json)
 app.post('/:user/transactions', transactions.create)

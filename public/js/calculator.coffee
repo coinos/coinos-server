@@ -11,8 +11,8 @@
 #= require js/modsqrt.js
 #= require js/rfc1751.js
 
-EXCHANGE_FAIL = "Error fetching exchange rate"
-SOCKET_FAIL = "Error connecting to payment server"
+EXCHANGE_FAIL = "Problem fetching exchange rate"
+SOCKET_FAIL = "Problem connecting to payment server, notifications may not appear"
 ADDRESS_FAIL = "Invalid address"
 
 g = exports ? this
@@ -59,7 +59,9 @@ setup = ->
     $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
   if g.user.logo
-    $('#logo').attr('src', g.user.logo).show()
+    ext = g.user.logo.substr(g.user.logo.length - 3)
+    src = "/assets/img/logos/#{g.user.username}.#{ext}"
+    $('#logo').attr('src', src).show()
 
   getAddress()
 
@@ -108,25 +110,29 @@ updateTotal = ->
   new QRCode('qr', text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}", width: 280, height: 280)
 
 listen = ->
-  setTimeout(listen, 10000)
-
-  unless g.blockchain and g.blockchain.readyState is 1
+  g.attempts++
+  if g.blockchain and g.blockchain.readyState is 1
+    setTimeout(listen, 12000)
+  else
+    fail(SOCKET_FAIL) if g.attempts > 3
     g.blockchain = new WebSocket("wss://ws.blockchain.info/inv")
 
     g.blockchain.onopen = -> 
-      $('#connection').fadeIn().removeClass('glyphicon-exclamation-sign').addClass('glyphicon-signal')
-      clear(SOCKET_FAIL)
-      g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
+      if g.blockchain.readyState is 1
+        g.attempts = 0
+        clear(SOCKET_FAIL)
+        g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
+      else
+        setTimeout(g.blockchain.onopen, 12000)
     
     g.blockchain.onerror =  ->
-      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
-      g.blockchain = null
       fail(SOCKET_FAIL)
+      g.blockchain.close()
+      delete g.blockchain
+      listen()
 
     g.blockchain.onclose = ->
-      $('#connection').addClass('glyphicon-exclamation-sign').removeClass('glyphicon-signal')
-      g.blockchain = null
-      fail(SOCKET_FAIL)
+      delete g.blockchain
       listen()
 
     g.blockchain.onmessage = (e) ->
@@ -149,7 +155,7 @@ logTransaction = (txid, amount) ->
     $('#amount').blur()
     $('#payment').hide()
     $('#received').fadeIn('slow')
-    $('#chaching')[0].play()
+    $('#success')[0].play()
     g.user.index++
 
     $.post("/#{g.user.username}/transactions",
@@ -171,6 +177,8 @@ getAddress = ->
       master = bitcoin.HDNode.fromBase58(g.user.pubkey)
       child = master.derive(0).derive(g.user.index)
       g.user.address = child.pubKey.getAddress().toString()
+      g.blockchain.close() if g.blockchain
+      listen()
     catch
       fail(ADDRESS_FAIL)
 

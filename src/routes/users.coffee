@@ -1,6 +1,8 @@
 db = require("../redis")
 config = require("../config")
-bcrypt = require('bcrypt')
+bcrypt = require('bcryptjs')
+fs = require('fs')
+request = require('request')
 
 module.exports = (sessions) ->
   exists: (req, res) ->
@@ -33,6 +35,14 @@ module.exports = (sessions) ->
         if req.query.verified?
           options.verified = true
 
+        if obj.logo and obj.logo.length > 3
+          ext = obj.logo.substr(obj.logo.length - 3)
+          path = "public/assets/img/logos/#{obj.username}.#{ext}"
+          fs.lstat(path, (err, stats) ->
+            if ext in ['jpg', 'png', 'gif'] and (err or not stats.isFile())
+              request("#{obj.logo}").pipe(fs.createWriteStream(path))
+          )
+            
         res.render('users/show', options)
         delete req.session.verified
       else 
@@ -181,4 +191,13 @@ module.exports = (sessions) ->
         db.hset("user:#{reply.toString()}", "verified", "true", ->
           res.redirect("/#{reply.toString()}?verified")
         )
+    )
+
+  wallet: (req, res) ->
+    res.render('users/wallet', 
+      user: req.params.user, 
+      layout: 'layout',
+      navigation: true,
+      js: (-> global.js), 
+      css: (-> global.css)
     )

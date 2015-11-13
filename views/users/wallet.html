@@ -1,0 +1,56 @@
+{{#yield-scripts}}
+  {{#js}}js/wallet{{/js}}
+{{/yield-scripts}}
+
+<form id="setup" action="/{{user}}" method="post" style="display: none">
+  <h1>Wallet</h1>
+
+  <input type="hidden" id="username" name="username" value="{{user}}" />
+  <input type="hidden" id="email" name="email" />
+
+  <div class="form-group">
+    <label>Available Balance:</label>
+    <b id="balance" class="lead">0.05154234</b> BTC
+  </div>
+
+  <div>
+    <ul class="nav nav-tabs" role="tablist">
+      <li role="presentation" class="active"><a href="#withdraw" aria-controls="withdraw" role="tab" data-toggle="tab">Withdraw</a></li>
+      <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">Manage Keys</a></li>
+    </ul>
+
+    <div class="tab-content">
+      <div role="tabpanel" class="tab-pane active" id="withdraw">
+        <div class="form-group">
+          <label for="amount">Amount:</label>
+          <div class="input-group">
+            <input type="number" id="amount" name="amount" class="form-control" value="0.05154232" />
+            <span class="input-group-btn">
+              <button type="button" class="btn">BTC</button>
+            </span>
+            <span class="input-group-btn">
+              <button type="button" class="btn">Max</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Recipient:</label>
+          <div class="input-group">
+            <input type="text" id="recipient" name="recipient" class="form-control" />
+            <span class="input-group-btn">
+              <button type="button" class="btn"><span class="glyphicon glyphicon-camera"></span></button>
+            </span>
+          </div>
+        </div>  
+      </div>
+      <div role="tabpanel" class="tab-pane" id="settings">
+        <div class="form-group">
+          <label for="pubkey">Bitcoin Receiving Address or HD Wallet Pubkey:</label>
+            <input type="text" id="pubkey" name="pubkey" class="form-control" placeholder="xpub..."  />
+            <input type="hidden" id="privkey" name="privkey" />
+        </div>
+      </div>
+    </div>
+  </div>
+</form>

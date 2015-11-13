@@ -3,7 +3,7 @@
 
   db = require("./redis");
 
-  bcrypt = require('bcrypt');
+  bcrypt = require('bcryptjs');
 
   db.get("user:admin", function(err, res) {
     if (!res) {
