@@ -3,7 +3,7 @@
 
   db = require("redis").createClient();
 
-  bcrypt = require('bcrypt');
+  bcrypt = require('bcryptjs');
 
   passport = require('passport');
 

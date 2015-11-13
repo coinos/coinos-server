@@ -1,6 +1,6 @@
 db = require("../redis")
 config = require("../config")
-bcrypt = require('bcrypt')
+bcrypt = require('bcryptjs')
 fs = require('fs')
 request = require('request')
 
