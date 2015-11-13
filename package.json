@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "async": "0.9.0",
-    "bcrypt": "0.7.8",
+    "bcryptjs": "^2.3.0",
     "body-parser": "^1.5.0",
     "coffee-script": "1.7.1",
     "connect-assets": "4.0.1",
@@ -19,11 +19,11 @@
     "express-session": "^1.6.5",
     "hogan-express": "0.5.2",
     "less": "1.7.3",
+    "nodemailer": "~1.2.1",
     "passport": "0.2.0",
     "passport-local": "1.0.0",
     "redis": "0.11.0",
     "request": "~2.40.0",
-    "nodemailer": "~1.2.1",
     "sendgrid": "~1.2.0"
   },
   "devDependencies": {
