@@ -113,6 +113,11 @@
 
   app.get('/ticker', cache, calculator.ticker);
 
+  app.get('/token', cache, function(req, res) {
+    res.write(config.blockcypher_token);
+    return res.end();
+  });
+
   app.get('/tips', cache, function(req, res) {
     return res.render('tips', {
       notice: true,

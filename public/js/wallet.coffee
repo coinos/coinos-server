@@ -22,111 +22,45 @@ g = exports ? this
 g.proceed = false
 
 $(->
-  $('#encryption-password').pwstrength(showVerdicts: false)
+  api = 'https://api.blockcypher.com/v1/btc/main'
+  addresses = []
+  balance = 0
+  token = ''
+  $('#balance, #amount').hide()
+  $.get("/token", (data) -> 
+    token = data
+    $.get("#{api}/wallets/hd/yummy/addresses?token=#{token}", (data) -> 
+      for c in data.chains
+        for a in c.chain_addresses
+          addresses.push(a.address)
+
+      chunks = []
+      for i in [0 .. addresses.length] by 10 
+        chunks.push(addresses.slice(i,i+10))
+
+      doSetTimeout = (c,i) ->
+        setTimeout(->
+          $.get("#{api}/addrs/#{c.join(';')}/balance?token=#{token}", (addresses) -> 
+            for address in addresses
+              balance = parseInt(balance) + parseInt(address.final_balance)
+              val = (balance / 100000000).toFixed(8)
+
+            $('#balance').html(val)
+            $('#amount').val(val)
+            $('#balance, #amount').fadeIn()
+          )
+        , i*1500)
+
+      for c, i in chunks
+        doSetTimeout(c, i)
+    )
+  )
 
   user = $('#username').val()
   $.getJSON("/#{user}.json", (data) ->
     $('#pubkey').val(data.pubkey)
     $('#address').val(data.address)
     $('#setup').fadeIn()
-  )
-
-  $('#pubkey').blur(->
-    if check_address($(this).val())
-      $(this).parent().removeClass('has-error')
-    else 
-      $(this).parent().addClass('has-error')
-  )
-
-  $('#generate').click(->
-    key = new Key()
-    g.pubkey = key.extended_public_key_string()
-    g.privkey = key.extended_private_key_string()
-
-    $('#modal').modal()
-    $('#pubkey_text').html(g.pubkey)
-    $('#privkey_text').html(g.privkey)
-    $('#qr').html('')
-    new QRCode('qr', text: g.privkey, width: 260, height: 260)
-  )
-
-  $('#encryption-password').keyup((e) ->
-    return if e.keyCode is 9 or e.keyCode is 16
-    g.enc_privkey = CryptoJS.AES.encrypt(g.privkey, $(this).val()).toString()
-    g.enc_privkey = g.privkey if $(this).val() == ''
-    $('#privkey_text').html(g.enc_privkey)
-    $('#qr').html('')
-    new QRCode('qr', text: g.enc_privkey, width: 260, height: 260)
-
-    if $(this).val()
-      $('#status').html('(Encrypted)')
-    else
-      $('#status').html('(Unencrypted)')
-  )
-
-  $('#confirm').blur(->
-    $('#confirm_error').remove() 
-    if $('#password').val() != $('#confirm').val()
-      $('#password, #confirm').parent().addClass('has-error')
-      $('#confirm').parent().after('<div id="confirm_error" class="alert alert-danger">Passwords don\'t match</div>')
-    else
-      $('#password, #confirm').parent().removeClass('has-error')
-  )
-
-  $('#encryption-password, #encryption-confirm').keyup((e) -> check_passwords(e) unless e.keyCode is 9)
-  $('#encryption-password, #encryption-confirm').blur((e) -> check_passwords(e))
-
-  check_passwords = (e) ->
-    if $('#encryption-password').val() != $('#encryption-confirm').val() or $('#encryption-password').val() is ''
-      $('#encryption-password, #encryption-confirm').parent().addClass('has-error')
-      $('#modal .alert').removeClass('alert-success').addClass('alert-danger')
-    else
-      $('#encryption-password, #encryption-confirm').parent().removeClass('has-error')
-      $('#modal .alert').removeClass('alert-danger').addClass('alert-success')
-
-    if $('.progress-bar-success').length > 0
-      $('#encryption-password').parent().removeClass('has-error')
-    else
-      $('#encryption-password').parent().addClass('has-error')
-
-  $('#print').click(->
-    $('#key-dialog').printElement(printMode: 'popup')
-  )
-
-  $('a[data-toggle="tab"]').on('shown.bs.tab', (e) ->
-    $('#print').toggle(e.target.attributes.href.value == '#step1')
-  )
-
-  $('#close').click(-> 
-    $('#modal .form-control').blur()
-    if $('#modal .has-error').length > 0
-      $('#step1_link').click()
-      $('#modal .has-error').effect('shake', 500)
-    else
-      g.update_key = true
-      $('#modal').modal('hide')
-  )
-  $('#encrypt').submit(-> $('#close').click(); return false)
-
-  $('#modal').on('show.bs.modal', -> 
-    $('#encryption-password, #encryption-confirm').val('').keyup().parent().removeClass('has-error')
-    $('#modal .alert').removeClass('alert-success').addClass('alert-danger')
-  )
-
-  $('#modal').on('shown.bs.modal', -> 
-    g.update_key = false
-    $('#encryption-password').focus()
-  ).on('hidden.bs.modal', ->
-    if g.update_key
-      $('#pubkey').val(g.pubkey) 
-      $('#privkey').val(g.enc_privkey)
-  )
-
-  $('#setup').submit(->
-    $('#setup .form-control').blur()
-    if $('#setup .has-error').length > 0
-      $('#setup .has-error').effect('shake', 500)
-      return false
   )
 )
 

@@ -67,6 +67,10 @@ app.get('/address', cache, calculator.address)
 app.get('/register', cache, users.new)
 app.get('/sweep', calculator.sweep)
 app.get('/ticker', cache, calculator.ticker)
+app.get('/token', cache, (req, res) ->
+  res.write(config.blockcypher_token)
+  res.end()
+)
 app.get('/tips', cache, (req, res) ->
   res.render('tips', 
     notice: true,
