@@ -1,5 +1,5 @@
 db = require("./redis")
-bcrypt = require('bcrypt')
+bcrypt = require('bcryptjs')
 
 db.get("user:admin", (err, res) ->
   if !res

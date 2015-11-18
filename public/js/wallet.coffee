@@ -20,49 +20,91 @@
 
 g = exports ? this
 g.proceed = false
+g.api = 'https://api.blockcypher.com/v1/btc/main'
 
 $(->
-  api = 'https://api.blockcypher.com/v1/btc/main'
-  addresses = []
-  balance = 0
-  token = ''
-  $('#balance, #amount').hide()
-  $.get("/token", (data) -> 
-    token = data
-    $.get("#{api}/wallets/hd/yummy/addresses?token=#{token}", (data) -> 
-      for c in data.chains
-        for a in c.chain_addresses
-          addresses.push(a.address)
-
-      chunks = []
-      for i in [0 .. addresses.length] by 10 
-        chunks.push(addresses.slice(i,i+10))
-
-      doSetTimeout = (c,i) ->
-        setTimeout(->
-          $.get("#{api}/addrs/#{c.join(';')}/balance?token=#{token}", (addresses) -> 
-            for address in addresses
-              balance = parseInt(balance) + parseInt(address.final_balance)
-              val = (balance / 100000000).toFixed(8)
-
-            $('#balance').html(val)
-            $('#amount').val(val)
-            $('#balance, #amount').fadeIn()
-          )
-        , i*1500)
-
-      for c, i in chunks
-        doSetTimeout(c, i)
-    )
-  )
-
-  user = $('#username').val()
-  $.getJSON("/#{user}.json", (data) ->
-    $('#pubkey').val(data.pubkey)
-    $('#address').val(data.address)
-    $('#setup').fadeIn()
+  getToken()
+  $('form').submit(->
+    $('.form-control').blur()
+    if $('.has-error').length > 0
+      $('.has-error').effect('shake', 500)
+      return false
   )
 )
+
+getToken = ->
+  $.get("/token", (token) -> 
+    g.token = token
+    getUser()
+  )
+
+getUser = ->
+  $.getJSON("/#{$('#username').val()}.json", (user) ->
+    g.user = user
+    $('#pubkey').val(user.pubkey)
+    $('#address').val(user.address)
+    $('form').fadeIn()
+
+    createWallet()
+  )
+
+
+createWallet = ->
+  if localStorage.getItem(g.user.username) is null
+    localStorage.setItem(g.user.username, JSON.stringify(addresses: [], balances: []))
+    if isBip32(g.user.pubkey)
+      data = 
+        name: g.user.username
+        extended_public_key: g.user.pubkey
+        subchain_indexes: [0,1]
+      $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data), getAddresses)
+    else
+      $('#balance').html(99)
+      $('#amount').val(99)
+  else
+    getAddresses()
+
+getAddresses = ->  
+  addresses = []
+  $.get("#{g.api}/wallets/hd/#{g.user.username}/addresses?token=#{g.token}", (data) -> 
+    count = JSON.parse(localStorage.getItem(g.user.username)).addresses.length
+    balances = JSON.parse(localStorage.getItem(g.user.username)).balances
+
+    for c in data.chains
+      for a in c.chain_addresses
+        addresses.push(a.address)
+
+    chunks = []
+    for i in [0..Math.floor(count / 10)]
+      chunks.push(addresses.slice(10 * i + count, 10 * i + count + 10))
+
+    getChunk = (chunk, i, last) ->
+      setTimeout(->
+        $.get("#{g.api}/addrs/#{chunk.join(';')}/balance?token=#{g.token}", (addresses) -> 
+          for address in addresses
+            balances.push(parseInt(address.final_balance))
+
+          if i is last
+            localStorage.setItem(g.user.username, JSON.stringify(addresses: addresses, balances: balances))
+            calculateBalance() 
+        )
+      , i*1500)
+
+    if chunks[0].length
+      for chunk, i in chunks
+        getChunk(chunk, i, chunks.length)
+    else
+      calculateBalance()
+
+    localStorage.setItem(g.user.username, JSON.stringify(addresses: addresses, balances: balances))
+  )
+
+calculateBalance = ->
+  balances = JSON.parse(localStorage.getItem(g.user.username)).balances
+  balance = balances.reduce (t,s) -> t + s
+  val = (balance / 100000000).toFixed(8)
+  $('#balance').html(val)
+  $('#amount').val(val)
 
 check_address = (address) ->
   try
