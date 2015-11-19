@@ -45,6 +45,13 @@ $(->
 
       $(this).html('BTC')
   )
+  
+  $('#max').click(->
+    if $('#currency_toggle').html() is 'BTC'
+      $('#amount').val(g.balance)
+    else
+      $('#amount').val((g.balance * g.exchange).toFixed(2))
+  )
 )
 
 
