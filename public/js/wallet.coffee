@@ -30,7 +30,23 @@ $(->
       $('.has-error').effect('shake', 500)
       return false
   )
+
+  $('#currency_toggle').click(->
+    if $(this).html() is 'BTC'
+      g.amount = $('#amount').val()
+      $('#amount').val((g.amount * g.exchange).toFixed(2))
+      $(this).html(g.user.currency)
+    else
+      amount = $('#amount').val() / g.exchange
+      if Math.abs(g.amount - amount) > 0.00001
+        $('#amount').val(parseFloat(amount).toFixed(8))
+      else
+        $('#amount').val(parseFloat(g.amount).toFixed(8))
+
+      $(this).html('BTC')
+  )
 )
+
 
 getToken = ->
   $.get("/token", (token) -> 
@@ -45,9 +61,14 @@ getUser = ->
     $('#address').val(user.address)
     $('form').fadeIn()
 
-    createWallet()
+    getExchangeRate()
   )
 
+getExchangeRate = ->
+  $.get("/ticker?currency=#{g.user.currency}&symbol=#{g.user.symbol}&type=bid", (exchange) -> 
+    g.exchange = exchange
+    createWallet()
+  )
 
 createWallet = ->
   if localStorage.getItem(g.user.username) is null
@@ -102,9 +123,10 @@ getAddresses = ->
 calculateBalance = ->
   balances = JSON.parse(localStorage.getItem(g.user.username)).balances
   balance = balances.reduce (t,s) -> t + s
-  val = (balance / 100000000).toFixed(8)
-  $('#balance').html(val)
-  $('#amount').val(val)
+  g.balance = (balance / 100000000).toFixed(8)
+  $('#balance').html(g.balance)
+  $('#fiat').html("#{(g.balance * g.exchange).toFixed(2)} #{g.user.currency}")
+  $('#amount').val(g.balance)
 
 check_address = (address) ->
   try
