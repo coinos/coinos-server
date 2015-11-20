@@ -32,25 +32,26 @@ $(->
   )
 
   $('#currency_toggle').click(->
-    if $(this).html() is 'BTC'
-      g.amount = $('#amount').val()
-      $('#amount').val((g.amount * g.exchange).toFixed(2))
+    if $(this).html() is g.user.unit
+      g.amount = parseFloat($('#amount').val()).toFixed(precision())
+      $('#amount').val((g.amount * g.exchange / multiplier()).toFixed(2))
       $(this).html(g.user.currency)
     else
-      amount = $('#amount').val() / g.exchange
-      if Math.abs(g.amount - amount) > 0.00001
-        $('#amount').val(parseFloat(amount).toFixed(8))
+      amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
+      if Math.abs(g.amount - amount).toFixed(precision()) > (.000000005 * g.exchange * multiplier()).toFixed(precision())
+        $('#amount').val(amount)
       else
-        $('#amount').val(parseFloat(g.amount).toFixed(8))
+        $('#amount').val(g.amount)
 
-      $(this).html('BTC')
+      $(this).html(g.user.unit)
   )
   
   $('#max').click(->
-    if $('#currency_toggle').html() is 'BTC'
+    if $('#currency_toggle').html() is g.user.unit
       $('#amount').val(g.balance)
     else
-      $('#amount').val((g.balance * g.exchange).toFixed(2))
+      g.amount = parseFloat(g.balance).toFixed(precision())
+      $('#amount').val((g.balance / multiplier() * g.exchange).toFixed(2))
   )
 )
 
@@ -66,6 +67,8 @@ getUser = ->
     g.user = user
     $('#pubkey').val(user.pubkey)
     $('#address').val(user.address)
+    $('#unit').html(user.unit)
+    $('#currency_toggle').html(user.unit)
     $('form').fadeIn()
 
     getExchangeRate()
@@ -130,9 +133,10 @@ getAddresses = ->
 calculateBalance = ->
   balances = JSON.parse(localStorage.getItem(g.user.username)).balances
   balance = balances.reduce (t,s) -> t + s
-  g.balance = (balance / 100000000).toFixed(8)
+  g.balance = (balance * multiplier() / 100000000).toFixed(precision())
+  fiat = (g.balance * g.exchange / multiplier()).toFixed(2)
   $('#balance').html(g.balance)
-  $('#fiat').html("#{(g.balance * g.exchange).toFixed(2)} #{g.user.currency}")
+  $('#fiat').html("#{fiat} #{g.user.currency}")
   $('#amount').val(g.balance)
 
 check_address = (address) ->
@@ -148,3 +152,14 @@ isBip32 = (address) ->
     return true
   catch
     return false
+
+multiplier = ->
+  switch g.user.unit
+    when 'BTC' then 1
+    when 'mBTC' then 1000
+    when 'µBTC' then 1000000
+    when 'bits' then 1000000
+    when 'satoshis' then 100000000
+
+precision = ->
+  9 - multiplier().toString().length
