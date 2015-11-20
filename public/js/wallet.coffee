@@ -36,6 +36,7 @@ $(->
       g.amount = parseFloat($('#amount').val()).toFixed(precision())
       $('#amount').val((g.amount * g.exchange / multiplier()).toFixed(2))
       $(this).html(g.user.currency)
+      $('#amount').attr('step', 0.01)
     else
       amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
       if Math.abs(g.amount - amount).toFixed(precision()) > (.000000005 * g.exchange * multiplier()).toFixed(precision())
@@ -44,14 +45,25 @@ $(->
         $('#amount').val(g.amount)
 
       $(this).html(g.user.unit)
+      $('#amount').attr('step', 0.00000001 * multiplier())
   )
   
   $('#max').click(->
     if $('#currency_toggle').html() is g.user.unit
       $('#amount').val(g.balance)
+      $('#amount').attr('max', g.balance)
     else
       g.amount = parseFloat(g.balance).toFixed(precision())
-      $('#amount').val((g.balance / multiplier() * g.exchange).toFixed(2))
+      amount = (g.balance / multiplier() * g.exchange).toFixed(2)
+      $('#amount').val(amount)
+      $('#amount').attr('max', amount)
+  )
+
+  $('#amount').change(->
+    if $('#currency_toggle').html() is g.user.unit
+      $(this).val(parseFloat($(this).val()).toFixed(precision()))
+    else
+      $(this).val(parseFloat($(this).val()).toFixed(2))
   )
 )
 
@@ -70,6 +82,7 @@ getUser = ->
     $('#unit').html(user.unit)
     $('#currency_toggle').html(user.unit)
     $('form').fadeIn()
+    $('#amount').attr('step', 0.00000001 * multiplier())
 
     getExchangeRate()
   )
