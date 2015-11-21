@@ -2,58 +2,59 @@
   {{#js}}js/wallet{{/js}}
 {{/yield-scripts}}
 
-<form action="/{{user}}" method="post" style="display: none">
-  <h1>Wallet</h1>
+<h1>Wallet</h1>
 
-  <input type="hidden" id="username" name="username" value="{{user}}" />
-  <input type="hidden" id="email" name="email" />
+<input type="hidden" id="username" name="username" value="{{user}}" />
+<input type="hidden" id="email" name="email" />
 
-  <div class="form-group">
-    <label>Available Balance:</label>
-    <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> /
-    <b id="fiat" class="lead">0</b>
-  </div>
+<div class="form-group">
+  <label>Balance:</label>
+  <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
+  <b class="lead">(<b id="fiat" class="lead">0</b>)</b>
+</div>
 
-  <div>
-    <ul class="nav nav-tabs" role="tablist">
-      <li role="presentation" class="active"><a href="#withdraw" aria-controls="withdraw" role="tab" data-toggle="tab">Withdraw</a></li>
-      <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">Manage Keys</a></li>
-    </ul>
+<div>
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#withdraw" aria-controls="withdraw" role="tab" data-toggle="tab">Withdraw</a></li>
+    <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">Settings</a></li>
+  </ul>
 
-    <div class="tab-content">
-      <div role="tabpanel" class="tab-pane active" id="withdraw">
-        <div class="form-group">
-          <label for="amount">Amount:</label>
-          <div class="input-group">
-            <input type="number" id="amount" name="amount" class="form-control" min="0" />
-            <span class="input-group-btn">
-              <button id="currency_toggle" type="button" class="btn"></button>
-            </span>
-            <span class="input-group-btn">
-              <button id="max" type="button" class="btn">Max</button>
-            </span>
-          </div>
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="withdraw">
+      <div class="form-group">
+        <label for="amount">Amount:</label>
+        <div class="input-group">
+          <input type="number" id="amount" name="amount" class="form-control" min="0" />
+          <span class="input-group-btn">
+            <button id="currency_toggle" type="button" class="btn"></button>
+          </span>
+          <span class="input-group-btn">
+            <button id="max" type="button" class="btn">Max</button>
+          </span>
         </div>
-
-        <div class="form-group">
-          <label for="amount">Receiving Address:</label>
-          <div class="input-group">
-            <input type="text" id="recipient" name="recipient" class="form-control" />
-            <span class="input-group-btn">
-              <button type="button" class="btn"><span class="glyphicon glyphicon-camera"></span></button>
-            </span>
-          </div>
-        </div>  
       </div>
-      <div role="tabpanel" class="tab-pane" id="settings">
+
+      <div class="form-group">
+        <label for="amount">Receiving Address:</label>
+        <div class="input-group">
+          <input type="text" id="recipient" name="recipient" class="form-control" />
+          <span class="input-group-btn">
+            <button type="button" class="btn"><span class="glyphicon glyphicon-camera"></span></button>
+          </span>
+        </div>
+      </div>  
+      <input class="btn btn-primary" type="submit" value="Send Payment" />
+    </div>
+    <div role="tabpanel" class="tab-pane" id="settings">
+      <form action="/{{user}}" method="post" style="display: none">
         <div class="form-group">
           <label for="pubkey">Bitcoin Receiving Address or HD Wallet Pubkey:</label>
             <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
             <input type="hidden" id="privkey" name="privkey" />
         </div>
-      </div>
+        <input class="btn btn-primary" type="submit" value="Save" />
+      </form>
     </div>
   </div>
+</div>
 
-  <input class="btn btn-primary" type="submit" value="Done" />
-</form>
