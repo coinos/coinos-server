@@ -39,7 +39,9 @@ $(->
       $('#amount').attr('step', 0.01)
     else
       amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
-      if Math.abs(g.amount - amount).toFixed(precision()) > (.000000005 * g.exchange * multiplier()).toFixed(precision())
+      difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()))
+      tolerance = parseFloat((.000000005 * g.exchange * multiplier()).toFixed(precision()))
+      if difference > tolerance
         $('#amount').val(amount)
       else
         $('#amount').val(g.amount)
