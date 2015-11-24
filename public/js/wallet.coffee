@@ -101,7 +101,7 @@ createWallet = ->
         name: g.user.username
         extended_public_key: g.user.pubkey
         subchain_indexes: [0,1]
-      $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data), getAddresses)
+      $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data), getAddresses).fail(getAddresses)
     else
       $('#balance').html(99)
       $('#amount').val(99)
@@ -110,13 +110,17 @@ createWallet = ->
 
 getAddresses = ->  
   addresses = []
+  g.cache = JSON.parse(localStorage.getItem(g.user.username))
   $.get("#{g.api}/wallets/hd/#{g.user.username}/addresses?token=#{g.token}", (data) -> 
-    count = JSON.parse(localStorage.getItem(g.user.username)).addresses.length
-    balances = JSON.parse(localStorage.getItem(g.user.username)).balances
+    count = g.cache.addresses.length
+    balances = g.cache.balances
 
     for c in data.chains
       for a in c.chain_addresses
         addresses.push(a.address)
+
+    g.cache.addresses = addresses
+    localStorage.setItem(g.user.username, JSON.stringify(g.cache))
 
     chunks = []
     for i in [0..Math.floor(count / 10)]
@@ -125,28 +129,28 @@ getAddresses = ->
     getChunk = (chunk, i, last) ->
       setTimeout(->
         $.get("#{g.api}/addrs/#{chunk.join(';')}/balance?token=#{g.token}", (addresses) -> 
+          addresses = [addresses] unless addresses instanceof Array
           for address in addresses
-            balances.push(parseInt(address.final_balance))
+            g.cache.balances.push(parseInt(address.final_balance))
 
           if i is last
-            localStorage.setItem(g.user.username, JSON.stringify(addresses: addresses, balances: balances))
+            localStorage.setItem(g.user.username, JSON.stringify(g.cache))
             calculateBalance() 
         )
       , i*1500)
 
-    if chunks[0].length
+    if chunks.length
       for chunk, i in chunks
-        getChunk(chunk, i, chunks.length)
-    else
-      calculateBalance()
+        getChunk(chunk, i, chunks.length - 1) if chunk.length
 
-    localStorage.setItem(g.user.username, JSON.stringify(addresses: addresses, balances: balances))
+    calculateBalance()
   )
 
 calculateBalance = ->
+  balance = 0
   balances = JSON.parse(localStorage.getItem(g.user.username)).balances
-
-  balance = balances.length ? balances.reduce (t,s) -> t + s : 0
+  if balances.length
+    balance = balances.reduce (t,s) -> t + s 
 
   g.balance = (balance * multiplier() / 100000000).toFixed(precision())
   fiat = (g.balance * g.exchange / multiplier()).toFixed(2)
