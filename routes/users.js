@@ -59,7 +59,9 @@
               path = "public/assets/img/logos/" + obj.username + "." + ext;
               fs.lstat(path, function(err, stats) {
                 if ((ext === 'jpg' || ext === 'png' || ext === 'gif') && (err || !stats.isFile())) {
-                  return request("" + obj.logo).pipe(fs.createWriteStream(path));
+                  try {
+                    return request("" + obj.logo).pipe(fs.createWriteStream(path));
+                  } catch (_error) {}
                 }
               });
             }

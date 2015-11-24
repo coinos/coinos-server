@@ -145,10 +145,13 @@ getAddresses = ->
 
 calculateBalance = ->
   balances = JSON.parse(localStorage.getItem(g.user.username)).balances
-  balance = balances.reduce (t,s) -> t + s
+
+  balance = balances.length ? balances.reduce (t,s) -> t + s : 0
+
   g.balance = (balance * multiplier() / 100000000).toFixed(precision())
   fiat = (g.balance * g.exchange / multiplier()).toFixed(2)
   $('#balance').html(g.balance)
+  $('#balance').parent().fadeIn()
   $('#fiat').html("#{fiat} #{g.user.currency}")
   $('#amount').val(g.balance)
 

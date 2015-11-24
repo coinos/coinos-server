@@ -40,7 +40,8 @@ module.exports = (sessions) ->
           path = "public/assets/img/logos/#{obj.username}.#{ext}"
           fs.lstat(path, (err, stats) ->
             if ext in ['jpg', 'png', 'gif'] and (err or not stats.isFile())
-              request("#{obj.logo}").pipe(fs.createWriteStream(path))
+              try
+                request("#{obj.logo}").pipe(fs.createWriteStream(path))
           )
             
         res.render('users/show', options)
