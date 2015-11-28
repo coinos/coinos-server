@@ -51,7 +51,7 @@ $(->
       amount = (g.amount * g.exchange / multiplier()).toFixed(2)
       $('#amount').val(amount)
       $('#amount').attr('step', 0.01)
-      $('#amount').attr('max', g.balance * g.exchange / multiplier())
+      $('#amount').attr('max', (g.balance * g.exchange / multiplier()).toFixed(2))
     else
       $(this).html(g.user.unit)
       $('#amount').val(convertedAmount())
@@ -73,6 +73,9 @@ $(->
       $(this).val(parseFloat($(this).val()).toFixed(precision()))
     else
       $(this).val(parseFloat($(this).val()).toFixed(2))
+
+    if $(this).val() > $(this).attr('max')
+      $(this).val($(this).attr('max'))
   )
 )
 
@@ -159,7 +162,7 @@ sendTransaction = ->
 convertedAmount = ->
   amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
   difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()))
-  tolerance = parseFloat((.000000005 * g.exchange * multiplier()).toFixed(precision()))
+  tolerance = parseFloat((.00000002 * g.exchange * multiplier()).toFixed(precision()))
   if difference > tolerance
     return amount
   else
