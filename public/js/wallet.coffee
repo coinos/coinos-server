@@ -37,7 +37,6 @@ $(->
       $('#settings .alert-success').fadeIn().delay(500).fadeOut()
     )
 
-    localStorage.removeItem(g.user.username)
     return false
   )
 
@@ -47,32 +46,26 @@ $(->
 
   $('#currency_toggle').click(->
     if $(this).html() is g.user.unit
-      g.amount = parseFloat($('#amount').val()).toFixed(precision())
-      $('#amount').val((g.amount * g.exchange / multiplier()).toFixed(2))
       $(this).html(g.user.currency)
+      g.amount = parseFloat($('#amount').val()).toFixed(precision())
+      amount = (g.amount * g.exchange / multiplier()).toFixed(2)
+      $('#amount').val(amount)
       $('#amount').attr('step', 0.01)
+      $('#amount').attr('max', g.balance * g.exchange / multiplier())
     else
-      amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
-      difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()))
-      tolerance = parseFloat((.000000005 * g.exchange * multiplier()).toFixed(precision()))
-      if difference > tolerance
-        $('#amount').val(amount)
-      else
-        $('#amount').val(g.amount)
-
       $(this).html(g.user.unit)
+      $('#amount').val(convertedAmount())
       $('#amount').attr('step', 0.00000001 * multiplier())
+      $('#amount').attr('max', g.balance)
   )
   
   $('#max').click(->
     if $('#currency_toggle').html() is g.user.unit
       $('#amount').val(g.balance)
-      $('#amount').attr('max', g.balance)
     else
       g.amount = parseFloat(g.balance).toFixed(precision())
       amount = (g.balance / multiplier() * g.exchange).toFixed(2)
       $('#amount').val(amount)
-      $('#amount').attr('max', amount)
   )
 
   $('#amount').change(->
@@ -110,82 +103,42 @@ getExchangeRate = ->
   )
 
 createWallet = ->
-  if localStorage.getItem(g.user.username) is null
-    localStorage.setItem(g.user.username, JSON.stringify(addresses: [], balances: []))
-
   if isBip32(g.user.pubkey)
     data = 
       name: g.user.username
       extended_public_key: g.user.pubkey
       subchain_indexes: [0,1]
-    $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data), getAddresses).fail(getAddresses)
+    $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data)).always(getBalance)
   else
     $('#balance').html(99)
     $('#amount').val(99)
 
-getAddresses = ->  
-  addresses = []
-  g.cache = JSON.parse(localStorage.getItem(g.user.username))
-  $.get("#{g.api}/wallets/hd/#{g.user.username}/addresses?token=#{g.token}", (data) -> 
-    count = g.cache.addresses.length
-    balances = g.cache.balances
-
-    for c in data.chains
-      for a in c.chain_addresses
-        addresses.push(a.address)
-
-    g.cache.addresses = addresses
-    localStorage.setItem(g.user.username, JSON.stringify(g.cache))
-
-    chunks = []
-    for i in [Math.floor(count / 10)..Math.floor(addresses.length / 10)]
-      chunks.push(addresses.slice(10 * i + count, 10 * i + count + 10))
-
-    getChunk = (chunk, i, last) ->
-      setTimeout(->
-        $.get("#{g.api}/addrs/#{chunk.join(';')}/balance?token=#{g.token}", (addresses) -> 
-          addresses = [addresses] unless addresses instanceof Array
-          for address in addresses
-            g.cache.balances.push(parseInt(address.final_balance))
-
-          if i is last
-            localStorage.setItem(g.user.username, JSON.stringify(g.cache))
-            calculateBalance() 
-        )
-      , i*1500)
-
-    hit = false
-    if chunks.length
-      for chunk, i in chunks
-        if chunk.length
-          hit = true
-          getChunk(chunk, i, chunks.length - 1) 
-
-    calculateBalance() unless hit
+getBalance = ->
+  $.get("#{g.api}/addrs/#{g.user.username}/balance?token=#{g.token}&omitWalletAddresses=true", (data) ->
+    balance = data.final_balance
+    g.balance = (balance * multiplier() / 100000000).toFixed(precision())
+    fiat = (g.balance * g.exchange / multiplier()).toFixed(2)
+    $('#balance').html(g.balance)
+    $('#balance').parent().fadeIn()
+    $('#fiat').html("#{fiat} #{g.user.currency}")
+    $('#amount').val(g.balance)
+    $('#amount').attr('max', g.balance)
   )
-
-calculateBalance = ->
-  balance = 0
-  balances = JSON.parse(localStorage.getItem(g.user.username)).balances
-  if balances.length
-    balance = balances.reduce (t,s) -> t + s 
-
-  g.balance = (balance * multiplier() / 100000000).toFixed(precision())
-  fiat = (g.balance * g.exchange / multiplier()).toFixed(2)
-  $('#balance').html(g.balance)
-  $('#balance').parent().fadeIn()
-  $('#fiat').html("#{fiat} #{g.user.currency}")
-  $('#amount').val(g.balance)
 
 sendTransaction = ->
   master = bitcoin.HDNode.fromBase58(g.user.privkey)
   if typeof master.keyPair.d isnt 'undefined'
     fee = 12500
-    amount = parseInt($('#amount').val() * 100000000 / multiplier())
-    amount = amount - fee
+    if $('#currency_toggle').html() is g.user.unit
+      amount = $('#amount').val()
+    else
+      amount = convertedAmount()
+
+    value = parseInt(amount * 100000000 / multiplier())
+
     req = 
       inputs: [{wallet_name: g.user.username, wallet_token: g.token}],
-      outputs: [{addresses: [$('#recipient').val()], value: amount}]
+      outputs: [{addresses: [$('#recipient').val()], value: value}]
 
     $.post("#{g.api}/txs/new?token=#{g.token}", JSON.stringify(req)).then((tx) ->
       tx.pubkeys = []
@@ -202,6 +155,15 @@ sendTransaction = ->
     )
   else
     $('#withdraw .alert-danger').fadeIn().delay(500).fadeOut()
+
+convertedAmount = ->
+  amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
+  difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()))
+  tolerance = parseFloat((.000000005 * g.exchange * multiplier()).toFixed(precision()))
+  if difference > tolerance
+    return amount
+  else
+    return g.amount
 
 
 check_address = (address) ->
