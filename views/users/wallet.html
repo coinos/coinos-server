@@ -21,39 +21,44 @@
 
   <div class="tab-content">
     <div role="tabpanel" class="tab-pane active" id="withdraw">
-      <div class="form-group">
-        <label for="amount">Amount:</label>
-        <div class="input-group">
-          <input type="number" id="amount" name="amount" class="form-control" min="0" />
-          <span class="input-group-btn">
-            <button id="currency_toggle" type="button" class="btn"></button>
-          </span>
-          <span class="input-group-btn">
-            <button id="max" type="button" class="btn">Max</button>
-          </span>
+      <form>
+        <div class="form-group">
+          <label for="amount">Amount:</label>
+          <div class="input-group">
+            <input type="number" id="amount" name="amount" class="form-control" min="0" />
+            <span class="input-group-btn">
+              <button id="currency_toggle" type="button" class="btn"></button>
+            </span>
+            <span class="input-group-btn">
+              <button id="max" type="button" class="btn">Max</button>
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="amount">Receiving Address:</label>
-        <div class="input-group">
-          <input type="text" id="recipient" name="recipient" class="form-control" />
-          <span class="input-group-btn">
-            <button type="button" class="btn"><span class="glyphicon glyphicon-camera"></span></button>
-          </span>
-        </div>
-      </div>  
-      <input class="btn btn-primary" type="submit" value="Send Payment" />
+        <div class="form-group">
+          <label for="amount">Receiving Address:</label>
+          <div class="input-group">
+            <input type="text" id="recipient" name="recipient" class="form-control" />
+            <span class="input-group-btn">
+              <button type="button" class="btn"><span class="glyphicon glyphicon-camera"></span></button>
+            </span>
+          </div>
+        </div>  
+        <input id="send" class="btn btn-primary" type="button" value="Send Payment" />
+      </form>
+      <div class="alert alert-success" style="display: none">Transaction sent</div>
+      <div class="alert alert-danger" style="display: none">Need private key</div>
     </div>
     <div role="tabpanel" class="tab-pane" id="settings">
-      <form action="/{{user}}" method="post" style="display: none">
+      <form>
         <div class="form-group">
           <label for="pubkey">Bitcoin Receiving Address or HD Wallet Pubkey:</label>
             <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
-            <input type="hidden" id="privkey" name="privkey" />
+            <textarea id="privkey" name="privkey" class="form-control" placeholder="xpriv..." rows="3"></textarea>
         </div>
-        <input class="btn btn-primary" type="submit" value="Save" />
+        <input class="btn btn-primary" type="button" value="Save" />
       </form>
+      <div class="alert alert-success" style="display: none">Settings updated</div>
     </div>
   </div>
 </div>

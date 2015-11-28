@@ -176,7 +176,7 @@ getAddress = ->
     try
       master = bitcoin.HDNode.fromBase58(g.user.pubkey)
       child = master.derive(0).derive(g.user.index)
-      g.user.address = child.pubKey.getAddress().toString()
+      g.user.address = child.getAddress().toString()
       g.blockchain.close() if g.blockchain
       listen()
     catch

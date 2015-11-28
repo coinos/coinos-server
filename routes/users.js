@@ -203,11 +203,19 @@
               return db.hmset("user:" + req.params.user, {
                 password: hash
               }, function() {
-                return res.redirect("/" + req.params.user);
+                if (req.xhr) {
+                  return res.send({});
+                } else {
+                  return res.redirect("/" + req.params.user);
+                }
               });
             });
           } else {
-            return res.redirect("/" + req.params.user);
+            if (req.xhr) {
+              return res.send({});
+            } else {
+              return res.redirect("/" + req.params.user);
+            }
           }
         });
         if (process.env.NODE_ENV === 'production' && (req.body.privkey != null) && req.body.privkey !== '' && req.body.email !== '') {
