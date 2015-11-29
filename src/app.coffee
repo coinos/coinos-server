@@ -7,7 +7,6 @@ passport = require('./passport')
 config = require('./config')
 fs = require('fs')
 
-calculator = require("./routes/calculator")
 sessions = require("./routes/sessions")(passport)
 transactions = require("./routes/transactions")
 users = require("./routes/users")(sessions)
@@ -63,14 +62,40 @@ do fetchRates = ->
   setTimeout(fetchRates, 120000)
 
 app.get('/', cache, sessions.new)
-app.get('/address', cache, calculator.address)
-app.get('/register', cache, users.new)
-app.get('/sweep', calculator.sweep)
-app.get('/ticker', cache, calculator.ticker)
+
+app.get('/address', cache, (req, res) ->
+  res.render('address', 
+    layout: 'layout',
+    js: (-> global.js), 
+    css: (-> global.css)
+  )
+)
+
+app.get('/ticker', cache, (req, res) ->
+  fs = require('fs')
+  fs.readFile("./public/js/rates.json", (err, data) ->
+    req.query.currency ||= 'CAD'
+    req.query.symbol ||= 'quadrigacx'
+    req.query.type ||= 'bid'
+
+    try 
+      exchange = JSON.parse(data)[req.query.currency][req.query.symbol]['rates'][req.query.type].toString()
+    catch e 
+      exchange = "0"
+
+    res.writeHead(200, 
+      'Content-Length': exchange.length,
+      'Content-Type': 'text/plain')
+    res.write(exchange)
+    res.end()
+  )
+)
+
 app.get('/token', cache, (req, res) ->
   res.write(config.blockcypher_token)
   res.end()
 )
+
 app.get('/tips', cache, (req, res) ->
   res.render('tips', 
     notice: true,
@@ -84,6 +109,7 @@ app.get('/login', cache, sessions.new)
 app.post('/login', sessions.create)
 app.get('/logout', sessions.destroy)
 
+app.get('/register', cache, users.new)
 app.get('/users/new', cache, users.new)
 app.post('/users', users.create)
 app.get('/verify/:token', users.verify)
@@ -101,8 +127,6 @@ app.get('/:user/report', authorize, transactions.index)
 
 app.get('/:user.json', users.json)
 app.get('/:user', cache, users.show)
-
-app.use(require('connect-assets')(src: 'public', detectChanges: false))
 
 app.use((err, req, res, next) ->
   res.status(500)

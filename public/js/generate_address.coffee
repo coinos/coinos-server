@@ -1,12 +1,3 @@
-#= require js/jquery-1.8.2.min.js
-#= require js/jquery-ui.min.js
-#= require js/jquery.printElement.min.js
-#= require js/bootstrap.min.js
-#= require js/bitcoinjs-min-1.0.2.js
-#= require js/qrcode.js
-#= require js/bip38.js
-#= require js/check_password.js
-
 g = this
 
 $(->

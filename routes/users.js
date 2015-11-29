@@ -56,7 +56,7 @@
             }
             if (obj.logo && obj.logo.length > 3) {
               ext = obj.logo.substr(obj.logo.length - 3);
-              path = "public/assets/img/logos/" + obj.username + "." + ext;
+              path = "public/img/logos/" + obj.username + "." + ext;
               fs.lstat(path, function(err, stats) {
                 if ((ext === 'jpg' || ext === 'png' || ext === 'gif') && (err || !stats.isFile())) {
                   try {
@@ -204,7 +204,8 @@
                 password: hash
               }, function() {
                 if (req.xhr) {
-                  return res.send({});
+                  res.send({});
+                  return res.end();
                 } else {
                   return res.redirect("/" + req.params.user);
                 }
@@ -212,7 +213,8 @@
             });
           } else {
             if (req.xhr) {
-              return res.send({});
+              res.send({});
+              return res.end();
             } else {
               return res.redirect("/" + req.params.user);
             }

@@ -1,12 +1,9 @@
-#= require ../js/jquery-1.8.2.min.js
-#= require ../js/jquery-ui.min.js
-#= require ../js/bootstrap.min.js
-#= require ../js/moment.min.js
+moment = require('moment')
 
 g = exports ? this
 
 $(->
-  from = moment().subtract('days', 7)
+  from = moment().subtract(7, 'days')
   to = moment()
 
   $('#from').html(from.format("MMMM Do, YYYY"))

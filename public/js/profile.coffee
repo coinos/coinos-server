@@ -1,6 +1,3 @@
-#= require ../js/jquery-1.8.2.min.js
-#= require ../js/bootstrap.min.js
-
 g = exports ? this
 g.proceed = false
 

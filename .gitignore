@@ -8,4 +8,4 @@ src/config.coffee
 config.js
 passenger*
 tmp
-public/assets/img/logos/*
+public/img/logos/*

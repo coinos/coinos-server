@@ -3,8 +3,18 @@
     <meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1" />
     <title>CoinOS</title>
-    <link href="/assets/img/favicon.ico" rel="shortcut icon" />
-    {{#css}}css/calculator{{/css}}
+    <link href="/img/favicon.ico" rel="shortcut icon" />
+    <link rel="stylesheet" href="/jquery-ui/themes/ui-lightness/jquery-ui.min.css" />
+    <link rel="stylesheet" href="/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/bootstrap/dist/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="/font-awesome/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="/css/coinos.css" />
+    <script src="/jquery/dist/jquery.min.js"></script>
+    <script src="/jquery-ui/jquery-ui.min.js"></script>
+    <script src="/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="/js/bitcoinjs.min.js"></script>
+    <script src="/js/qrcode.js"></script>
     {{{yield-styles}}}
     {{{yield-scripts}}}
   </head>
@@ -25,9 +35,6 @@
               <li><a href="/{{user}}/profile"><span class="glyphicon glyphicon-user"></span> Account</a></li>
               <li><a href="/{{user}}/edit"><span class="glyphicon glyphicon-cog"></span> Settings</a></li>
               <li><a href="/logout"><span class="glyphicon glyphicon-off"></span> Logout</a></li>
-              <!--
-              <li><a href="/help"><span class="glyphicon glyphicon-info-sign"></span> Help</a></li>
--->
             </ul>
           </div>
         </div>

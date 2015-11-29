@@ -1,15 +1,4 @@
-#= require js/jquery-1.8.2.min.js
-#= require js/moment.min.js
-#= require js/qrcode.js
-#= require js/bootstrap.min.js
-#= require js/2.5.3-crypto-sha256.js
-#= require js/jsbn.js
-#= require js/jsbn2.js
-#= require js/bitcoinjs-min.js
-#= require js/bitcoinjs-min-1.0.2.js
-#= require js/sha512.js
-#= require js/modsqrt.js
-#= require js/rfc1751.js
+moment = require('moment') 
 
 EXCHANGE_FAIL = "Problem fetching exchange rate"
 SOCKET_FAIL = "Problem connecting to payment server, notifications may not appear"
@@ -60,7 +49,7 @@ setup = ->
 
   if g.user.logo
     ext = g.user.logo.substr(g.user.logo.length - 3)
-    src = "/assets/img/logos/#{g.user.username}.#{ext}"
+    src = "/img/logos/#{g.user.username}.#{ext}"
     $('#logo').attr('src', src).show()
 
   getAddress()
@@ -170,7 +159,7 @@ logTransaction = (txid, amount) ->
 
 getAddress = ->
   try
-    bitcoin.Address.fromBase58Check(g.user.pubkey)
+    bitcoin.address.fromBase58Check(g.user.pubkey)
     g.user.address = g.user.pubkey
   catch
     try
@@ -185,7 +174,7 @@ getAddress = ->
   s = """
     <a href='/#{g.user.username}/report'>#{g.user.address}</a> 
     <a href='http://blockchain.info/address/#{g.user.address}' target='_blank'>
-      <img src='/assets/img/blockchain.png' />
+      <img src='/img/blockchain.png' />
     </a>
   """
   $('#address').html(s)

@@ -1,0 +1,81 @@
+h1 { margin-top: 0; }
+	
+div.container-fluid {
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align:left;
+  padding-bottom: 50px;
+}
+
+.navbar-toggle { background-color: #428bca; width: 100%; position: absolute; top: 0px; height: 30px; margin: 0; float: none; z-index: 1; margin-bottom: -30px; }
+.navbar-toggle .glyphicon { margin-top: -5px; padding-left: 10px; }
+.navbar { margin: 0; min-height: 40px; }
+.navbar-collapse.in { overflow-y: visible; }
+#connection { display: none; }
+
+#nav {
+  .nav { margin-top: 30px; }
+  .nav li a { padding: 10px 0 10px 10px; }
+}
+
+.form-group {
+  label { font-weight: normal; font-size: 14px; display: block; }
+  p, span, .form-control { font-size: 18px; }
+  span, label { color: #999; }
+  .form-control { height: auto; padding: 3px; display: inline-block; }
+  .input-group-addon { color: #000; }
+}
+
+div#calculator {
+  #amount { width: 5em; }
+  #received { font-size: 16px; width: 100%; }
+  strong#total { font-size: 30px; }
+  p#address { padding-top: 10px; }
+  #title { display: none; }
+  #title a { color: #000; text-decoration: none; }
+  #logo { display: none; padding: 10px 0; margin-bottom: 10px; max-height: 250px; width: 100%; }
+  #error { margin-top: 10px; }
+}
+
+td#total { font-weight: bold; text-align: right; }
+
+#main-logo {
+  background-image: url('../img/coinos_logo.png');
+  width: 300px;
+  height: 80px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.svg #main-logo {
+  background-image: url('../img/coinos_logo.svg') !important;
+  background-size: 300px 80px;
+}
+
+#modal .tab-pane { padding-top: 15px; }
+
+@media screen and (min-width: 768px) {
+  .modal-dialog {
+      width: 400px; /* either % (e.g. 60%) or px (400px) */
+  }
+
+  #modal #qr { padding-left: 40px; }
+}
+
+@page {
+   margin: 0;
+}
+
+div.pass-container {
+    height: 30px;
+}
+
+div.pass-bar {
+    height: 11px;
+    margin-top: 2px;
+}
+div.pass-hint {
+    font-family: arial;
+    font-size: 11px;
+}

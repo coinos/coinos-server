@@ -1,5 +1,5 @@
 {{#yield-scripts}}
-  {{#js}}js/calculator{{/js}}
+  <script src="/js/calculator.js"></script>
 {{/yield-scripts}}
 
 {{#verified}}
@@ -15,7 +15,7 @@ Your email has been verified. Thank you!
   <input id="user" type="hidden" value="{{user}}" />
 
   <h1 id="title"></h1>
-  <a href="/{{user}}/edit"><img id="logo" src="/assets/img/bitcoin.png" alt="Logo" /></a>
+  <a href="/{{user}}/edit"><img id="logo" src="/img/bitcoin.png" alt="Logo" /></a>
 
   <form role="form">
     <div class="form-group">

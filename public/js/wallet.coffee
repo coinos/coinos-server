@@ -1,21 +1,4 @@
-#= require ../js/jquery-1.8.2.min.js
-#= require ../js/jquery-ui.min.js
-#= require ../js/jquery.printElement.min.js
-#= require ../js/check_password.js
-#= require ../js/bootstrap.min.js
-#= require ../js/jsbn.js
-#= require ../js/jsbn2.js
-#= require ../js/crypto-min.js
-#= require ../js/2.5.3-crypto-sha256.js
-#= require ../js/sha512.js
-#= require ../js/rfc1751.js
-#= require ../js/bitcoinjs-lib.min.js
-#= require ../js/modsqrt.js
-#= require ../js/bip32.js
-#= require ../js/secure_random.js
-#= require ../js/qrcode.js
-#= require ../js/aes.js
-#= require ../js/buffer.js
+buffer = require('buffer')
 
 g = exports ? this
 g.proceed = false

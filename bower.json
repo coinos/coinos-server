@@ -1,0 +1,33 @@
+{
+  "name": "coinos",
+  "description": "Bitcoin Point of Sale App",
+  "main": "app.js",
+  "authors": [
+    "Adam Soltys <adam.soltys@pwgsc-tpsgc.gc.ca>"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "bitcoin",
+    "point",
+    "of",
+    "sale"
+  ],
+  "homepage": "https://github.com/asoltys/coinos.io",
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "public",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "font-awesome": "~4.5.0",
+    "jquery": "~2.1.4",
+    "jquery-ui": "~1.11.4",
+    "bootstrap": "~3.3.6"
+  }
+}

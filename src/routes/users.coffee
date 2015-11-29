@@ -37,7 +37,7 @@ module.exports = (sessions) ->
 
         if obj.logo and obj.logo.length > 3
           ext = obj.logo.substr(obj.logo.length - 3)
-          path = "public/assets/img/logos/#{obj.username}.#{ext}"
+          path = "public/img/logos/#{obj.username}.#{ext}"
           fs.lstat(path, (err, stats) ->
             if ext in ['jpg', 'png', 'gif'] and (err or not stats.isFile())
               try
@@ -155,6 +155,7 @@ module.exports = (sessions) ->
           db.hmset("user:#{req.params.user}", password: hash, ->
             if req.xhr
               res.send({})
+              res.end()
             else
               res.redirect("/#{req.params.user}") 
           )
@@ -162,6 +163,7 @@ module.exports = (sessions) ->
       else
         if req.xhr
           res.send({})
+          res.end()
         else
           res.redirect("/#{req.params.user}")
     )

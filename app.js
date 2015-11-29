@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, calculator, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
 
   request = require('request');
 
@@ -16,8 +16,6 @@
   config = require('./config');
 
   fs = require('fs');
-
-  calculator = require("./routes/calculator");
 
   sessions = require("./routes/sessions")(passport);
 
@@ -105,13 +103,39 @@
 
   app.get('/', cache, sessions["new"]);
 
-  app.get('/address', cache, calculator.address);
+  app.get('/address', cache, function(req, res) {
+    return res.render('address', {
+      layout: 'layout',
+      js: (function() {
+        return global.js;
+      }),
+      css: (function() {
+        return global.css;
+      })
+    });
+  });
 
-  app.get('/register', cache, users["new"]);
-
-  app.get('/sweep', calculator.sweep);
-
-  app.get('/ticker', cache, calculator.ticker);
+  app.get('/ticker', cache, function(req, res) {
+    fs = require('fs');
+    return fs.readFile("./public/js/rates.json", function(err, data) {
+      var e, exchange, _base, _base1, _base2;
+      (_base = req.query).currency || (_base.currency = 'CAD');
+      (_base1 = req.query).symbol || (_base1.symbol = 'quadrigacx');
+      (_base2 = req.query).type || (_base2.type = 'bid');
+      try {
+        exchange = JSON.parse(data)[req.query.currency][req.query.symbol]['rates'][req.query.type].toString();
+      } catch (_error) {
+        e = _error;
+        exchange = "0";
+      }
+      res.writeHead(200, {
+        'Content-Length': exchange.length,
+        'Content-Type': 'text/plain'
+      });
+      res.write(exchange);
+      return res.end();
+    });
+  });
 
   app.get('/token', cache, function(req, res) {
     res.write(config.blockcypher_token);
@@ -136,6 +160,8 @@
   app.post('/login', sessions.create);
 
   app.get('/logout', sessions.destroy);
+
+  app.get('/register', cache, users["new"]);
 
   app.get('/users/new', cache, users["new"]);
 
@@ -164,11 +190,6 @@
   app.get('/:user.json', users.json);
 
   app.get('/:user', cache, users.show);
-
-  app.use(require('connect-assets')({
-    src: 'public',
-    detectChanges: false
-  }));
 
   app.use(function(err, req, res, next) {
     res.status(500);
