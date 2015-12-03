@@ -1,6 +1,7 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0](function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
 (function(){(function() {
-  var buffer, check_address, convertedAmount, createWallet, g, getBalance, getExchangeRate, getToken, getUser, isBip32, multiplier, precision, sendTransaction;
+  var buffer, check_address, convertedAmount, createWallet, displayErrors, g, getBalance, getExchangeRate, getToken, getUser, isBip32, multiplier, precision, sendTransaction,
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   buffer = require('buffer');
 
@@ -61,7 +62,7 @@
       } else {
         $(this).val(parseFloat($(this).val()).toFixed(2));
       }
-      if ($(this).val() > $(this).attr('max')) {
+      if (parseFloat($(this).val()) > parseFloat($(this).attr('max'))) {
         return $(this).val($(this).attr('max'));
       }
     });
@@ -95,18 +96,24 @@
   };
 
   createWallet = function() {
-    var data;
-    if (isBip32(g.user.pubkey)) {
-      data = {
-        name: g.user.username,
-        extended_public_key: g.user.pubkey,
-        subchain_indexes: [0, 1]
-      };
-      return $.post("" + g.api + "/wallets/hd?token=" + g.token, JSON.stringify(data)).always(getBalance);
-    } else {
-      $('#balance').html(99);
-      return $('#amount').val(99);
-    }
+    return $.get("" + g.api + "/wallets?token=" + g.token, function(data) {
+      var _ref;
+      if (_ref = g.user.username, __indexOf.call(data.wallet_names, _ref) >= 0) {
+        return getBalance();
+      } else {
+        if (isBip32(g.user.pubkey)) {
+          data = {
+            name: g.user.username,
+            extended_public_key: g.user.pubkey,
+            subchain_indexes: [0, 1]
+          };
+          return $.post("" + g.api + "/wallets/hd?token=" + g.token, JSON.stringify(data)).always(getBalance);
+        } else {
+          $('#balance').html(99);
+          return $('#amount').val(99);
+        }
+      }
+    });
   };
 
   getBalance = function() {
@@ -116,53 +123,123 @@
       g.balance = (balance * multiplier() / 100000000).toFixed(precision());
       fiat = (g.balance * g.exchange / multiplier()).toFixed(2);
       $('#balance').html(g.balance);
-      $('#balance').parent().fadeIn();
+      $('.wallet').fadeIn();
       $('#fiat').html("" + fiat + " " + g.user.currency);
-      $('#amount').val(g.balance);
       return $('#amount').attr('max', g.balance);
     });
   };
 
   sendTransaction = function() {
-    var amount, fee, master, req, value;
-    master = bitcoin.HDNode.fromBase58(g.user.privkey);
-    if (typeof master.keyPair.d !== 'undefined') {
-      fee = 12500;
-      if ($('#currency_toggle').html() === g.user.unit) {
-        amount = $('#amount').val();
+    var dialog, params;
+    dialog = new BootstrapDialog({
+      title: '<h3>Confirm Transaction</h3>',
+      message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>',
+      buttons: [
+        {
+          label: 'Send',
+          cssClass: 'btn-primary'
+        }, {
+          label: ' Cancel',
+          cssClass: 'btn-default',
+          action: function(dialogItself) {
+            return dialogItself.close();
+          },
+          icon: 'glyphicon glyphicon-ban-circle'
+        }
+      ]
+    }).open();
+    params = {
+      inputs: [
+        {
+          wallet_name: g.user.username,
+          wallet_token: g.token
+        }
+      ],
+      outputs: [
+        {
+          addresses: [$('#recipient').val()],
+          value: 1
+        }
+      ],
+      preference: $('#priority').val()
+    };
+    return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
+      var amount, e, master, value, _i, _len, _ref;
+      if (data.errors) {
+        dialog.getModalBody().html('');
+        _ref = data.errors;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          e = _ref[_i];
+          dialog.getModalBody().append("<div class='alert alert-danger'>" + e + "</div>");
+        }
+      }
+      master = bitcoin.HDNode.fromBase58(g.user.privkey);
+      if (typeof master.keyPair.d === 'undefined') {
+        $('#withdraw .alert-danger').fadeIn().delay(500).fadeOut();
       } else {
-        amount = convertedAmount();
+        if ($('#currency_toggle').html() === g.user.unit) {
+          amount = $('#amount').val();
+        } else {
+          amount = convertedAmount();
+        }
       }
       value = parseInt(amount * 100000000 / multiplier());
-      req = {
-        inputs: [
-          {
-            wallet_name: g.user.username,
-            wallet_token: g.token
-          }
-        ],
-        outputs: [
-          {
-            addresses: [$('#recipient').val()],
-            value: value
-          }
-        ]
-      };
-      return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(req)).then(function(tx) {
-        tx.pubkeys = [];
-        tx.signatures = tx.tosign.map(function(tosign, i) {
+      params.fees = data.tx.fees;
+      params.outputs[0].value = value;
+      if (value > parseFloat(g.balance).toSatoshis() - params.fees) {
+        params.outputs[0].value -= params.fees;
+      }
+      return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
+        var change, fee, total;
+        data.pubkeys = [];
+        data.signatures = data.tosign.map(function(tosign, i) {
           var key, path;
-          path = tx.tx.inputs[i].hd_path.split('/');
+          path = data.tx.inputs[i].hd_path.split('/');
           key = master.derive(path[1]).derive(path[2]);
-          tx.pubkeys.push(key.getPublicKeyBuffer().toString('hex'));
+          data.pubkeys.push(key.getPublicKeyBuffer().toString('hex'));
           return key.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
         });
-        return $.post("" + g.api + "/txs/send?token=" + g.token, JSON.stringify(tx)).then(function(finaltx) {
-          return $('#withdraw .alert-success').fadeIn().delay(500).fadeOut();
+        amount = data.tx.outputs[0].value;
+        fee = data.tx.fees;
+        total = amount;
+        if (value > parseFloat(g.balance).toSatoshis() - data.tx.fees) {
+          total += fee;
+        }
+        if (data.tx.outputs.length === 2) {
+          $('#change').show();
+          change = data.tx.outputs[1].value;
+          $('#transaction .change').html("" + (change.toBTC()) + " " + g.user.unit + " (" + (change.toFiat()) + " " + g.user.currency + ")");
+        }
+        $('#transaction .amount').html("" + (amount.toBTC()) + " " + g.user.unit + " (" + (amount.toFiat()) + " " + g.user.currency + ")");
+        $('#transaction .fee').html("" + (fee.toBTC()) + " " + g.user.unit + " (" + (fee.toFiat()) + " " + g.user.currency + ")");
+        $('#transaction .total').html("" + (total.toBTC()) + " " + g.user.unit + " (" + (total.toFiat()) + " " + g.user.currency + ")");
+        $('#transaction .address').html(data.tx.outputs[0].addresses[0]);
+        dialog.getModalBody().html($('#transaction').html());
+        return dialog.getModal().find('.btn-primary').click(function() {
+          return $.post("" + g.api + "/txs/send?token=" + g.token, JSON.stringify(data)).then(function(finaltx) {
+            return $('#withdraw .alert-success').fadeIn().delay(500).fadeOut();
+          });
         });
+      }).fail(function(data) {
+        return displayErrors(data.responseJSON, dialog);
       });
-    } else {
-      return $('#withdraw .alert-danger').fadeIn().delay(500).fadeOut();
+    }).fail(function(data) {
+      return displayErrors(data.responseJSON, dialog);
+    });
+  };
+
+  displayErrors = function(data, dialog) {
+    var e, _i, _len, _ref, _results;
+    if (data.errors) {
+      dialog.getModalBody().html('');
+      dialog.getModal().find('.btn-primary').hide();
+      _ref = data.errors;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        e = _ref[_i];
+        _results.push(dialog.getModalBody().append("<div class='alert alert-danger'>" + e.error + "</div>"));
+      }
+      return _results;
     }
   };
 
@@ -213,6 +290,18 @@
 
   precision = function() {
     return 9 - multiplier().toString().length;
+  };
+
+  Number.prototype.toBTC = function() {
+    return (this / 100000000 * multiplier()).toFixed(precision());
+  };
+
+  Number.prototype.toFiat = function() {
+    return (this * g.exchange / 100000000).toFixed(2);
+  };
+
+  Number.prototype.toSatoshis = function() {
+    return parseInt(this * 100000000 / multiplier());
   };
 
 }).call(this);
