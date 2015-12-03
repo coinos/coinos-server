@@ -39,7 +39,7 @@ filterDates = ->
     amount = parseFloat(e.exchange) * parseFloat(e.received)
 
     !isNaN(parseFloat(amount)) && isFinite(amount) &&
-      (!from? || d.diff(from) >= 0) && (!to? || d.diff(to) <= 0) 
+      (!from? || d.diff(from, 'days') >= 0) && (!to? || d.diff(to, 'days') <= 0) 
   )
 
   display(transactions)   

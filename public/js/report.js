@@ -46,7 +46,7 @@
       to = moment($('#to_date').val(), "MM/DD/YYYY");
       d = moment(e.date);
       amount = parseFloat(e.exchange) * parseFloat(e.received);
-      return !isNaN(parseFloat(amount)) && isFinite(amount) && ((from == null) || d.diff(from) >= 0) && ((to == null) || d.diff(to) <= 0);
+      return !isNaN(parseFloat(amount)) && isFinite(amount) && ((from == null) || d.diff(from, 'days') >= 0) && ((to == null) || d.diff(to, 'days') <= 0);
     });
     return display(transactions);
   };
