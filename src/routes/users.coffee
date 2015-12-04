@@ -94,34 +94,33 @@ module.exports = (sessions) ->
          )
       )
 
-      if process.env.NODE_ENV is 'production'
-        require('crypto').randomBytes(48, (ex, buf) ->
-          token = buf.toString('base64').replace(/\//g,'').replace(/\+/g,'')
-          db.set("token:#{token}", req.body.username)
-          host = req.hostname
-          host += ':3000' if host is 'localhost'
-          url = "#{req.protocol}://#{host}/verify/#{token}"
+      require('crypto').randomBytes(48, (ex, buf) ->
+        token = buf.toString('base64').replace(/\//g,'').replace(/\+/g,'')
+        db.set("token:#{token}", req.body.username)
+        host = req.hostname
+        host += ':3000' if host is 'localhost'
+        url = "#{req.protocol}://#{host}/verify/#{token}"
 
-          res.render('users/welcome', 
-            user: req.params.user, 
-            layout: 'mail',
-            url: url,
-            privkey: req.body.privkey,
-            js: (-> global.js), 
-            css: (-> global.css),
-            (err, html) ->
-              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
+        res.render('users/welcome', 
+          user: req.params.user, 
+          layout: 'mail',
+          url: url,
+          privkey: req.body.privkey,
+          js: (-> global.js), 
+          css: (-> global.css),
+          (err, html) ->
+            sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
 
-              email = new sendgrid.Email(
-                to: req.body.email
-                from: 'adam@coinos.io'
-                subject: 'Welcome to CoinOS'
-                html: html
-              )
+            email = new sendgrid.Email(
+              to: req.body.email
+              from: 'adam@coinos.io'
+              subject: 'Welcome to CoinOS'
+              html: html
+            )
 
-              sendgrid.send(email)
-          )
+            sendgrid.send(email)
         )
+      )
     )
 
   edit: (req, res) ->

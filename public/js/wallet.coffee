@@ -6,7 +6,10 @@ g.api = 'https://api.blockcypher.com/v1/btc/main'
 
 $(->
   getToken()
-  $('#settings form input[type=button]').click(->
+
+  $('button[data-toggle=tooltip]').tooltip(trigger: 'hover')
+
+  $('#keys form input[type=button]').click(->
     $('.form-control').blur()
     if $('.has-error').length > 0
       $('.has-error').effect('shake', 500)
@@ -17,13 +20,16 @@ $(->
     )
 
     $.post("/#{g.user.username}", $('#settings form').serializeObject(), ->
-      $('#settings .alert-success').fadeIn().delay(500).fadeOut()
+      $('#keys .alert-success').fadeIn().delay(2000).fadeOut()
+      setTimeout(-> 
+        $('#withdraw').click()
+      , 2000)
     )
 
     return false
   )
 
-  $('#withdraw form input[type=button]').click(->
+  $('#withdrawal form input[type=button]').click(->
     sendTransaction()
   )
 
@@ -59,6 +65,24 @@ $(->
 
     if parseFloat($(this).val()) > parseFloat($(this).attr('max'))
       $(this).val($(this).attr('max'))
+  )
+
+  $('#password').keyup(->
+    try
+      g.privkey = CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8)
+  )
+
+  $('#manage, #withdraw').click(->
+    $('#keys, #withdrawal').toggle()
+    $('#withdraw, #manage').toggle()
+  )
+
+  $('#backup').click(->
+    url = 'data:application/json;base64,' + btoa(JSON.stringify(g.user.privkey))
+    pom = document.createElement('a')
+    pom.setAttribute('href', url)
+    pom.setAttribute('download', 'coinos-wallet.aes.json')
+    pom.click()
   )
 )
 
@@ -116,23 +140,12 @@ getBalance = ->
     $('.wallet').fadeIn()
     $('#fiat').html("#{fiat} #{g.user.currency}")
     $('#amount').attr('max', g.balance)
+    $('#amount').val(0.00001)
+    $('#recipient').val('13zP2yHXd6pMM9cATwRtQcTx7CgZsi6saE')
+    $('#amount').focus()
   )
 
 sendTransaction = ->
-  dialog = new BootstrapDialog(
-    title: '<h3>Confirm Transaction</h3>'
-    message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>'
-    buttons: [
-      label: 'Send'
-      cssClass: 'btn-primary'
-    ,
-      label: ' Cancel'
-      cssClass: 'btn-default'
-      action: (dialogItself) -> dialogItself.close()
-      icon: 'glyphicon glyphicon-ban-circle'
-    ]
-  ).open()
-
   params = 
     inputs: [{wallet_name: g.user.username, wallet_token: g.token}]
     outputs: [{addresses: [$('#recipient').val()], value: 1}]
@@ -144,11 +157,27 @@ sendTransaction = ->
       for e in data.errors
         dialog.getModalBody().append("<div class='alert alert-danger'>#{e}</div>")
 
-    master = bitcoin.HDNode.fromBase58(g.user.privkey)
+    try
+      master = bitcoin.HDNode.fromBase58(g.privkey)
 
-    if typeof master.keyPair.d is 'undefined'
-      $('#withdraw .alert-danger').fadeIn().delay(500).fadeOut()
+    if !master or typeof master.keyPair.d is 'undefined'
+      $('#withdrawal .alert-danger').fadeIn().delay(3000).fadeOut()
+      $('#password').focus()
     else
+      dialog = new BootstrapDialog(
+        title: '<h3>Confirm Transaction</h3>'
+        message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>'
+        buttons: [
+          label: 'Send'
+          cssClass: 'btn-primary'
+        ,
+          label: ' Cancel'
+          cssClass: 'btn-default'
+          action: (dialogItself) -> dialogItself.close()
+          icon: 'glyphicon glyphicon-ban-circle'
+        ]
+      ).open()
+
       if $('#currency_toggle').html() is g.user.unit
         amount = $('#amount').val()
       else
@@ -160,7 +189,6 @@ sendTransaction = ->
       params.outputs[0].value = value
       if value > parseFloat(g.balance).toSatoshis() - params.fees 
         params.outputs[0].value -= params.fees
-
 
       $.post("#{g.api}/txs/new?token=#{g.token}", JSON.stringify(params)).done((data) ->
         data.pubkeys = []
@@ -180,22 +208,22 @@ sendTransaction = ->
         if data.tx.outputs.length is 2
           $('#change').show()
           change = data.tx.outputs[1].value
-          $('#transaction .change').html("#{(change.toBTC())} #{g.user.unit} (#{change.toFiat()} #{g.user.currency})")
+          $('.dialog .change').html("#{(change.toBTC())} #{g.user.unit} (#{change.toFiat()} #{g.user.currency})")
 
-        $('#transaction .amount').html("#{(amount.toBTC())} #{g.user.unit} (#{amount.toFiat()} #{g.user.currency})")
-        $('#transaction .fee').html("#{(fee.toBTC())} #{g.user.unit} (#{fee.toFiat()} #{g.user.currency})")
-        $('#transaction .total').html("#{(total.toBTC())} #{g.user.unit} (#{total.toFiat()} #{g.user.currency})")
-        $('#transaction .address').html(data.tx.outputs[0].addresses[0])
+        $('.dialog .amount').html("#{(amount.toBTC())} #{g.user.unit} (#{amount.toFiat()} #{g.user.currency})")
+        $('.dialog .fee').html("#{(fee.toBTC())} #{g.user.unit} (#{fee.toFiat()} #{g.user.currency})")
+        $('.dialog .total').html("#{(total.toBTC())} #{g.user.unit} (#{total.toFiat()} #{g.user.currency})")
+        $('.dialog .address').html(data.tx.outputs[0].addresses[0])
 
-        dialog.getModalBody().html($('#transaction').html())
+        dialog.getModalBody().html($('.dialog').html())
         dialog.getModal().find('.btn-primary').click(-> 
           $.post("#{g.api}/txs/send?token=#{g.token}", JSON.stringify(data)).then((finaltx) ->
-            $('#withdraw .alert-success').fadeIn().delay(500).fadeOut()
+            $('#withdrawal .alert-success').fadeIn().delay(2000).fadeOut()
           )
         )
-    ).fail((data) ->
-      displayErrors(data.responseJSON, dialog)
-    )
+      ).fail((data) ->
+        displayErrors(data.responseJSON, dialog)
+      )
   ).fail((data) ->
     displayErrors(data.responseJSON, dialog)
   )

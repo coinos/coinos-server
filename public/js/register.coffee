@@ -4,9 +4,10 @@ $(->
   $('#username').focus()
   $('#password').pwstrength(showVerdicts: false)
 
-  key = new Key()
-  $('#pubkey').val(key.extended_public_key_string())
-  privkey = key.extended_private_key_string()
+  mnemonic = bip39.generateMnemonic()
+  key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
+  $('#pubkey').val(key.neutered().toString())
+  privkey = key.toString()
 
   $('#password').keyup((e) ->
     return if e.keyCode is 9 or e.keyCode is 16

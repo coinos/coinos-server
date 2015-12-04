@@ -13,7 +13,10 @@
 
   $(function() {
     getToken();
-    $('#settings form input[type=button]').click(function() {
+    $('button[data-toggle=tooltip]').tooltip({
+      trigger: 'hover'
+    });
+    $('#keys form input[type=button]').click(function() {
       $('.form-control').blur();
       if ($('.has-error').length > 0) {
         $('.has-error').effect('shake', 500);
@@ -23,11 +26,14 @@
         type: 'DELETE'
       });
       $.post("/" + g.user.username, $('#settings form').serializeObject(), function() {
-        return $('#settings .alert-success').fadeIn().delay(500).fadeOut();
+        $('#keys .alert-success').fadeIn().delay(2000).fadeOut();
+        return setTimeout(function() {
+          return $('#withdraw').click();
+        }, 2000);
       });
       return false;
     });
-    $('#withdraw form input[type=button]').click(function() {
+    $('#withdrawal form input[type=button]').click(function() {
       return sendTransaction();
     });
     $('#currency_toggle').click(function() {
@@ -56,7 +62,7 @@
         return $('#amount').val(amount);
       }
     });
-    return $('#amount').change(function() {
+    $('#amount').change(function() {
       if ($('#currency_toggle').html() === g.user.unit) {
         $(this).val(parseFloat($(this).val()).toFixed(precision()));
       } else {
@@ -65,6 +71,23 @@
       if (parseFloat($(this).val()) > parseFloat($(this).attr('max'))) {
         return $(this).val($(this).attr('max'));
       }
+    });
+    $('#password').keyup(function() {
+      try {
+        return g.privkey = CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8);
+      } catch (_error) {}
+    });
+    $('#manage, #withdraw').click(function() {
+      $('#keys, #withdrawal').toggle();
+      return $('#withdraw, #manage').toggle();
+    });
+    return $('#backup').click(function() {
+      var pom, url;
+      url = 'data:application/json;base64,' + btoa(JSON.stringify(g.user.privkey));
+      pom = document.createElement('a');
+      pom.setAttribute('href', url);
+      pom.setAttribute('download', 'coinos-wallet.aes.json');
+      return pom.click();
     });
   });
 
@@ -125,29 +148,15 @@
       $('#balance').html(g.balance);
       $('.wallet').fadeIn();
       $('#fiat').html("" + fiat + " " + g.user.currency);
-      return $('#amount').attr('max', g.balance);
+      $('#amount').attr('max', g.balance);
+      $('#amount').val(0.00001);
+      $('#recipient').val('13zP2yHXd6pMM9cATwRtQcTx7CgZsi6saE');
+      return $('#amount').focus();
     });
   };
 
   sendTransaction = function() {
-    var dialog, params;
-    dialog = new BootstrapDialog({
-      title: '<h3>Confirm Transaction</h3>',
-      message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>',
-      buttons: [
-        {
-          label: 'Send',
-          cssClass: 'btn-primary'
-        }, {
-          label: ' Cancel',
-          cssClass: 'btn-default',
-          action: function(dialogItself) {
-            return dialogItself.close();
-          },
-          icon: 'glyphicon glyphicon-ban-circle'
-        }
-      ]
-    }).open();
+    var params;
     params = {
       inputs: [
         {
@@ -164,7 +173,7 @@
       preference: $('#priority').val()
     };
     return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
-      var amount, e, master, value, _i, _len, _ref;
+      var amount, dialog, e, master, value, _i, _len, _ref;
       if (data.errors) {
         dialog.getModalBody().html('');
         _ref = data.errors;
@@ -173,56 +182,76 @@
           dialog.getModalBody().append("<div class='alert alert-danger'>" + e + "</div>");
         }
       }
-      master = bitcoin.HDNode.fromBase58(g.user.privkey);
-      if (typeof master.keyPair.d === 'undefined') {
-        $('#withdraw .alert-danger').fadeIn().delay(500).fadeOut();
+      try {
+        master = bitcoin.HDNode.fromBase58(g.privkey);
+      } catch (_error) {}
+      if (!master || typeof master.keyPair.d === 'undefined') {
+        $('#withdrawal .alert-danger').fadeIn().delay(3000).fadeOut();
+        return $('#password').focus();
       } else {
+        dialog = new BootstrapDialog({
+          title: '<h3>Confirm Transaction</h3>',
+          message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>',
+          buttons: [
+            {
+              label: 'Send',
+              cssClass: 'btn-primary'
+            }, {
+              label: ' Cancel',
+              cssClass: 'btn-default',
+              action: function(dialogItself) {
+                return dialogItself.close();
+              },
+              icon: 'glyphicon glyphicon-ban-circle'
+            }
+          ]
+        }).open();
         if ($('#currency_toggle').html() === g.user.unit) {
           amount = $('#amount').val();
         } else {
           amount = convertedAmount();
         }
-      }
-      value = parseInt(amount * 100000000 / multiplier());
-      params.fees = data.tx.fees;
-      params.outputs[0].value = value;
-      if (value > parseFloat(g.balance).toSatoshis() - params.fees) {
-        params.outputs[0].value -= params.fees;
-      }
-      return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
-        var change, fee, total;
-        data.pubkeys = [];
-        data.signatures = data.tosign.map(function(tosign, i) {
-          var key, path;
-          path = data.tx.inputs[i].hd_path.split('/');
-          key = master.derive(path[1]).derive(path[2]);
-          data.pubkeys.push(key.getPublicKeyBuffer().toString('hex'));
-          return key.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
-        });
-        amount = data.tx.outputs[0].value;
-        fee = data.tx.fees;
-        total = amount;
-        if (value > parseFloat(g.balance).toSatoshis() - data.tx.fees) {
-          total += fee;
+        value = parseInt(amount * 100000000 / multiplier());
+        params.fees = data.tx.fees;
+        params.outputs[0].value = value;
+        if (value > parseFloat(g.balance).toSatoshis() - params.fees) {
+          params.outputs[0].value -= params.fees;
         }
-        if (data.tx.outputs.length === 2) {
-          $('#change').show();
-          change = data.tx.outputs[1].value;
-          $('#transaction .change').html("" + (change.toBTC()) + " " + g.user.unit + " (" + (change.toFiat()) + " " + g.user.currency + ")");
-        }
-        $('#transaction .amount').html("" + (amount.toBTC()) + " " + g.user.unit + " (" + (amount.toFiat()) + " " + g.user.currency + ")");
-        $('#transaction .fee').html("" + (fee.toBTC()) + " " + g.user.unit + " (" + (fee.toFiat()) + " " + g.user.currency + ")");
-        $('#transaction .total').html("" + (total.toBTC()) + " " + g.user.unit + " (" + (total.toFiat()) + " " + g.user.currency + ")");
-        $('#transaction .address').html(data.tx.outputs[0].addresses[0]);
-        dialog.getModalBody().html($('#transaction').html());
-        return dialog.getModal().find('.btn-primary').click(function() {
-          return $.post("" + g.api + "/txs/send?token=" + g.token, JSON.stringify(data)).then(function(finaltx) {
-            return $('#withdraw .alert-success').fadeIn().delay(500).fadeOut();
+        return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
+          var change, fee, total;
+          data.pubkeys = [];
+          data.signatures = data.tosign.map(function(tosign, i) {
+            var key, path;
+            path = data.tx.inputs[i].hd_path.split('/');
+            key = master.derive(path[1]).derive(path[2]);
+            data.pubkeys.push(key.getPublicKeyBuffer().toString('hex'));
+            return key.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
           });
+          amount = data.tx.outputs[0].value;
+          fee = data.tx.fees;
+          total = amount;
+          if (value > parseFloat(g.balance).toSatoshis() - data.tx.fees) {
+            total += fee;
+          }
+          if (data.tx.outputs.length === 2) {
+            $('#change').show();
+            change = data.tx.outputs[1].value;
+            $('.dialog .change').html("" + (change.toBTC()) + " " + g.user.unit + " (" + (change.toFiat()) + " " + g.user.currency + ")");
+          }
+          $('.dialog .amount').html("" + (amount.toBTC()) + " " + g.user.unit + " (" + (amount.toFiat()) + " " + g.user.currency + ")");
+          $('.dialog .fee').html("" + (fee.toBTC()) + " " + g.user.unit + " (" + (fee.toFiat()) + " " + g.user.currency + ")");
+          $('.dialog .total').html("" + (total.toBTC()) + " " + g.user.unit + " (" + (total.toFiat()) + " " + g.user.currency + ")");
+          $('.dialog .address').html(data.tx.outputs[0].addresses[0]);
+          dialog.getModalBody().html($('.dialog').html());
+          return dialog.getModal().find('.btn-primary').click(function() {
+            return $.post("" + g.api + "/txs/send?token=" + g.token, JSON.stringify(data)).then(function(finaltx) {
+              return $('#withdrawal .alert-success').fadeIn().delay(2000).fadeOut();
+            });
+          });
+        }).fail(function(data) {
+          return displayErrors(data.responseJSON, dialog);
         });
-      }).fail(function(data) {
-        return displayErrors(data.responseJSON, dialog);
-      });
+      }
     }).fail(function(data) {
       return displayErrors(data.responseJSON, dialog);
     });

@@ -33,6 +33,8 @@ $(->
 
     user = $('#username').val()
     $.getJSON("/#{user}.json", (data) ->
+      data.commission ?= 0
+      data.unit ?= 'BTC'
       $('#email').val(data.email)
       $('#title').val(data.title)
       $('#logo').val(data.logo)

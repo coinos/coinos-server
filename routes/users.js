@@ -128,40 +128,38 @@
               return sessions.create(req, res);
             });
           });
-          if (process.env.NODE_ENV === 'production') {
-            return require('crypto').randomBytes(48, function(ex, buf) {
-              var host, token, url;
-              token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '');
-              db.set("token:" + token, req.body.username);
-              host = req.hostname;
-              if (host === 'localhost') {
-                host += ':3000';
-              }
-              url = "" + req.protocol + "://" + host + "/verify/" + token;
-              return res.render('users/welcome', {
-                user: req.params.user,
-                layout: 'mail',
-                url: url,
-                privkey: req.body.privkey,
-                js: (function() {
-                  return global.js;
-                }),
-                css: (function() {
-                  return global.css;
-                })
-              }, function(err, html) {
-                var email, sendgrid;
-                sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
-                email = new sendgrid.Email({
-                  to: req.body.email,
-                  from: 'adam@coinos.io',
-                  subject: 'Welcome to CoinOS',
-                  html: html
-                });
-                return sendgrid.send(email);
+          return require('crypto').randomBytes(48, function(ex, buf) {
+            var host, token, url;
+            token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '');
+            db.set("token:" + token, req.body.username);
+            host = req.hostname;
+            if (host === 'localhost') {
+              host += ':3000';
+            }
+            url = "" + req.protocol + "://" + host + "/verify/" + token;
+            return res.render('users/welcome', {
+              user: req.params.user,
+              layout: 'mail',
+              url: url,
+              privkey: req.body.privkey,
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              })
+            }, function(err, html) {
+              var email, sendgrid;
+              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
+              email = new sendgrid.Email({
+                to: req.body.email,
+                from: 'adam@coinos.io',
+                subject: 'Welcome to CoinOS',
+                html: html
               });
+              return sendgrid.send(email);
             });
-          }
+          });
         });
       },
       edit: function(req, res) {

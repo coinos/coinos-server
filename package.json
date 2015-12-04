@@ -9,6 +9,7 @@
   "dependencies": {
     "async": "0.9.0",
     "bcryptjs": "^2.3.0",
+    "bip39": "^2.2.0",
     "body-parser": "^1.5.0",
     "coffee-script": "1.7.1",
     "connect-assets": "*",

@@ -43,6 +43,12 @@
       });
       user = $('#username').val();
       return $.getJSON("/" + user + ".json", function(data) {
+        if (data.commission == null) {
+          data.commission = 0;
+        }
+        if (data.unit == null) {
+          data.unit = 'BTC';
+        }
         $('#email').val(data.email);
         $('#title').val(data.title);
         $('#logo').val(data.logo);

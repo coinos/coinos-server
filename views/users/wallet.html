@@ -1,82 +1,93 @@
 {{#yield-scripts}}
   <script src="/bootstrap3-dialog/dist/js/bootstrap-dialog.min.js"></script>
   <script src="/jquery-serialize-object/dist/jquery.serialize-object.min.js"></script>
+  <script src="/crypto-js/crypto-js.js"></script>
   <script src="/js/wallet.js"></script>
 {{/yield-scripts}}
 
 <div class="wallet" style="display: none">
-  <h1>Wallet</h1>
+  <h1>Wallet Balance</h1>
 
   <input type="hidden" id="username" name="username" value="{{user}}" />
   <input type="hidden" id="email" name="email" />
 
-  <div class="form-group">
-    <label>Balance:</label>
+  <div class="well">
     <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
-    <b class="lead">(<b id="fiat" class="lead">0 CAD</b>)</b>
+    (<b id="fiat" class="lead">0 CAD</b>)
+    <div class="pull-right">
+    <button id="withdraw" type="button" class="btn btn-default" style="display: none" data-toggle="tooltip" data-placement="bottom" title="Withdraw"><i class="fa fa-btc fa-lg"></i></button>
+    <button id="manage" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Manage Keys"><i class="fa fa-key fa-lg"></i></button>
+    <button id="backup" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Download Backup"><i class="fa fa-download fa-lg"></i></button>
+    </div>
   </div>
 
-  <div>
-    <ul class="nav nav-tabs" role="tablist">
-      <li role="presentation" class="active"><a href="#withdraw" aria-controls="withdraw" role="tab" data-toggle="tab">Withdraw</a></li>
-      <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">Settings</a></li>
-    </ul>
+  <div id="keys" style="display: none">
+    <h3>Keys</h3>
 
-    <div class="tab-content">
-      <div role="tabpanel" class="tab-pane active" id="withdraw">
-        <form>
-          <div class="form-group">
-            <label for="amount">Amount:</label>
-            <div class="input-group">
-              <input type="number" id="amount" name="amount" class="form-control" min="0" />
-              <span class="input-group-btn">
-                <button id="currency_toggle" type="button" class="btn"></button>
-              </span>
-              <span class="input-group-btn">
-                <button id="max" type="button" class="btn">Max</button>
-              </span>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="amount">Receiving Address:</label>
-            <div class="input-group" style="width: 100%">
-              <input type="text" id="recipient" name="recipient" class="form-control" />
-            </div>
-          </div>  
-          
-          <div class="form-group">
-            <label for="priority">Fee Priority for Confirmation Time:</label>
-            <div class="input-group" style="width: 100%">
-              <select id="priority" name="priority" class="form-control">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-          </div>
-
-          <input id="gsend" class="btn btn-primary" type="button" value="Calculate Fee and Confirm Transaction" />
-        </form>
-        <div class="alert alert-success" style="display: none">Transaction sent</div>
-        <div class="alert alert-danger" style="display: none">Need private key</div>
+    <div class="alert alert-success" style="display: none">Settings updated</div> 
+    <form>
+      <div class="form-group">
+        <label for="pubkey">Bitcoin Address or HD Wallet xpub Key:</label>
+          <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
       </div>
-      <div role="tabpanel" class="tab-pane" id="settings">
-        <form>
-          <div class="form-group">
-            <label for="pubkey">Bitcoin Receiving Address or HD Wallet Pubkey:</label>
-              <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
-              <textarea id="privkey" name="privkey" class="form-control" placeholder="xpriv..." rows="3"></textarea>
-          </div>
-          <input class="btn btn-primary" type="button" value="Save" />
-        </form>
-        <div class="alert alert-success" style="display: none">Settings updated</div>
+
+      <div class="form-group">
+        <label for="pubkey">Private Key:</label>
+          <textarea id="privkey" name="privkey" class="form-control" placeholder="xpriv..." rows="5"></textarea>
       </div>
-    </div>
+      <input class="btn btn-primary" type="button" value="Save" />
+    </form>
+  </div>
+
+  <div id="withdrawal">
+    <h3>Send Payment / Withdrawal</h3>
+
+    <div class="alert alert-success" style="display: none">Transaction sent</div>
+    <div class="alert alert-danger" style="display: none">Invalid password or problem with private key</div>
+
+    <form>
+      <div class="form-group">
+        <label for="amount">Amount:</label>
+        <div class="input-group">
+          <input type="number" id="amount" name="amount" class="form-control" min="0" />
+          <span class="input-group-btn">
+            <button id="currency_toggle" type="button" class="btn btn-primary"></button>
+          </span>
+          <span class="input-group-btn">
+            <button id="max" type="button" class="btn btn-primary">Max</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">To Address:</label>
+        <div class="input-group" style="width: 100%">
+          <input type="text" id="recipient" name="recipient" class="form-control" />
+        </div>
+      </div>  
+      
+      <div class="form-group">
+        <label for="priority">Fee Priority for Confirmation Time:</label>
+        <div class="input-group" style="width: 100%">
+          <select id="priority" name="priority" class="form-control">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input id="password" name="password" type="password" class="form-control"  />
+      </div>
+
+      <input id="send" class="btn btn-primary" type="button" value="Calculate Fee and Confirm Transaction" />
+    </form>
   </div>
 </div>
 
-<div id="transaction" style="display: none">
+<div class="dialog" style="display: none">
   <div style="margin-bottom: 10px">
     <label>Amount:</label> <span class="amount"></span><br />
     <label>To:</label> <span class="address"></span>
@@ -87,4 +98,5 @@
     </span>
     <label>Fee:</label> <span class="fee"></span><br />
   </div>
+
 </div>
