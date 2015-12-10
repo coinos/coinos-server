@@ -2,6 +2,7 @@
   <script src="/bootstrap3-dialog/dist/js/bootstrap-dialog.min.js"></script>
   <script src="/jquery-serialize-object/dist/jquery.serialize-object.min.js"></script>
   <script src="/crypto-js/crypto-js.js"></script>
+  <script src="/js/bip39.js"></script>
   <script src="/js/wallet.js"></script>
 {{/yield-scripts}}
 
@@ -10,6 +11,11 @@
 
   <input type="hidden" id="username" name="username" value="{{user}}" />
   <input type="hidden" id="email" name="email" />
+
+  <div id="keys_updated" class="alert alert-success alert-dismissible" style="display: none">
+    <button type="button" class="close" data-hide="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    Wallet keys updated
+  </div>
 
   <div class="well">
     <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
@@ -24,16 +30,23 @@
   <div id="keys" style="display: none">
     <h3>Keys</h3>
 
-    <div class="alert alert-success" style="display: none">Settings updated</div> 
     <form>
       <div class="form-group">
         <label for="pubkey">Bitcoin Address or HD Wallet xpub Key:</label>
-          <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
+        <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
+      </div>
+
+      <button id="generate" class="btn btn-primary pull-right" type="button"><i class="fa fa-bolt"></i> Generate New HD Wallet</button>
+      <br class="clear" />
+
+      <div class="form-group" style="display: none">
+        <label for="new_password">Password:</label>
+        <input id="new_password" name="new_password" type="password" class="form-control"  />
       </div>
 
       <div class="form-group">
-        <label for="pubkey">Private Key:</label>
-          <textarea id="privkey" name="privkey" class="form-control" placeholder="xpriv..." rows="5"></textarea>
+        <label for="pubkey">Encrypted Private Key:</label>
+        <textarea id="privkey" name="privkey" class="form-control" placeholder="xpriv..." rows="5"></textarea>
       </div>
       <input class="btn btn-primary" type="button" value="Save" />
     </form>
@@ -42,8 +55,16 @@
   <div id="withdrawal">
     <h3>Send Payment / Withdrawal</h3>
 
-    <div class="alert alert-success" style="display: none">Transaction sent</div>
-    <div class="alert alert-danger" style="display: none">Invalid password or problem with private key</div>
+    <div id="transaction_sent" class="alert alert-success alert-dismissible" style="display: none">
+      <button type="button" class="close" data-hide="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      <p>Transaction sent!</p><br />
+      <button id="blockchain" class="btn btn-success">View on Blockchain</button>
+    </div>
+
+    <div id="invalid_password" class="alert alert-danger alert-dismissible" style="display: none">
+      <button type="button" class="close" data-hide="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+      Invalid password or problem with private key
+    </div>
 
     <form>
       <div class="form-group">
@@ -90,13 +111,8 @@
 <div class="dialog" style="display: none">
   <div style="margin-bottom: 10px">
     <label>Amount:</label> <span class="amount"></span><br />
-    <label>To:</label> <span class="address"></span>
-  </div>
-  <div>
-    <span id="change" style="display: none">
-      <label>Change:</label> <span class="change"></span><br />
-    </span>
     <label>Fee:</label> <span class="fee"></span><br />
+    <label>To:</label> <span class="address"></span>
   </div>
 
 </div>
