@@ -7,7 +7,7 @@
 
   g.proceed = false;
 
-  g.api = 'https://api.blockcypher.com/v1/bcy/test';
+  g.api = 'https://api.blockcypher.com/v1/btc/main';
 
   $(function() {
     getToken();
@@ -44,9 +44,7 @@
       });
       return false;
     });
-    $('#withdrawal form input[type=button]').click(function() {
-      return sendTransaction();
-    });
+    $('#withdrawal form input[type=button]').click(sendTransaction);
     $('#currency_toggle').click(function() {
       var amount;
       if ($(this).html() === g.user.unit) {
@@ -129,7 +127,7 @@
       $('#new_password').parent().show();
       return $('#new_password').effect('shake', 500).focus();
     });
-    return $('[data-hide]').on('click', function() {
+    return $('.close').on('click', function() {
       return $(this).closest('.alert').fadeOut();
     });
   });
@@ -191,8 +189,6 @@
       $('#balance').html(g.balance);
       $('#fiat').html("" + fiat + " " + g.user.currency);
       $('#amount').attr('max', g.balance);
-      $('#amount').val(g.balance);
-      $('#recipient').val('CAdJXbDTotrZt4DjC7oj9npQUZgKKMF5e3');
       $('#amount').focus();
       return $('.wallet').fadeIn();
     });
@@ -281,7 +277,7 @@
               $('#balance').html(g.balance);
               $('#fiat').html("" + fiat + " " + g.user.currency);
               $('#blockchain').off('click').on('click', function() {
-                return window.open('https://live.blockcypher.com/bcy/tx/' + finaltx.tx.hash, '_blank');
+                return window.open('https://live.blockcypher.com/btc/main/' + finaltx.tx.hash, '_blank');
               });
               return dialog.close();
             });

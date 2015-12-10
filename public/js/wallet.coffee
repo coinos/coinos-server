@@ -1,6 +1,6 @@
 g = exports ? this
 g.proceed = false
-g.api = 'https://api.blockcypher.com/v1/bcy/test'
+g.api = 'https://api.blockcypher.com/v1/btc/main'
 
 $(->
   getToken()
@@ -39,9 +39,7 @@ $(->
     return false
   )
 
-  $('#withdrawal form input[type=button]').click(->
-    sendTransaction()
-  )
+  $('#withdrawal form input[type=button]').click(sendTransaction)
 
   $('#currency_toggle').click(->
     if $(this).html() is g.user.unit
@@ -126,9 +124,7 @@ $(->
     $('#new_password').effect('shake', 500).focus()
   )
 
-  $('[data-hide]').on('click', ->
-    $(this).closest('.alert').fadeOut();
-  )
+  $('.close').on('click', -> $(this).closest('.alert').fadeOut())
 )
 
 
@@ -184,8 +180,6 @@ getBalance = ->
     $('#balance').html(g.balance)
     $('#fiat').html("#{fiat} #{g.user.currency}")
     $('#amount').attr('max', g.balance)
-    $('#amount').val(g.balance)
-    $('#recipient').val('CAdJXbDTotrZt4DjC7oj9npQUZgKKMF5e3')
     $('#amount').focus()
     $('.wallet').fadeIn()
   )
@@ -259,7 +253,7 @@ sendTransaction = ->
             fiat = balance.toFiat()
             $('#balance').html(g.balance)
             $('#fiat').html("#{fiat} #{g.user.currency}")
-            $('#blockchain').off('click').on('click', -> window.open('https://live.blockcypher.com/bcy/tx/' + finaltx.tx.hash, '_blank'))
+            $('#blockchain').off('click').on('click', -> window.open('https://live.blockcypher.com/btc/main/' + finaltx.tx.hash, '_blank'))
             dialog.close()
           )
         )

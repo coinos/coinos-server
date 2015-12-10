@@ -9,3 +9,4 @@ config.js
 passenger*
 tmp
 public/img/logos/*
+public/bower

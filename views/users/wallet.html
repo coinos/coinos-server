@@ -2,7 +2,7 @@
   <script src="/bootstrap3-dialog/dist/js/bootstrap-dialog.min.js"></script>
   <script src="/jquery-serialize-object/dist/jquery.serialize-object.min.js"></script>
   <script src="/crypto-js/crypto-js.js"></script>
-  <script src="/js/bip39.js"></script>
+  <script src="/js/bip39.min.js"></script>
   <script src="/js/wallet.js"></script>
 {{/yield-scripts}}
 
@@ -12,18 +12,25 @@
   <input type="hidden" id="username" name="username" value="{{user}}" />
   <input type="hidden" id="email" name="email" />
 
-  <div id="keys_updated" class="alert alert-success alert-dismissible" style="display: none">
-    <button type="button" class="close" data-hide="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+  <div id="keys_updated" class="alert alert-success" style="display: none">
+    <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
     Wallet keys updated
   </div>
 
   <div class="well">
     <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
     (<b id="fiat" class="lead">0 CAD</b>)
+
     <div class="pull-right">
-    <button id="withdraw" type="button" class="btn btn-default" style="display: none" data-toggle="tooltip" data-placement="bottom" title="Withdraw"><i class="fa fa-btc fa-lg"></i></button>
-    <button id="manage" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Manage Keys"><i class="fa fa-key fa-lg"></i></button>
-    <button id="backup" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Download Backup"><i class="fa fa-download fa-lg"></i></button>
+      <button id="withdraw" type="button" class="btn btn-default" style="display: none" data-toggle="tooltip" data-placement="bottom" title="Withdraw">
+        <i class="fa fa-btc fa-lg"></i>
+      </button>
+      <button id="manage" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Manage Keys">
+        <i class="fa fa-key fa-lg"></i>
+      </button>
+      <button id="backup" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Download Backup">
+        <i class="fa fa-download fa-lg"></i>
+      </button>
     </div>
   </div>
 
@@ -55,14 +62,14 @@
   <div id="withdrawal">
     <h3>Send Payment / Withdrawal</h3>
 
-    <div id="transaction_sent" class="alert alert-success alert-dismissible" style="display: none">
-      <button type="button" class="close" data-hide="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <div id="transaction_sent" class="alert alert-success" style="display: none">
+      <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       <p>Transaction sent!</p><br />
       <button id="blockchain" class="btn btn-success">View on Blockchain</button>
     </div>
 
-    <div id="invalid_password" class="alert alert-danger alert-dismissible" style="display: none">
-      <button type="button" class="close" data-hide="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <div id="invalid_keys" class="alert alert-danger" style="display: none">
+      <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
       Invalid password or problem with private key
     </div>
 
