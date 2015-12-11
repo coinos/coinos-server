@@ -1,15 +1,17 @@
 g = exports ? this
 g.proceed = false
-g.api = 'https://api.blockcypher.com/v1/btc/main'
+g.api = '/blockcypher/v1/btc/main'
 
 validators = 
   address: (e) ->
+    return true if e.val() is ''
     try 
       bitcoin.address.fromBase58Check(e.val())
     catch
       return false
 
   password: (e) ->
+    return true if e.val() is ''
     g.master = null
     try
       g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8))
@@ -17,13 +19,13 @@ validators =
     catch
       return false
 
-
 errors = 
-  address: 'Invalid address'
-  password: 'Wrong password'
+  address: 'Invalid address.'
+  password: 'Wrong password.'
 
 $(->
-  getToken()
+  getUser()
+  
   $('form').validator(custom: validators, errors: errors)
 
   $('button[data-toggle=tooltip]').tooltip(trigger: 'hover')
@@ -39,7 +41,7 @@ $(->
 
     $.post("/#{g.user.username}", $('#keys form').serializeObject(), ->
       $.ajax(
-        url: "#{g.api}/wallets/hd/#{g.user.username}?token=#{g.token}"
+        url: "#{g.api}/wallets/hd/#{g.user.username}"
         type: 'DELETE'
       ).done(->
         setTimeout(->
@@ -48,8 +50,8 @@ $(->
             extended_public_key: $('#pubkey').val()
             subchain_indexes: [0,1]
     
-          $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data)).always(->
-            $.post("#{g.api}/wallets/hd/#{g.user.username}/addresses/derive?token=#{g.token}").always(->
+          $.post("#{g.api}/wallets/hd", JSON.stringify(data)).always(->
+            $.post("#{g.api}/wallets/hd/#{g.user.username}/addresses/derive").always(->
               getBalance()
             )
           )
@@ -79,11 +81,11 @@ $(->
   
   $('#max').click(->
     if $('#currency_toggle').html() is g.user.unit
-      $('#amount').val(g.balance)
+      $('#amount').val(g.balance).blur()
     else
       g.amount = parseFloat(g.balance).toFixed(precision())
       amount = (g.balance / multiplier() * g.exchange).toFixed(2)
-      $('#amount').val(amount)
+      $('#amount').val(amount).blur()
   )
 
   $('#amount').change(->
@@ -141,13 +143,6 @@ $(->
   $('.close').on('click', -> $(this).closest('.alert').fadeOut())
 )
 
-
-getToken = ->
-  $.get("/token", (token) -> 
-    g.token = token
-    getUser()
-  )
-
 getUser = ->
   $.getJSON("/#{$('#username').val()}.json", (user) ->
     g.user = user
@@ -168,7 +163,7 @@ getExchangeRate = ->
   )
 
 createWallet = ->
-  $.get("#{g.api}/wallets?token=#{g.token}", (data) ->
+  $.get("#{g.api}/wallets", (data) ->
     if g.user.username in data.wallet_names
       getBalance()
     else
@@ -178,7 +173,7 @@ createWallet = ->
           extended_public_key: g.user.pubkey
           subchain_indexes: [0,1]
 
-        $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data)).always(getBalance)
+        $.post("#{g.api}/wallets/hd", JSON.stringify(data)).always(getBalance)
       else
         # TODO implement this properly
         $('#balance').html(99)
@@ -187,7 +182,7 @@ createWallet = ->
 
 
 getBalance = ->
-  $.get("#{g.api}/addrs/#{g.user.username}/balance?token=#{g.token}&omitWalletAddresses=true", (data) ->
+  $.get("#{g.api}/addrs/#{g.user.username}/balance?omitWalletAddresses=true", (data) ->
     balance = data.final_balance
     g.balance = balance.toBTC()
     fiat = balance.toFiat()
@@ -227,7 +222,7 @@ sendTransaction = ->
       outputs: [{addresses: [$('#recipient').val()], value: 1}]
       preference: $('#priority').val()
 
-    $.post("#{g.api}/txs/new?token=#{g.token}", JSON.stringify(params)).done((data) ->
+    $.post("#{g.api}/txs/new", JSON.stringify(params)).done((data) ->
       if $('#currency_toggle').html() is g.user.unit
         amount = $('#amount').val()
       else
@@ -240,7 +235,7 @@ sendTransaction = ->
       if value > parseFloat(g.balance).toSatoshis() - params.fees 
         params.outputs[0].value -= params.fees
 
-      $.post("#{g.api}/txs/new?token=#{g.token}", JSON.stringify(params)).done((data) ->
+      $.post("#{g.api}/txs/new", JSON.stringify(params)).done((data) ->
         data.pubkeys = []
         data.signatures = data.tosign.map((tosign, i) ->
           path = data.tx.inputs[i].hd_path.split('/')
@@ -265,14 +260,14 @@ sendTransaction = ->
         dialog.getModalBody().html($('.dialog').html())
 
         dialog.getModal().find('.btn-primary').click(-> 
-          $.post("#{g.api}/txs/send?token=#{g.token}", JSON.stringify(g.data)).then((finaltx) ->
+          $.post("#{g.api}/txs/send", JSON.stringify(g.data)).then((finaltx) ->
             $('#transaction_sent').fadeIn()
             balance = g.balance.toSatoshis() - finaltx.tx.outputs[0].value - finaltx.tx.fees
             g.balance = balance.toBTC()
             fiat = balance.toFiat()
             $('#balance').html(g.balance)
             $('#fiat').html("#{fiat} #{g.user.currency}")
-            $('#blockchain').off('click').on('click', -> window.open('https://live.blockcypher.com/btc/main/' + finaltx.tx.hash, '_blank'))
+            $('#blockchain').off('click').on('click', -> window.open('https://live.blockcypher.com/btc/main/tx/' + finaltx.tx.hash, '_blank'))
             dialog.close()
           )
         )

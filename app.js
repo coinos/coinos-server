@@ -1,5 +1,6 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, request, session, sessionStore, sessions, transactions, users;
+  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, users,
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   request = require('request');
 
@@ -17,6 +18,8 @@
 
   fs = require('fs');
 
+  proxyMiddleware = require('http-proxy-middleware');
+
   sessions = require("./routes/sessions")(passport);
 
   transactions = require("./routes/transactions");
@@ -31,6 +34,23 @@
     ttl: 172800
   });
 
+  proxyContext = '/blockcypher';
+
+  proxyOptions = {
+    target: 'https://api.blockcypher.com',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/blockcypher/': '/'
+    },
+    onProxyReq: function(proxyReq, req, res) {
+      var symbol;
+      symbol = __indexOf.call(proxyReq.path, '?') >= 0 ? '&' : '?';
+      return proxyReq.path += "" + symbol + "token=" + config.blockcypher_token;
+    }
+  };
+
+  proxy = proxyMiddleware(proxyContext, proxyOptions);
+
   app = express();
 
   app.enable('trust proxy');
@@ -42,6 +62,8 @@
   app.set('views', __dirname + '/views');
 
   app.use(express["static"](__dirname + '/public'));
+
+  app.use(proxy);
 
   app.use(bodyParser.urlencoded({
     extended: true
@@ -135,11 +157,6 @@
       res.write(exchange);
       return res.end();
     });
-  });
-
-  app.get('/token', cache, function(req, res) {
-    res.write(config.blockcypher_token);
-    return res.end();
   });
 
   app.get('/tips', cache, function(req, res) {

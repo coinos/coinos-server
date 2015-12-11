@@ -6,6 +6,7 @@ path = require('path')
 passport = require('./passport')
 config = require('./config')
 fs = require('fs')
+proxyMiddleware = require('http-proxy-middleware')
 
 sessions = require("./routes/sessions")(passport)
 transactions = require("./routes/transactions")
@@ -15,12 +16,25 @@ session = require('express-session')
 RedisStore = require('connect-redis')(session)
 sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
 
+proxyContext = '/blockcypher'
+proxyOptions = 
+  target: 'https://api.blockcypher.com'
+  changeOrigin: true
+  pathRewrite: 
+    '^/blockcypher/': '/'
+  onProxyReq: (proxyReq, req, res) ->
+    symbol = if '?' in proxyReq.path then '&' else '?'
+    proxyReq.path += "#{symbol}token=#{config.blockcypher_token}"
+    
+proxy = proxyMiddleware(proxyContext, proxyOptions)
+
 app = express()
 app.enable('trust proxy')
 app.engine('html', require('hogan-express'))
 app.set('view engine', 'html')
 app.set('views', __dirname + '/views')
 app.use(express.static(__dirname + '/public'))
+app.use(proxy)
 app.use(bodyParser.urlencoded({ extended: true}))
 app.use(bodyParser.json())
 app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
@@ -61,6 +75,7 @@ do fetchRates = ->
   )
   setTimeout(fetchRates, 120000)
 
+
 app.get('/', cache, sessions.new)
 
 app.get('/address', cache, (req, res) ->
@@ -89,11 +104,6 @@ app.get('/ticker', cache, (req, res) ->
     res.write(exchange)
     res.end()
   )
-)
-
-app.get('/token', cache, (req, res) ->
-  res.write(config.blockcypher_token)
-  res.end()
 )
 
 app.get('/tips', cache, (req, res) ->

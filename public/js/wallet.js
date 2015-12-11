@@ -1,16 +1,19 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0](function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
 (function(){(function() {
-  var check_address, convertedAmount, createWallet, displayErrors, errors, g, getBalance, getExchangeRate, getToken, getUser, isBip32, multiplier, precision, sendTransaction, validators,
+  var check_address, convertedAmount, createWallet, displayErrors, errors, g, getBalance, getExchangeRate, getUser, isBip32, multiplier, precision, sendTransaction, validators,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   g = typeof exports !== "undefined" && exports !== null ? exports : this;
 
   g.proceed = false;
 
-  g.api = 'https://api.blockcypher.com/v1/btc/main';
+  g.api = '/blockcypher/v1/btc/main';
 
   validators = {
     address: function(e) {
+      if (e.val() === '') {
+        return true;
+      }
       try {
         return bitcoin.address.fromBase58Check(e.val());
       } catch (_error) {
@@ -18,6 +21,9 @@
       }
     },
     password: function(e) {
+      if (e.val() === '') {
+        return true;
+      }
       g.master = null;
       try {
         g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8));
@@ -29,12 +35,12 @@
   };
 
   errors = {
-    address: 'Invalid address',
-    password: 'Wrong password'
+    address: 'Invalid address.',
+    password: 'Wrong password.'
   };
 
   $(function() {
-    getToken();
+    getUser();
     $('form').validator({
       custom: validators,
       errors: errors
@@ -52,7 +58,7 @@
       $('#keys_updated').fadeIn();
       $.post("/" + g.user.username, $('#keys form').serializeObject(), function() {
         return $.ajax({
-          url: "" + g.api + "/wallets/hd/" + g.user.username + "?token=" + g.token,
+          url: "" + g.api + "/wallets/hd/" + g.user.username,
           type: 'DELETE'
         }).done(function() {
           return setTimeout(function() {
@@ -62,8 +68,8 @@
               extended_public_key: $('#pubkey').val(),
               subchain_indexes: [0, 1]
             };
-            return $.post("" + g.api + "/wallets/hd?token=" + g.token, JSON.stringify(data)).always(function() {
-              return $.post("" + g.api + "/wallets/hd/" + g.user.username + "/addresses/derive?token=" + g.token).always(function() {
+            return $.post("" + g.api + "/wallets/hd", JSON.stringify(data)).always(function() {
+              return $.post("" + g.api + "/wallets/hd/" + g.user.username + "/addresses/derive").always(function() {
                 return getBalance();
               });
             });
@@ -92,11 +98,11 @@
     $('#max').click(function() {
       var amount;
       if ($('#currency_toggle').html() === g.user.unit) {
-        return $('#amount').val(g.balance);
+        return $('#amount').val(g.balance).blur();
       } else {
         g.amount = parseFloat(g.balance).toFixed(precision());
         amount = (g.balance / multiplier() * g.exchange).toFixed(2);
-        return $('#amount').val(amount);
+        return $('#amount').val(amount).blur();
       }
     });
     $('#amount').change(function() {
@@ -152,13 +158,6 @@
     });
   });
 
-  getToken = function() {
-    return $.get("/token", function(token) {
-      g.token = token;
-      return getUser();
-    });
-  };
-
   getUser = function() {
     return $.getJSON("/" + ($('#username').val()) + ".json", function(user) {
       g.user = user;
@@ -180,7 +179,7 @@
   };
 
   createWallet = function() {
-    return $.get("" + g.api + "/wallets?token=" + g.token, function(data) {
+    return $.get("" + g.api + "/wallets", function(data) {
       var _ref;
       if (_ref = g.user.username, __indexOf.call(data.wallet_names, _ref) >= 0) {
         return getBalance();
@@ -191,7 +190,7 @@
             extended_public_key: g.user.pubkey,
             subchain_indexes: [0, 1]
           };
-          return $.post("" + g.api + "/wallets/hd?token=" + g.token, JSON.stringify(data)).always(getBalance);
+          return $.post("" + g.api + "/wallets/hd", JSON.stringify(data)).always(getBalance);
         } else {
           $('#balance').html(99);
           return $('#amount').val(99);
@@ -201,7 +200,7 @@
   };
 
   getBalance = function() {
-    return $.get("" + g.api + "/addrs/" + g.user.username + "/balance?token=" + g.token + "&omitWalletAddresses=true", function(data) {
+    return $.get("" + g.api + "/addrs/" + g.user.username + "/balance?omitWalletAddresses=true", function(data) {
       var balance, fiat;
       balance = data.final_balance;
       g.balance = balance.toBTC();
@@ -257,7 +256,7 @@
         ],
         preference: $('#priority').val()
       };
-      return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
+      return $.post("" + g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
         var amount, value;
         if ($('#currency_toggle').html() === g.user.unit) {
           amount = $('#amount').val();
@@ -270,7 +269,7 @@
         if (value > parseFloat(g.balance).toSatoshis() - params.fees) {
           params.outputs[0].value -= params.fees;
         }
-        return $.post("" + g.api + "/txs/new?token=" + g.token, JSON.stringify(params)).done(function(data) {
+        return $.post("" + g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
           var fee, total;
           data.pubkeys = [];
           data.signatures = data.tosign.map(function(tosign, i) {
@@ -293,7 +292,7 @@
           $('.dialog .address').html(data.tx.outputs[0].addresses[0]);
           dialog.getModalBody().html($('.dialog').html());
           return dialog.getModal().find('.btn-primary').click(function() {
-            return $.post("" + g.api + "/txs/send?token=" + g.token, JSON.stringify(g.data)).then(function(finaltx) {
+            return $.post("" + g.api + "/txs/send", JSON.stringify(g.data)).then(function(finaltx) {
               var balance, fiat;
               $('#transaction_sent').fadeIn();
               balance = g.balance.toSatoshis() - finaltx.tx.outputs[0].value - finaltx.tx.fees;
@@ -302,7 +301,7 @@
               $('#balance').html(g.balance);
               $('#fiat').html("" + fiat + " " + g.user.currency);
               $('#blockchain').off('click').on('click', function() {
-                return window.open('https://live.blockcypher.com/btc/main/' + finaltx.tx.hash, '_blank');
+                return window.open('https://live.blockcypher.com/btc/main/tx/' + finaltx.tx.hash, '_blank');
               });
               return dialog.close();
             });
