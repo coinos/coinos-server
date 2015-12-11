@@ -1,6 +1,6 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0](function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
 (function(){(function() {
-  var check_address, convertedAmount, createWallet, displayErrors, g, getBalance, getExchangeRate, getToken, getUser, isBip32, multiplier, precision, sendTransaction,
+  var check_address, convertedAmount, createWallet, displayErrors, errors, g, getBalance, getExchangeRate, getToken, getUser, isBip32, multiplier, precision, sendTransaction, validators,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   g = typeof exports !== "undefined" && exports !== null ? exports : this;
@@ -9,8 +9,36 @@
 
   g.api = 'https://api.blockcypher.com/v1/btc/main';
 
+  validators = {
+    address: function(e) {
+      try {
+        return bitcoin.address.fromBase58Check(e.val());
+      } catch (_error) {
+        return false;
+      }
+    },
+    password: function(e) {
+      g.master = null;
+      try {
+        g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8));
+        return $('#invalid_keys').fadeOut();
+      } catch (_error) {
+        return false;
+      }
+    }
+  };
+
+  errors = {
+    address: 'Invalid address',
+    password: 'Wrong password'
+  };
+
   $(function() {
     getToken();
+    $('form').validator({
+      custom: validators,
+      errors: errors
+    });
     $('button[data-toggle=tooltip]').tooltip({
       trigger: 'hover'
     });
@@ -81,28 +109,20 @@
         return $(this).val($(this).attr('max'));
       }
     });
-    $('#password').keyup(function() {
-      g.master = null;
-      try {
-        g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), $(this).val()).toString(CryptoJS.enc.Utf8));
-        $(this).parent().removeClass('has-error').addClass('has-success');
-        return $('#invalid_keys').fadeOut();
-      } catch (_error) {
-        return $(this).parent().addClass('has-error').removeClass('has-success');
-      }
-    });
+    $('#password').keyup(function() {});
     $('#new_password').keyup(function() {
       $('#privkey').val(CryptoJS.AES.encrypt(g.privkey, $(this).val()));
       try {
-        bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8));
-        return $(this).parent().removeClass('has-error').addClass('has-success');
+        return bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8));
       } catch (_error) {
-        return $(this).parent().addClass('has-error').removeClass('has-success');
+
       }
     });
     $('#manage').click(function() {
-      $('#keys, #withdrawal').toggle();
-      $('#withdraw, #manage').toggle();
+      $('#withdrawal').hide();
+      $('#keys').show();
+      $('#withdraw').toggle(g.balance > 0);
+      $('#manage').hide();
       return $('#privkey').val(g.user.privkey);
     });
     $('#withdraw').click(function() {
@@ -189,8 +209,13 @@
       $('#balance').html(g.balance);
       $('#fiat').html("" + fiat + " " + g.user.currency);
       $('#amount').attr('max', g.balance);
-      $('#amount').focus();
-      return $('.wallet').fadeIn();
+      $('.wallet').fadeIn();
+      if (g.balance > 0) {
+        $('#withdrawal').show();
+        return $('#amount').focus();
+      } else {
+        return $('#manage').click();
+      }
     });
   };
 

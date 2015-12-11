@@ -61,6 +61,12 @@ div.container-fluid {
 .form-group .input-group-addon {
   color: #000;
 }
+.form-group .input-group-btn {
+  padding-top: 24px;
+}
+.form-group .form-control-feedback {
+  margin-top: 24px;
+}
 div#calculator #amount {
   width: 5em;
 }

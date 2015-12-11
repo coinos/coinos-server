@@ -2,8 +2,29 @@ g = exports ? this
 g.proceed = false
 g.api = 'https://api.blockcypher.com/v1/btc/main'
 
+validators = 
+  address: (e) ->
+    try 
+      bitcoin.address.fromBase58Check(e.val())
+    catch
+      return false
+
+  password: (e) ->
+    g.master = null
+    try
+      g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8))
+      $('#invalid_keys').fadeOut()
+    catch
+      return false
+
+
+errors = 
+  address: 'Invalid address'
+  password: 'Wrong password'
+
 $(->
   getToken()
+  $('form').validator(custom: validators, errors: errors)
 
   $('button[data-toggle=tooltip]').tooltip(trigger: 'hover')
 
@@ -26,7 +47,7 @@ $(->
             name: g.user.username
             extended_public_key: $('#pubkey').val()
             subchain_indexes: [0,1]
-
+    
           $.post("#{g.api}/wallets/hd?token=#{g.token}", JSON.stringify(data)).always(->
             $.post("#{g.api}/wallets/hd/#{g.user.username}/addresses/derive?token=#{g.token}").always(->
               getBalance()
@@ -76,13 +97,6 @@ $(->
   )
 
   $('#password').keyup(->
-    g.master = null
-    try
-      g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), $(this).val()).toString(CryptoJS.enc.Utf8))
-      $(this).parent().removeClass('has-error').addClass('has-success')
-      $('#invalid_keys').fadeOut()
-    catch
-      $(this).parent().addClass('has-error').removeClass('has-success')
   )
 
   $('#new_password').keyup(->
@@ -90,14 +104,14 @@ $(->
 
     try
       bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8))
-      $(this).parent().removeClass('has-error').addClass('has-success')
     catch
-      $(this).parent().addClass('has-error').removeClass('has-success')
   )
 
   $('#manage').click(->
-    $('#keys, #withdrawal').toggle()
-    $('#withdraw, #manage').toggle()
+    $('#withdrawal').hide()
+    $('#keys').show()
+    $('#withdraw').toggle(g.balance > 0)
+    $('#manage').hide()
     $('#privkey').val(g.user.privkey)
   )
 
@@ -180,8 +194,13 @@ getBalance = ->
     $('#balance').html(g.balance)
     $('#fiat').html("#{fiat} #{g.user.currency}")
     $('#amount').attr('max', g.balance)
-    $('#amount').focus()
     $('.wallet').fadeIn()
+
+    if g.balance > 0
+      $('#withdrawal').show()
+      $('#amount').focus()
+    else
+      $('#manage').click()
   )
 
 sendTransaction = ->
