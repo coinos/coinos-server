@@ -41,12 +41,72 @@
 
   $(function() {
     getUser();
+    $('#types').attr('data-content', "Bitcoin Address (starts with 1 or 3)<br />\nPrivate Key (starts with 5 or L)<br />\nHD Wallet pubkey (starts with xpub)<br />\nHD Wallet private key (starts with xprv)<br />\nAES Encrypted Private Key (starts with U)<br />\nBIP38 Encrypted Private Key (starts with 6)<br />\nBIP39 Mnemonic (series of 12-24 english words)").popover({
+      html: true
+    }).on("show.bs.popover", function() {
+      return $(this).data("bs.popover").tip().css({
+        minWidth: "400px"
+      });
+    });
     $('form').validator({
       custom: validators,
       errors: errors
     });
-    $('button[data-toggle=tooltip]').tooltip({
+    $('[data-toggle=tooltip]').tooltip({
       trigger: 'hover'
+    });
+    $('#pubkey').keyup(function() {
+      var key, val, _ref;
+      val = $(this).val();
+      $('#type').val('unknown');
+      switch (val[0]) {
+        case '1':
+          try {
+            bitcoin.address.fromBase58Check(val);
+            return $('#type').val('address');
+          } catch (_error) {}
+          break;
+        case '5':
+        case 'L':
+        case 'K':
+          try {
+            bitcoin.ECPair.fromWIF(val);
+            return $('#type').val('private_key');
+          } catch (_error) {}
+          break;
+        case 'U':
+          try {
+            CryptoJS.AES.decrypt(val, $('#new_password').val());
+            return $('#type').val('aes');
+          } catch (_error) {}
+          break;
+        case '6':
+          try {
+            key = bip38().decrypt(val, $('#new_password').val());
+            bitcoin.ECPair.fromWIF(key);
+            return $('#type').val('bip38');
+          } catch (_error) {}
+          break;
+        case 'x':
+          if ($(this).val()[3] === 'b') {
+            try {
+              bitcoin.HDNode.fromBase58(val);
+              return $('#type').val('xpub');
+            } catch (_error) {}
+          } else {
+            try {
+              bitcoin.HDNode.fromBase58(val);
+              return $('#type').val('xprv');
+            } catch (_error) {}
+          }
+          break;
+        default:
+          if ((_ref = val.split(' ').length) === 12 || _ref === 15 || _ref === 18 || _ref === 21 || _ref === 24) {
+            if (bip39.validateMnemonic(val)) {
+              return $('#type').val('bip39');
+            }
+          }
+      }
     });
     $('#keys form input[type=button]').click(function() {
       $('.form-control').blur();
@@ -148,7 +208,7 @@
       mnemonic = bip39.generateMnemonic();
       key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0);
       g.privkey = key.toString();
-      $('#pubkey').val(key.neutered().toString()).effect('highlight', {}, 2000);
+      $('#pubkey').val(key.neutered().toString()).effect('highlight', {}, 2000).keyup();
       $('#privkey').val('');
       $('#new_password').parent().show();
       return $('#new_password').effect('shake', 500).focus();
@@ -161,7 +221,7 @@
   getUser = function() {
     return $.getJSON("/" + ($('#username').val()) + ".json", function(user) {
       g.user = user;
-      $('#pubkey').val(user.pubkey);
+      $('#pubkey').val(user.pubkey).keyup();
       $('#privkey').val(user.privkey);
       $('#address').val(user.address);
       $('#unit').html(user.unit);

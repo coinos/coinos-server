@@ -2,6 +2,7 @@
   <script src="/bower/bootstrap3-dialog/dist/js/bootstrap-dialog.min.js"></script>
   <script src="/bower/jquery-serialize-object/dist/jquery.serialize-object.min.js"></script>
   <script src="/bower/crypto-js/crypto-js.js"></script>
+  <script src="/js/bip38.min.js"></script>
   <script src="/js/bip39.min.js"></script>
   <script src="/js/wallet.js"></script>
 {{/yield-scripts}}
@@ -39,22 +40,49 @@
 
     <form>
       <div class="form-group">
-        <label for="pubkey">Bitcoin Address or HD Wallet xpub Key:</label>
-        <textarea id="pubkey" name="pubkey" class="form-control" placeholder="xpub..." rows="3"></textarea>
+        <div class="input-group" style="width: 100%">
+          <label for="new_password">Password:</label>
+          <input id="new_password" name="new_password" type="password" class="form-control"  />
+        </div>
       </div>
 
+      <div class="form-group has-feedback">
+        <div class="input-group" style="width: 100%">
+          <label for="pubkey">
+            Address or Key:
+            <button id="types" type="button" class="btn btn-default" title="Supported Key Types" data-toggle="popover" data-placement="right">
+              <i class="fa fa-question"></i>
+            </button>
+          </label>
+          <textarea id="pubkey" name="pubkey" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: none">
+        <div class="input-group" style="width: 100%">
+          <label for="privkey">Key:</label>
+          <textarea id="privkey" name="privkey" class="form-control" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="form-group has-feedback">
+        <div class="input-group" style="width: 100%">
+          <label for="type">Detected Type:</label>
+          <select id="type" name="type" class="form-control" disabled>
+            <option value="unknown">Unknown</option>
+            <option value="address">Bitcoin Address (starts with 1 or 3)</option>
+            <option value="private_key">Private Key (starts with 5 or L)</option>
+            <option value="xpub">HD Wallet pubkey (starts with xpub)</option>
+            <option value="xprv">HD Wallet private key (starts with xprv)</option>
+            <option value="aes">AES Encrypted Private Key (starts with U)</option>
+            <option value="bip38">BIP38 Encrypted Private Key (starts with 6)</option>
+            <option value="bip39">BIP39 Mnemonic (series of 12-24 english words)</option>
+          </select>
+        </div>
+      </div>
       <button id="generate" class="btn btn-primary pull-right" type="button"><i class="fa fa-bolt"></i> Generate New HD Wallet</button>
       <br class="clear" />
 
-      <div class="form-group" style="display: none">
-        <label for="new_password">Password:</label>
-        <input id="new_password" name="new_password" type="password" class="form-control"  />
-      </div>
-
-      <div class="form-group">
-        <label for="pubkey">Encrypted Private Key:</label>
-        <textarea id="privkey" name="privkey" class="form-control" placeholder="xpriv..." rows="5"></textarea>
-      </div>
       <input class="btn btn-primary" type="button" value="Save" />
     </form>
   </div>

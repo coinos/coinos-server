@@ -26,9 +26,58 @@ errors =
 $(->
   getUser()
   
-  $('form').validator(custom: validators, errors: errors)
+  $('#types').attr('data-content', """
+    Bitcoin Address (starts with 1 or 3)<br />
+    Private Key (starts with 5 or L)<br />
+    HD Wallet pubkey (starts with xpub)<br />
+    HD Wallet private key (starts with xprv)<br />
+    AES Encrypted Private Key (starts with U)<br />
+    BIP38 Encrypted Private Key (starts with 6)<br />
+    BIP39 Mnemonic (series of 12-24 english words)
+  """)
+  .popover(html: true)
+  .on("show.bs.popover", -> $(this).data("bs.popover").tip().css(minWidth: "400px"))
 
-  $('button[data-toggle=tooltip]').tooltip(trigger: 'hover')
+  $('form').validator(custom: validators, errors: errors)
+  $('[data-toggle=tooltip]').tooltip(trigger: 'hover')
+
+  $('#pubkey').keyup(->
+    val = $(this).val()
+    $('#type').val('unknown')
+    switch val[0]
+      when '1' 
+        try 
+          bitcoin.address.fromBase58Check(val)
+          $('#type').val('address')
+      when '5', \
+           'L', \
+           'K'
+        try
+          bitcoin.ECPair.fromWIF(val)
+          $('#type').val('private_key')
+      when 'U' 
+        try
+          CryptoJS.AES.decrypt(val, $('#new_password').val())
+          $('#type').val('aes')
+      when '6' 
+        try
+          key = bip38().decrypt(val, $('#new_password').val())
+          bitcoin.ECPair.fromWIF(key)
+          $('#type').val('bip38')
+      when 'x'
+        if $(this).val()[3] is 'b'
+          try
+            bitcoin.HDNode.fromBase58(val)
+            $('#type').val('xpub')
+        else
+          try
+            bitcoin.HDNode.fromBase58(val)
+            $('#type').val('xprv')
+      else
+        if val.split(' ').length in [12, 15, 18, 21, 24]
+          if bip39.validateMnemonic(val)
+            $('#type').val('bip39')
+  )
 
   $('#keys form input[type=button]').click(->
     $('.form-control').blur()
@@ -134,7 +183,7 @@ $(->
     mnemonic = bip39.generateMnemonic()
     key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
     g.privkey = key.toString()
-    $('#pubkey').val(key.neutered().toString()).effect('highlight', {}, 2000)
+    $('#pubkey').val(key.neutered().toString()).effect('highlight', {}, 2000).keyup()
     $('#privkey').val('')
     $('#new_password').parent().show()
     $('#new_password').effect('shake', 500).focus()
@@ -146,7 +195,7 @@ $(->
 getUser = ->
   $.getJSON("/#{$('#username').val()}.json", (user) ->
     g.user = user
-    $('#pubkey').val(user.pubkey)
+    $('#pubkey').val(user.pubkey).keyup()
     $('#privkey').val(user.privkey)
     $('#address').val(user.address)
     $('#unit').html(user.unit)
