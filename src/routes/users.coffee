@@ -86,6 +86,8 @@ module.exports = (sessions) ->
            username: req.body.username,
            password: hash,
            email: req.body.email,
+           commission: req.body.commission
+           unit: req.body.unit,
            pubkey: req.body.pubkey,
            privkey: req.body.privkey
           , ->
@@ -144,9 +146,6 @@ module.exports = (sessions) ->
   update: (req, res) ->
     if req.body.password is ''
       delete req.body.password
-
-    if req.body.privkey is ''
-      delete req.body.privkey
 
     db.hmset("user:"+req.params.user, req.body, ->
       if req.body.password?

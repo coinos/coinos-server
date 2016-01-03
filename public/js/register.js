@@ -5,25 +5,9 @@
   g = this;
 
   $(function() {
-    var key, mnemonic, privkey;
     $('#username').focus();
     $('#password').pwstrength({
       showVerdicts: false
-    });
-    mnemonic = bip39.generateMnemonic();
-    key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0);
-    $('#pubkey').val(key.neutered().toString());
-    privkey = key.toString();
-    $('#password').keyup(function(e) {
-      var enc_privkey;
-      if (e.keyCode === 9 || e.keyCode === 16) {
-        return;
-      }
-      enc_privkey = CryptoJS.AES.encrypt(privkey, $(this).val()).toString();
-      if ($(this).val() === '') {
-        enc_privkey = privkey;
-      }
-      return $('#privkey').val(enc_privkey);
     });
     $('#username').blur(function() {
       $(this).parent().next('.alert').remove();
@@ -68,10 +52,16 @@
       }
     });
     return $('#register').submit(function() {
+      var key, mnemonic;
       $('.form-control').blur();
       if ($('.has-error').length > 0) {
         $('.has-error').effect('shake', 500);
         return false;
+      } else {
+        mnemonic = bip39.generateMnemonic();
+        key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0);
+        $('#pubkey').val(key.neutered().toString());
+        return $('#privkey').val(CryptoJS.AES.encrypt(key.toString(), $('#password').val()).toString());
       }
     });
   });

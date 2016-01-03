@@ -112,7 +112,7 @@ listen = ->
         clear(SOCKET_FAIL)
         g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
       else
-        setTimeout(g.blockchain.onopen, 12000)
+        setTimeout(g.blockchain.onopen, 12000 * g.attempts)
     
     g.blockchain.onerror =  ->
       fail(SOCKET_FAIL)

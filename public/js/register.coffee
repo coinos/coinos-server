@@ -4,17 +4,6 @@ $(->
   $('#username').focus()
   $('#password').pwstrength(showVerdicts: false)
 
-  mnemonic = bip39.generateMnemonic()
-  key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
-  $('#pubkey').val(key.neutered().toString())
-  privkey = key.toString()
-
-  $('#password').keyup((e) ->
-    return if e.keyCode is 9 or e.keyCode is 16
-    enc_privkey = CryptoJS.AES.encrypt(privkey, $(this).val()).toString()
-    enc_privkey = privkey if $(this).val() == ''
-    $('#privkey').val(enc_privkey)
-  )
 
   $('#username').blur(->
     $(this).parent().next('.alert').remove()
@@ -62,5 +51,10 @@ $(->
     if $('.has-error').length > 0
       $('.has-error').effect('shake', 500)
       return false
+    else
+      mnemonic = bip39.generateMnemonic()
+      key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
+      $('#pubkey').val(key.neutered().toString())
+      $('#privkey').val(CryptoJS.AES.encrypt(key.toString(), $('#password').val()).toString())
   )
 )

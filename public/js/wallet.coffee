@@ -12,16 +12,39 @@ validators =
 
   password: (e) ->
     return true if e.val() is ''
-    g.master = null
+    g.key = null
+
     try
-      g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8))
-      $('#invalid_keys').fadeOut()
+      s = CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8)
+      if s[0] is 'x'
+        g.key = bitcoin.HDNode.fromBase58(s)
+      else
+        g.key = bitcoin.ECPair.fromWIF(s)
     catch
       return false
+
+    $('#invalid_keys').fadeOut()
+
+  phrase: (e) ->
+    try
+      s = CryptoJS.AES.decrypt(g.user.privkey, e.val()).toString(CryptoJS.enc.Utf8)
+      if s[0] is 'x'
+        bitcoin.HDNode.fromBase58(s)
+      else
+        bitcoin.ECPair.fromWIF(s)
+    catch
+      return false
+
+    $('#invalid_keys').fadeOut()
+
+  key: (e) ->
+    $('#keytype').val() != 'unknown'
 
 errors = 
   address: 'Invalid address.'
   password: 'Wrong password.'
+  phrase: 'Wrong password.'
+  key: 'Could not detect key type.'
 
 $(->
   getUser()
@@ -38,78 +61,107 @@ $(->
   .popover(html: true)
   .on("show.bs.popover", -> $(this).data("bs.popover").tip().css(minWidth: "400px"))
 
-  $('form').validator(custom: validators, errors: errors)
+  $('form').validator(custom: validators, errors: errors, delay: 1200)
   $('[data-toggle=tooltip]').tooltip(trigger: 'hover')
 
-  $('#pubkey').keyup(->
+  $('#key').keyup(->
     val = $(this).val()
-    $('#type').val('unknown')
+
+    $('#keytype').val('unknown')
+    $('#phrase').closest('.form-group').show()
+
     switch val[0]
       when '1' 
         try 
           bitcoin.address.fromBase58Check(val)
-          $('#type').val('address')
+          $('#keytype').val('address')
+          $('#phrase').closest('.form-group').hide()
       when '5', \
            'L', \
            'K'
         try
           bitcoin.ECPair.fromWIF(val)
-          $('#type').val('private_key')
+          $('#keytype').val('wif')
       when 'U' 
         try
-          CryptoJS.AES.decrypt(val, $('#new_password').val())
-          $('#type').val('aes')
+          if CryptoJS.AES.decrypt(val, $('#phrase').val()).toString(CryptoJS.enc.Utf8)
+            $('#keytype').val('aes')
       when '6' 
-        try
-          key = bip38().decrypt(val, $('#new_password').val())
-          bitcoin.ECPair.fromWIF(key)
-          $('#type').val('bip38')
+        if bip38().verify(val)
+          $('#keytype').val('bip38')
       when 'x'
         if $(this).val()[3] is 'b'
           try
             bitcoin.HDNode.fromBase58(val)
-            $('#type').val('xpub')
+            $('#keytype').val('xpub')
+            $('#phrase').closest('.form-group').hide()
         else
           try
             bitcoin.HDNode.fromBase58(val)
-            $('#type').val('xprv')
+            $('#keytype').val('xprv')
       else
-        if val.split(' ').length in [12, 15, 18, 21, 24]
-          if bip39.validateMnemonic(val)
-            $('#type').val('bip39')
+        if val.split(' ').length in [12, 15, 18, 21, 24] and bip39.validateMnemonic(val)
+          $('#keytype').val('bip39')
   )
 
-  $('#keys form input[type=button]').click(->
+  $('#key').blur(->
+    $('#keys form').validator('validate')
+  )
+
+  $('#save').click(->
     $('.form-control').blur()
     if $('#keys .has-error').length > 0
       $('#keys .has-error').effect('shake', 500)
       return
 
-    $('#withdraw').click()
-    $('#keys_updated').fadeIn()
+    key = $('#key').val()
+    proceed = true
 
-    $.post("/#{g.user.username}", $('#keys form').serializeObject(), ->
-      $.ajax(
-        url: "#{g.api}/wallets/hd/#{g.user.username}"
-        type: 'DELETE'
-      ).done(->
-        setTimeout(->
-          data = 
-            name: g.user.username
-            extended_public_key: $('#pubkey').val()
-            subchain_indexes: [0,1]
-    
-          $.post("#{g.api}/wallets/hd", JSON.stringify(data)).always(->
-            $.post("#{g.api}/wallets/hd/#{g.user.username}/addresses/derive").always(->
-              getBalance()
-            )
-          )
-        , 300)
-      )
-    )
+    switch $('#keytype').val()
+      when 'address'
+        $('#pubkey').val(key)
+        $('#privkey').val('')
+      when 'wif'
+        pubkey = bitcoin.ECPair.fromWIF(key).getAddress()
+        privkey = CryptoJS.AES.encrypt(key, $('#phrase').val())
+        $('#pubkey').val(pubkey)
+        $('#privkey').val(privkey)
+      when 'aes'
+        try
+          pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).neutered().toString()
+          $('#pubkey').val(pubkey)
+          $('#privkey').val(key)
+        catch
+          try
+            pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).getAddress()
+            $('#pubkey').val(pubkey)
+            $('#privkey').val(key)
+          catch
+            proceed = false
+      when 'bip38'
+        wif = bip38().decrypt(key, $('#phrase').val())
+        pubkey = bitcoin.ECPair.fromWIF(wif).getAddress()
+        privkey = CryptoJS.AES.encrypt(wif, $('#phrase').val())
+        $('#pubkey').val(pubkey)
+        $('#privkey, #key').val(privkey)
+      when 'xpub'
+        $('#pubkey').val(key)
+        $('#privkey').val('')
+      when 'xprv'
+        pubkey = bitcoin.HDNode.fromBase58(key).neutered().toString()
+        privkey = CryptoJS.AES.encrypt(key, $('#phrase').val())
+        $('#pubkey').val(pubkey)
+        $('#privkey').val(privkey)
+      when 'bip39'
+        master = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(key)).deriveHardened(44).deriveHardened(0)
+        pubkey = master.neutered().toString()
+        privkey = CryptoJS.AES.encrypt(master.toString(), $('#phrase').val())
+        $('#pubkey').val(pubkey)
+        $('#privkey').val(privkey)
 
-    return false
+    updateUser() if proceed
   )
+
 
   $('#withdrawal form input[type=button]').click(sendTransaction)
 
@@ -147,46 +199,49 @@ $(->
       $(this).val($(this).attr('max'))
   )
 
-  $('#password').keyup(->
-  )
-
-  $('#new_password').keyup(->
-    $('#privkey').val(CryptoJS.AES.encrypt(g.privkey, $(this).val()))
-
+  $('#phrase').keyup(->
     try
-      bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8))
-    catch
+      CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8)
+      $('#key').keyup()
   )
-
+    
   $('#manage').click(->
     $('#withdrawal').hide()
     $('#keys').show()
-    $('#withdraw').toggle(g.balance > 0)
-    $('#manage').hide()
+    $('#withdraw').hide().toggle(g.balance > 0 and g.user.privkey)
     $('#privkey').val(g.user.privkey)
   )
 
   $('#withdraw').click(->
-    $('#keys, #withdrawal').toggle()
-    $('#withdraw, #manage').toggle()
+    $('#withdrawal').show()
+    $('#amount').focus()
+    $('#keys').hide()
+    $('#withdraw').hide().toggle(g.balance > 0 and g.user.privkey)
+    $('#withdrawal form').validator('destroy')
+    $('#withdrawal form').validator(custom: validators, errors: errors, delay: 1200)
+  )
+
+  $('#cancel').click(->
+    $('#keys').hide()
   )
 
   $('#backup').click(->
     url = 'data:application/json;base64,' + btoa(JSON.stringify(g.user.privkey))
-    pom = document.createElement('a')
-    pom.setAttribute('href', url)
-    pom.setAttribute('download', 'coinos-wallet.aes.json')
-    pom.click()
+    a = document.createElement('a')
+    a.setAttribute('href', url)
+    a.setAttribute('download', 'coinos-wallet.aes.json')
+    a.click()
   )
 
   $('#generate').click(->
-    mnemonic = bip39.generateMnemonic()
-    key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
-    g.privkey = key.toString()
-    $('#pubkey').val(key.neutered().toString()).effect('highlight', {}, 2000).keyup()
-    $('#privkey').val('')
-    $('#new_password').parent().show()
-    $('#new_password').effect('shake', 500).focus()
+    bootbox.confirm('<h3>Are you sure?</h3> <p>This will overwrite your existing wallet so make sure that you have the backup we sent to your email in case you want to restore it.</p>', (result) ->
+      if result
+        mnemonic = bip39.generateMnemonic()
+        key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
+        $('#key').val(key.toString()).effect('highlight', {}, 2000).keyup()
+        $('#phrase').parent().show()
+        $('#phrase').effect('shake', 500).focus()
+    )
   )
 
   $('.close').on('click', -> $(this).closest('.alert').fadeOut())
@@ -195,7 +250,9 @@ $(->
 getUser = ->
   $.getJSON("/#{$('#username').val()}.json", (user) ->
     g.user = user
-    $('#pubkey').val(user.pubkey).keyup()
+    g.privkey = user.privkey
+    $('#key').val(user.privkey or user.pubkey).keyup()
+    $('#pubkey').val(user.pubkey)
     $('#privkey').val(user.privkey)
     $('#address').val(user.address)
     $('#unit').html(user.unit)
@@ -216,17 +273,16 @@ createWallet = ->
     if g.user.username in data.wallet_names
       getBalance()
     else
-      if isBip32(g.user.pubkey)
-        data = 
-          name: g.user.username
-          extended_public_key: g.user.pubkey
-          subchain_indexes: [0,1]
+      params = name: g.user.username
 
-        $.post("#{g.api}/wallets/hd", JSON.stringify(data)).always(getBalance)
+      if isBip32(g.user.pubkey)
+        params.extended_public_key = g.user.pubkey
+        params.subchain_indexes = [0,1]
+
+        $.post("#{g.api}/wallets/hd", JSON.stringify(params)).done(getBalance).fail(-> $('.wallet').fadeIn())
       else
-        # TODO implement this properly
-        $('#balance').html(99)
-        $('#amount').val(99)
+        params.addresses = [g.user.pubkey]
+        $.post("#{g.api}/wallets", JSON.stringify(params)).done(getBalance).fail(-> $('.wallet').fadeIn())
   )
 
 
@@ -240,15 +296,38 @@ getBalance = ->
     $('#amount').attr('max', g.balance)
     $('.wallet').fadeIn()
 
-    if g.balance > 0
+    if g.balance > 0 and g.user.privkey
+      $('#keys').hide()
+      $('#withdrawal form').validator('destroy')
+      $('#withdrawal form').validator(custom: validators, errors: errors, delay: 1200)
       $('#withdrawal').show()
       $('#amount').focus()
     else
-      $('#manage').click()
+      $('#withdraw').hide()
+  )
+
+updateUser = ->
+  data = $('#keys form').serializeObject()
+  delete data['key']
+  delete data['phrase']
+
+  $.post("/#{g.user.username}", data, ->
+    $.ajax(
+      url: "#{g.api}/wallets/hd/#{g.user.username}"
+      type: 'DELETE'
+    ).always(->
+      $.ajax(
+        url: "#{g.api}/wallets/#{g.user.username}"
+        type: 'DELETE'
+      ).always(->
+        $('#keys').hide()
+        createWallet()
+      )
+    )
   )
 
 sendTransaction = ->
-  if !g.master or typeof g.master.keyPair.d is 'undefined'
+  if !g.key or (typeof g.key.d is 'undefined' and typeof g.key.keyPair.d is 'undefined')
     $('#invalid_keys').fadeIn()
     $('#password').focus()
   else
@@ -286,12 +365,18 @@ sendTransaction = ->
 
       $.post("#{g.api}/txs/new", JSON.stringify(params)).done((data) ->
         data.pubkeys = []
-        data.signatures = data.tosign.map((tosign, i) ->
-          path = data.tx.inputs[i].hd_path.split('/')
-          key = g.master.derive(path[1]).derive(path[2])
-          data.pubkeys.push(key.keyPair.getPublicKeyBuffer().toString('hex'))
-          return key.keyPair.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex")
-        )
+        if g.key instanceof bitcoin.ECPair
+          data.signatures = data.tosign.map((tosign, i) ->
+            data.pubkeys.push(g.key.getPublicKeyBuffer().toString('hex'))
+            g.key.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex")
+          )
+        else
+          data.signatures = data.tosign.map((tosign, i) ->
+            path = data.tx.inputs[i].hd_path.split('/')
+            key = g.key.derive(path[1]).derive(path[2])
+            data.pubkeys.push(key.keyPair.getPublicKeyBuffer().toString('hex'))
+            key.keyPair.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex")
+          )
 
         g.data = data
 

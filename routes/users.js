@@ -121,6 +121,8 @@
               username: req.body.username,
               password: hash,
               email: req.body.email,
+              commission: req.body.commission,
+              unit: req.body.unit,
               pubkey: req.body.pubkey,
               privkey: req.body.privkey
             }, function() {
@@ -191,9 +193,6 @@
       update: function(req, res) {
         if (req.body.password === '') {
           delete req.body.password;
-        }
-        if (req.body.privkey === '') {
-          delete req.body.privkey;
         }
         db.hmset("user:" + req.params.user, req.body, function() {
           if (req.body.password != null) {

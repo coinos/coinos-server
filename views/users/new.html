@@ -1,8 +1,8 @@
 {{#yield-scripts}}
-<script src="/js/bip39.js"></script>
+<script src="/js/bip39.min.js"></script>
 <script src="/js/check_email.js"></script>
 <script src="/js/check_password.js"></script>
-<script src="/crypto-js/crypto-js.js"></script>
+<script src="/bower/crypto-js/crypto-js.js"></script>
 <script src="/js/register.js"></script>
 {{/yield-scripts}}
 
@@ -33,6 +33,9 @@
     <label for="confirm">Confirm Passphrase:</label>
     <input type="password" id="confirm" name="confirm" class="form-control" />
   </div>
+
+  <input id="commission" name="commission" type="hidden" value="0" />
+  <input id="unit" name="unit" type="hidden" value="BTC" />
 
   <input id="pubkey" name="pubkey" type="hidden" />
   <input id="privkey" name="privkey" type="hidden" />

@@ -1,6 +1,6 @@
 ;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0](function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
 (function(){(function() {
-  var check_address, convertedAmount, createWallet, displayErrors, errors, g, getBalance, getExchangeRate, getUser, isBip32, multiplier, precision, sendTransaction, validators,
+  var check_address, convertedAmount, createWallet, displayErrors, errors, g, getBalance, getExchangeRate, getUser, isBip32, multiplier, precision, sendTransaction, updateUser, validators,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   g = typeof exports !== "undefined" && exports !== null ? exports : this;
@@ -21,22 +21,47 @@
       }
     },
     password: function(e) {
+      var s;
       if (e.val() === '') {
         return true;
       }
-      g.master = null;
+      g.key = null;
       try {
-        g.master = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8));
-        return $('#invalid_keys').fadeOut();
+        s = CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8);
+        if (s[0] === 'x') {
+          g.key = bitcoin.HDNode.fromBase58(s);
+        } else {
+          g.key = bitcoin.ECPair.fromWIF(s);
+        }
       } catch (_error) {
         return false;
       }
+      return $('#invalid_keys').fadeOut();
+    },
+    phrase: function(e) {
+      var s;
+      try {
+        s = CryptoJS.AES.decrypt(g.user.privkey, e.val()).toString(CryptoJS.enc.Utf8);
+        if (s[0] === 'x') {
+          bitcoin.HDNode.fromBase58(s);
+        } else {
+          bitcoin.ECPair.fromWIF(s);
+        }
+      } catch (_error) {
+        return false;
+      }
+      return $('#invalid_keys').fadeOut();
+    },
+    key: function(e) {
+      return $('#keytype').val() !== 'unknown';
     }
   };
 
   errors = {
     address: 'Invalid address.',
-    password: 'Wrong password.'
+    password: 'Wrong password.',
+    phrase: 'Wrong password.',
+    key: 'Could not detect key type.'
   };
 
   $(function() {
@@ -50,20 +75,23 @@
     });
     $('form').validator({
       custom: validators,
-      errors: errors
+      errors: errors,
+      delay: 1200
     });
     $('[data-toggle=tooltip]').tooltip({
       trigger: 'hover'
     });
-    $('#pubkey').keyup(function() {
-      var key, val, _ref;
+    $('#key').keyup(function() {
+      var val, _ref;
       val = $(this).val();
-      $('#type').val('unknown');
+      $('#keytype').val('unknown');
+      $('#phrase').closest('.form-group').show();
       switch (val[0]) {
         case '1':
           try {
             bitcoin.address.fromBase58Check(val);
-            return $('#type').val('address');
+            $('#keytype').val('address');
+            return $('#phrase').closest('.form-group').hide();
           } catch (_error) {}
           break;
         case '5':
@@ -71,72 +99,106 @@
         case 'K':
           try {
             bitcoin.ECPair.fromWIF(val);
-            return $('#type').val('private_key');
+            return $('#keytype').val('wif');
           } catch (_error) {}
           break;
         case 'U':
           try {
-            CryptoJS.AES.decrypt(val, $('#new_password').val());
-            return $('#type').val('aes');
+            if (CryptoJS.AES.decrypt(val, $('#phrase').val()).toString(CryptoJS.enc.Utf8)) {
+              return $('#keytype').val('aes');
+            }
           } catch (_error) {}
           break;
         case '6':
-          try {
-            key = bip38().decrypt(val, $('#new_password').val());
-            bitcoin.ECPair.fromWIF(key);
-            return $('#type').val('bip38');
-          } catch (_error) {}
+          if (bip38().verify(val)) {
+            return $('#keytype').val('bip38');
+          }
           break;
         case 'x':
           if ($(this).val()[3] === 'b') {
             try {
               bitcoin.HDNode.fromBase58(val);
-              return $('#type').val('xpub');
+              $('#keytype').val('xpub');
+              return $('#phrase').closest('.form-group').hide();
             } catch (_error) {}
           } else {
             try {
               bitcoin.HDNode.fromBase58(val);
-              return $('#type').val('xprv');
+              return $('#keytype').val('xprv');
             } catch (_error) {}
           }
           break;
         default:
-          if ((_ref = val.split(' ').length) === 12 || _ref === 15 || _ref === 18 || _ref === 21 || _ref === 24) {
-            if (bip39.validateMnemonic(val)) {
-              return $('#type').val('bip39');
-            }
+          if (((_ref = val.split(' ').length) === 12 || _ref === 15 || _ref === 18 || _ref === 21 || _ref === 24) && bip39.validateMnemonic(val)) {
+            return $('#keytype').val('bip39');
           }
       }
     });
-    $('#keys form input[type=button]').click(function() {
+    $('#key').blur(function() {
+      return $('#keys form').validator('validate');
+    });
+    $('#save').click(function() {
+      var key, master, privkey, proceed, pubkey, wif;
       $('.form-control').blur();
       if ($('#keys .has-error').length > 0) {
         $('#keys .has-error').effect('shake', 500);
         return;
       }
-      $('#withdraw').click();
-      $('#keys_updated').fadeIn();
-      $.post("/" + g.user.username, $('#keys form').serializeObject(), function() {
-        return $.ajax({
-          url: "" + g.api + "/wallets/hd/" + g.user.username,
-          type: 'DELETE'
-        }).done(function() {
-          return setTimeout(function() {
-            var data;
-            data = {
-              name: g.user.username,
-              extended_public_key: $('#pubkey').val(),
-              subchain_indexes: [0, 1]
-            };
-            return $.post("" + g.api + "/wallets/hd", JSON.stringify(data)).always(function() {
-              return $.post("" + g.api + "/wallets/hd/" + g.user.username + "/addresses/derive").always(function() {
-                return getBalance();
-              });
-            });
-          }, 300);
-        });
-      });
-      return false;
+      key = $('#key').val();
+      proceed = true;
+      switch ($('#keytype').val()) {
+        case 'address':
+          $('#pubkey').val(key);
+          $('#privkey').val('');
+          break;
+        case 'wif':
+          pubkey = bitcoin.ECPair.fromWIF(key).getAddress();
+          privkey = CryptoJS.AES.encrypt(key, $('#phrase').val());
+          $('#pubkey').val(pubkey);
+          $('#privkey').val(privkey);
+          break;
+        case 'aes':
+          try {
+            pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).neutered().toString();
+            $('#pubkey').val(pubkey);
+            $('#privkey').val(key);
+          } catch (_error) {
+            try {
+              pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).getAddress();
+              $('#pubkey').val(pubkey);
+              $('#privkey').val(key);
+            } catch (_error) {
+              proceed = false;
+            }
+          }
+          break;
+        case 'bip38':
+          wif = bip38().decrypt(key, $('#phrase').val());
+          pubkey = bitcoin.ECPair.fromWIF(wif).getAddress();
+          privkey = CryptoJS.AES.encrypt(wif, $('#phrase').val());
+          $('#pubkey').val(pubkey);
+          $('#privkey, #key').val(privkey);
+          break;
+        case 'xpub':
+          $('#pubkey').val(key);
+          $('#privkey').val('');
+          break;
+        case 'xprv':
+          pubkey = bitcoin.HDNode.fromBase58(key).neutered().toString();
+          privkey = CryptoJS.AES.encrypt(key, $('#phrase').val());
+          $('#pubkey').val(pubkey);
+          $('#privkey').val(privkey);
+          break;
+        case 'bip39':
+          master = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(key)).deriveHardened(44).deriveHardened(0);
+          pubkey = master.neutered().toString();
+          privkey = CryptoJS.AES.encrypt(master.toString(), $('#phrase').val());
+          $('#pubkey').val(pubkey);
+          $('#privkey').val(privkey);
+      }
+      if (proceed) {
+        return updateUser();
+      }
     });
     $('#withdrawal form input[type=button]').click(sendTransaction);
     $('#currency_toggle').click(function() {
@@ -175,43 +237,52 @@
         return $(this).val($(this).attr('max'));
       }
     });
-    $('#password').keyup(function() {});
-    $('#new_password').keyup(function() {
-      $('#privkey').val(CryptoJS.AES.encrypt(g.privkey, $(this).val()));
+    $('#phrase').keyup(function() {
       try {
-        return bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8));
-      } catch (_error) {
-
-      }
+        CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8);
+        return $('#key').keyup();
+      } catch (_error) {}
     });
     $('#manage').click(function() {
       $('#withdrawal').hide();
       $('#keys').show();
-      $('#withdraw').toggle(g.balance > 0);
-      $('#manage').hide();
+      $('#withdraw').hide().toggle(g.balance > 0 && g.user.privkey);
       return $('#privkey').val(g.user.privkey);
     });
     $('#withdraw').click(function() {
-      $('#keys, #withdrawal').toggle();
-      return $('#withdraw, #manage').toggle();
+      $('#withdrawal').show();
+      $('#amount').focus();
+      $('#keys').hide();
+      $('#withdraw').hide().toggle(g.balance > 0 && g.user.privkey);
+      $('#withdrawal form').validator('destroy');
+      return $('#withdrawal form').validator({
+        custom: validators,
+        errors: errors,
+        delay: 1200
+      });
+    });
+    $('#cancel').click(function() {
+      return $('#keys').hide();
     });
     $('#backup').click(function() {
-      var pom, url;
+      var a, url;
       url = 'data:application/json;base64,' + btoa(JSON.stringify(g.user.privkey));
-      pom = document.createElement('a');
-      pom.setAttribute('href', url);
-      pom.setAttribute('download', 'coinos-wallet.aes.json');
-      return pom.click();
+      a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'coinos-wallet.aes.json');
+      return a.click();
     });
     $('#generate').click(function() {
-      var key, mnemonic;
-      mnemonic = bip39.generateMnemonic();
-      key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0);
-      g.privkey = key.toString();
-      $('#pubkey').val(key.neutered().toString()).effect('highlight', {}, 2000).keyup();
-      $('#privkey').val('');
-      $('#new_password').parent().show();
-      return $('#new_password').effect('shake', 500).focus();
+      return bootbox.confirm('<h3>Are you sure?</h3> <p>This will overwrite your existing wallet so make sure that you have the backup we sent to your email in case you want to restore it.</p>', function(result) {
+        var key, mnemonic;
+        if (result) {
+          mnemonic = bip39.generateMnemonic();
+          key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0);
+          $('#key').val(key.toString()).effect('highlight', {}, 2000).keyup();
+          $('#phrase').parent().show();
+          return $('#phrase').effect('shake', 500).focus();
+        }
+      });
     });
     return $('.close').on('click', function() {
       return $(this).closest('.alert').fadeOut();
@@ -221,7 +292,9 @@
   getUser = function() {
     return $.getJSON("/" + ($('#username').val()) + ".json", function(user) {
       g.user = user;
-      $('#pubkey').val(user.pubkey).keyup();
+      g.privkey = user.privkey;
+      $('#key').val(user.privkey || user.pubkey).keyup();
+      $('#pubkey').val(user.pubkey);
       $('#privkey').val(user.privkey);
       $('#address').val(user.address);
       $('#unit').html(user.unit);
@@ -240,20 +313,24 @@
 
   createWallet = function() {
     return $.get("" + g.api + "/wallets", function(data) {
-      var _ref;
+      var params, _ref;
       if (_ref = g.user.username, __indexOf.call(data.wallet_names, _ref) >= 0) {
         return getBalance();
       } else {
+        params = {
+          name: g.user.username
+        };
         if (isBip32(g.user.pubkey)) {
-          data = {
-            name: g.user.username,
-            extended_public_key: g.user.pubkey,
-            subchain_indexes: [0, 1]
-          };
-          return $.post("" + g.api + "/wallets/hd", JSON.stringify(data)).always(getBalance);
+          params.extended_public_key = g.user.pubkey;
+          params.subchain_indexes = [0, 1];
+          return $.post("" + g.api + "/wallets/hd", JSON.stringify(params)).done(getBalance).fail(function() {
+            return $('.wallet').fadeIn();
+          });
         } else {
-          $('#balance').html(99);
-          return $('#amount').val(99);
+          params.addresses = [g.user.pubkey];
+          return $.post("" + g.api + "/wallets", JSON.stringify(params)).done(getBalance).fail(function() {
+            return $('.wallet').fadeIn();
+          });
         }
       }
     });
@@ -269,18 +346,46 @@
       $('#fiat').html("" + fiat + " " + g.user.currency);
       $('#amount').attr('max', g.balance);
       $('.wallet').fadeIn();
-      if (g.balance > 0) {
+      if (g.balance > 0 && g.user.privkey) {
+        $('#keys').hide();
+        $('#withdrawal form').validator('destroy');
+        $('#withdrawal form').validator({
+          custom: validators,
+          errors: errors,
+          delay: 1200
+        });
         $('#withdrawal').show();
         return $('#amount').focus();
       } else {
-        return $('#manage').click();
+        return $('#withdraw').hide();
       }
+    });
+  };
+
+  updateUser = function() {
+    var data;
+    data = $('#keys form').serializeObject();
+    delete data['key'];
+    delete data['phrase'];
+    return $.post("/" + g.user.username, data, function() {
+      return $.ajax({
+        url: "" + g.api + "/wallets/hd/" + g.user.username,
+        type: 'DELETE'
+      }).always(function() {
+        return $.ajax({
+          url: "" + g.api + "/wallets/" + g.user.username,
+          type: 'DELETE'
+        }).always(function() {
+          $('#keys').hide();
+          return createWallet();
+        });
+      });
     });
   };
 
   sendTransaction = function() {
     var dialog, params;
-    if (!g.master || typeof g.master.keyPair.d === 'undefined') {
+    if (!g.key || (typeof g.key.d === 'undefined' && typeof g.key.keyPair.d === 'undefined')) {
       $('#invalid_keys').fadeIn();
       return $('#password').focus();
     } else {
@@ -332,13 +437,20 @@
         return $.post("" + g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
           var fee, total;
           data.pubkeys = [];
-          data.signatures = data.tosign.map(function(tosign, i) {
-            var key, path;
-            path = data.tx.inputs[i].hd_path.split('/');
-            key = g.master.derive(path[1]).derive(path[2]);
-            data.pubkeys.push(key.keyPair.getPublicKeyBuffer().toString('hex'));
-            return key.keyPair.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
-          });
+          if (g.key instanceof bitcoin.ECPair) {
+            data.signatures = data.tosign.map(function(tosign, i) {
+              data.pubkeys.push(g.key.getPublicKeyBuffer().toString('hex'));
+              return g.key.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
+            });
+          } else {
+            data.signatures = data.tosign.map(function(tosign, i) {
+              var key, path;
+              path = data.tx.inputs[i].hd_path.split('/');
+              key = g.key.derive(path[1]).derive(path[2]);
+              data.pubkeys.push(key.keyPair.getPublicKeyBuffer().toString('hex'));
+              return key.keyPair.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
+            });
+          }
           g.data = data;
           amount = data.tx.outputs[0].value;
           fee = data.tx.fees;

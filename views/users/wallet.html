@@ -13,92 +13,86 @@
   <input type="hidden" id="username" name="username" value="{{user}}" />
   <input type="hidden" id="email" name="email" />
 
-  <div id="keys_updated" class="alert alert-success" style="display: none">
-    <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-    Wallet keys updated
-  </div>
-
   <div class="well">
     <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
     (<b id="fiat" class="lead">0 CAD</b>)
 
     <div class="pull-right">
-      <button id="withdraw" type="button" class="btn btn-default" style="display: none" data-toggle="tooltip" data-placement="bottom" title="Withdraw">
+      <button id="withdraw" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Withdraw">
         <i class="fa fa-btc fa-lg"></i>
       </button>
       <button id="manage" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Manage Keys">
-        <i class="fa fa-key fa-lg"></i>
+        <i class="fa fa-cog fa-lg"></i>
       </button>
-      <button id="backup" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Download Backup">
+      <button id="backup" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Wallet Backup">
         <i class="fa fa-download fa-lg"></i>
       </button>
     </div>
   </div>
 
+  <div id="keys_updated" class="alert alert-success" style="display: none">
+    <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    Wallet keys updated
+  </div>
+
+  <div id="transaction_sent" class="alert alert-success" style="display: none">
+    <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    <p>Transaction sent!</p><br />
+    <button id="blockchain" class="btn btn-success">View on Blockchain</button>
+  </div>
+
   <div id="keys" style="display: none">
-    <h3>Keys</h3>
+    <h3>Settings</h3>
 
     <form>
-      <div class="form-group">
-        <div class="input-group" style="width: 100%">
-          <label for="new_password">Password:</label>
-          <input id="new_password" name="new_password" type="password" class="form-control"  />
-        </div>
-      </div>
-
       <div class="form-group has-feedback">
         <div class="input-group" style="width: 100%">
-          <label for="pubkey">
+          <label for="key">
             Address or Key:
-            <button id="types" type="button" class="btn btn-default" title="Supported Key Types" data-toggle="popover" data-placement="right">
-              <i class="fa fa-question"></i>
-            </button>
           </label>
-          <textarea id="pubkey" name="pubkey" class="form-control" rows="3"></textarea>
+          <textarea id="key" name="key" class="form-control" rows="5" data-key="true"></textarea>
         </div>
       </div>
 
-      <div class="form-group" style="display: none">
-        <div class="input-group" style="width: 100%">
-          <label for="privkey">Key:</label>
-          <textarea id="privkey" name="privkey" class="form-control" rows="3"></textarea>
-        </div>
-      </div>
+      <input type="hidden" id="pubkey" name="pubkey" />
+      <input type="hidden" id="privkey" name="privkey" />
 
-      <div class="form-group has-feedback">
+      <div class="form-group has-feedback" style="display: none">
         <div class="input-group" style="width: 100%">
-          <label for="type">Detected Type:</label>
-          <select id="type" name="type" class="form-control" disabled>
+          <label for="keytype">Detected Type:</label>
+          <select id="keytype" name="keytype" class="form-control">
             <option value="unknown">Unknown</option>
             <option value="address">Bitcoin Address (starts with 1 or 3)</option>
-            <option value="private_key">Private Key (starts with 5 or L)</option>
-            <option value="xpub">HD Wallet pubkey (starts with xpub)</option>
-            <option value="xprv">HD Wallet private key (starts with xprv)</option>
+            <option value="wif">Private Key (starts with 5 or L or K)</option>
+            <option value="xpub">HD Wallet Pubkey (starts with xpub)</option>
+            <option value="xprv">HD Wallet Private Key (starts with xprv)</option>
             <option value="aes">AES Encrypted Private Key (starts with U)</option>
             <option value="bip38">BIP38 Encrypted Private Key (starts with 6)</option>
-            <option value="bip39">BIP39 Mnemonic (series of 12-24 english words)</option>
+            <option value="bip39">BIP39 Mnemonic (series of 12-24 words)</option>
           </select>
         </div>
       </div>
-      <button id="generate" class="btn btn-primary pull-right" type="button"><i class="fa fa-bolt"></i> Generate New HD Wallet</button>
-      <br class="clear" />
 
-      <input class="btn btn-primary" type="button" value="Save" />
+      <div class="form-group has-feedback">
+        <div class="input-group" style="width: 100%">
+          <label for="phrase">Passphrase:</label>
+          <input id="phrase" name="phrase" type="password" data-phrase="true" class="form-control"  />
+        </div>
+      </div>
+
+      <button id="generate" class="btn btn-success pull-right" type="button"><i class="fa fa-bolt"></i> Create New Wallet</button>
+
+      <input id="save" class="btn btn-primary" type="button" value="Save" />
+      <input id="cancel" class="btn btn-default" type="button" value="Cancel" />
     </form>
   </div>
 
   <div id="withdrawal" style="display: none">
     <h3>Send Payment / Withdrawal</h3>
 
-    <div id="transaction_sent" class="alert alert-success" style="display: none">
-      <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      <p>Transaction sent!</p><br />
-      <button id="blockchain" class="btn btn-success">View on Blockchain</button>
-    </div>
-
     <div id="invalid_keys" class="alert alert-danger" style="display: none">
       <button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-      Invalid password or problem with private key
+      Invalid passphrase or problem with private key
     </div>
 
     <form>
@@ -137,7 +131,7 @@
 
       <div class="form-group has-feedback">
         <div class="input-group" style="width: 100%">
-          <label for="password">Password:</label>
+          <label for="password">Passphrase:</label>
           <input id="password" name="password" type="password" class="form-control" data-password="true" required  />
         </div>
         <div class="help-block with-errors"></div>
@@ -154,5 +148,4 @@
     <label>Fee:</label> <span class="fee"></span><br />
     <label>To:</label> <span class="address"></span>
   </div>
-
 </div>

@@ -130,7 +130,7 @@
           clear(SOCKET_FAIL);
           return g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}');
         } else {
-          return setTimeout(g.blockchain.onopen, 12000);
+          return setTimeout(g.blockchain.onopen, 12000 * g.attempts);
         }
       };
       g.blockchain.onerror = function() {
