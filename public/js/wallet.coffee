@@ -10,40 +10,11 @@ validators =
     catch
       return false
 
-  password: (e) ->
-    return true if e.val() is ''
-    g.key = null
-
-    try
-      s = CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8)
-      if s[0] is 'x'
-        g.key = bitcoin.HDNode.fromBase58(s)
-      else
-        g.key = bitcoin.ECPair.fromWIF(s)
-    catch
-      return false
-
-    $('#invalid_keys').fadeOut()
-
-  phrase: (e) ->
-    try
-      s = CryptoJS.AES.decrypt(g.user.privkey, e.val()).toString(CryptoJS.enc.Utf8)
-      if s[0] is 'x'
-        bitcoin.HDNode.fromBase58(s)
-      else
-        bitcoin.ECPair.fromWIF(s)
-    catch
-      return false
-
-    $('#invalid_keys').fadeOut()
-
   key: (e) ->
     $('#keytype').val() != 'unknown'
 
 errors = 
   address: 'Invalid address.'
-  password: 'Wrong password.'
-  phrase: 'Wrong password.'
   key: 'Could not detect key type.'
 
 $(->
@@ -68,14 +39,12 @@ $(->
     val = $(this).val()
 
     $('#keytype').val('unknown')
-    $('#phrase').closest('.form-group').show()
 
     switch val[0]
       when '1' 
         try 
           bitcoin.address.fromBase58Check(val)
           $('#keytype').val('address')
-          $('#phrase').closest('.form-group').hide()
       when '5', \
            'L', \
            'K'
@@ -84,7 +53,7 @@ $(->
           $('#keytype').val('wif')
       when 'U' 
         try
-          if CryptoJS.AES.decrypt(val, $('#phrase').val()).toString(CryptoJS.enc.Utf8)
+          if CryptoJS.AES.decrypt(val, g.password).toString(CryptoJS.enc.Utf8)
             $('#keytype').val('aes')
       when '6' 
         if bip38().verify(val)
@@ -94,7 +63,6 @@ $(->
           try
             bitcoin.HDNode.fromBase58(val)
             $('#keytype').val('xpub')
-            $('#phrase').closest('.form-group').hide()
         else
           try
             bitcoin.HDNode.fromBase58(val)
@@ -102,10 +70,6 @@ $(->
       else
         if val.split(' ').length in [12, 15, 18, 21, 24] and bip39.validateMnemonic(val)
           $('#keytype').val('bip39')
-  )
-
-  $('#key').blur(->
-    $('#keys form').validator('validate')
   )
 
   $('#save').click(->
@@ -123,25 +87,25 @@ $(->
         $('#privkey').val('')
       when 'wif'
         pubkey = bitcoin.ECPair.fromWIF(key).getAddress()
-        privkey = CryptoJS.AES.encrypt(key, $('#phrase').val())
+        privkey = CryptoJS.AES.encrypt(key, g.password)
         $('#pubkey').val(pubkey)
         $('#privkey').val(privkey)
       when 'aes'
         try
-          pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).neutered().toString()
+          pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, g.password).toString(CryptoJS.enc.Utf8)).neutered().toString()
           $('#pubkey').val(pubkey)
           $('#privkey').val(key)
         catch
           try
-            pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).getAddress()
+            pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, g.password).toString(CryptoJS.enc.Utf8)).getAddress()
             $('#pubkey').val(pubkey)
             $('#privkey').val(key)
           catch
             proceed = false
       when 'bip38'
-        wif = bip38().decrypt(key, $('#phrase').val())
+        wif = bip38().decrypt(key, g.password)
         pubkey = bitcoin.ECPair.fromWIF(wif).getAddress()
-        privkey = CryptoJS.AES.encrypt(wif, $('#phrase').val())
+        privkey = CryptoJS.AES.encrypt(wif, g.password)
         $('#pubkey').val(pubkey)
         $('#privkey, #key').val(privkey)
       when 'xpub'
@@ -149,17 +113,22 @@ $(->
         $('#privkey').val('')
       when 'xprv'
         pubkey = bitcoin.HDNode.fromBase58(key).neutered().toString()
-        privkey = CryptoJS.AES.encrypt(key, $('#phrase').val())
+        privkey = CryptoJS.AES.encrypt(key, g.password)
         $('#pubkey').val(pubkey)
         $('#privkey').val(privkey)
       when 'bip39'
         master = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(key)).deriveHardened(44).deriveHardened(0)
         pubkey = master.neutered().toString()
-        privkey = CryptoJS.AES.encrypt(master.toString(), $('#phrase').val())
+        privkey = CryptoJS.AES.encrypt(master.toString(), g.password)
         $('#pubkey').val(pubkey)
         $('#privkey').val(privkey)
 
-    updateUser() if proceed
+    if proceed
+      updateUser() 
+      $('#keys').hide()
+      $('#keys_updated').fadeIn()
+      $('#balances').hide()
+      $('#fetching').show()
   )
 
 
@@ -199,16 +168,28 @@ $(->
       $(this).val($(this).attr('max'))
   )
 
-  $('#phrase').keyup(->
+  $('#password').keyup(->
     try
-      CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8)
-      $('#key').keyup()
+      if g.user.privkey
+        g.privkey = CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8)
+      
+        if g.privkey[0] is 'x'
+          g.key = bitcoin.HDNode.fromBase58(g.privkey)
+        else
+          g.key = bitcoin.ECPair.fromWIF(g.privkey)
+
+        $('#key').val(g.privkey).keyup()
+      else
+        $('#key').val(g.user.pubkey).keyup()
+
+      $(this).closest('.form-group').hide()
+      $('.wallet').fadeIn()
+      g.password = $(this).val()
   )
     
   $('#manage').click(->
     $('#withdrawal').hide()
     $('#keys').show()
-    $('#withdraw').hide().toggle(g.balance > 0 and g.user.privkey)
     $('#privkey').val(g.user.privkey)
   )
 
@@ -216,20 +197,24 @@ $(->
     $('#withdrawal').show()
     $('#amount').focus()
     $('#keys').hide()
-    $('#withdraw').hide().toggle(g.balance > 0 and g.user.privkey)
     $('#withdrawal form').validator('destroy')
     $('#withdrawal form').validator(custom: validators, errors: errors, delay: 1200)
   )
 
   $('#cancel').click(->
     $('#keys').hide()
+    if g.balance > 0 and g.user.privkey
+      $('#withdrawal form').validator('destroy')
+      $('#withdrawal form').validator(custom: validators, errors: errors, delay: 1200)
+      $('#withdrawal').show()
+      $('#amount').focus()
   )
 
   $('#backup').click(->
     url = 'data:application/json;base64,' + btoa(JSON.stringify(g.user.privkey))
     a = document.createElement('a')
     a.setAttribute('href', url)
-    a.setAttribute('download', 'coinos-wallet.aes.json')
+    a.setAttribute('download', 'wallet.json.aes')
     a.click()
   )
 
@@ -239,8 +224,6 @@ $(->
         mnemonic = bip39.generateMnemonic()
         key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0)
         $('#key').val(key.toString()).effect('highlight', {}, 2000).keyup()
-        $('#phrase').parent().show()
-        $('#phrase').effect('shake', 500).focus()
     )
   )
 
@@ -250,16 +233,18 @@ $(->
 getUser = ->
   $.getJSON("/#{$('#username').val()}.json", (user) ->
     g.user = user
-    g.privkey = user.privkey
-    $('#key').val(user.privkey or user.pubkey).keyup()
+    $('#key').val(user.pubkey)
     $('#pubkey').val(user.pubkey)
     $('#privkey').val(user.privkey)
     $('#address').val(user.address)
     $('#unit').html(user.unit)
     $('#currency_toggle').html(user.unit)
     $('#amount').attr('step', 0.00000001 * multiplier())
+    $('#password').closest('.form-group').show()
+    $('#password').focus()
 
     getExchangeRate()
+    $('#password').keyup()
   )
 
 getExchangeRate = ->
@@ -294,7 +279,8 @@ getBalance = ->
     $('#balance').html(g.balance)
     $('#fiat').html("#{fiat} #{g.user.currency}")
     $('#amount').attr('max', g.balance)
-    $('.wallet').fadeIn()
+    $('#balances').show()
+    $('#fetching').hide()
 
     if g.balance > 0 and g.user.privkey
       $('#keys').hide()
@@ -302,35 +288,28 @@ getBalance = ->
       $('#withdrawal form').validator(custom: validators, errors: errors, delay: 1200)
       $('#withdrawal').show()
       $('#amount').focus()
-    else
-      $('#withdraw').hide()
   )
 
 updateUser = ->
   data = $('#keys form').serializeObject()
   delete data['key']
-  delete data['phrase']
 
   $.post("/#{g.user.username}", data, ->
     $.ajax(
-      url: "#{g.api}/wallets/hd/#{g.user.username}"
+      url: "#{g.api}/wallets/#{g.user.username}"
       type: 'DELETE'
     ).always(->
       $.ajax(
-        url: "#{g.api}/wallets/#{g.user.username}"
+        url: "#{g.api}/wallets/hd/#{g.user.username}"
         type: 'DELETE'
       ).always(->
-        $('#keys').hide()
-        createWallet()
+        getUser()
       )
     )
   )
 
 sendTransaction = ->
-  if !g.key or (typeof g.key.d is 'undefined' and typeof g.key.keyPair.d is 'undefined')
-    $('#invalid_keys').fadeIn()
-    $('#password').focus()
-  else
+  if g.key and not (typeof g.key.d is 'undefined' and typeof g.key.keyPair.d is 'undefined')
     dialog = new BootstrapDialog(
       title: '<h3>Confirm Transaction</h3>'
       message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>'
@@ -386,12 +365,16 @@ sendTransaction = ->
         if value > parseFloat(g.balance).toSatoshis() - data.tx.fees 
           total += fee
 
+
         $('.dialog .amount').html("#{(amount.toBTC())} #{g.user.unit} (#{amount.toFiat()} #{g.user.currency})")
         $('.dialog .fee').html("#{(fee.toBTC())} #{g.user.unit} (#{fee.toFiat()} #{g.user.currency})")
         $('.dialog .total').html("#{(total.toBTC())} #{g.user.unit} (#{total.toFiat()} #{g.user.currency})")
         $('.dialog .address').html(data.tx.outputs[0].addresses[0])
 
         dialog.getModalBody().html($('.dialog').html())
+
+        if amount.toBTC() < 0.00000534
+          displayErrors({errors: [error: 'Amount left over after fee is too small to send']}, dialog)
 
         dialog.getModal().find('.btn-primary').click(-> 
           $.post("#{g.api}/txs/send", JSON.stringify(g.data)).then((finaltx) ->
@@ -401,7 +384,7 @@ sendTransaction = ->
             fiat = balance.toFiat()
             $('#balance').html(g.balance)
             $('#fiat').html("#{fiat} #{g.user.currency}")
-            $('#blockchain').off('click').on('click', -> window.open('https://live.blockcypher.com/btc/main/tx/' + finaltx.tx.hash, '_blank'))
+            $('#blockchain').off('click').on('click', -> window.open('https://tradeblock.com/bitcoin/tx/' + finaltx.tx.hash, '_blank'))
             dialog.close()
           )
         )
@@ -456,7 +439,7 @@ precision = ->
   9 - multiplier().toString().length
 
 Number.prototype.toBTC = ->
-  parseFloat((this / 100000000 * multiplier()).toFixed(precision()))
+  parseFloat((this / 100000000 * multiplier())).toFixed(precision())
 
 Number.prototype.toFiat = ->
   (this * g.exchange / 100000000).toFixed(2)

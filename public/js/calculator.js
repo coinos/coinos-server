@@ -181,7 +181,7 @@
   };
 
   getAddress = function() {
-    var child, master, s;
+    var child, master;
     try {
       bitcoin.address.fromBase58Check(g.user.pubkey);
       g.user.address = g.user.pubkey;
@@ -198,8 +198,7 @@
         fail(ADDRESS_FAIL);
       }
     }
-    s = "<a href='/" + g.user.username + "/report'>" + g.user.address + "</a> \n<a href='http://blockchain.info/address/" + g.user.address + "' target='_blank'>\n  <img src='/img/blockchain.png' />\n</a>";
-    return $('#address').html(s);
+    return $('#address').html("<a href='https://tradeblock.com/bitcoin/address/" + g.user.address + "'>" + g.user.address + "</a>");
   };
 
   fail = function(msg) {

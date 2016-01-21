@@ -7,20 +7,27 @@
   <script src="/js/wallet.js"></script>
 {{/yield-scripts}}
 
-<div class="wallet" style="display: none">
-  <h1>Wallet Balance</h1>
+<h1>Wallet</h1>
 
+<div class="form-group has-feedback" style="display: none">
+  <div class="input-group" style="width: 100%">
+    <label for="password">Password:</label>
+    <input id="password" name="password" type="password" data-password="true" class="form-control"  />
+  </div>
+</div>
+
+<div class="wallet" style="display: none">
   <input type="hidden" id="username" name="username" value="{{user}}" />
   <input type="hidden" id="email" name="email" />
 
   <div class="well">
-    <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
-    (<b id="fiat" class="lead">0 CAD</b>)
+    <span id="fetching" class="lead"><i class="fa fa-refresh fa-spin"></i> Fetching balance...</span>
+    <span id="balances" style="display: none">
+      <b id="balance" class="lead">0</b> <b id="unit" class="lead"></b> 
+      (<b id="fiat" class="lead">0 CAD</b>)
+    </span>
 
     <div class="pull-right">
-      <button id="withdraw" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Withdraw">
-        <i class="fa fa-btc fa-lg"></i>
-      </button>
       <button id="manage" type="button" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Manage Keys">
         <i class="fa fa-cog fa-lg"></i>
       </button>
@@ -73,13 +80,6 @@
         </div>
       </div>
 
-      <div class="form-group has-feedback">
-        <div class="input-group" style="width: 100%">
-          <label for="phrase">Passphrase:</label>
-          <input id="phrase" name="phrase" type="password" data-phrase="true" class="form-control"  />
-        </div>
-      </div>
-
       <button id="generate" class="btn btn-success pull-right" type="button"><i class="fa fa-bolt"></i> Create New Wallet</button>
 
       <input id="save" class="btn btn-primary" type="button" value="Save" />
@@ -127,14 +127,6 @@
             <option value="high">High</option>
           </select>
         </div>
-      </div>
-
-      <div class="form-group has-feedback">
-        <div class="input-group" style="width: 100%">
-          <label for="password">Passphrase:</label>
-          <input id="password" name="password" type="password" class="form-control" data-password="true" required  />
-        </div>
-        <div class="help-block with-errors"></div>
       </div>
 
       <input id="send" class="btn btn-primary" type="button" value="Calculate Fee and Confirm Transaction" />

@@ -11,6 +11,7 @@
     "bcryptjs": "^2.3.0",
     "bip39": "^2.2.0",
     "body-parser": "^1.5.0",
+    "browser-sync": "^2.11.0",
     "coffee-script": "1.7.1",
     "connect-assets": "*",
     "connect-redis": "2.0.0",

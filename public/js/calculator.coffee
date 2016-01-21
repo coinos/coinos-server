@@ -171,13 +171,7 @@ getAddress = ->
     catch
       fail(ADDRESS_FAIL)
 
-  s = """
-    <a href='/#{g.user.username}/report'>#{g.user.address}</a> 
-    <a href='http://blockchain.info/address/#{g.user.address}' target='_blank'>
-      <img src='/img/blockchain.png' />
-    </a>
-  """
-  $('#address').html(s)
+  $('#address').html("<a href='https://tradeblock.com/bitcoin/address/#{g.user.address}'>#{g.user.address}</a>")
 
 fail = (msg) ->
   g.errors.push(msg)

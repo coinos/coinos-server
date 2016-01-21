@@ -20,38 +20,6 @@
         return false;
       }
     },
-    password: function(e) {
-      var s;
-      if (e.val() === '') {
-        return true;
-      }
-      g.key = null;
-      try {
-        s = CryptoJS.AES.decrypt($('#privkey').val(), e.val()).toString(CryptoJS.enc.Utf8);
-        if (s[0] === 'x') {
-          g.key = bitcoin.HDNode.fromBase58(s);
-        } else {
-          g.key = bitcoin.ECPair.fromWIF(s);
-        }
-      } catch (_error) {
-        return false;
-      }
-      return $('#invalid_keys').fadeOut();
-    },
-    phrase: function(e) {
-      var s;
-      try {
-        s = CryptoJS.AES.decrypt(g.user.privkey, e.val()).toString(CryptoJS.enc.Utf8);
-        if (s[0] === 'x') {
-          bitcoin.HDNode.fromBase58(s);
-        } else {
-          bitcoin.ECPair.fromWIF(s);
-        }
-      } catch (_error) {
-        return false;
-      }
-      return $('#invalid_keys').fadeOut();
-    },
     key: function(e) {
       return $('#keytype').val() !== 'unknown';
     }
@@ -59,8 +27,6 @@
 
   errors = {
     address: 'Invalid address.',
-    password: 'Wrong password.',
-    phrase: 'Wrong password.',
     key: 'Could not detect key type.'
   };
 
@@ -85,13 +51,11 @@
       var val, _ref;
       val = $(this).val();
       $('#keytype').val('unknown');
-      $('#phrase').closest('.form-group').show();
       switch (val[0]) {
         case '1':
           try {
             bitcoin.address.fromBase58Check(val);
-            $('#keytype').val('address');
-            return $('#phrase').closest('.form-group').hide();
+            return $('#keytype').val('address');
           } catch (_error) {}
           break;
         case '5':
@@ -104,7 +68,7 @@
           break;
         case 'U':
           try {
-            if (CryptoJS.AES.decrypt(val, $('#phrase').val()).toString(CryptoJS.enc.Utf8)) {
+            if (CryptoJS.AES.decrypt(val, g.password).toString(CryptoJS.enc.Utf8)) {
               return $('#keytype').val('aes');
             }
           } catch (_error) {}
@@ -118,8 +82,7 @@
           if ($(this).val()[3] === 'b') {
             try {
               bitcoin.HDNode.fromBase58(val);
-              $('#keytype').val('xpub');
-              return $('#phrase').closest('.form-group').hide();
+              return $('#keytype').val('xpub');
             } catch (_error) {}
           } else {
             try {
@@ -133,9 +96,6 @@
             return $('#keytype').val('bip39');
           }
       }
-    });
-    $('#key').blur(function() {
-      return $('#keys form').validator('validate');
     });
     $('#save').click(function() {
       var key, master, privkey, proceed, pubkey, wif;
@@ -153,18 +113,18 @@
           break;
         case 'wif':
           pubkey = bitcoin.ECPair.fromWIF(key).getAddress();
-          privkey = CryptoJS.AES.encrypt(key, $('#phrase').val());
+          privkey = CryptoJS.AES.encrypt(key, g.password);
           $('#pubkey').val(pubkey);
           $('#privkey').val(privkey);
           break;
         case 'aes':
           try {
-            pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).neutered().toString();
+            pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, g.password).toString(CryptoJS.enc.Utf8)).neutered().toString();
             $('#pubkey').val(pubkey);
             $('#privkey').val(key);
           } catch (_error) {
             try {
-              pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, $('#phrase').val()).toString(CryptoJS.enc.Utf8)).getAddress();
+              pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, g.password).toString(CryptoJS.enc.Utf8)).getAddress();
               $('#pubkey').val(pubkey);
               $('#privkey').val(key);
             } catch (_error) {
@@ -173,9 +133,9 @@
           }
           break;
         case 'bip38':
-          wif = bip38().decrypt(key, $('#phrase').val());
+          wif = bip38().decrypt(key, g.password);
           pubkey = bitcoin.ECPair.fromWIF(wif).getAddress();
-          privkey = CryptoJS.AES.encrypt(wif, $('#phrase').val());
+          privkey = CryptoJS.AES.encrypt(wif, g.password);
           $('#pubkey').val(pubkey);
           $('#privkey, #key').val(privkey);
           break;
@@ -185,19 +145,23 @@
           break;
         case 'xprv':
           pubkey = bitcoin.HDNode.fromBase58(key).neutered().toString();
-          privkey = CryptoJS.AES.encrypt(key, $('#phrase').val());
+          privkey = CryptoJS.AES.encrypt(key, g.password);
           $('#pubkey').val(pubkey);
           $('#privkey').val(privkey);
           break;
         case 'bip39':
           master = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(key)).deriveHardened(44).deriveHardened(0);
           pubkey = master.neutered().toString();
-          privkey = CryptoJS.AES.encrypt(master.toString(), $('#phrase').val());
+          privkey = CryptoJS.AES.encrypt(master.toString(), g.password);
           $('#pubkey').val(pubkey);
           $('#privkey').val(privkey);
       }
       if (proceed) {
-        return updateUser();
+        updateUser();
+        $('#keys').hide();
+        $('#keys_updated').fadeIn();
+        $('#balances').hide();
+        return $('#fetching').show();
       }
     });
     $('#withdrawal form input[type=button]').click(sendTransaction);
@@ -237,23 +201,33 @@
         return $(this).val($(this).attr('max'));
       }
     });
-    $('#phrase').keyup(function() {
+    $('#password').keyup(function() {
       try {
-        CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8);
-        return $('#key').keyup();
+        if (g.user.privkey) {
+          g.privkey = CryptoJS.AES.decrypt(g.user.privkey, $(this).val()).toString(CryptoJS.enc.Utf8);
+          if (g.privkey[0] === 'x') {
+            g.key = bitcoin.HDNode.fromBase58(g.privkey);
+          } else {
+            g.key = bitcoin.ECPair.fromWIF(g.privkey);
+          }
+          $('#key').val(g.privkey).keyup();
+        } else {
+          $('#key').val(g.user.pubkey).keyup();
+        }
+        $(this).closest('.form-group').hide();
+        $('.wallet').fadeIn();
+        return g.password = $(this).val();
       } catch (_error) {}
     });
     $('#manage').click(function() {
       $('#withdrawal').hide();
       $('#keys').show();
-      $('#withdraw').hide().toggle(g.balance > 0 && g.user.privkey);
       return $('#privkey').val(g.user.privkey);
     });
     $('#withdraw').click(function() {
       $('#withdrawal').show();
       $('#amount').focus();
       $('#keys').hide();
-      $('#withdraw').hide().toggle(g.balance > 0 && g.user.privkey);
       $('#withdrawal form').validator('destroy');
       return $('#withdrawal form').validator({
         custom: validators,
@@ -262,14 +236,24 @@
       });
     });
     $('#cancel').click(function() {
-      return $('#keys').hide();
+      $('#keys').hide();
+      if (g.balance > 0 && g.user.privkey) {
+        $('#withdrawal form').validator('destroy');
+        $('#withdrawal form').validator({
+          custom: validators,
+          errors: errors,
+          delay: 1200
+        });
+        $('#withdrawal').show();
+        return $('#amount').focus();
+      }
     });
     $('#backup').click(function() {
       var a, url;
       url = 'data:application/json;base64,' + btoa(JSON.stringify(g.user.privkey));
       a = document.createElement('a');
       a.setAttribute('href', url);
-      a.setAttribute('download', 'coinos-wallet.aes.json');
+      a.setAttribute('download', 'wallet.json.aes');
       return a.click();
     });
     $('#generate').click(function() {
@@ -278,9 +262,7 @@
         if (result) {
           mnemonic = bip39.generateMnemonic();
           key = bitcoin.HDNode.fromSeedBuffer(bip39.mnemonicToSeed(mnemonic)).deriveHardened(44).deriveHardened(0);
-          $('#key').val(key.toString()).effect('highlight', {}, 2000).keyup();
-          $('#phrase').parent().show();
-          return $('#phrase').effect('shake', 500).focus();
+          return $('#key').val(key.toString()).effect('highlight', {}, 2000).keyup();
         }
       });
     });
@@ -292,15 +274,17 @@
   getUser = function() {
     return $.getJSON("/" + ($('#username').val()) + ".json", function(user) {
       g.user = user;
-      g.privkey = user.privkey;
-      $('#key').val(user.privkey || user.pubkey).keyup();
+      $('#key').val(user.pubkey);
       $('#pubkey').val(user.pubkey);
       $('#privkey').val(user.privkey);
       $('#address').val(user.address);
       $('#unit').html(user.unit);
       $('#currency_toggle').html(user.unit);
       $('#amount').attr('step', 0.00000001 * multiplier());
-      return getExchangeRate();
+      $('#password').closest('.form-group').show();
+      $('#password').focus();
+      getExchangeRate();
+      return $('#password').keyup();
     });
   };
 
@@ -345,7 +329,8 @@
       $('#balance').html(g.balance);
       $('#fiat').html("" + fiat + " " + g.user.currency);
       $('#amount').attr('max', g.balance);
-      $('.wallet').fadeIn();
+      $('#balances').show();
+      $('#fetching').hide();
       if (g.balance > 0 && g.user.privkey) {
         $('#keys').hide();
         $('#withdrawal form').validator('destroy');
@@ -356,8 +341,6 @@
         });
         $('#withdrawal').show();
         return $('#amount').focus();
-      } else {
-        return $('#withdraw').hide();
       }
     });
   };
@@ -366,18 +349,16 @@
     var data;
     data = $('#keys form').serializeObject();
     delete data['key'];
-    delete data['phrase'];
     return $.post("/" + g.user.username, data, function() {
       return $.ajax({
-        url: "" + g.api + "/wallets/hd/" + g.user.username,
+        url: "" + g.api + "/wallets/" + g.user.username,
         type: 'DELETE'
       }).always(function() {
         return $.ajax({
-          url: "" + g.api + "/wallets/" + g.user.username,
+          url: "" + g.api + "/wallets/hd/" + g.user.username,
           type: 'DELETE'
         }).always(function() {
-          $('#keys').hide();
-          return createWallet();
+          return getUser();
         });
       });
     });
@@ -385,10 +366,7 @@
 
   sendTransaction = function() {
     var dialog, params;
-    if (!g.key || (typeof g.key.d === 'undefined' && typeof g.key.keyPair.d === 'undefined')) {
-      $('#invalid_keys').fadeIn();
-      return $('#password').focus();
-    } else {
+    if (g.key && !(typeof g.key.d === 'undefined' && typeof g.key.keyPair.d === 'undefined')) {
       dialog = new BootstrapDialog({
         title: '<h3>Confirm Transaction</h3>',
         message: '<i class="fa fa-spinner fa-spin"></i> Calculating fee...</i>',
@@ -463,6 +441,15 @@
           $('.dialog .total').html("" + (total.toBTC()) + " " + g.user.unit + " (" + (total.toFiat()) + " " + g.user.currency + ")");
           $('.dialog .address').html(data.tx.outputs[0].addresses[0]);
           dialog.getModalBody().html($('.dialog').html());
+          if (amount.toBTC() < 0.00000534) {
+            displayErrors({
+              errors: [
+                {
+                  error: 'Amount left over after fee is too small to send'
+                }
+              ]
+            }, dialog);
+          }
           return dialog.getModal().find('.btn-primary').click(function() {
             return $.post("" + g.api + "/txs/send", JSON.stringify(g.data)).then(function(finaltx) {
               var balance, fiat;
@@ -473,7 +460,7 @@
               $('#balance').html(g.balance);
               $('#fiat').html("" + fiat + " " + g.user.currency);
               $('#blockchain').off('click').on('click', function() {
-                return window.open('https://live.blockcypher.com/btc/main/tx/' + finaltx.tx.hash, '_blank');
+                return window.open('https://tradeblock.com/bitcoin/tx/' + finaltx.tx.hash, '_blank');
               });
               return dialog.close();
             });
@@ -552,7 +539,7 @@
   };
 
   Number.prototype.toBTC = function() {
-    return parseFloat((this / 100000000 * multiplier()).toFixed(precision()));
+    return parseFloat(this / 100000000 * multiplier()).toFixed(precision());
   };
 
   Number.prototype.toFiat = function() {

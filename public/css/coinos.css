@@ -78,7 +78,11 @@ div#calculator strong#total {
   font-size: 30px;
 }
 div#calculator p#address {
+  font-size: 16px;
   padding-top: 10px;
+}
+div#calculator p#address a {
+  color: #000;
 }
 div#calculator #title {
   display: none;
