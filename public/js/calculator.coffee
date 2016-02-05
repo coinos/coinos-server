@@ -8,6 +8,7 @@ g = exports ? this
 g.errors = []
 g.amount_requested = 0
 g.tip = 1
+g.transactions = []
 
 $(->
   $.ajax(
@@ -147,13 +148,15 @@ logTransaction = (txid, amount) ->
     $('#success')[0].play()
     g.user.index++
 
-    $.post("/#{g.user.username}/transactions",
-      txid: txid,
-      address: g.user.address,
-      date: moment().format("YYYY-MM-DD HH:mm:ss"),
-      received: amount,
-      exchange: g.exchange
-    )
+    if g.transactions.indexOf(txid) is -1
+      g.transactions.push(txid)
+      $.post("/#{g.user.username}/transactions",
+        txid: txid,
+        address: g.user.address,
+        date: moment().format("YYYY-MM-DD HH:mm:ss"),
+        received: amount,
+        exchange: g.exchange
+      )
 
     getAddress()
 
