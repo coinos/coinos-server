@@ -15,8 +15,8 @@ $(->
   $('#from_date').datepicker(onClose: filterDates)
   $('#to_date').datepicker(onClose: filterDates)
 
-  $('#from').click(-> $('#from_date').datepicker('show'))
-  $('#to').click(-> $('#to_date').datepicker('show'))
+  $('#from').click(-> $('#from_date').datepicker('show').blur())
+  $('#to').click(-> $('#to_date').datepicker('show').blur())
 
   $.getJSON('transactions.json', (data) ->
     g.transactions = data.transactions

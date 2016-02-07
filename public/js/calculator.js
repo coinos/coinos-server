@@ -128,7 +128,7 @@
   };
 
   updateTotal = function() {
-    var precision, size, subtotal, total;
+    var precision, size, subtotal, time, total;
     precision = 9 - multiplier().toString().length;
     subtotal = parseFloat(g.amount * g.tip).toFixed(2);
     total = (subtotal * multiplier() / g.exchange).toFixed(precision);
@@ -147,14 +147,21 @@
       $('.commission').html("+" + (Math.abs(g.user.commission)) + "%");
     }
     $('#total').html(total.toString());
-    $('#qr').html('');
     size = 300;
     $('#qr').css('height', size);
-    return new QRCode('qr', {
-      text: "bitcoin:" + g.user.address + "?amount=" + (g.amount_requested.toString()),
-      width: size,
-      height: size
-    });
+    time = 0;
+    if (g.timeout) {
+      time = 1500;
+    }
+    clearTimeout(g.timeout);
+    return g.timeout = setTimeout(function() {
+      $('#qr').html('');
+      return new QRCode('qr', {
+        text: "bitcoin:" + g.user.address + "?amount=" + (g.amount_requested.toString()),
+        width: size,
+        height: size
+      });
+    }, time);
   };
 
   listen = function() {

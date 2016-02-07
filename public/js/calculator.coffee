@@ -142,16 +142,24 @@ updateTotal = ->
 
 
   $('#total').html(total.toString())
-  $('#qr').html('')
  
   # size = $('#calculator').width() * 0.7
   size = 300
   $('#qr').css('height', size)
-  new QRCode('qr', 
-    text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}"
-    width: size
-    height: size
-  )
+
+  time = 0
+  if g.timeout
+    time = 1500
+
+  clearTimeout(g.timeout)
+  g.timeout = setTimeout(->
+    $('#qr').html('')
+    new QRCode('qr', 
+      text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}"
+      width: size
+      height: size
+    )
+  , time)
 
 listen = ->
   g.attempts++

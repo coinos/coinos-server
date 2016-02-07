@@ -21,10 +21,10 @@
       onClose: filterDates
     });
     $('#from').click(function() {
-      return $('#from_date').datepicker('show');
+      return $('#from_date').datepicker('show').blur();
     });
     $('#to').click(function() {
-      return $('#to_date').datepicker('show');
+      return $('#to_date').datepicker('show').blur();
     });
     return $.getJSON('transactions.json', function(data) {
       g.transactions = data.transactions;
