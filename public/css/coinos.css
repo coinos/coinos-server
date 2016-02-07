@@ -143,6 +143,7 @@ div#calculator #error {
 }
 div#calculator #qr {
   padding-bottom: 10px;
+  margin-left: 20px;
 }
 td#total {
   font-weight: bold;
