@@ -7,6 +7,7 @@ ADDRESS_FAIL = "Invalid address"
 g = exports ? this
 g.errors = []
 g.amount_requested = 0
+g.amount = 0.toFixed(2)
 g.tip = 1
 g.transactions = []
 
@@ -19,7 +20,44 @@ $(->
       setup()
   )
 
-  $('#tip button').click(->
+  $('button').click((e) ->
+    e.preventDefault()
+  )
+
+  $('.numpad .btn').off('click').click((e) ->
+    e.preventDefault()
+
+    m = $(this).html()
+    n = parseFloat($('.amount').html())
+
+    if m is 'C'
+      g.amount = 0.toFixed(2)
+      updateTotal()
+      return
+
+    return if n > 1000
+    
+    if m is '00'
+      n = 100 * n
+    else
+      n = 10 * n + parseFloat(m) / 100
+
+    g.amount = n.toFixed(2)
+
+    updateTotal()
+  )
+
+  $('.numpad .btn:last').off('click').click((e) ->
+    e.preventDefault()
+
+    g.amount = (Math.floor(100 * (parseFloat($('.amount').html()) / 10)) / 100).toFixed(2)
+    updateTotal()
+  )
+
+  $('.tippad .btn').off('click').click((e) ->
+    e.preventDefault()
+
+    $(this).addClass('active')
     value = $(this).html().slice(0, -1)
     $(this).siblings().css('font-weight','normal').removeClass('active')
     $(this).css('font-weight','bold')
@@ -27,15 +65,11 @@ $(->
     updateTotal()
   )
 
-  $('#amount').keyup(updateTotal)
-  $('#amount').focus(->
-    $('#received').hide()
-    $('#payment').fadeIn('slow')
-    $(this).val('')
-    updateTotal()
-  )
-
   $('#received').click(-> window.location = "/#{g.user.username}/report")
+  $('#slide').click(-> 
+    $('#controls').slideToggle() 
+    $(this).find('i').toggleClass('fa-sort-up').toggleClass('fa-sort-down')
+  )
 )
 
 setup = ->
@@ -55,11 +89,11 @@ setup = ->
 
   getAddress()
 
-  $('#symbol').html(g.user.currency)
-  $('#currency').html(g.user.currency)
-  $('#unit').html(g.user.unit)
+  $('.symbol').html(g.user.currency)
+  $('.currency').html(g.user.currency)
+  $('.unit').html(g.user.unit)
+
   $('#received').hide()
-  $('#tip button').first().click()
 
   fetchExchangeRate()
   listen()
@@ -79,7 +113,6 @@ fetchExchangeRate = ->
       updateTotal()
 
       unless g.setupComplete
-        $('#amount').focus()
         g.setupComplete = true
 
     error: -> fail(EXCHANGE_FAIL)
@@ -88,16 +121,37 @@ fetchExchangeRate = ->
 
 updateTotal = ->
   precision = 9 - multiplier().toString().length
-  amount = parseFloat($('#amount').val() * g.tip)
-  total = (amount * multiplier() / g.exchange).toFixed(precision)
-  g.amount_requested = (amount / g.exchange).toFixed(8)
+  subtotal = parseFloat(g.amount * g.tip).toFixed(2)
+  total = (subtotal * multiplier() / g.exchange).toFixed(precision)
+  g.amount_requested = (subtotal / g.exchange).toFixed(8)
 
   unless $.isNumeric(total)
     total = ''
 
+  $('#received').hide()
+  $('#payment').fadeIn('slow')
+
+  $('.tip').html((subtotal - g.amount).toFixed(2))
+  $('.subtotal').html(subtotal.toString())
+  $('.amount').html(g.amount)
+  $('.exchange').html(g.exchange)
+  $('.symbol').html(g.user.symbol)
+
+  if g.user.commission < 0
+    $('.commission').html("+#{Math.abs(g.user.commission)}%")
+
+
   $('#total').html(total.toString())
   $('#qr').html('')
-  new QRCode('qr', text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}", width: 280, height: 280)
+ 
+  # size = $('#calculator').width() * 0.7
+  size = 300
+  $('#qr').css('height', size)
+  new QRCode('qr', 
+    text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}"
+    width: size
+    height: size
+  )
 
 listen = ->
   g.attempts++
@@ -142,7 +196,6 @@ listen = ->
 
 logTransaction = (txid, amount) ->
   if $('#received').is(":hidden") and amount >= g.amount_requested
-    $('#amount').blur()
     $('#payment').hide()
     $('#received').fadeIn('slow')
     $('#success')[0].play()

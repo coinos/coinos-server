@@ -16,6 +16,8 @@
 
   g.amount_requested = 0;
 
+  g.amount = 0..toFixed(2);
+
   g.tip = 1;
 
   g.transactions = [];
@@ -29,23 +31,51 @@
         return setup();
       }
     });
-    $('#tip button').click(function() {
+    $('button').click(function(e) {
+      return e.preventDefault();
+    });
+    $('.numpad .btn').off('click').click(function(e) {
+      var m, n;
+      e.preventDefault();
+      m = $(this).html();
+      n = parseFloat($('.amount').html());
+      if (m === 'C') {
+        g.amount = 0..toFixed(2);
+        updateTotal();
+        return;
+      }
+      if (n > 1000) {
+        return;
+      }
+      if (m === '00') {
+        n = 100 * n;
+      } else {
+        n = 10 * n + parseFloat(m) / 100;
+      }
+      g.amount = n.toFixed(2);
+      return updateTotal();
+    });
+    $('.numpad .btn:last').off('click').click(function(e) {
+      e.preventDefault();
+      g.amount = (Math.floor(100 * (parseFloat($('.amount').html()) / 10)) / 100).toFixed(2);
+      return updateTotal();
+    });
+    $('.tippad .btn').off('click').click(function(e) {
       var value;
+      e.preventDefault();
+      $(this).addClass('active');
       value = $(this).html().slice(0, -1);
       $(this).siblings().css('font-weight', 'normal').removeClass('active');
       $(this).css('font-weight', 'bold');
       g.tip = 1 + (parseFloat(value) / 100);
       return updateTotal();
     });
-    $('#amount').keyup(updateTotal);
-    $('#amount').focus(function() {
-      $('#received').hide();
-      $('#payment').fadeIn('slow');
-      $(this).val('');
-      return updateTotal();
-    });
-    return $('#received').click(function() {
+    $('#received').click(function() {
       return window.location = "/" + g.user.username + "/report";
+    });
+    return $('#slide').click(function() {
+      $('#controls').slideToggle();
+      return $(this).find('i').toggleClass('fa-sort-up').toggleClass('fa-sort-down');
     });
   });
 
@@ -65,11 +95,10 @@
       $('#logo').attr('src', src).show();
     }
     getAddress();
-    $('#symbol').html(g.user.currency);
-    $('#currency').html(g.user.currency);
-    $('#unit').html(g.user.unit);
+    $('.symbol').html(g.user.currency);
+    $('.currency').html(g.user.currency);
+    $('.unit').html(g.user.unit);
     $('#received').hide();
-    $('#tip button').first().click();
     fetchExchangeRate();
     return listen();
   };
@@ -88,7 +117,6 @@
         $('#exchange').html(g.exchange);
         updateTotal();
         if (!g.setupComplete) {
-          $('#amount').focus();
           return g.setupComplete = true;
         }
       },
@@ -100,20 +128,32 @@
   };
 
   updateTotal = function() {
-    var amount, precision, total;
+    var precision, size, subtotal, total;
     precision = 9 - multiplier().toString().length;
-    amount = parseFloat($('#amount').val() * g.tip);
-    total = (amount * multiplier() / g.exchange).toFixed(precision);
-    g.amount_requested = (amount / g.exchange).toFixed(8);
+    subtotal = parseFloat(g.amount * g.tip).toFixed(2);
+    total = (subtotal * multiplier() / g.exchange).toFixed(precision);
+    g.amount_requested = (subtotal / g.exchange).toFixed(8);
     if (!$.isNumeric(total)) {
       total = '';
     }
+    $('#received').hide();
+    $('#payment').fadeIn('slow');
+    $('.tip').html((subtotal - g.amount).toFixed(2));
+    $('.subtotal').html(subtotal.toString());
+    $('.amount').html(g.amount);
+    $('.exchange').html(g.exchange);
+    $('.symbol').html(g.user.symbol);
+    if (g.user.commission < 0) {
+      $('.commission').html("+" + (Math.abs(g.user.commission)) + "%");
+    }
     $('#total').html(total.toString());
     $('#qr').html('');
+    size = 300;
+    $('#qr').css('height', size);
     return new QRCode('qr', {
       text: "bitcoin:" + g.user.address + "?amount=" + (g.amount_requested.toString()),
-      width: 280,
-      height: 280
+      width: size,
+      height: size
     });
   };
 
@@ -166,7 +206,6 @@
 
   logTransaction = function(txid, amount) {
     if ($('#received').is(":hidden") && amount >= g.amount_requested) {
-      $('#amount').blur();
       $('#payment').hide();
       $('#received').fadeIn('slow');
       $('#success')[0].play();

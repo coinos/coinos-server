@@ -15,32 +15,70 @@ Your email has been verified. Thank you!
   <input id="user" type="hidden" value="{{user}}" />
 
   <h1 id="title"></h1>
-  <a href="/{{user}}/edit"><img id="logo" src="/img/bitcoin.png" alt="Logo" /></a>
+  <img id="logo" src="/img/bitcoin.png" alt="Logo" />
 
-  <form role="form">
-    <div class="form-group">
-      <label for="amount">Amount:</label>
-      <input type="text" id="amount" class="form-control" />
-      <span id="currency"></span> / <span id="exchange"></span> <span>BTC</span>
+  <div id="controls">
+    <div class="rates pull-right tablet">
+      <h2><small>@</small><span class="exchange"></span></h2>
+      <h3 style="margin-top: -5px">
+        <span class="label label-default symbol"></span> 
+        <span class="label label-success commission"></span>
+      </h3>
     </div>
 
-    <div class="form-group">
-      <label for="tip">Tip:</label>
-      <div class="btn-toolbar">
-        <div class="btn-group" id="tip">
-          <button type="button" class="active btn btn-default">0%</button>
-          <button type="button" class="btn btn-default">10%</button>
-          <button type="button" class="btn btn-default">15%</button>
-          <button type="button" class="btn btn-default">20%</button>
-        </div>
+    <div class="numpad pull-left">
+      <h2><span class="amount">0.00</span> <small class="currency"></small></h2>
+      <button class="btn btn-lg btn-primary">1</button>
+      <button class="btn btn-lg btn-primary">2</button>
+      <button class="btn btn-lg btn-primary">3</button>
+      <br />
+      <button class="btn btn-lg btn-primary">4</button>
+      <button class="btn btn-lg btn-primary">5</button>
+      <button class="btn btn-lg btn-primary">6</button>
+      <br />
+      <button class="btn btn-lg btn-primary">7</button>
+      <button class="btn btn-lg btn-primary">8</button>
+      <button class="btn btn-lg btn-primary">9</button>
+      <br />
+      <button class="btn btn-lg btn-primary">C</button>
+      <button class="btn btn-lg btn-primary">0</button>
+      <button class="btn btn-lg btn-primary" style="padding: 13px 0"><i class="fa fa-arrow-left"></i></button>
+    </div>
+
+    <div class="tippad tablet">
+      <h2><small>+</small><span class="tip"></span></h2>
+        <button type="button" class="active btn btn-lg btn-default">0%</button><br />
+        <button type="button" class="btn btn-lg btn-default">10%</button><br />
+        <button type="button" class="btn btn-lg btn-default">15%</button><br />
+        <button type="button" class="btn btn-lg btn-default">20%</button>
+    </div>
+
+    <div class="clearfix mobile"></div>
+    <div class="tippad mobile" style="margin-top: 10px">
+      <h2><small>+</small><span class="tip"></span> <small>TIP</small></h2>
+      <div class="btn-group">
+        <button type="button" class="active btn btn-lg btn-default">0%</button>
+        <button type="button" class="btn btn-lg btn-default">10%</button>
+        <button type="button" class="btn btn-lg btn-default">15%</button>
+        <button type="button" class="btn btn-lg btn-default">20%</button>
       </div>
     </div>
-  </form>
 
-  <div id="payment">
-    <p>Please send <strong id="total">0.0</strong> <span id="unit"></span> to</p>
-    <a href="/{{user}}/report"><div id="qr"></div></a>
-    <p id="address"></p>
+    <div class="mobile">
+      <h3 class="pull-right" style="margin-top: -3px">
+        <span class="label label-default symbol"></span> 
+        <span class="label label-success commission"></span>
+      </h3>
+      <h2><small>@</small><span class="exchange"></span></h2>
+    </div>
+  </div>
+
+  <button id="slide" class="btn btn-primary" style="height: 1.8em; width: 100%; margin-bottom: 2px;"><i class="fa fa-lg fa-sort-up"></i></button>
+
+  <div id="payment" style="margin-top: -10px">
+    <h2><small>Please send</small> <span id="total">0.0</span> <small class="unit"></small></h2>
+    <div id="qr"></div>
+    <h2><span id="address" class="label label-success"></span></h2>
   </div>
 
   <button type="button" id="received" class="btn btn-success">Payment Received.  Thank you!</button>
