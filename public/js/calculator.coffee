@@ -217,6 +217,7 @@ logTransaction = (txid, amount) ->
         date: moment().format("YYYY-MM-DD HH:mm:ss"),
         received: amount,
         exchange: g.exchange
+        tip: g.tip
       )
 
     getAddress()

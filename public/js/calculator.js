@@ -224,7 +224,8 @@
           address: g.user.address,
           date: moment().format("YYYY-MM-DD HH:mm:ss"),
           received: amount,
-          exchange: g.exchange
+          exchange: g.exchange,
+          tip: g.tip
         });
       }
       return getAddress();

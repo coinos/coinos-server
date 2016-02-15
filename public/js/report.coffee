@@ -52,21 +52,44 @@ display = (transactions) ->
     $('.alert').fadeIn()
   else
     $('.alert').hide()
+    btc_total = btc_tips_total = 0
+    fiat_total = fiat_tips_total = 0
+
     $.each(transactions, ->
+      btc_tip_str = ""
+      fiat_tip_str = ""
+
       exchange = parseFloat(@exchange)
-      received = parseFloat(@received)
-      amount = received * exchange
+      tip = @tip
+      btc = parseFloat(@received)
+      fiat = btc * exchange
+
+      btc_total += parseFloat(btc.toFixed(8))
+      fiat_total += parseFloat(fiat.toFixed(2))
+
+      if tip > 1
+        btc = btc / tip
+        btc_tip = (btc * tip - btc).toFixed(8)
+        fiat_tip = (btc_tip * exchange).toFixed(2)
+
+        btc_tips_total += parseFloat(btc_tip)
+        fiat_tips_total += parseFloat(fiat_tip)
+
+        btc_tip_str = "<br /><small>+ #{btc_tip}</small>"
+        fiat_tip_str = "<br /><small>+ #{fiat_tip}</small>"
+
+      fiat = btc * exchange
+
       notes = @notes
       txid = @txid
-      address = @address
       date = moment(@date, 'YYYY-MM-DD h:mm:ss').format('MMM D h:mma')
 
       row = $("""
         <tr id='#{@txid}'>
           <td>#{date}&nbsp;&nbsp;<span class='glyphicon glyphicon-tag hidden'></span></td>
           <td>#{exchange.toFixed(2)}</td>
-          <td>#{received.toFixed(8)}</td>
-          <td>#{amount.toFixed(2)}</td>
+          <td>#{btc.toFixed(8)}#{btc_tip_str}</td>
+          <td>#{fiat.toFixed(2)}#{fiat_tip_str}</td>
         </tr>
       """)
 
@@ -117,16 +140,11 @@ display = (transactions) ->
       )
     )
 
-    btc = 0
-    $('table.report tbody td:nth-child(3)').each(->
-      btc += parseFloat($(this).html())
-    )
-    $('#btc').html(btc.toFixed(8))
-
-    cad = 0
-    $('table.report tbody td:nth-child(4)').each(->
-      cad += parseFloat($(this).html())
-    )
-    $('#cad').html(cad.toFixed(2))
+    $('#btc_total').html("#{parseFloat(btc_total).toFixed(8)}")
+    $('#fiat_total').html("#{parseFloat(fiat_total).toFixed(2)}")
+    $('#btc_tips').html("#{parseFloat(btc_tips_total).toFixed(8)}")
+    $('#fiat_tips').html("#{parseFloat(fiat_tips_total).toFixed(2)}")
+    $('#btc').html("#{parseFloat(btc_total - btc_tips_total).toFixed(8)}")
+    $('#fiat').html("#{parseFloat(fiat_total - fiat_tips_total).toFixed(2)}")
 
     $('.report').fadeIn()
