@@ -14,7 +14,7 @@
   module.exports = function(sessions) {
     return {
       exists: function(req, res) {
-        return db.hgetall("user:" + req.params.user, function(err, obj) {
+        return db.hgetall("user:" + req.params.user.toLowerCase(), function(err, obj) {
           if (obj != null) {
             res.write('true');
           } else {
@@ -25,7 +25,7 @@
       },
       json: function(req, res) {
         return db.llen("" + req.params.user + ":transactions", function(err, len) {
-          return db.hgetall("user:" + req.params.user, function(err, obj) {
+          return db.hgetall("user:" + (req.params.user.toLowerCase()), function(err, obj) {
             delete obj['password'];
             obj['index'] = len;
             res.writeHead(200, {
@@ -37,11 +37,11 @@
         });
       },
       show: function(req, res) {
-        return db.hgetall("user:" + req.params.user, function(err, obj) {
+        return db.hgetall("user:" + req.params.user.toLowerCase(), function(err, obj) {
           var ext, options, path;
           if (obj) {
             options = {
-              user: req.params.user,
+              user: req.params.user.toLowerCase(),
               layout: 'layout',
               navigation: true,
               js: (function() {
@@ -140,7 +140,7 @@
             }
             url = "" + req.protocol + "://" + host + "/verify/" + token;
             return res.render('users/welcome', {
-              user: req.params.user,
+              user: req.params.user.toLowerCase(),
               layout: 'mail',
               url: url,
               privkey: req.body.privkey,
@@ -166,7 +166,7 @@
       },
       edit: function(req, res) {
         return res.render('users/edit', {
-          user: req.params.user,
+          user: req.params.user.toLowerCase(),
           layout: 'layout',
           navigation: true,
           js: (function() {
@@ -179,7 +179,7 @@
       },
       profile: function(req, res) {
         return res.render('users/profile', {
-          user: req.params.user,
+          user: req.params.user.toLowerCase(),
           layout: 'layout',
           navigation: true,
           js: (function() {
@@ -194,17 +194,17 @@
         if (req.body.password === '') {
           delete req.body.password;
         }
-        db.hmset("user:" + req.params.user, req.body, function() {
+        db.hmset("user:" + req.params.user.toLowerCase(), req.body, function() {
           if (req.body.password != null) {
             return bcrypt.hash(req.body.password, 12, function(err, hash) {
-              return db.hmset("user:" + req.params.user, {
+              return db.hmset("user:" + (req.params.user.toLowerCase()), {
                 password: hash
               }, function() {
                 if (req.xhr) {
                   res.send({});
                   return res.end();
                 } else {
-                  return res.redirect("/" + req.params.user);
+                  return res.redirect("/" + (req.params.user.toLowerCase()));
                 }
               });
             });
@@ -213,13 +213,13 @@
               res.send({});
               return res.end();
             } else {
-              return res.redirect("/" + req.params.user);
+              return res.redirect("/" + (req.params.user.toLowerCase()));
             }
           }
         });
         if (process.env.NODE_ENV === 'production' && (req.body.privkey != null) && req.body.privkey !== '' && req.body.email !== '') {
           return res.render('users/key', {
-            user: req.params.user,
+            user: req.params.user.toLowerCase(),
             layout: 'mail',
             key: req.body.privkey,
             js: (function() {
@@ -255,7 +255,7 @@
       },
       wallet: function(req, res) {
         return res.render('users/wallet', {
-          user: req.params.user,
+          user: req.params.user.toLowerCase(),
           layout: 'layout',
           navigation: true,
           js: (function() {

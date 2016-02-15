@@ -6,14 +6,14 @@ request = require('request')
 
 module.exports = (sessions) ->
   exists: (req, res) ->
-    db.hgetall("user:"+req.params.user, (err, obj) ->
+    db.hgetall("user:"+req.params.user.toLowerCase(), (err, obj) ->
       if obj? then res.write('true') else res.write('false')
       res.end()
     )
   
   json: (req, res) ->
     db.llen("#{req.params.user}:transactions", (err, len) ->
-      db.hgetall("user:#{req.params.user}", (err, obj) ->
+      db.hgetall("user:#{req.params.user.toLowerCase()}", (err, obj) ->
         delete obj['password']
         obj['index'] = len
         res.writeHead(200, {"Content-Type": "application/json"});
@@ -23,10 +23,10 @@ module.exports = (sessions) ->
     )
 
   show: (req, res) ->
-    db.hgetall("user:"+req.params.user, (err, obj) ->
+    db.hgetall("user:"+req.params.user.toLowerCase(), (err, obj) ->
       if obj 
         options = 
-          user: req.params.user, 
+          user: req.params.user.toLowerCase(), 
           layout: 'layout',
           navigation: true,
           js: (-> global.js), 
@@ -104,7 +104,7 @@ module.exports = (sessions) ->
         url = "#{req.protocol}://#{host}/verify/#{token}"
 
         res.render('users/welcome', 
-          user: req.params.user, 
+          user: req.params.user.toLowerCase(), 
           layout: 'mail',
           url: url,
           privkey: req.body.privkey,
@@ -127,7 +127,7 @@ module.exports = (sessions) ->
 
   edit: (req, res) ->
     res.render('users/edit', 
-      user: req.params.user, 
+      user: req.params.user.toLowerCase(), 
       layout: 'layout',
       navigation: true,
       js: (-> global.js), 
@@ -136,7 +136,7 @@ module.exports = (sessions) ->
 
   profile: (req, res) ->
     res.render('users/profile', 
-      user: req.params.user, 
+      user: req.params.user.toLowerCase(), 
       layout: 'layout',
       navigation: true,
       js: (-> global.js), 
@@ -147,15 +147,15 @@ module.exports = (sessions) ->
     if req.body.password is ''
       delete req.body.password
 
-    db.hmset("user:"+req.params.user, req.body, ->
+    db.hmset("user:"+req.params.user.toLowerCase(), req.body, ->
       if req.body.password?
         bcrypt.hash(req.body.password, 12, (err, hash) ->
-          db.hmset("user:#{req.params.user}", password: hash, ->
+          db.hmset("user:#{req.params.user.toLowerCase()}", password: hash, ->
             if req.xhr
               res.send({})
               res.end()
             else
-              res.redirect("/#{req.params.user}") 
+              res.redirect("/#{req.params.user.toLowerCase()}") 
           )
         )
       else
@@ -163,7 +163,7 @@ module.exports = (sessions) ->
           res.send({})
           res.end()
         else
-          res.redirect("/#{req.params.user}")
+          res.redirect("/#{req.params.user.toLowerCase()}")
     )
 
     if process.env.NODE_ENV is 'production' and 
@@ -171,7 +171,7 @@ module.exports = (sessions) ->
     req.body.privkey != '' and 
     req.body.email != ''
       res.render('users/key', 
-        user: req.params.user, 
+        user: req.params.user.toLowerCase(), 
         layout: 'mail',
         key: req.body.privkey,
         js: (-> global.js), 
@@ -202,7 +202,7 @@ module.exports = (sessions) ->
 
   wallet: (req, res) ->
     res.render('users/wallet', 
-      user: req.params.user, 
+      user: req.params.user.toLowerCase(), 
       layout: 'layout',
       navigation: true,
       js: (-> global.js), 
