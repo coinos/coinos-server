@@ -24,7 +24,10 @@
         });
       },
       json: function(req, res) {
-        return db.llen("" + req.params.user + ":transactions", function(err, len) {
+        if (!req.params.user) {
+          res.end();
+        }
+        return db.llen("" + (req.params.user.toLowerCase()) + ":transactions", function(err, len) {
           return db.hgetall("user:" + (req.params.user.toLowerCase()), function(err, obj) {
             delete obj['password'];
             obj['index'] = len;
@@ -140,7 +143,7 @@
             }
             url = "" + req.protocol + "://" + host + "/verify/" + token;
             return res.render('users/welcome', {
-              user: req.params.user.toLowerCase(),
+              user: req.body.username.toLowerCase(),
               layout: 'mail',
               url: url,
               privkey: req.body.privkey,

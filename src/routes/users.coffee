@@ -12,7 +12,8 @@ module.exports = (sessions) ->
     )
   
   json: (req, res) ->
-    db.llen("#{req.params.user}:transactions", (err, len) ->
+    res.end() unless req.params.user
+    db.llen("#{req.params.user.toLowerCase()}:transactions", (err, len) ->
       db.hgetall("user:#{req.params.user.toLowerCase()}", (err, obj) ->
         delete obj['password']
         obj['index'] = len
@@ -104,7 +105,7 @@ module.exports = (sessions) ->
         url = "#{req.protocol}://#{host}/verify/#{token}"
 
         res.render('users/welcome', 
-          user: req.params.user.toLowerCase(), 
+          user: req.body.username.toLowerCase(), 
           layout: 'mail',
           url: url,
           privkey: req.body.privkey,
