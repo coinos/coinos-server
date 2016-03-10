@@ -30,13 +30,9 @@ Download and configure CoinOS:
     git clone https://github.com/thebitcoincoop/coinos
     cd coinos
     npm install  
-    node app.js
+    npm start
 
 Now the app should be runnning at http://localhost:3000/
-
-# Contributors
-
- Contributors include: Alex Millar
 
 # License
 
