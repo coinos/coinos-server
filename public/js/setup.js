@@ -21,20 +21,20 @@
       });
       $("#currency option[value='CAD']").attr('selected', 'selected');
       $('#currency').change(function() {
-        var symbol, symbols;
-        $('#symbol option').remove();
-        symbol = $(this).val();
-        if (!symbol) {
+        var currency, symbols;
+        currency = $(this).val();
+        if (!currency) {
           return;
         }
-        symbols = Object.keys(data[symbol]);
+        $('#symbol option').remove();
+        symbols = Object.keys(data[currency]);
         $.each(symbols, function(i, v) {
           if (v === 'localbitcoins') {
             return;
           }
           return $('#symbol').append("<option value='" + v + "'>" + v + "</option>");
         });
-        switch ($(this).val()) {
+        switch (currency) {
           case 'CAD':
             return $("#symbol option[value='quadrigacx']").attr('selected', 'selected');
           case 'USD':
@@ -53,10 +53,11 @@
         $('#title').val(data.title);
         $('#logo').val(data.logo);
         $('#address').val(data.address);
-        $("#symbol option[value='" + data.symbol + "']").attr('selected', 'selected');
         $('#commission').val(data.commission);
         $('#unit').val(data.unit);
+        $("#currency option[value='" + data.currency + "']").attr('selected', 'selected');
         $('#currency').change();
+        $("#symbol option[value='" + data.symbol + "']").attr('selected', 'selected');
         $('#setup').fadeIn();
         return $('#title').focus();
       });

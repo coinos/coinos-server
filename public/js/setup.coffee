@@ -15,16 +15,17 @@ $(->
     $("#currency option[value='CAD']").attr('selected', 'selected')
 
     $('#currency').change(->
+      currency = $(this).val()
+      return unless currency
+
       $('#symbol option').remove()
-      symbol = $(this).val()
-      return unless symbol
-      symbols = Object.keys(data[symbol])
+      symbols = Object.keys(data[currency])
       $.each(symbols, (i, v) ->
         return if v == 'localbitcoins'
         $('#symbol').append("<option value='#{v}'>#{v}</option>")
       )
 
-      switch $(this).val()
+      switch currency
         when 'CAD'
           $("#symbol option[value='quadrigacx']").attr('selected', 'selected')
         when 'USD'
@@ -39,10 +40,11 @@ $(->
       $('#title').val(data.title)
       $('#logo').val(data.logo)
       $('#address').val(data.address)
-      $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
       $('#commission').val(data.commission)
       $('#unit').val(data.unit)
+      $("#currency option[value='#{data.currency}']").attr('selected', 'selected')
       $('#currency').change()
+      $("#symbol option[value='#{data.symbol}']").attr('selected', 'selected')
       $('#setup').fadeIn()
       $('#title').focus()
     )
