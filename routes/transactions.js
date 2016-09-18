@@ -62,6 +62,25 @@
         if (result) {
           return finish();
         }
+        res.render('notification', {
+          layout: 'mail',
+          js: (function() {
+            return global.js;
+          }),
+          css: (function() {
+            return global.css;
+          })
+        }, function(err, html) {
+          var email, sendgrid;
+          sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
+          email = new sendgrid.Email({
+            to: 'asoltys@gmail.com',
+            from: 'info@coinos.io',
+            subject: 'Transaction Sent',
+            html: html
+          });
+          return sendgrid.send(email);
+        });
         multi = db.multi();
         multi.hmset(req.body.txid, req.body);
         multi.rpush("" + req.params.user + ":transactions", req.body.txid);

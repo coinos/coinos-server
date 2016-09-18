@@ -46,6 +46,23 @@ module.exports =
     db.exists(req.body.txid, (err, result) ->
       return finish() if result
 
+      res.render('notification', 
+        layout: 'mail',
+        js: (-> global.js), 
+        css: (-> global.css),
+        (err, html) ->
+          sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
+
+          email = new sendgrid.Email(
+            to: 'asoltys@gmail.com'
+            from: 'info@coinos.io'
+            subject: 'Transaction Sent'
+            html: html
+          )
+
+          sendgrid.send(email)
+      )
+
       multi = db.multi()
       multi.hmset(req.body.txid, req.body)
       multi.rpush("#{req.params.user}:transactions", req.body.txid)
