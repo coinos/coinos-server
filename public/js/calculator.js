@@ -44,7 +44,7 @@
         updateTotal();
         return;
       }
-      if (n > 1000) {
+      if (n > 100000) {
         return;
       }
       if (m === '00') {
@@ -61,12 +61,16 @@
       return updateTotal();
     });
     $('.tippad .btn').off('click').click(function(e) {
-      var value;
+      var text, value;
       e.preventDefault();
+      text = $(this).html();
+      if (text === 'No Tip') {
+        value = 0;
+      } else {
+        value = text.slice(1, -1);
+      }
       $(this).addClass('active');
-      value = $(this).html().slice(0, -1);
-      $(this).siblings().css('font-weight', 'normal').removeClass('active');
-      $(this).css('font-weight', 'bold');
+      $(this).siblings().removeClass('active');
       g.tip = 1 + (parseFloat(value) / 100);
       return updateTotal();
     });
@@ -151,7 +155,7 @@
     $('#qr').css('height', size);
     time = 0;
     if (g.timeout) {
-      time = 1500;
+      time = 10;
     }
     clearTimeout(g.timeout);
     return g.timeout = setTimeout(function() {

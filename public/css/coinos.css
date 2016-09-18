@@ -47,7 +47,6 @@ div.container-fluid {
 .numpad .btn,
 .tippad .btn {
   margin-bottom: 5px;
-  padding: 10px;
   width: 6em;
 }
 .numpad h2,
@@ -56,11 +55,15 @@ div.container-fluid {
   margin-top: 1px;
 }
 .numpad {
-  width: 24em;
+  width: 26em;
 }
 .rates {
   margin-top: -15px;
-  text-align: right;
+}
+.rates h2 .label {
+  font-size: 14px;
+  position: relative;
+  top: -5px;
 }
 #slide {
   height: 1.8em;
@@ -69,7 +72,10 @@ div.container-fluid {
 }
 @media (max-width: 360px) {
   .tippad .btn {
-    width: 4.8em;
+    width: 4.3em;
+  }
+  .numpad .btn {
+    width: 5.7em;
   }
   .numpad,
   .tippad,
@@ -167,6 +173,9 @@ div#calculator #qr {
   padding-bottom: 10px;
   margin-left: 20px;
 }
+div#calculator .numpad .btn-primary {
+  background: #abc;
+}
 td.total {
   font-weight: bold;
   text-align: right;
@@ -184,4 +193,30 @@ td.total {
 }
 @page {
   margin: 0;
+}
+.btn-sample {
+  color: #FFFFFF;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  background-color: #DBDBDB;
+  *background-color: #DBDBDB;
+  background-image: -moz-linear-gradient(top, #B5B5B5, #DBDBDB);
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#B5B5B5), to(#DBDBDB));
+  background-image: -webkit-linear-gradient(top, #B5B5B5, #DBDBDB);
+  background-image: -o-linear-gradient(top, #B5B5B5, #DBDBDB);
+  background-image: linear-gradient(to bottom, #B5B5B5, #DBDBDB);
+  background-repeat: repeat-x;
+  border-color: #DBDBDB;
+  border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#B5B5B5', endColorstr='#DBDBDB', GradientType=0);
+  filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
+}
+.btn-sample:hover,
+.btn-sample:focus,
+.btn-sample:active,
+.btn-sample.active,
+.btn-sample.disabled,
+.btn-sample[disabled] {
+  color: #FFFFFF;
+  background-color: #DBDBDB;
+  *background-color: #003bb3;
 }

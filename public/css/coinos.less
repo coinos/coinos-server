@@ -18,15 +18,19 @@ div.container-fluid {
 .navbar-collapse.in { overflow-y: visible; }
 #connection { display: none; }
 
-.numpad .btn, .tippad .btn { margin-bottom: 5px; padding: 10px; width: 6em; }
+.numpad .btn, .tippad .btn { margin-bottom: 5px; width: 6em; }
 .numpad h2, .tippad h2 { margin-bottom: 2px; margin-top: 1px; }
-.numpad { width: 24em; }
-.rates { margin-top: -15px; text-align: right; }
+.numpad { width: 26em; }
+.rates { 
+  margin-top: -15px; 
+  h2 .label { font-size: 14px; position: relative; top: -5px; }
+}
 
 #slide { height: 1.8em; width: 100%; margin-bottom: 2px; }
 
 @media (max-width: 360px) { 
-  .tippad .btn { width: 4.8em; } 
+  .tippad .btn { width: 4.3em; } 
+  .numpad .btn { width: 5.7em; }
   .numpad, .tippad, .rates, #payment { padding-left: 5px; }
   .rates { width: 100%; text-align: left; }
   #address{ font-size: 16px; }
@@ -69,6 +73,7 @@ div#calculator {
   #logo { display: none; padding: 10px 0; margin-bottom: 10px; max-height: 225px; width: 100%; }
   #error { margin-top: 10px; }
   #qr { padding-bottom: 10px; margin-left: 20px; }
+  .numpad .btn-primary { background: #abc; }
 }
 
 td.total { font-weight: bold; text-align: right; }
@@ -88,4 +93,31 @@ td.total { font-weight: bold; text-align: right; }
 
 @page {
    margin: 0;
+}
+
+.btn-sample {
+	color: #FFFFFF;
+	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+	background-color: #DBDBDB;
+	*background-color: #DBDBDB;
+	background-image: -moz-linear-gradient(top, #B5B5B5, #DBDBDB);
+	background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#B5B5B5), to(#DBDBDB));
+	background-image: -webkit-linear-gradient(top, #B5B5B5, #DBDBDB);
+	background-image: -o-linear-gradient(top, #B5B5B5, #DBDBDB);
+	background-image: linear-gradient(to bottom, #B5B5B5, #DBDBDB);
+	background-repeat: repeat-x;
+	border-color: #DBDBDB;
+	border-color: rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25);
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#B5B5B5', endColorstr='#DBDBDB', GradientType=0);
+	filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
+}
+.btn-sample:hover,
+.btn-sample:focus,
+.btn-sample:active,
+.btn-sample.active,
+.btn-sample.disabled,
+.btn-sample[disabled] {
+	color: #FFFFFF;
+	background-color: #DBDBDB;
+	*background-color: #003bb3;
 }

@@ -35,7 +35,7 @@ $(->
       updateTotal()
       return
 
-    return if n > 1000
+    return if n > 100000
     
     if m is '00'
       n = 100 * n
@@ -57,10 +57,14 @@ $(->
   $('.tippad .btn').off('click').click((e) ->
     e.preventDefault()
 
+    text = $(this).html()
+    if text is 'No Tip'
+      value = 0
+    else
+      value = text.slice(1, -1)
+
     $(this).addClass('active')
-    value = $(this).html().slice(0, -1)
-    $(this).siblings().css('font-weight','normal').removeClass('active')
-    $(this).css('font-weight','bold')
+    $(this).siblings().removeClass('active')
     g.tip = 1 + (parseFloat(value)/100)
     updateTotal()
   )
@@ -149,7 +153,7 @@ updateTotal = ->
 
   time = 0
   if g.timeout
-    time = 1500
+    time = 10
 
   clearTimeout(g.timeout)
   g.timeout = setTimeout(->
