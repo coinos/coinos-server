@@ -44,7 +44,7 @@
         updateTotal();
         return;
       }
-      if (n > 100000) {
+      if (n > 10000000) {
         return;
       }
       if (m === '00') {

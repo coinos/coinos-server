@@ -35,7 +35,7 @@ $(->
       updateTotal()
       return
 
-    return if n > 100000
+    return if n > 10000000
     
     if m is '00'
       n = 100 * n
