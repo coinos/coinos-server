@@ -1,38 +1,30 @@
 # CoinOS
 
-CoinOS is a mobile-friendly Point-of-Sale page that merchants can use to accept Bitcoin payments.
+CoinOS is a mobile-friendly point-of-sale app that merchants can use to accept Bitcoin payments.
 
-# How it Works
+# Features
 
-* You create an account and configure some basic parameters for your storefront like a name, logo, and bitcoin receiving address
-* You set an exchange rate to be used to convert from your local currency to bitcoin
-* CoinOS creates a custom webpage that you can bring up on a mobile device to generate payment requests
-* You enter a sale amount in your local currency and CoinOS converts it to bitcoin using your chosen exchange rate
-* CoinOS creates a QR code for the payment request with your receiving address and the sale amount encoded
-* CoinOS listens for transactions on the Bitcoin network and displays a notification when the requested amount is received at your address
-* The details of the transaction and the exchange rate used at the time of sale are recorded and made available in a convenient report
-
-# Technical Details
-
-The site is programmed in HTML and Coffeescript using NodeJS and jQuery. Account details and transaction data are stored in a Redis database.  Users are responsible for providing their own receiving addresses managed with whatever wallet they prefer, so CoinOS never stores any bitcoins.
-
-We use the websocket payment notification API from http://blockchain.info/api/api_websocket to listen for and display payment notifications in real time. The bitcoin exchange rates are fetched from http://bitcoinaverage.com/
+* Setup a customized payment page with your company name and logo
+* Enter sale amounts in your local currency and have them converted to an amount in bitcoin using your chosen exchange rate
+* A QR code payment request is generated with your receiving address and the sale amount for your customers to scan
+* Get am on-screen notification when the requested amount is received at your address
+* Transactions and the exchange rate at the time of sale are recorded and can be viewed later and filtered by date range
 
 # Installation
 
-Install nodeJS (http://nodejs.org/) and redis (http://redis.io/).  On Ubuntu, this would be:
+Install nodeJS (http://nodejs.org/) and redis (http://redis.io/).  On Ubuntu that looks like:
 
     sudo apt-get install nodejs redis-server
-    sudo ln -sf /usr/bin/nodejs /usr/bin/node
 
 Download and configure CoinOS:
 
     git clone https://github.com/thebitcoincoop/coinos
     cd coinos
-    npm install  
+    npm install 
+    bower install
     npm start
 
-Now the app should be runnning at http://localhost:3000/
+Now the app should be runnning at http://localhost:3001/
 
 # License
 
