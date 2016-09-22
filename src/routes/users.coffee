@@ -159,6 +159,9 @@ module.exports = (sessions) ->
       delete req.body.password
 
     db.hmset("user:"+req.params.user.toLowerCase(), req.body, ->
+      req.session.user = req.body
+      delete req.session.user.password
+
       if req.body.password?
         bcrypt.hash(req.body.password, 12, (err, hash) ->
           db.hmset("user:#{req.params.user.toLowerCase()}", password: hash, ->

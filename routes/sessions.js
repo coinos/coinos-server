@@ -29,6 +29,7 @@
               badpw: true
             });
           }
+          req.session.user = user;
           return req.login(user, function(err) {
             var re, url;
             if (err) {

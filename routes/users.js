@@ -207,6 +207,8 @@
           delete req.body.password;
         }
         db.hmset("user:" + req.params.user.toLowerCase(), req.body, function() {
+          req.session.user = req.body;
+          delete req.session.user.password;
           if (req.body.password != null) {
             return bcrypt.hash(req.body.password, 12, function(err, hash) {
               return db.hmset("user:" + (req.params.user.toLowerCase()), {

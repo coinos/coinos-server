@@ -17,6 +17,7 @@ module.exports = (passport) ->
           css: (-> global.css),
           badpw: true
         )
+      req.session.user = user
       req.login(user, (err) ->
         if (err) 
           return next(err)

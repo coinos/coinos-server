@@ -4,11 +4,13 @@ moment = require('moment')
 
 module.exports =
   index: (req, res) ->
-    res.render('transactions/index',  
-      user: req.params.user,
-      layout: 'layout',
-      navigation: true,
-      js: (-> global.js), 
+    res.render(
+      'transactions/index'  
+      user: req.params.user
+      currency: req.session.user.currency
+      layout: 'layout'
+      navigation: true
+      js: (-> global.js)
       css: (-> global.css)
     )
 

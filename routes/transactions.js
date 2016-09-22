@@ -11,6 +11,7 @@
     index: function(req, res) {
       return res.render('transactions/index', {
         user: req.params.user,
+        currency: req.session.user.currency,
         layout: 'layout',
         navigation: true,
         js: (function() {
