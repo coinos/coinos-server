@@ -12,7 +12,6 @@
     $('#title').focus();
     user = $('#username').val();
     $.getJSON("/" + user + ".json", function(data) {
-      $('#username').val(data.username);
       $('#email').val(data.email);
       return $('#profile').fadeIn();
     });

@@ -1,4 +1,6 @@
 db = require('../redis')
+config = require("../config")
+moment = require('moment') 
 
 module.exports =
   index: (req, res) ->
@@ -39,6 +41,32 @@ module.exports =
 
   create: (req, res) ->
     finish = ->
+      db.hgetall("user:"+req.params.user.toLowerCase(), (err, user) ->
+        res.render('transactions/notification', 
+          layout: 'mail'
+          amount: (req.body.received * req.body.exchange).toFixed(2).toString() + ' ' + user.currency
+          address: req.body.address
+          txid: req.body.txid
+          js: (-> global.js)
+          css: (-> global.css)
+          (err, html) ->
+            helper = require('sendgrid').mail
+            from_email = new helper.Email('info@coinos.io')
+            to_email = new helper.Email(user.email)
+            subject = 'Transaction Sent'
+            content = new helper.Content('text/html', html)
+            mail = new helper.Mail(from_email, subject, to_email, content)
+
+            sg = require('sendgrid')(config.sendgrid_token)
+            request = sg.emptyRequest(
+              method: 'POST'
+              path: '/v3/mail/send'
+              body: mail.toJSON()
+            )
+
+            sg.API(request)
+        )
+      )
       res.write(JSON.stringify(req.body))
       res.end()
 

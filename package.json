@@ -31,7 +31,7 @@
     "passport-local": "1.0.0",
     "redis": "0.11.0",
     "request": "~2.40.0",
-    "sendgrid": "~1.2.0"
+    "sendgrid": "^4.3.0"
   },
   "devDependencies": {
     "coffeeify": "^1.2.0",
