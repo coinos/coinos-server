@@ -127,7 +127,11 @@ module.exports = (sessions) ->
               body: mail.toJSON()
             )
 
-            sg.API(request)
+            sg.API(request, (error, response) ->
+              console.log(response.statusCode)
+              console.log(response.body)
+              console.log(response.headers)
+            )
         )
       )
     )
@@ -198,7 +202,11 @@ module.exports = (sessions) ->
             body: mail.toJSON()
           )
 
-          sg.API(request)
+          sg.API(request, (error, response) ->
+            console.log(response.statusCode)
+            console.log(response.body)
+            console.log(response.headers)
+          )
       )
 
   verify: (req, res) ->

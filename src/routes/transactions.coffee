@@ -64,7 +64,11 @@ module.exports =
               body: mail.toJSON()
             )
 
-            sg.API(request)
+            sg.API(request, (error, response) ->
+              console.log(response.statusCode)
+              console.log(response.body)
+              console.log(response.headers)
+            )
         )
       )
       res.write(JSON.stringify(req.body))

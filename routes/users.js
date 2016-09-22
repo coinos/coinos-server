@@ -167,7 +167,11 @@
                 path: '/v3/mail/send',
                 body: mail.toJSON()
               });
-              return sg.API(request);
+              return sg.API(request, function(error, response) {
+                console.log(response.statusCode);
+                console.log(response.body);
+                return console.log(response.headers);
+              });
             });
           });
         });
@@ -250,7 +254,11 @@
               path: '/v3/mail/send',
               body: mail.toJSON()
             });
-            return sg.API(request);
+            return sg.API(request, function(error, response) {
+              console.log(response.statusCode);
+              console.log(response.body);
+              return console.log(response.headers);
+            });
           });
         }
       },
