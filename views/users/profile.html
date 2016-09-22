@@ -5,10 +5,7 @@
 <form id="profile" action="/{{user}}" method="post" style="display: none">
   <h1>Account Profile</h1>
 
-  <div class="form-group">
-    <label for="username">Username:</label>
-    <input type="text" id="username" name="username" value="{{user}}" class="form-control" />
-  </div>
+  <input type="hidden" id="username" name="username" value="{{user}}" class="form-control" />
 
   <div class="form-group">
     <label for="email">Email:</label>

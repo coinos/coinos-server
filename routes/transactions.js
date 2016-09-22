@@ -1,7 +1,11 @@
 (function() {
-  var db;
+  var config, db, moment;
 
   db = require('../redis');
+
+  config = require("../config");
+
+  moment = require('moment');
 
   module.exports = {
     index: function(req, res) {
@@ -53,6 +57,35 @@
     create: function(req, res) {
       var finish;
       finish = function() {
+        db.hgetall("user:" + req.params.user.toLowerCase(), function(err, user) {
+          return res.render('transactions/notification', {
+            layout: 'mail',
+            amount: (req.body.received * req.body.exchange).toFixed(2).toString() + ' ' + user.currency,
+            address: req.body.address,
+            txid: req.body.txid,
+            js: (function() {
+              return global.js;
+            }),
+            css: (function() {
+              return global.css;
+            })
+          }, function(err, html) {
+            var content, from_email, helper, mail, request, sg, subject, to_email;
+            helper = require('sendgrid').mail;
+            from_email = new helper.Email('info@coinos.io');
+            to_email = new helper.Email(user.email);
+            subject = 'Transaction Sent';
+            content = new helper.Content('text/html', html);
+            mail = new helper.Mail(from_email, subject, to_email, content);
+            sg = require('sendgrid')(config.sendgrid_token);
+            request = sg.emptyRequest({
+              method: 'POST',
+              path: '/v3/mail/send',
+              body: mail.toJSON()
+            });
+            return sg.API(request);
+          });
+        });
         res.write(JSON.stringify(req.body));
         return res.end();
       };
@@ -62,25 +95,6 @@
         if (result) {
           return finish();
         }
-        res.render('notification', {
-          layout: 'mail',
-          js: (function() {
-            return global.js;
-          }),
-          css: (function() {
-            return global.css;
-          })
-        }, function(err, html) {
-          var email, sendgrid;
-          sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
-          email = new sendgrid.Email({
-            to: 'asoltys@gmail.com',
-            from: 'info@coinos.io',
-            subject: 'Transaction Sent',
-            html: html
-          });
-          return sendgrid.send(email);
-        });
         multi = db.multi();
         multi.hmset(req.body.txid, req.body);
         multi.rpush("" + req.params.user + ":transactions", req.body.txid);

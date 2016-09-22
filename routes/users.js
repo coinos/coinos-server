@@ -154,15 +154,20 @@
                 return global.css;
               })
             }, function(err, html) {
-              var email, sendgrid;
-              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
-              email = new sendgrid.Email({
-                to: req.body.email,
-                from: 'adam@coinos.io',
-                subject: 'Welcome to CoinOS',
-                html: html
+              var content, from_email, helper, mail, sg, subject, to_email;
+              helper = require('sendgrid').mail;
+              from_email = new helper.Email('info@coinos.io');
+              to_email = new helper.Email(req.body.email);
+              subject = 'Welcome to CoinOS';
+              content = new helper.Content('text/html', html);
+              mail = new helper.Mail(from_email, subject, to_email, content);
+              sg = require('sendgrid')(config.sendgrid_token);
+              request = sg.emptyRequest({
+                method: 'POST',
+                path: '/v3/mail/send',
+                body: mail.toJSON()
               });
-              return sendgrid.send(email);
+              return sg.API(request);
             });
           });
         });
@@ -232,15 +237,20 @@
               return global.css;
             })
           }, function(err, html) {
-            var email, sendgrid;
-            sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
-            email = new sendgrid.Email({
-              to: req.body.email,
-              from: 'adam@coinos.io',
-              subject: 'CoinOS Wallet Key',
-              html: html
+            var content, from_email, helper, mail, sg, subject, to_email;
+            helper = require('sendgrid').mail;
+            from_email = new helper.Email('info@coinos.io');
+            to_email = new helper.Email(req.body.email);
+            subject = 'CoinOS Wallet Key';
+            content = new helper.Content('text/html', html);
+            mail = new helper.Mail(from_email, subject, to_email, content);
+            sg = require('sendgrid')(config.sendgrid_token);
+            request = sg.emptyRequest({
+              method: 'POST',
+              path: '/v3/mail/send',
+              body: mail.toJSON()
             });
-            return sendgrid.send(email);
+            return sg.API(request);
           });
         }
       },

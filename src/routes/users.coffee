@@ -112,16 +112,22 @@ module.exports = (sessions) ->
           js: (-> global.js), 
           css: (-> global.css),
           (err, html) ->
-            sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
 
-            email = new sendgrid.Email(
-              to: req.body.email
-              from: 'adam@coinos.io'
-              subject: 'Welcome to CoinOS'
-              html: html
+            helper = require('sendgrid').mail
+            from_email = new helper.Email('info@coinos.io')
+            to_email = new helper.Email(req.body.email)
+            subject = 'Welcome to CoinOS'
+            content = new helper.Content('text/html', html)
+            mail = new helper.Mail(from_email, subject, to_email, content)
+
+            sg = require('sendgrid')(config.sendgrid_token)
+            request = sg.emptyRequest(
+              method: 'POST'
+              path: '/v3/mail/send'
+              body: mail.toJSON()
             )
 
-            sendgrid.send(email)
+            sg.API(request)
         )
       )
     )
@@ -178,16 +184,21 @@ module.exports = (sessions) ->
         js: (-> global.js), 
         css: (-> global.css),
         (err, html) ->
-          sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password)
+          helper = require('sendgrid').mail
+          from_email = new helper.Email('info@coinos.io')
+          to_email = new helper.Email(req.body.email)
+          subject = 'CoinOS Wallet Key'
+          content = new helper.Content('text/html', html)
+          mail = new helper.Mail(from_email, subject, to_email, content)
 
-          email = new sendgrid.Email(
-            to: req.body.email
-            from: 'adam@coinos.io'
-            subject: 'CoinOS Wallet Key'
-            html: html
+          sg = require('sendgrid')(config.sendgrid_token)
+          request = sg.emptyRequest(
+            method: 'POST'
+            path: '/v3/mail/send'
+            body: mail.toJSON()
           )
 
-          sendgrid.send(email)
+          sg.API(request)
       )
 
   verify: (req, res) ->

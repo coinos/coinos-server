@@ -7,7 +7,6 @@ $(->
 
   user = $('#username').val()
   $.getJSON("/#{user}.json", (data) ->
-    $('#username').val(data.username)
     $('#email').val(data.email)
     $('#profile').fadeIn()
   )
