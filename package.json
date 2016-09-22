@@ -21,8 +21,6 @@
     "express-session": "^1.6.5",
     "hogan-express": "0.5.2",
     "http-proxy-middleware": "^0.9.0",
-    "jquery": "^2.1.4",
-    "jquery-ui": "^1.10.5",
     "less": "1.7.3",
     "moment": "^2.10.6",
     "node-http-proxy": "^0.2.3",
