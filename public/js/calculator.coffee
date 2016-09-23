@@ -231,14 +231,11 @@ getAddress = ->
     bitcoin.address.fromBase58Check(g.user.pubkey)
     g.user.address = g.user.pubkey
   catch
-    try
-      master = bitcoin.HDNode.fromBase58(g.user.pubkey)
-      child = master.derive(0).derive(g.user.index)
-      g.user.address = child.getAddress().toString()
-      g.blockchain.close() if g.blockchain
-      listen()
-    catch
-      fail(ADDRESS_FAIL)
+    master = bitcoin.HDNode.fromBase58(g.user.pubkey)
+    child = master.derive(0).derive(g.user.index)
+    g.user.address = child.getAddress().toString()
+    g.blockchain.close() if g.blockchain
+    listen()
 
   $('#address').html("<a href='https://tradeblock.com/bitcoin/address/#{g.user.address}'>#{g.user.address}</a>")
 
