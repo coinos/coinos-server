@@ -324,7 +324,7 @@
     return $.get("" + g.api + "/addrs/" + g.user.username + "/balance?omitWalletAddresses=true", function(data) {
       var balance, fiat;
       balance = data.final_balance;
-      g.balance = balance.toBTC();
+      g.balance = parseFloat(balance.toBTC());
       fiat = balance.toFiat();
       $('#balance').html(g.balance);
       $('#fiat').html("" + fiat + " " + g.user.currency);
@@ -424,7 +424,7 @@
             data.signatures = data.tosign.map(function(tosign, i) {
               var key, path;
               path = data.tx.inputs[i].hd_path.split('/');
-              key = g.key.derive(path[1]).derive(path[2]);
+              key = g.key.derive(parseInt(path[1])).derive(parseInt(path[2]));
               data.pubkeys.push(key.keyPair.getPublicKeyBuffer().toString('hex'));
               return key.keyPair.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex");
             });
@@ -491,6 +491,9 @@
 
   convertedAmount = function() {
     var amount, difference, tolerance;
+    if (!(g.amount && isNumeric(g.amount))) {
+      g.amount = amount;
+    }
     amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision());
     difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()));
     tolerance = parseFloat((.00000002 * g.exchange * multiplier()).toFixed(precision()));
@@ -543,7 +546,7 @@
   };
 
   Number.prototype.toFiat = function() {
-    return (this * g.exchange / 100000000).toFixed(2);
+    return parseFloat(this * g.exchange / 100000000).toFixed(2);
   };
 
   Number.prototype.toSatoshis = function() {

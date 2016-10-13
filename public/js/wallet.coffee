@@ -274,7 +274,7 @@ createWallet = ->
 getBalance = ->
   $.get("#{g.api}/addrs/#{g.user.username}/balance?omitWalletAddresses=true", (data) ->
     balance = data.final_balance
-    g.balance = balance.toBTC()
+    g.balance = parseFloat(balance.toBTC())
     fiat = balance.toFiat()
     $('#balance').html(g.balance)
     $('#fiat').html("#{fiat} #{g.user.currency}")
@@ -352,7 +352,7 @@ sendTransaction = ->
         else
           data.signatures = data.tosign.map((tosign, i) ->
             path = data.tx.inputs[i].hd_path.split('/')
-            key = g.key.derive(path[1]).derive(path[2])
+            key = g.key.derive(parseInt(path[1])).derive(parseInt(path[2]))
             data.pubkeys.push(key.keyPair.getPublicKeyBuffer().toString('hex'))
             key.keyPair.sign(new buffer.Buffer(tosign, "hex")).toDER().toString("hex")
           )
@@ -404,6 +404,7 @@ displayErrors = (data, dialog) ->
 
 
 convertedAmount = ->
+  g.amount = amount unless g.amount and isNumeric(g.amount)
   amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
   difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()))
   tolerance = parseFloat((.00000002 * g.exchange * multiplier()).toFixed(precision()))
@@ -442,7 +443,7 @@ Number.prototype.toBTC = ->
   parseFloat((this / 100000000 * multiplier())).toFixed(precision())
 
 Number.prototype.toFiat = ->
-  (this * g.exchange / 100000000).toFixed(2)
+  parseFloat((this * g.exchange / 100000000)).toFixed(2)
 
 Number.prototype.toSatoshis = ->
   parseInt(this * 100000000 / multiplier())
