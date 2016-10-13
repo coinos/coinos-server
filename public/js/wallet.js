@@ -491,7 +491,11 @@
 
   convertedAmount = function() {
     var amount, difference, tolerance;
+<<<<<<< 076dbb62f7b05305e9be91af36f32c56caf9448c
     if (!(g.amount && !isNaN(parseFloat(g.amount)))) {
+=======
+    if (!(g.amount && isNumeric(g.amount))) {
+>>>>>>> Fix wallet bugs
       g.amount = amount;
     }
     amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision());
