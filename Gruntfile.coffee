@@ -1,13 +1,6 @@
 module.exports = (grunt) ->
   grunt.initConfig(
     pkg: grunt.file.readJSON('package.json')
-    coffeeify:
-      src: 
-        expand: true
-        cwd: 'public/js'
-        src: ['*.coffee']
-        dest: 'public/js'
-        ext: '.js'
     coffee:
       server: 
         expand: true
@@ -42,7 +35,6 @@ module.exports = (grunt) ->
   )
 
   grunt.loadNpmTasks('grunt-browser-sync')
-  grunt.loadNpmTasks('grunt-coffeeify')
   grunt.loadNpmTasks('grunt-contrib-less')
   grunt.loadNpmTasks('grunt-contrib-coffee')
   grunt.loadNpmTasks('grunt-contrib-watch')
