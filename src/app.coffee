@@ -6,6 +6,7 @@ path = require('path')
 passport = require('./passport')
 config = require('./config')
 fs = require('fs')
+bcoin = require('bcoin').set('testnet')
 proxyMiddleware = require('http-proxy-middleware')
 
 sessions = require("./routes/sessions")(passport)
