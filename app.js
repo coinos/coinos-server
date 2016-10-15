@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bcoin, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, users,
+  var RedisStore, app, authorize, bcoin, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, startBcoin, transactions, users,
     indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   request = require('request');
@@ -123,6 +123,28 @@
       } catch (undefined) {}
     });
     return setTimeout(fetchRates, 120000);
+  })();
+
+  (startBcoin = function() {
+    var chain, pool;
+    chain = new bcoin.chain({
+      db: 'leveldb',
+      location: process.env.HOME + '/chain.db',
+      spv: true
+    });
+    pool = new bcoin.pool({
+      chain: chain,
+      spv: true
+    });
+    return pool.open(function(err) {
+      pool.watchAddress('mhwWUZAmP4ycvwj4DdfGRy2JNRwDXeuwtj');
+      pool.connect();
+      pool.startSync();
+      pool.on('error', function(err) {});
+      return pool.on('tx', function(tx) {
+        return console.log(tx);
+      });
+    });
   })();
 
   app.get('/', cache, sessions["new"]);

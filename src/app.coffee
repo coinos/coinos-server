@@ -76,6 +76,28 @@ do fetchRates = ->
   )
   setTimeout(fetchRates, 120000)
 
+do startBcoin = ->
+  chain = new bcoin.chain(
+    db: 'leveldb'
+    location: process.env.HOME + '/chain.db'
+    spv: true
+  )
+
+  pool = new bcoin.pool(
+    chain: chain
+    spv: true
+  )
+
+  pool.open((err) -> 
+    pool.watchAddress('mhwWUZAmP4ycvwj4DdfGRy2JNRwDXeuwtj')
+
+    pool.connect()
+    pool.startSync()
+
+    pool.on('error', (err) -> return)
+    pool.on('tx', (tx) -> console.log(tx))
+  )
+
 app.get('/', cache, sessions.new)
 
 app.get('/address', cache, (req, res) ->
