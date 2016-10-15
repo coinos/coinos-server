@@ -1,5 +1,3 @@
-moment = require('moment')
-
 g = exports ? this
 
 $(->
@@ -19,7 +17,7 @@ $(->
   $('#to').click(-> $('#to_date').datepicker('show').blur())
 
   $.getJSON('transactions.json', (data) ->
-    g.transactions = data.transactions
+    g.transactions = data.transactions.filter((t) -> t.user is $('#user').val())
     display(g.transactions)
     filterDates()
   )

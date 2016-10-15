@@ -1,6 +1,11 @@
+Promise = require('bluebird')
 db = require('../redis')
 config = require("../config")
 moment = require('moment') 
+
+txid = (transaction, user) ->
+  return transaction if transaction.match(/[a-z]/i)
+  return user + ":transactions:" + transaction
 
 module.exports =
   index: (req, res) ->
@@ -15,31 +20,30 @@ module.exports =
     )
 
   json: (req, res) ->
-    user = req.params.user
-    r = 'transactions': []
+    result = 'transactions': []
+    promises = []
+    pattern = req.params.user
+    if req.session.user.username is 'admin'
+      x = '*'
 
-    db.lrange("#{user}:transactions", 0, -1, (err, transactions) ->
-      if err or not transactions.length
-        res.write(JSON.stringify(r)) 
-        return res.end()
-      
-      txid = ->
-        x = transactions[i++]
-        return x if x.match(/[a-z]/i)
-        return user + ":transactions:" + x
-
-      cb = (err, t) ->
-        r.transactions.push t
-
-        if i >= transactions.length
-          res.write(JSON.stringify(r))
-          res.end()
-        else
-          db.hgetall(txid(), cb)
-      
-      i = 0
-      db.hgetall(txid(), cb)
+    db.keysAsync("#{pattern}:transactions").then((keys) ->
+      Promise.all(keys.map((key) -> 
+        user = key.substr(0, key.indexOf(':'))
+        db.lrangeAsync(key, 0, -1).then((transactions) ->
+          Promise.all(transactions.map((transaction) ->
+            db.hgetallAsync(txid(transaction, user)).then((transaction) ->
+              if transaction
+                transaction.user = user
+                result.transactions.push(transaction)
+            )
+          ))
+        )
+      ))
+    ).then(->
+      res.write(JSON.stringify(result))
+      res.end()
     )
+
 
   create: (req, res) ->
     finish = ->

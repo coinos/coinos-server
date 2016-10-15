@@ -1,6 +1,6 @@
 (function() {
   var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, users,
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+    indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   request = require('request');
 
@@ -44,8 +44,8 @@
     },
     onProxyReq: function(proxyReq, req, res) {
       var symbol;
-      symbol = __indexOf.call(proxyReq.path, '?') >= 0 ? '&' : '?';
-      return proxyReq.path += "" + symbol + "token=" + config.blockcypher_token;
+      symbol = indexOf.call(proxyReq.path, '?') >= 0 ? '&' : '?';
+      return proxyReq.path += symbol + "token=" + config.blockcypher_token;
     }
   };
 
@@ -93,8 +93,8 @@
   app.use(passport.session());
 
   authorize = function(req, res, next) {
-    var _ref, _ref1;
-    if (req.params.user === ((_ref = req.user) != null ? _ref.username : void 0) || ((_ref1 = req.user) != null ? _ref1.username : void 0) === 'admin') {
+    var ref, ref1;
+    if (req.params.user === ((ref = req.user) != null ? ref.username : void 0) || ((ref1 = req.user) != null ? ref1.username : void 0) === 'admin') {
       return next();
     }
     req.session.redirect = req.path;
@@ -118,7 +118,7 @@
         return fs.truncate(file, 0, function() {
           return stream.write(body);
         });
-      } catch (_error) {}
+      } catch (undefined) {}
     });
     return setTimeout(fetchRates, 120000);
   })();
@@ -140,14 +140,14 @@
   app.get('/ticker', cache, function(req, res) {
     fs = require('fs');
     return fs.readFile("./public/js/rates.json", function(err, data) {
-      var e, exchange, _base, _base1, _base2;
-      (_base = req.query).currency || (_base.currency = 'CAD');
-      (_base1 = req.query).symbol || (_base1.symbol = 'quadrigacx');
-      (_base2 = req.query).type || (_base2.type = 'bid');
+      var base, base1, base2, e, error1, exchange;
+      (base = req.query).currency || (base.currency = 'CAD');
+      (base1 = req.query).symbol || (base1.symbol = 'quadrigacx');
+      (base2 = req.query).type || (base2.type = 'bid');
       try {
         exchange = JSON.parse(data)[req.query.currency][req.query.symbol]['rates'][req.query.type].toString();
-      } catch (_error) {
-        e = _error;
+      } catch (error1) {
+        e = error1;
         exchange = "0";
       }
       res.writeHead(200, {

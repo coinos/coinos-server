@@ -1,11 +1,20 @@
 (function() {
-  var config, db, moment;
+  var Promise, config, db, moment, txid;
+
+  Promise = require('bluebird');
 
   db = require('../redis');
 
   config = require("../config");
 
   moment = require('moment');
+
+  txid = function(transaction, user) {
+    if (transaction.match(/[a-z]/i)) {
+      return transaction;
+    }
+    return user + ":transactions:" + transaction;
+  };
 
   module.exports = {
     index: function(req, res) {
@@ -23,36 +32,33 @@
       });
     },
     json: function(req, res) {
-      var r, user;
-      user = req.params.user;
-      r = {
+      var pattern, promises, result, x;
+      result = {
         'transactions': []
       };
-      return db.lrange("" + user + ":transactions", 0, -1, function(err, transactions) {
-        var cb, i, txid;
-        if (err || !transactions.length) {
-          res.write(JSON.stringify(r));
-          return res.end();
-        }
-        txid = function() {
-          var x;
-          x = transactions[i++];
-          if (x.match(/[a-z]/i)) {
-            return x;
-          }
-          return user + ":transactions:" + x;
-        };
-        cb = function(err, t) {
-          r.transactions.push(t);
-          if (i >= transactions.length) {
-            res.write(JSON.stringify(r));
-            return res.end();
-          } else {
-            return db.hgetall(txid(), cb);
-          }
-        };
-        i = 0;
-        return db.hgetall(txid(), cb);
+      promises = [];
+      pattern = req.params.user;
+      if (req.session.user.username === 'admin') {
+        x = '*';
+      }
+      return db.keysAsync(pattern + ":transactions").then(function(keys) {
+        return Promise.all(keys.map(function(key) {
+          var user;
+          user = key.substr(0, key.indexOf(':'));
+          return db.lrangeAsync(key, 0, -1).then(function(transactions) {
+            return Promise.all(transactions.map(function(transaction) {
+              return db.hgetallAsync(txid(transaction, user)).then(function(transaction) {
+                if (transaction) {
+                  transaction.user = user;
+                  return result.transactions.push(transaction);
+                }
+              });
+            }));
+          });
+        }));
+      }).then(function() {
+        res.write(JSON.stringify(result));
+        return res.end();
       });
     },
     create: function(req, res) {
@@ -102,7 +108,7 @@
         }
         multi = db.multi();
         multi.hmset(req.body.txid, req.body);
-        multi.rpush("" + req.params.user + ":transactions", req.body.txid);
+        multi.rpush(req.params.user + ":transactions", req.body.txid);
         return multi.exec(function(err, replies) {
           return finish();
         });

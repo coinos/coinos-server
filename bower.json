@@ -33,7 +33,8 @@
     "bootstrap3-dialog": "~1.34.7",
     "jquery-serialize-object": "~2.5.0",
     "crypto-js": "~3.1.5",
-    "bootbox.js": "bootbox#~4.4.0"
+    "bootbox.js": "bootbox#~4.4.0",
+    "moment": "^2.15.1"
   },
   "resolutions": {
     "bootstrap": "b962f8a4308d094c23c9ac47a0a5ee3d4e9a4bfd"

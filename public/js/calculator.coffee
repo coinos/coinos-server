@@ -1,5 +1,3 @@
-moment = require('moment') 
-
 EXCHANGE_FAIL = "Problem fetching exchange rate"
 SOCKET_FAIL = "Problem connecting to payment server, notifications may not appear"
 ADDRESS_FAIL = "Invalid address"

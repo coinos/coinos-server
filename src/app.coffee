@@ -75,7 +75,6 @@ do fetchRates = ->
   )
   setTimeout(fetchRates, 120000)
 
-
 app.get('/', cache, sessions.new)
 
 app.get('/address', cache, (req, res) ->
