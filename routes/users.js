@@ -1,5 +1,7 @@
 (function() {
-  var bcrypt, config, db, fs, request;
+  var Promise, bcrypt, config, db, fs, request;
+
+  Promise = require('bluebird');
 
   db = require("../redis");
 
@@ -23,11 +25,31 @@
           return res.end();
         });
       },
+      index: function(req, res) {
+        var result;
+        result = {
+          'users': []
+        };
+        return db.keysAsync("user:*").then(function(users) {
+          return Promise.all(users.map(function(key) {
+            return db.hgetallAsync(key).then(function(user) {
+              delete user['password'];
+              return result.users.push(user);
+            });
+          }));
+        }).then(function() {
+          res.writeHead(200, {
+            "Content-Type": "application/json"
+          });
+          res.write(JSON.stringify(result));
+          return res.end();
+        });
+      },
       json: function(req, res) {
         if (!req.params.user) {
           res.end();
         }
-        return db.llen("" + (req.params.user.toLowerCase()) + ":transactions", function(err, len) {
+        return db.llen((req.params.user.toLowerCase()) + ":transactions", function(err, len) {
           return db.hgetall("user:" + (req.params.user.toLowerCase()), function(err, obj) {
             delete obj['password'];
             obj['index'] = len;
@@ -64,7 +86,7 @@
                 if ((ext === 'jpg' || ext === 'png' || ext === 'gif') && (err || !stats.isFile())) {
                   try {
                     return request("" + obj.logo).pipe(fs.createWriteStream(path));
-                  } catch (_error) {}
+                  } catch (undefined) {}
                 }
               });
             }
@@ -141,7 +163,7 @@
             if (host === 'localhost') {
               host += ':3000';
             }
-            url = "" + req.protocol + "://" + host + "/verify/" + token;
+            url = req.protocol + "://" + host + "/verify/" + token;
             return res.render('users/welcome', {
               user: req.body.username.toLowerCase(),
               layout: 'mail',

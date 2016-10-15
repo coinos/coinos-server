@@ -1,3 +1,4 @@
+Promise = require('bluebird')
 db = require("../redis")
 config = require("../config")
 bcrypt = require('bcryptjs')
@@ -8,6 +9,21 @@ module.exports = (sessions) ->
   exists: (req, res) ->
     db.hgetall("user:"+req.params.user.toLowerCase(), (err, obj) ->
       if obj? then res.write('true') else res.write('false')
+      res.end()
+    )
+
+  index: (req, res) ->
+    result = 'users': []
+    db.keysAsync("user:*").then((users) ->
+      Promise.all(users.map((key) ->
+        db.hgetallAsync(key).then((user) ->
+          delete user['password']
+          result.users.push(user)
+        )
+      ))
+    ).then(->
+      res.writeHead(200, {"Content-Type": "application/json"});
+      res.write(JSON.stringify(result))
       res.end()
     )
   
