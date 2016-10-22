@@ -6,9 +6,7 @@ path = require('path')
 passport = require('./passport')
 config = require('./config')
 fs = require('fs')
-bcoin = require('bcoin').set('testnet')
 proxyMiddleware = require('http-proxy-middleware')
-
 sessions = require("./routes/sessions")(passport)
 transactions = require("./routes/transactions")
 users = require("./routes/users")(sessions)
@@ -16,6 +14,7 @@ users = require("./routes/users")(sessions)
 session = require('express-session')
 RedisStore = require('connect-redis')(session)
 sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
+
 
 proxyContext = '/blockcypher'
 proxyOptions = 
@@ -76,27 +75,8 @@ do fetchRates = ->
   )
   setTimeout(fetchRates, 120000)
 
-do startBcoin = ->
-  chain = new bcoin.chain(
-    db: 'leveldb'
-    location: process.env.HOME + '/chain.db'
-    spv: true
-  )
-
-  pool = new bcoin.pool(
-    chain: chain
-    spv: true
-  )
-
-  pool.open((err) -> 
-    pool.watchAddress('mhwWUZAmP4ycvwj4DdfGRy2JNRwDXeuwtj')
-
-    pool.connect()
-    pool.startSync()
-
-    pool.on('error', (err) -> return)
-    pool.on('tx', (tx) -> console.log(tx))
-  )
+do startBcoin = -> 
+  require('./bcoin').init()
 
 app.get('/', cache, sessions.new)
 

@@ -237,6 +237,7 @@ getUser = ->
     $('#pubkey').val(user.pubkey)
     $('#privkey').val(user.privkey)
     $('#address').val(user.address)
+    $('.address').html(user.address)
     $('#unit').html(user.unit)
     $('#currency_toggle').html(user.unit)
     $('#amount').attr('step', 0.00000001 * multiplier())
