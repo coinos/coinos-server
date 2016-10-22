@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bcoin, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, users,
+  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, users,
     indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   request = require('request');
@@ -17,8 +17,6 @@
   config = require('./config');
 
   fs = require('fs');
-
-  bcoin = require('bcoin').set('testnet');
 
   proxyMiddleware = require('http-proxy-middleware');
 
