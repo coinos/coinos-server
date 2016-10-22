@@ -2,27 +2,20 @@ g = this
 
 $(->
   $('#username').focus()
-  $('#password').pwstrength(showVerdicts: false)
-
 
   $('#username').blur(->
     $(this).parent().next('.alert').remove()
 
-    if /^[a-z]+$/.test($(this).val()) and $(this).val().length > 2
+    if /^[a-z]+$/.test($(this).val())
       $(this).parent().removeClass('has-error')
     else
       $(this).parent().addClass('has-error')
-      $(this).parent().after('<div class="alert alert-danger">Username must be lowecase and have at least 3 characters</div>')
+      $(this).parent().after('<div class="alert alert-danger">Username must be all lowercase</div>')
   )
 
   $('#password').blur(->
     $('#confirm').blur()
     $(this).parent().next('.alert').remove()
-
-    if $('.progress-bar-success').length > 0
-      $(this).parent().removeClass('has-error')
-    else
-      $(this).parent().addClass('has-error')
   )
 
   $('#confirm').blur(->
