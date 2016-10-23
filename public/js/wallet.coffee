@@ -404,7 +404,7 @@ displayErrors = (data, dialog) ->
 
 
 convertedAmount = ->
-  g.amount = amount unless g.amount and isNumeric(g.amount)
+  g.amount = amount unless g.amount and !isNaN(parseFloat(g.amount))
   amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision())
   difference = parseFloat(Math.abs(g.amount - amount).toFixed(precision()))
   tolerance = parseFloat((.00000002 * g.exchange * multiplier()).toFixed(precision()))

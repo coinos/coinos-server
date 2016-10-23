@@ -1,7 +1,6 @@
-;(function(e,t,n){function i(n,s){if(!t[n]){if(!e[n]){var o=typeof require=="function"&&require;if(!s&&o)return o(n,!0);if(r)return r(n,!0);throw new Error("Cannot find module '"+n+"'")}var u=t[n]={exports:{}};e[n][0](function(t){var r=e[n][1][t];return i(r?r:t)},u,u.exports)}return t[n].exports}var r=typeof require=="function"&&require;for(var s=0;s<n.length;s++)i(n[s]);return i})({1:[function(require,module,exports){
-(function(){(function() {
+(function() {
   var check_address, convertedAmount, createWallet, displayErrors, errors, g, getBalance, getExchangeRate, getUser, isBip32, multiplier, precision, sendTransaction, updateUser, validators,
-    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+    indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   g = typeof exports !== "undefined" && exports !== null ? exports : this;
 
@@ -11,12 +10,13 @@
 
   validators = {
     address: function(e) {
+      var error;
       if (e.val() === '') {
         return true;
       }
       try {
         return bitcoin.address.fromBase58Check(e.val());
-      } catch (_error) {
+      } catch (error) {
         return false;
       }
     },
@@ -48,7 +48,7 @@
       trigger: 'hover'
     });
     $('#key').keyup(function() {
-      var val, _ref;
+      var ref, val;
       val = $(this).val();
       $('#keytype').val('unknown');
       switch (val[0]) {
@@ -56,7 +56,7 @@
           try {
             bitcoin.address.fromBase58Check(val);
             return $('#keytype').val('address');
-          } catch (_error) {}
+          } catch (undefined) {}
           break;
         case '5':
         case 'L':
@@ -64,14 +64,14 @@
           try {
             bitcoin.ECPair.fromWIF(val);
             return $('#keytype').val('wif');
-          } catch (_error) {}
+          } catch (undefined) {}
           break;
         case 'U':
           try {
             if (CryptoJS.AES.decrypt(val, g.password).toString(CryptoJS.enc.Utf8)) {
               return $('#keytype').val('aes');
             }
-          } catch (_error) {}
+          } catch (undefined) {}
           break;
         case '6':
           if (bip38().verify(val)) {
@@ -83,22 +83,22 @@
             try {
               bitcoin.HDNode.fromBase58(val);
               return $('#keytype').val('xpub');
-            } catch (_error) {}
+            } catch (undefined) {}
           } else {
             try {
               bitcoin.HDNode.fromBase58(val);
               return $('#keytype').val('xprv');
-            } catch (_error) {}
+            } catch (undefined) {}
           }
           break;
         default:
-          if (((_ref = val.split(' ').length) === 12 || _ref === 15 || _ref === 18 || _ref === 21 || _ref === 24) && bip39.validateMnemonic(val)) {
+          if (((ref = val.split(' ').length) === 12 || ref === 15 || ref === 18 || ref === 21 || ref === 24) && bip39.validateMnemonic(val)) {
             return $('#keytype').val('bip39');
           }
       }
     });
     $('#save').click(function() {
-      var key, master, privkey, proceed, pubkey, wif;
+      var error, error1, key, master, privkey, proceed, pubkey, wif;
       $('.form-control').blur();
       if ($('#keys .has-error').length > 0) {
         $('#keys .has-error').effect('shake', 500);
@@ -122,12 +122,12 @@
             pubkey = bitcoin.HDNode.fromBase58(CryptoJS.AES.decrypt(key, g.password).toString(CryptoJS.enc.Utf8)).neutered().toString();
             $('#pubkey').val(pubkey);
             $('#privkey').val(key);
-          } catch (_error) {
+          } catch (error) {
             try {
               pubkey = bitcoin.ECPair.fromWIF(CryptoJS.AES.decrypt(key, g.password).toString(CryptoJS.enc.Utf8)).getAddress();
               $('#pubkey').val(pubkey);
               $('#privkey').val(key);
-            } catch (_error) {
+            } catch (error1) {
               proceed = false;
             }
           }
@@ -217,7 +217,7 @@
         $(this).closest('.form-group').hide();
         $('.wallet').fadeIn();
         return g.password = $(this).val();
-      } catch (_error) {}
+      } catch (undefined) {}
     });
     $('#manage').click(function() {
       $('#withdrawal').hide();
@@ -296,9 +296,9 @@
   };
 
   createWallet = function() {
-    return $.get("" + g.api + "/wallets", function(data) {
-      var params, _ref;
-      if (_ref = g.user.username, __indexOf.call(data.wallet_names, _ref) >= 0) {
+    return $.get(g.api + "/wallets", function(data) {
+      var params, ref;
+      if (ref = g.user.username, indexOf.call(data.wallet_names, ref) >= 0) {
         return getBalance();
       } else {
         params = {
@@ -307,12 +307,12 @@
         if (isBip32(g.user.pubkey)) {
           params.extended_public_key = g.user.pubkey;
           params.subchain_indexes = [0, 1];
-          return $.post("" + g.api + "/wallets/hd", JSON.stringify(params)).done(getBalance).fail(function() {
+          return $.post(g.api + "/wallets/hd", JSON.stringify(params)).done(getBalance).fail(function() {
             return $('.wallet').fadeIn();
           });
         } else {
           params.addresses = [g.user.pubkey];
-          return $.post("" + g.api + "/wallets", JSON.stringify(params)).done(getBalance).fail(function() {
+          return $.post(g.api + "/wallets", JSON.stringify(params)).done(getBalance).fail(function() {
             return $('.wallet').fadeIn();
           });
         }
@@ -321,13 +321,13 @@
   };
 
   getBalance = function() {
-    return $.get("" + g.api + "/addrs/" + g.user.username + "/balance?omitWalletAddresses=true", function(data) {
+    return $.get(g.api + "/addrs/" + g.user.username + "/balance?omitWalletAddresses=true", function(data) {
       var balance, fiat;
       balance = data.final_balance;
       g.balance = parseFloat(balance.toBTC());
       fiat = balance.toFiat();
       $('#balance').html(g.balance);
-      $('#fiat').html("" + fiat + " " + g.user.currency);
+      $('#fiat').html(fiat + " " + g.user.currency);
       $('#amount').attr('max', g.balance);
       $('#balances').show();
       $('#fetching').hide();
@@ -351,11 +351,11 @@
     delete data['key'];
     return $.post("/" + g.user.username, data, function() {
       return $.ajax({
-        url: "" + g.api + "/wallets/" + g.user.username,
+        url: g.api + "/wallets/" + g.user.username,
         type: 'DELETE'
       }).always(function() {
         return $.ajax({
-          url: "" + g.api + "/wallets/hd/" + g.user.username,
+          url: g.api + "/wallets/hd/" + g.user.username,
           type: 'DELETE'
         }).always(function() {
           return getUser();
@@ -399,7 +399,7 @@
         ],
         preference: $('#priority').val()
       };
-      return $.post("" + g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
+      return $.post(g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
         var amount, value;
         if ($('#currency_toggle').html() === g.user.unit) {
           amount = $('#amount').val();
@@ -412,7 +412,7 @@
         if (value > parseFloat(g.balance).toSatoshis() - params.fees) {
           params.outputs[0].value -= params.fees;
         }
-        return $.post("" + g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
+        return $.post(g.api + "/txs/new", JSON.stringify(params)).done(function(data) {
           var fee, total;
           data.pubkeys = [];
           if (g.key instanceof bitcoin.ECPair) {
@@ -436,9 +436,9 @@
           if (value > parseFloat(g.balance).toSatoshis() - data.tx.fees) {
             total += fee;
           }
-          $('.dialog .amount').html("" + (amount.toBTC()) + " " + g.user.unit + " (" + (amount.toFiat()) + " " + g.user.currency + ")");
-          $('.dialog .fee').html("" + (fee.toBTC()) + " " + g.user.unit + " (" + (fee.toFiat()) + " " + g.user.currency + ")");
-          $('.dialog .total').html("" + (total.toBTC()) + " " + g.user.unit + " (" + (total.toFiat()) + " " + g.user.currency + ")");
+          $('.dialog .amount').html((amount.toBTC()) + " " + g.user.unit + " (" + (amount.toFiat()) + " " + g.user.currency + ")");
+          $('.dialog .fee').html((fee.toBTC()) + " " + g.user.unit + " (" + (fee.toFiat()) + " " + g.user.currency + ")");
+          $('.dialog .total').html((total.toBTC()) + " " + g.user.unit + " (" + (total.toFiat()) + " " + g.user.currency + ")");
           $('.dialog .address').html(data.tx.outputs[0].addresses[0]);
           dialog.getModalBody().html($('.dialog').html());
           if (amount.toBTC() < 0.00000534) {
@@ -451,14 +451,14 @@
             }, dialog);
           }
           return dialog.getModal().find('.btn-primary').click(function() {
-            return $.post("" + g.api + "/txs/send", JSON.stringify(g.data)).then(function(finaltx) {
+            return $.post(g.api + "/txs/send", JSON.stringify(g.data)).then(function(finaltx) {
               var balance, fiat;
               $('#transaction_sent').fadeIn();
               balance = g.balance.toSatoshis() - finaltx.tx.outputs[0].value - finaltx.tx.fees;
               g.balance = balance.toBTC();
               fiat = balance.toFiat();
               $('#balance').html(g.balance);
-              $('#fiat').html("" + fiat + " " + g.user.currency);
+              $('#fiat').html(fiat + " " + g.user.currency);
               $('#blockchain').off('click').on('click', function() {
                 return window.open('https://blockchain.info/tx/' + finaltx.tx.hash, '_blank');
               });
@@ -475,23 +475,23 @@
   };
 
   displayErrors = function(data, dialog) {
-    var e, _i, _len, _ref, _results;
+    var e, j, len, ref, results;
     if (data.errors) {
       dialog.getModalBody().html('');
       dialog.getModal().find('.btn-primary').hide();
-      _ref = data.errors;
-      _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        e = _ref[_i];
-        _results.push(dialog.getModalBody().append("<div class='alert alert-danger'>" + e.error + "</div>"));
+      ref = data.errors;
+      results = [];
+      for (j = 0, len = ref.length; j < len; j++) {
+        e = ref[j];
+        results.push(dialog.getModalBody().append("<div class='alert alert-danger'>" + e.error + "</div>"));
       }
-      return _results;
+      return results;
     }
   };
 
   convertedAmount = function() {
     var amount, difference, tolerance;
-    if (!(g.amount && isNumeric(g.amount))) {
+    if (!(g.amount && !isNaN(parseFloat(g.amount)))) {
       g.amount = amount;
     }
     amount = parseFloat($('#amount').val() * multiplier() / g.exchange).toFixed(precision());
@@ -505,19 +505,21 @@
   };
 
   check_address = function(address) {
+    var error;
     try {
       bitcoin.address.fromBase58Check(address);
       return true;
-    } catch (_error) {
+    } catch (error) {
       return isBip32(address);
     }
   };
 
   isBip32 = function(address) {
+    var error;
     try {
       bitcoin.HDNode.fromBase58(address);
       return true;
-    } catch (_error) {
+    } catch (error) {
       return false;
     }
   };
@@ -554,8 +556,3 @@
   };
 
 }).call(this);
-
-
-})()
-},{}]},{},[1])
-;
