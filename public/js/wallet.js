@@ -460,7 +460,7 @@
               $('#balance').html(g.balance);
               $('#fiat').html("" + fiat + " " + g.user.currency);
               $('#blockchain').off('click').on('click', function() {
-                return window.open('https://tradeblock.com/bitcoin/tx/' + finaltx.tx.hash, '_blank');
+                return window.open('https://blockchain.info/tx/' + finaltx.tx.hash, '_blank');
               });
               return dialog.close();
             });

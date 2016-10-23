@@ -247,7 +247,7 @@
       }
       listen();
     }
-    return $('#address').html("<a href='https://tradeblock.com/bitcoin/address/" + g.user.address + "'>" + g.user.address + "</a>");
+    return $('#address').html("<a href='https://blockchain.info/address/" + g.user.address + "'>" + g.user.address + "</a>");
   };
 
   fail = function(msg) {

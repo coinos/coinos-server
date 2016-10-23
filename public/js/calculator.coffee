@@ -235,7 +235,7 @@ getAddress = ->
     g.blockchain.close() if g.blockchain
     listen()
 
-  $('#address').html("<a href='https://tradeblock.com/bitcoin/address/#{g.user.address}'>#{g.user.address}</a>")
+  $('#address').html("<a href='https://blockchain.info/address/#{g.user.address}'>#{g.user.address}</a>")
 
 fail = (msg) ->
   g.errors.push(msg)

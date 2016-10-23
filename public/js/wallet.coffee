@@ -384,7 +384,7 @@ sendTransaction = ->
             fiat = balance.toFiat()
             $('#balance').html(g.balance)
             $('#fiat').html("#{fiat} #{g.user.currency}")
-            $('#blockchain').off('click').on('click', -> window.open('https://tradeblock.com/bitcoin/tx/' + finaltx.tx.hash, '_blank'))
+            $('#blockchain').off('click').on('click', -> window.open('https://blockchain.info/tx/' + finaltx.tx.hash, '_blank'))
             dialog.close()
           )
         )
