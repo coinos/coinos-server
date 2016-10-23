@@ -556,11 +556,3 @@
   };
 
 }).call(this);
-<<<<<<< 73af154d7e064ed6a46583639c8b72e2c3c88731
-=======
-
-
-})()
-},{}]},{},[1])
-;
->>>>>>> Use blockchain.info as explorer
