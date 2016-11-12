@@ -11,3 +11,4 @@ tmp
 public/img/logos/*
 public/bower
 public/.well_known
+db
