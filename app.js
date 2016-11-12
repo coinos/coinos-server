@@ -1,5 +1,5 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, startBcoin, transactions, users,
+  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, twilio, users,
     indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   request = require('request');
@@ -23,6 +23,8 @@
   sessions = require("./routes/sessions")(passport);
 
   transactions = require("./routes/transactions");
+
+  twilio = require('twilio');
 
   users = require("./routes/users")(sessions);
 
@@ -85,7 +87,7 @@
     cookie: {
       maxAge: 1209600000
     },
-    key: 'vanbtc.sid'
+    key: 'coinos.sid'
   }));
 
   app.use(passport.initialize());
@@ -123,9 +125,7 @@
     return setTimeout(fetchRates, 120000);
   })();
 
-  (startBcoin = function() {
-    return require('./bcoin').init();
-  })();
+  require('./bcoin').init(app);
 
   app.get('/', cache, sessions["new"]);
 

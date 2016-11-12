@@ -9,6 +9,7 @@ fs = require('fs')
 proxyMiddleware = require('http-proxy-middleware')
 sessions = require("./routes/sessions")(passport)
 transactions = require("./routes/transactions")
+twilio = require('twilio')
 users = require("./routes/users")(sessions)
 
 session = require('express-session')
@@ -45,7 +46,7 @@ app.use(session(
   secret: config.secret
   store: sessionStore
   cookie: maxAge: 1209600000
-  key: 'vanbtc.sid'
+  key: 'coinos.sid'
 ))
 app.use(passport.initialize())
 app.use(passport.session())
@@ -75,8 +76,7 @@ do fetchRates = ->
   )
   setTimeout(fetchRates, 120000)
 
-do startBcoin = -> 
-  require('./bcoin').init()
+require('./bcoin').init(app)
 
 app.get('/', cache, sessions.new)
 

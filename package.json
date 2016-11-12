@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "async": "2.1.1",
-    "bcoin": "git+https://github.com/bcoin-org/bcoin.git#0ca843e3cabd4920546a9947f15954e2b7ede195",
+    "bcoin": "git+https://github.com/bcoin-org/bcoin.git#master",
     "bcryptjs": "^2.3.0",
     "bip39": "^2.2.0",
     "bitcoinjs-lib": "^2.3.0",
@@ -31,7 +31,8 @@
     "passport-local": "1.0.0",
     "redis": "2.6.2",
     "request": "~2.75.0",
-    "sendgrid": "^4.3.0"
+    "sendgrid": "^4.3.0",
+    "twilio": "^2.11.0"
   },
   "devDependencies": {
     "bower": "^1.8.0",
