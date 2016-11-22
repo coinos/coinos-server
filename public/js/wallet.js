@@ -58,6 +58,12 @@
             return $('#keytype').val('address');
           } catch (undefined) {}
           break;
+        case 'm':
+          try {
+            bitcoin.address.fromBase58Check(val);
+            return $('#keytype').val('address');
+          } catch (undefined) {}
+          break;
         case '5':
         case 'L':
         case 'K':

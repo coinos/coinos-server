@@ -41,7 +41,11 @@ $(->
     $('#keytype').val('unknown')
 
     switch val[0]
-      when '1' 
+      when '1'
+        try 
+          bitcoin.address.fromBase58Check(val)
+          $('#keytype').val('address')
+      when 'm'
         try 
           bitcoin.address.fromBase58Check(val)
           $('#keytype').val('address')
