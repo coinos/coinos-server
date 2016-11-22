@@ -3,7 +3,7 @@
   "description": "Bitcoin Point of Sale App",
   "main": "app.js",
   "authors": [
-    "Adam Soltys <adam.soltys@pwgsc-tpsgc.gc.ca>"
+    "Adam Soltys <asoltys@gmail.com>"
   ],
   "license": "MIT",
   "keywords": [
@@ -34,7 +34,8 @@
     "jquery-serialize-object": "~2.5.0",
     "crypto-js": "~3.1.5",
     "bootbox.js": "bootbox#~4.4.0",
-    "moment": "^2.15.1"
+    "moment": "^2.15.1",
+    "bootstrap-formhelpers": "^2.3.0"
   },
   "resolutions": {
     "bootstrap": "b962f8a4308d094c23c9ac47a0a5ee3d4e9a4bfd"

@@ -179,8 +179,12 @@ module.exports = (sessions) ->
       delete req.session.user.password
 
       if req.body.password?
-        bcrypt.hash(req.body.password, 12, (err, hash) ->
-          db.hmset("user:#{req.params.user.toLowerCase()}", password: hash, ->
+        bcrypt.hash(req.body.password, 12, (err, password) ->
+          db.hmset("user:#{req.params.user.toLowerCase()}", 
+            email: email
+            password: password 
+            phone: phone
+          , ->
             if req.xhr
               res.send({})
               res.end()

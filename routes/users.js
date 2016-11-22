@@ -232,9 +232,11 @@
           req.session.user = req.body;
           delete req.session.user.password;
           if (req.body.password != null) {
-            return bcrypt.hash(req.body.password, 12, function(err, hash) {
+            return bcrypt.hash(req.body.password, 12, function(err, password) {
               return db.hmset("user:" + (req.params.user.toLowerCase()), {
-                password: hash
+                email: email,
+                password: password,
+                phone: phone
               }, function() {
                 if (req.xhr) {
                   res.send({});

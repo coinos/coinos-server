@@ -1,4 +1,5 @@
 {{#yield-scripts}}
+<script src="/bower/bootstrap-formhelpers/dist/js/bootstrap-formhelpers.min.js"></script>
 <script src="/js/profile.js"></script>
 {{/yield-scripts}}
 
@@ -10,6 +11,11 @@
   <div class="form-group">
     <label for="email">Email:</label>
     <input type="text" id="email" name="email" class="form-control" />
+  </div>
+
+  <div class="form-group">
+    <label for="phone">Phone:</label>
+    <input type="text" id="phone" name="phone" class="form-control bfh-phone" data-format="+1 (ddd) ddd-dddd" />
   </div>
 
   <div class="form-group">
