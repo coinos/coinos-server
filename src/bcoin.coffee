@@ -22,14 +22,12 @@ module.exports =
       seeds: ['dctrl.ca']
     )
 
-    pool.logger.level = 4
+    # pool.logger.level = 4
 
     pool.open().then(->
       db.keysAsync("user:*").then((keys) ->
         Promise.all(keys.map((key) ->
           db.hgetallAsync(key).then((user) ->
-            console.log(key)
-            console.log(user)
             if user.address
               pool.watchAddress(user.address)
               users[user.address] = 
@@ -49,15 +47,11 @@ module.exports =
       )
 
       pool.on('tx', (tx) ->
-        console.log(tx)
-
         for output in tx.outputs
           value = (output.value / 100000000).toFixed(8)
           address = output.getAddress().toBase58()
           if Object.keys(users).includes(address)
             app.render('payment', { value: value, address: address }, (err, html) ->
-              debugger
-              console.log(users[address])
               helper = require('sendgrid').mail
               from_email = new helper.Email('info@coinos.io')
               to_email = new helper.Email(users[address].email)

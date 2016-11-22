@@ -26,13 +26,10 @@
         maxPeers: 1,
         seeds: ['dctrl.ca']
       });
-      pool.logger.level = 4;
       return pool.open().then(function() {
         db.keysAsync("user:*").then(function(keys) {
           return Promise.all(keys.map(function(key) {
             return db.hgetallAsync(key).then(function(user) {
-              console.log(key);
-              console.log(user);
               if (user.address) {
                 pool.watchAddress(user.address);
                 return users[user.address] = {
@@ -52,7 +49,6 @@
         });
         return pool.on('tx', function(tx) {
           var address, client, i, len, output, ref, results, value;
-          console.log(tx);
           ref = tx.outputs;
           results = [];
           for (i = 0, len = ref.length; i < len; i++) {
@@ -64,9 +60,7 @@
                 value: value,
                 address: address
               }, function(err, html) {
-                debugger;
                 var content, from_email, helper, mail, request, sg, subject, to_email;
-                console.log(users[address]);
                 helper = require('sendgrid').mail;
                 from_email = new helper.Email('info@coinos.io');
                 to_email = new helper.Email(users[address].email);
