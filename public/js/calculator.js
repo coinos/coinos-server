@@ -173,12 +173,12 @@
       if (g.attempts > 3) {
         fail(SOCKET_FAIL);
       }
-      g.blockchain = new WebSocket("wss://ws.blockchain.info/inv");
+      g.blockchain = new WebSocket("wss://socket.blockcypher.com/v1/btc/main");
       g.blockchain.onopen = function() {
         if (g.blockchain.readyState === 1) {
           g.attempts = 0;
           clear(SOCKET_FAIL);
-          return g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}');
+          return g.blockchain.send('{"event":"unconfirmed-tx", "address":"' + g.user.address + '"}');
         } else {
           return setTimeout(g.blockchain.onopen, 12000 * g.attempts);
         }
@@ -194,19 +194,21 @@
         return listen();
       };
       return g.blockchain.onmessage = function(e) {
-        var amount, results, txid;
-        results = eval('(' + e.data + ')');
+        var amount, j, len, output, ref, tx, txid;
+        tx = JSON.parse(e.data);
         amount = 0;
-        txid = results.x.hash;
+        txid = tx.hash;
         if (txid === g.last) {
           return;
         }
         g.last = txid;
-        $.each(results.x.out, function(i, v) {
-          if (v.addr === g.user.address) {
-            return amount += v.value / 100000000;
+        ref = tx.outputs;
+        for (j = 0, len = ref.length; j < len; j++) {
+          output = ref[j];
+          if (output.addresses[0] === g.user.address) {
+            amount += output.value / 100000000;
           }
-        });
+        }
         return logTransaction(txid, amount);
       };
     }
@@ -271,17 +273,17 @@
   };
 
   Array.prototype.uniq = function() {
-    var j, key, output, ref, results1, value;
+    var j, key, output, ref, results, value;
     output = {};
     for (key = j = 0, ref = this.length; 0 <= ref ? j < ref : j > ref; key = 0 <= ref ? ++j : --j) {
       output[this[key]] = this[key];
     }
-    results1 = [];
+    results = [];
     for (key in output) {
       value = output[key];
-      results1.push(value);
+      results.push(value);
     }
-    return results1;
+    return results;
   };
 
   multiplier = function() {

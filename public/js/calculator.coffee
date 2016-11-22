@@ -169,13 +169,13 @@ listen = ->
     setTimeout(listen, 12000)
   else
     fail(SOCKET_FAIL) if g.attempts > 3
-    g.blockchain = new WebSocket("wss://ws.blockchain.info/inv")
+    g.blockchain = new WebSocket("wss://socket.blockcypher.com/v1/btc/main")
 
     g.blockchain.onopen = -> 
       if g.blockchain.readyState is 1
         g.attempts = 0
         clear(SOCKET_FAIL)
-        g.blockchain.send('{"op":"addr_sub", "addr":"' + g.user.address + '"}')
+        g.blockchain.send('{"event":"unconfirmed-tx", "address":"' + g.user.address + '"}')
       else
         setTimeout(g.blockchain.onopen, 12000 * g.attempts)
     
@@ -190,17 +190,17 @@ listen = ->
       listen()
 
     g.blockchain.onmessage = (e) ->
-      results = eval('(' + e.data + ')')
+      tx = JSON.parse(e.data)
+
       amount = 0
-      txid = results.x.hash
+      txid = tx.hash
 
       return if txid == g.last
       g.last = txid
       
-      $.each(results.x.out, (i, v) ->
-        if (v.addr == g.user.address) 
-          amount += v.value / 100000000
-      )
+      for output in tx.outputs
+        if (output.addresses[0] == g.user.address) 
+          amount += output.value / 100000000
 
       logTransaction(txid, amount)
 
