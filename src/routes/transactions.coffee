@@ -59,7 +59,7 @@ module.exports =
             helper = require('sendgrid').mail
             from_email = new helper.Email('info@coinos.io')
             to_email = new helper.Email(user.email)
-            subject = 'Transaction Sent'
+            subject = 'Payment Received'
             content = new helper.Content('text/html', html)
             mail = new helper.Mail(from_email, subject, to_email, content)
 

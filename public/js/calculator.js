@@ -1,11 +1,15 @@
 (function() {
-  var ADDRESS_FAIL, EXCHANGE_FAIL, SOCKET_FAIL, clear, fail, fetchExchangeRate, g, getAddress, listen, logTransaction, multiplier, setup, updateTotal;
+  var ADDRESS_FAIL, API_URL, EXCHANGE_FAIL, SOCKET_FAIL, TEST_URL, clear, fail, fetchExchangeRate, g, getAddress, listen, logTransaction, multiplier, setup, updateTotal;
 
   EXCHANGE_FAIL = "Problem fetching exchange rate";
 
   SOCKET_FAIL = "Problem connecting to payment server, notifications may not appear";
 
   ADDRESS_FAIL = "Invalid address";
+
+  API_URL = "wss://socket.blockcypher.com/v1/btc/main";
+
+  TEST_URL = "wss://socket.blockcypher.com/v1/btc/test3";
 
   g = typeof exports !== "undefined" && exports !== null ? exports : this;
 
@@ -96,6 +100,9 @@
       $('#logo').attr('src', src).show();
     }
     getAddress();
+    if (g.user.address[0] === 'm') {
+      API_URL = TEST_URL;
+    }
     $('.symbol').html(g.user.currency);
     $('.currency').html(g.user.currency);
     $('.unit').html(g.user.unit);
@@ -173,7 +180,7 @@
       if (g.attempts > 3) {
         fail(SOCKET_FAIL);
       }
-      g.blockchain = new WebSocket("wss://socket.blockcypher.com/v1/btc/main");
+      g.blockchain = new WebSocket(API_URL);
       g.blockchain.onopen = function() {
         if (g.blockchain.readyState === 1) {
           g.attempts = 0;

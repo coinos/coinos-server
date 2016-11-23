@@ -1,6 +1,8 @@
 EXCHANGE_FAIL = "Problem fetching exchange rate"
 SOCKET_FAIL = "Problem connecting to payment server, notifications may not appear"
 ADDRESS_FAIL = "Invalid address"
+API_URL = "wss://socket.blockcypher.com/v1/btc/main"
+TEST_URL = "wss://socket.blockcypher.com/v1/btc/test3"
 
 g = exports ? this
 g.errors = []
@@ -90,6 +92,8 @@ setup = ->
     $('#logo').attr('src', src).show()
 
   getAddress()
+  if g.user.address[0] is 'm'
+    API_URL = TEST_URL
 
   $('.symbol').html(g.user.currency)
   $('.currency').html(g.user.currency)
@@ -169,7 +173,7 @@ listen = ->
     setTimeout(listen, 12000)
   else
     fail(SOCKET_FAIL) if g.attempts > 3
-    g.blockchain = new WebSocket("wss://socket.blockcypher.com/v1/btc/main")
+    g.blockchain = new WebSocket(API_URL)
 
     g.blockchain.onopen = -> 
       if g.blockchain.readyState is 1
