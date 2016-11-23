@@ -18,10 +18,10 @@ sessionStore = new RedisStore(require('./redis').host, ttl: 172800)
 
 
 proxyContext = '/blockcypher'
-proxyOptions = 
+proxyOptions =
   target: 'https://api.blockcypher.com'
   changeOrigin: true
-  pathRewrite: 
+  pathRewrite:
     '^/blockcypher/': '/'
   onProxyReq: (proxyReq, req, res) ->
     symbol = if '?' in proxyReq.path then '&' else '?'
@@ -54,7 +54,7 @@ app.use(passport.session())
 authorize = (req, res, next) ->
   if req.params.user is req.user?.username or
     req.user?.username is 'admin'
-      return next() 
+      return next()
 
   req.session.redirect = req.path
   res.redirect('/login')
@@ -66,7 +66,7 @@ cache = (req, res, next) ->
 
 do fetchRates = ->
   request("https://api.bitcoinaverage.com/exchanges/all", (error, response, body) ->
-    try 
+    try
       require('util').isDate(JSON.parse(body).timestamp)
       file = 'public/js/rates.json'
       stream = fs.createWriteStream(file)
@@ -81,9 +81,9 @@ require('./bcoin').init(app)
 app.get('/', cache, sessions.new)
 
 app.get('/address', cache, (req, res) ->
-  res.render('address', 
+  res.render('address',
     layout: 'layout',
-    js: (-> global.js), 
+    js: (-> global.js),
     css: (-> global.css)
   )
 )
@@ -95,12 +95,12 @@ app.get('/ticker', cache, (req, res) ->
     req.query.symbol ||= 'quadrigacx'
     req.query.type ||= 'bid'
 
-    try 
+    try
       exchange = JSON.parse(data)[req.query.currency][req.query.symbol]['rates'][req.query.type].toString()
-    catch e 
+    catch e
       exchange = "0"
 
-    res.writeHead(200, 
+    res.writeHead(200,
       'Content-Length': exchange.length,
       'Content-Type': 'text/plain')
     res.write(exchange)
@@ -109,10 +109,10 @@ app.get('/ticker', cache, (req, res) ->
 )
 
 app.get('/tips', cache, (req, res) ->
-  res.render('tips', 
+  res.render('tips',
     notice: true,
     layout: 'layout',
-    js: (-> global.js), 
+    js: (-> global.js),
     css: (-> global.css)
   )
 )
@@ -143,7 +143,7 @@ app.get('/:user', cache, users.show)
 
 app.use((err, req, res, next) ->
   res.status(500)
-  res.send('An error occurred');
+  res.send('An error occurred')
   console.error(err.stack)
   res.end()
 )

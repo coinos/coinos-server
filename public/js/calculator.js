@@ -201,14 +201,13 @@
         return listen();
       };
       return g.blockchain.onmessage = function(e) {
-        var amount, j, len, output, ref, tx, txid;
+        var amount, j, len, output, ref, tx;
         tx = JSON.parse(e.data);
         amount = 0;
-        txid = tx.hash;
-        if (txid === g.last) {
+        if (tx.hash === g.last_seen) {
           return;
         }
-        g.last = txid;
+        g.last_seen = tx.hash;
         ref = tx.outputs;
         for (j = 0, len = ref.length; j < len; j++) {
           output = ref[j];
@@ -216,7 +215,7 @@
             amount += output.value / 100000000;
           }
         }
-        return logTransaction(txid, amount);
+        return logTransaction(tx.hash, amount);
       };
     }
   };

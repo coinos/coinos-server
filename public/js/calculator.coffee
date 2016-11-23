@@ -13,7 +13,7 @@ g.transactions = []
 
 $(->
   $.ajax(
-    url: $('#user').val() + '.json', 
+    url: $('#user').val() + '.json',
     dataType: 'json',
     success: (data) ->
       g.user = data
@@ -70,8 +70,8 @@ $(->
   )
 
   $('#received').click(-> window.location = "/#{g.user.username}/report")
-  $('#slide').click(-> 
-    $('#controls').slideToggle() 
+  $('#slide').click(->
+    $('#controls').slideToggle()
     $(this).find('i').toggleClass('fa-sort-up').toggleClass('fa-sort-down')
   )
 )
@@ -83,7 +83,7 @@ setup = ->
   g.user.symbol or= 'quadrigacx'
   g.user.unit or= 'BTC'
 
-  if g.user.title 
+  if g.user.title
     $('#title').html("<a href='/#{g.user.username}/edit'>#{g.user.title}</a>").show()
 
   if g.user.logo
@@ -107,7 +107,7 @@ setup = ->
 fetchExchangeRate = ->
   $.ajax(
     url: "ticker?currency=#{g.user.currency}&symbol=#{g.user.symbol}&type=bid",
-    success: (exchange) -> 
+    success: (exchange) ->
       if exchange?
         clear(EXCHANGE_FAIL)
       else
@@ -149,7 +149,6 @@ updateTotal = ->
 
   $('#total').html(total.toString())
  
-  # size = $('#calculator').width() * 0.7
   size = 300
   $('#qr').css('height', size)
 
@@ -160,7 +159,7 @@ updateTotal = ->
   clearTimeout(g.timeout)
   g.timeout = setTimeout(->
     $('#qr').html('')
-    new QRCode('qr', 
+    new QRCode('qr',
       text: "bitcoin:#{g.user.address}?amount=#{g.amount_requested.toString()}"
       width: size
       height: size
@@ -175,7 +174,7 @@ listen = ->
     fail(SOCKET_FAIL) if g.attempts > 3
     g.blockchain = new WebSocket(API_URL)
 
-    g.blockchain.onopen = -> 
+    g.blockchain.onopen = ->
       if g.blockchain.readyState is 1
         g.attempts = 0
         clear(SOCKET_FAIL)
@@ -195,18 +194,16 @@ listen = ->
 
     g.blockchain.onmessage = (e) ->
       tx = JSON.parse(e.data)
-
       amount = 0
-      txid = tx.hash
 
-      return if txid == g.last
-      g.last = txid
+      return if tx.hash == g.last_seen
+      g.last_seen = tx.hash
       
       for output in tx.outputs
-        if (output.addresses[0] == g.user.address) 
+        if (output.addresses[0] == g.user.address)
           amount += output.value / 100000000
 
-      logTransaction(txid, amount)
+      logTransaction(tx.hash, amount)
 
 logTransaction = (txid, amount) ->
   if $('#received').is(":hidden") and amount >= g.amount_requested
