@@ -32,6 +32,7 @@
     "sendgrid": "^4.3.0"
   },
   "devDependencies": {
+    "bower": "^1.8.0",
     "coffeeify": "^2.0.1",
     "grunt": "^1.0.1",
     "grunt-browser-sync": "^2.2.0",
