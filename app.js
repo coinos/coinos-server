@@ -1,63 +1,23 @@
 (function() {
-  var RedisStore, app, authorize, bodyParser, cache, config, cookieParser, express, fetchRates, fs, passport, path, proxy, proxyContext, proxyMiddleware, proxyOptions, request, session, sessionStore, sessions, transactions, twilio, users,
-    indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-  request = require('request');
-
-  express = require('express');
-
-  bodyParser = require('body-parser');
-
-  cookieParser = require('cookie-parser');
-
-  path = require('path');
-
-  passport = require('./passport');
-
-  config = require('./config');
+  var app, config, engines, express, fetchRates, fs, path, request, route, routes, view, _fn;
 
   fs = require('fs');
 
-  proxyMiddleware = require('http-proxy-middleware');
+  express = require('express');
 
-  sessions = require("./routes/sessions")(passport);
+  path = require('path');
 
-  transactions = require("./routes/transactions");
+  engines = require('consolidate');
 
-  twilio = require('twilio');
+  request = require('request');
 
-  users = require("./routes/users")(sessions);
-
-  session = require('express-session');
-
-  RedisStore = require('connect-redis')(session);
-
-  sessionStore = new RedisStore(require('./redis').host, {
-    ttl: 172800
-  });
-
-  proxyContext = '/blockcypher';
-
-  proxyOptions = {
-    target: 'https://api.blockcypher.com',
-    changeOrigin: true,
-    pathRewrite: {
-      '^/blockcypher/': '/'
-    },
-    onProxyReq: function(proxyReq, req, res) {
-      var symbol;
-      symbol = indexOf.call(proxyReq.path, '?') >= 0 ? '&' : '?';
-      return proxyReq.path += symbol + "token=" + config.blockcypher_token;
-    }
-  };
-
-  proxy = proxyMiddleware(proxyContext, proxyOptions);
+  config = require('./config');
 
   app = express();
 
   app.enable('trust proxy');
 
-  app.engine('html', require('hogan-express'));
+  app.engine('html', require('mmm').__express);
 
   app.set('view engine', 'html');
 
@@ -65,50 +25,11 @@
 
   app.use(express["static"](__dirname + '/public'));
 
-  app.use(proxy);
+  app.use(express.bodyParser());
 
-  app.use(bodyParser.urlencoded({
-    extended: true
-  }));
+  app.use(express.cookieParser());
 
-  app.use(bodyParser.json());
-
-  app.use(bodyParser.json({
-    type: 'application/vnd.api+json'
-  }));
-
-  app.use(cookieParser(config.secret));
-
-  app.use(session({
-    resave: true,
-    saveUninitialized: true,
-    secret: config.secret,
-    store: sessionStore,
-    cookie: {
-      maxAge: 1209600000
-    },
-    key: 'coinos.sid'
-  }));
-
-  app.use(passport.initialize());
-
-  app.use(passport.session());
-
-  authorize = function(req, res, next) {
-    var ref, ref1;
-    if (req.params.user === ((ref = req.user) != null ? ref.username : void 0) || ((ref1 = req.user) != null ? ref1.username : void 0) === 'admin') {
-      return next();
-    }
-    req.session.redirect = req.path;
-    return res.redirect('/login');
-  };
-
-  cache = function(req, res, next) {
-    if (req.path !== '/login') {
-      res.setHeader("Cache-Control", "public, max-age=900");
-    }
-    return next();
-  };
+  app.use(app.router);
 
   (fetchRates = function() {
     request("https://api.bitcoinaverage.com/exchanges/all", function(error, response, body) {
@@ -120,38 +41,136 @@
         return fs.truncate(file, 0, function() {
           return stream.write(body);
         });
-      } catch (undefined) {}
+      } catch (_error) {}
     });
     return setTimeout(fetchRates, 120000);
   })();
 
-  require('./bcoin').init(app);
+  routes = {
+    '/': 'index',
+    '/about': 'about',
+    '/coinfest': 'coinfest',
+    '/coinos': 'coinos',
+    '/contact': 'contact',
+    '/directors': 'directors',
+    '/membership': 'membership',
+    '/merchants': 'merchants',
+    '/partners': 'partners',
+    '/register': 'register'
+  };
 
-  app.get('/', cache, sessions["new"]);
+  _fn = function(route, view) {
+    return app.get(route, function(req, res) {
+      return res.render(view, {
+        js: (function() {
+          return global.js;
+        }),
+        css: (function() {
+          return global.css;
+        }),
+        layout: 'layout'
+      });
+    });
+  };
+  for (route in routes) {
+    view = routes[route];
+    _fn(route, view);
+  }
 
-  app.get('/address', cache, function(req, res) {
-    return res.render('address', {
-      layout: 'layout',
-      js: (function() {
-        return global.js;
-      }),
-      css: (function() {
-        return global.css;
-      })
+  app.get('/users', function(req, res) {
+    var db;
+    db = require('./redis');
+    return db.keys('member:*', function(err, keys) {
+      var i, key, users, _i, _len, _results;
+      users = [];
+      _results = [];
+      for (i = _i = 0, _len = keys.length; _i < _len; i = ++_i) {
+        key = keys[i];
+        _results.push((function(i, db) {
+          return db.hgetall(key, function(err, user) {
+            if (!user["private"]) {
+              users.push(user);
+            }
+            if (i >= keys.length - 1) {
+              users.sort(function(a, b) {
+                if (parseInt(a.number) < parseInt(b.number)) {
+                  return -1;
+                }
+                if (parseInt(a.number) > parseInt(b.number)) {
+                  return 1;
+                }
+                return 0;
+              });
+              res.write(JSON.stringify(users));
+              return res.end();
+            }
+          });
+        })(i, db));
+      }
+      return _results;
     });
   });
 
-  app.get('/ticker', cache, function(req, res) {
+  app.post('/users', function(req, res) {
+    var db, userkey;
+    db = require('./redis');
+    userkey = "member:" + req.body.email;
+    return db.hgetall(userkey, function(err, obj) {
+      if (obj) {
+        res.status(500).send("Sorry, that email address is already registered");
+        return;
+      }
+      db.sadd("users", userkey);
+      return db.incr('members', function(err, number) {
+        return db.hmset(userkey, {
+          name: req.body.name,
+          email: req.body.email,
+          address: req.body.address,
+          number: number,
+          date: req.body.date,
+          txid: req.body.txid
+        }, function(err, obj) {
+          var email;
+          if (true || process.env.NODE_ENV === 'production') {
+            email = req.body.email;
+            res.render('welcome', {
+              layout: 'mail',
+              js: (function() {
+                return global.js;
+              }),
+              css: (function() {
+                return global.css;
+              })
+            }, function(err, html) {
+              var sendgrid;
+              sendgrid = require('sendgrid')(config.sendgrid_user, config.sendgrid_password);
+              email = new sendgrid.Email({
+                to: email,
+                from: 'info@bitcoincoop.org',
+                subject: 'Welcome to the Co-op!',
+                html: html
+              });
+              return sendgrid.send(email);
+            });
+          }
+          return res.end();
+        });
+      });
+    });
+  });
+
+  app.get('/ticker', function(req, res) {
+    var fd;
     fs = require('fs');
-    return fs.readFile("./public/js/rates.json", function(err, data) {
-      var base, base1, base2, e, error1, exchange;
-      (base = req.query).currency || (base.currency = 'CAD');
-      (base1 = req.query).symbol || (base1.symbol = 'quadrigacx');
-      (base2 = req.query).type || (base2.type = 'bid');
+    return fd = fs.readFile("./public/js/rates.json", function(err, data) {
+      var e, exchange, _base, _base1, _base2;
+      (_base = req.query).currency || (_base.currency = 'CAD');
+      (_base1 = req.query).symbol || (_base1.symbol = 'quadrigacx');
+      (_base2 = req.query).type || (_base2.type = 'bid');
       try {
         exchange = JSON.parse(data)[req.query.currency][req.query.symbol]['rates'][req.query.type].toString();
-      } catch (error1) {
-        e = error1;
+      } catch (_error) {
+        e = _error;
         exchange = "0";
       }
       res.writeHead(200, {
@@ -163,64 +182,12 @@
     });
   });
 
-  app.get('/tips', cache, function(req, res) {
-    return res.render('tips', {
-      notice: true,
-      layout: 'layout',
-      js: (function() {
-        return global.js;
-      }),
-      css: (function() {
-        return global.css;
-      })
-    });
-  });
-
-  app.get('/login', cache, sessions["new"]);
-
-  app.post('/login', sessions.create);
-
-  app.get('/logout', sessions.destroy);
-
-  app.get('/users.json', users.index);
-
-  app.get('/register', cache, users["new"]);
-
-  app.get('/users/new', cache, users["new"]);
-
-  app.post('/users', users.create);
-
-  app.get('/verify/:token', users.verify);
-
-  app.post('/:user', authorize, users.update);
-
-  app.get('/:user/edit', authorize, users.edit);
-
-  app.get('/:user/profile', authorize, users.profile);
-
-  app.get('/:user/wallet', authorize, users.wallet);
-
-  app.get('/:user/transactions.json', authorize, transactions.json);
-
-  app.post('/:user/transactions', transactions.create);
-
-  app.post('/transactions/:txid', transactions.update);
-
-  app["delete"]('/:user/transactions/:txid', transactions["delete"]);
-
-  app.get('/:user/report', authorize, transactions.index);
-
-  app.get('/:user.json', users.json);
-
-  app.get('/:user', cache, users.show);
-
   app.use(function(err, req, res, next) {
     res.status(500);
-    res.send('An error occurred');
-    console.error(err.stack);
+    console.log(err);
     return res.end();
   });
 
-  app.listen(3000);
+  app.listen(3002);
 
 }).call(this);

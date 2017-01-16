@@ -1,0 +1,44 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>CoinOS</title>
+    <link href="/img/favicon.ico" rel="shortcut icon" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.2.1/css/font-awesome.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-validator/0.5.3/js/bootstrapValidator.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootbox.js/4.4.0/bootbox.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bitcoinjs-lib/0.2.0-1/bitcoinjs-min.js"></script>
+    <script src="/js/buffer.min.js"></script>
+    <script src="/js/qrcode.js"></script>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <nav class="navbar" role="navigation">
+        <button type="button" class="btn btn-primary navbar-toggle" data-toggle="collapse" data-target="#nav">
+          <span class="pull-right glyphicon glyphicon-list"></span>
+          <span id="connection" class="pull-right glyphicon glyphicon-exclamation-sign"></span>
+        </button>
+        <div id="nav" class="collapse navbar-collapse no-transition">
+          <div class="navbar">
+            <ul class="nav navbar-nav">
+              <li><a href="/{{user}}"><span class="glyphicon glyphicon-home"></span> Home</a></li>
+              <li><a href="/{{user}}/report"><span class="glyphicon glyphicon-list-alt"></span> Sales</a></li>
+              <li><a href="/{{user}}/wallet"><span class="fa fa-bank"></span> Wallet</a></li>
+              <li><a href="/{{user}}/profile"><span class="glyphicon glyphicon-user"></span> Account</a></li>
+              <li><a href="/{{user}}/edit"><span class="glyphicon glyphicon-cog"></span> Settings</a></li>
+              <li><a href="/logout"><span class="glyphicon glyphicon-off"></span> Logout</a></li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+      <div class="row" id="app"></div>
+    </div>
+  </body>
+</html>

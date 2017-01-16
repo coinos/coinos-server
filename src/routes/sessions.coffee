@@ -1,9 +1,8 @@
 module.exports = (passport) ->
   new: (req, res) ->
     res.render('sessions/new', 
-      layout: 'layout',
       js: (-> global.js), 
-      css: (-> global.css)
+      css: (-> global.css) 
     )
 
   create: (req, res, next) ->
@@ -11,23 +10,12 @@ module.exports = (passport) ->
       if (err)
         return next(err)
       if (!user) 
-        return res.render('sessions/new', 
-          layout: 'layout',  
-          js: (-> global.js), 
-          css: (-> global.css),
-          badpw: true
-        )
-      req.session.user = user
+        return res.redirect('/login')
       req.login(user, (err) ->
         if (err) 
           return next(err)
-
-        re = new RegExp(user.username, 'g')
-        if req.session.redirect? and re.test(req.session.redirect)
-          url = req.session.redirect 
-
-        url ?= "/#{user.username}"
-        delete req.session.redirect
+        url = req.headers['referer']
+        url = "/#{user.username}" unless /edit/.test(url) 
         return res.redirect(url)
       )
     )(req, res, next)
