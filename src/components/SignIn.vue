@@ -1,7 +1,7 @@
 <template lang="pug">
 div
   #main-logo
-  p.alert.alert-danger Invalid username or password, please try again.
+  // p.alert.alert-danger Invalid username or password, please try again.
   form.form-signin(action='login', method='post')
     input.form-control(name='username', type='text', placeholder='Username', value='user', required='', autofocus='')
     br

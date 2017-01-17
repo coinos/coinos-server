@@ -1,6 +1,30 @@
-# The Bitcoin Co-op
+# CoinOS
 
-This website uses the Twitter Bootstrap library and the ExpressJS framework.  If you want to contribute changes or updates, contact adam@bitcoincoop.org to get started.
+CoinOS is a mobile-friendly point-of-sale app that merchants can use to accept Bitcoin payments.
+
+# Features
+
+* Setup a customized payment page with your company name and logo
+* Enter sale amounts in your local currency and have them converted to an amount in bitcoin using your chosen exchange rate
+* A QR code payment request is generated with your receiving address and the sale amount for your customers to scan
+* Get am on-screen notification when the requested amount is received at your address
+* Transactions and the exchange rate at the time of sale are recorded and can be viewed later and filtered by date range
+
+# Installation
+
+Install nodeJS (http://nodejs.org/) and redis (http://redis.io/).  On Ubuntu that looks like:
+
+    sudo apt-get install nodejs redis-server
+
+Download and configure CoinOS:
+
+    git clone https://github.com/thebitcoincoop/coinos
+    cd coinos
+    npm install 
+    bower install
+    npm start
+
+Now the app should be runnning at http://localhost:3001/
 
 # License
 

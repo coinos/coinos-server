@@ -4,10 +4,11 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import App from './App'
 import SignIn from './components/SignIn'
+import Sales from './components/Sales'
 
 const routes = [
   { path: '/', component: SignIn },
-  { path: '/signin', component: SignIn }
+  { path: '/sales', component: Sales }
 ]
 
 const router = new VueRouter({
