@@ -11,7 +11,7 @@
     $('#encryption-password').pwstrength({
       showVerdicts: false
     });
-    $.getJSON("/js/rates.json", function(data) {
+    $.getJSON("/rates", function(data) {
       var currencies, user;
       currencies = Object.keys(data);
       currencies = currencies.sort();
