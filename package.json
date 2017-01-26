@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "async": "2.1.1",
-    "bcoin": "git+https://github.com/bcoin-org/bcoin.git#master",
+    "bcoin": "git+https://github.com/bcoin-org/bcoin.git#2552b3fca35279ca6f5b9e2156d1899d0b05e717",
     "bcryptjs": "^2.3.0",
     "bip39": "^2.2.0",
     "bitcoinjs-lib": "^2.3.0",

@@ -1,105 +1,99 @@
 (function() {
-  var bcoin, config, db, twilio;
-
-  bcoin = require('bcoin');
-
-  config = require('./config');
-
-  db = require('./redis');
-
-  twilio = require('twilio');
+  const bcoin = require('bcoin')
+  const config = require('./config')
+  const db = require('./redis')
+  const twilio = require('twilio')
+  const sg = require('sendgrid')(config.sendgrid_token)
 
   module.exports = {
     init: function(app) {
-      var chain, pool, users;
-      users = {};
-      chain = new bcoin.chain({
+      let users = {}
+      const chain = new bcoin.chain({
         db: 'leveldb',
         name: 'spvchain',
         location: __dirname + '/db/spvchain',
         spv: true
-      });
-      pool = new bcoin.pool({
+      })
+      const pool = new bcoin.pool({
         chain: chain,
         spv: true,
         size: 1,
         maxPeers: 1,
         seeds: ['dctrl.ca']
-      });
-      return pool.open().then(function() {
+      })
+      pool.open().then(function() {
         db.keysAsync("user:*").then(function(keys) {
-          return Promise.all(keys.map(function(key) {
-            return db.hgetallAsync(key).then(function(user) {
+          Promise.all(keys.map(function(key) {
+            db.hgetallAsync(key).then(function(user) {
               if (user.address) {
-                pool.watchAddress(user.address);
-                return users[user.address] = {
+                pool.watchAddress(user.address)
+                users[user.address] = {
                   email: user.email,
                   currency: user.currency,
                   symbol: user.symbol,
                   phone: user.phone
-                };
+                }
               }
-            });
-          }));
-        });
-        pool.connect().then(function() {
-          pool.startSync();
-        });
+            })
+          }))
+        })
+
+        pool.connect().then(function() { pool.startSync() })
+
         pool.on('error', function(err) {
-          return console.log(err);
-        });
-        return pool.on('tx', function(tx) {
-          var address, client, i, len, output, ref, results, value;
-          ref = tx.outputs;
-          results = [];
+          console.log(err)
+        })
+
+        pool.on('tx', function(tx) {
+          var address, client, i, len, output, ref, results, value
+          ref = tx.outputs
+          results = []
           for (i = 0, len = ref.length; i < len; i++) {
-            output = ref[i];
-            value = (output.value / 100000000).toFixed(8);
-            address = output.getAddress().toBase58();
+            output = ref[i]
+            value = (output.value / 100000000).toFixed(8)
+            address = output.getAddress().toBase58()
             if (Object.keys(users).includes(address)) {
               app.render('payment', {
                 value: value,
                 address: address
               }, function(err, html) {
-                var content, from_email, helper, mail, request, sg, subject, to_email;
-                helper = require('sendgrid').mail;
-                from_email = new helper.Email('info@coinos.io');
-                to_email = new helper.Email(users[address].email);
-                subject = 'Received Payment';
-                content = new helper.Content('text/html', html);
-                mail = new helper.Mail(from_email, subject, to_email, content);
-                sg = require('sendgrid')(config.sendgrid_token);
-                request = sg.emptyRequest({
+                let helper = require('sendgrid').mail
+                let from_email = new helper.Email('info@coinos.io')
+                let to_email = new helper.Email(users[address].email)
+                let subject = 'Received Payment'
+                let content = new helper.Content('text/html', html)
+                let mail = new helper.Mail(from_email, subject, to_email, content)
+                let request = sg.emptyRequest({
                   method: 'POST',
                   path: '/v3/mail/send',
                   body: mail.toJSON()
-                });
-                return sg.API(request, function(error, response) {
-                  console.log(response.statusCode);
-                  console.log(response.body);
-                  return console.log(response.headers);
-                });
-              });
+                })
+                sg.API(request, function(error, response) {
+                  console.log(response.statusCode)
+                  console.log(response.body)
+                  console.log(response.headers)
+                })
+              })
               if (users[address].phone) {
-                client = new twilio.RestClient(config.twilio_sid, config.twilio_token);
+                client = new twilio.RestClient(config.twilio_sid, config.twilio_token)
                 results.push(client.messages.create({
                   to: user.phone,
                   from: config.twilio_number,
                   body: "You received a payment of " + value + " BTC"
                 }, function(err, message) {
-                  return console.log(message.sid);
-                }));
+                  console.log(message.sid)
+                }))
               } else {
-                results.push(void 0);
+                results.push(void 0)
               }
             } else {
-              results.push(void 0);
+              results.push(void 0)
             }
           }
-          return results;
-        });
-      });
+          return results
+        })
+      })
     }
-  };
+  }
 
-}).call(this);
+}).call(this)
