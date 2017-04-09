@@ -101,8 +101,6 @@
     return setTimeout(fetchRates, 120000)
   })()
 
-  require('./bcoin').init(app)
-
   app.get('/', cache, sessions["new"])
 
   app.get('/address', cache, function(req, res) {
