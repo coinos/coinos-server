@@ -101,8 +101,6 @@
     return setTimeout(fetchRates, 120000)
   })()
 
-  app.get('/', cache, sessions["new"])
-
   app.get('/address', cache, function(req, res) {
     return res.render('address', {
       layout: 'layout',
@@ -139,38 +137,15 @@
     return res.end()
   })
 
-  app.get('/tips', cache, function(req, res) {
-    return res.render('tips', {
-      notice: true,
-      layout: 'layout',
-      js: (function() {
-        return global.js
-      }),
-      css: (function() {
-        return global.css
-      })
-    })
-  })
-
-  app.get('/login', cache, sessions["new"])
-  app.post('/login', sessions.create)
-  app.get('/logout', sessions.destroy)
   app.get('/users.json', users.index)
-  app.get('/register', cache, users["new"])
-  app.get('/users/new', cache, users["new"])
   app.post('/users', users.create)
   app.get('/verify/:token', users.verify)
   app.post('/:user', authorize, users.update)
-  app.get('/:user/edit', authorize, users.edit)
-  app.get('/:user/profile', authorize, users.profile)
-  app.get('/:user/wallet', authorize, users.wallet)
   app.get('/:user/transactions.json', authorize, transactions.json)
   app.post('/:user/transactions', transactions.create)
   app.post('/transactions/:txid', transactions.update)
   app["delete"]('/:user/transactions/:txid', transactions["delete"])
-  app.get('/:user/report', authorize, transactions.index)
   app.get('/:user.json', users.json)
-  app.get('/:user', cache, users.show)
 
   app.use(function(err, req, res, next) {
     res.status(500)
