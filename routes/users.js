@@ -49,15 +49,17 @@ module.exports = (sessions) => {
     create: function(req, res) {
       const userkey = "user:" + req.body.username
 
-      db.hgetallAsync(userkey).then((err, obj) => {
+      db.hgetallAsync(userkey).then((obj) => {
         if (obj) {
-          res.status(400).json({ message: 'User exists' })
-          return
+          error = { message: 'User exists' }
+          res.status(400).json(error) 
+          throw error
         }
-
+      }).then(() => {
         if (req.body.passconfirm !== req.body.password) {
-          res.status(400).json({ message: 'Passwords must match' })
-          return
+          error = { message: 'Passwords must match' }
+          res.status(400).json(error) 
+          throw error
         }
 
         bcrypt.hash(req.body.password, 12, function(err, hash) {
@@ -75,10 +77,7 @@ module.exports = (sessions) => {
             require('crypto').randomBytes(48, function(ex, buf) {
               const token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '')
               db.set("token:" + token, req.body.username)
-              host = req.hostname
-              if (host === 'localhost') {
-                host += ':' + req.port
-              }
+              host = req.get('Host')
               url = req.protocol + "://" + host + "/verify/" + token
               res.render('users/welcome', {
                 user: req.body.username.toLowerCase(),
@@ -109,7 +108,7 @@ module.exports = (sessions) => {
             })
           })
         })
-      })
+      }).catch((e) => {})
     },
     update: function(req, res) {
       if (req.body.password === '') {
