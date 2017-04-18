@@ -1,43 +1,33 @@
 const Promise = require('bluebird')
 const db = require("../redis")
 const config = require("../config")
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcrypt')
 const fs = require('fs')
 const request = require('request')
+const jwt = require('jsonwebtoken')
 
 module.exports = {
   login (req, res) {
-    if(req.body.name && req.body.password){
-      var name = req.body.name
-      var password = req.body.password
-    }
-    var user = db[_.findIndex(db, {name: name})]
-
-    if( ! user ){
-      res.status(401).json({message:"no such user found"})
-      return 
-    }
-
-    if(user.password === req.body.password) {
-      var payload = {id: user.id}
-      var token = jwt.sign(payload, process.env.SECRET)
-      res.json({message: "ok", token: token})
-    } else {
-      res.status(401).json({message:"passwords did not match"})
-    }
+    db.hgetallAsync('user:' + req.body.username).then((user) => {
+      bcrypt.compare(req.body.password, user.password).then((result) => {
+        if (result) {
+          let payload = { username: user.username }
+          let token = jwt.sign(payload, process.env.SECRET)
+          res.json({message: 'ok', token: token})
+        } else {
+          res.status(401)
+        }
+      }).catch((err) => {
+        console.log(err)
+        res.status(401)
+      })
+    }).catch((err) => {
+      console.log(err)
+      res.status(401)
+    })
   },
   secret (req, res) {
-    res.json({message: "Success! You can not see this without a token"})
-  },
-  exists: function(req, res) {
-    return db.hgetall("user:" + req.params.user.toLowerCase(), function(err, obj) {
-      if (obj != null) {
-        res.write('true')
-      } else {
-        res.write('false')
-      }
-      return res.end()
-    })
+    res.json({message: 'Success! You can not see this without a token'})
   },
   index: function(req, res) {
     var result
@@ -73,18 +63,18 @@ module.exports = {
 
     db.hgetallAsync(userkey).then((obj) => {
       if (obj) {
-        error = { message: 'User exists' }
+        error = { message: 'user exists' }
         res.status(400).json(error) 
         throw error
       }
     }).then(() => {
       if (req.body.passconfirm !== req.body.password) {
-        error = { message: 'Passwords must match' }
+        error = { message: 'passwords must match' }
         res.status(400).json(error) 
         throw error
       }
 
-      bcrypt.hash(req.body.password, 12, function(err, hash) {
+      bcrypt.hash(req.body.password).then(function(err, hash) {
         db.sadd("users", userkey)
         db.hmset(userkey, {
           username: req.body.username,
@@ -131,7 +121,7 @@ module.exports = {
       req.session.user = req.body
       delete req.session.user.password
       if (req.body.password != null) {
-        bcrypt.hash(req.body.password, 12, function(err, password) {
+        bcrypt.hash(req.body.password).then(function(err, password) {
           db.hmset("user:" + (req.params.user.toLowerCase()), {
             email: email,
             password: password,

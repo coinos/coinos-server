@@ -9,7 +9,7 @@ module.exports = (function (app) {
           app.set('rates', body)
         } catch (undefined) {}
       })
-      return setTimeout(this.fetchRates, 120000)
+      return setTimeout(module.exports.fetchRates, 120000)
     },
     index (req, res) {
       res.write(app.get('rates'))

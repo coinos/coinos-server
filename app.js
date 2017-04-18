@@ -1,6 +1,5 @@
 const express = require('express')
 const bodyParser = require('body-parser')
-const path = require('path')
 const passport = require('./passport')
 const cache = require('./cache')
 
@@ -8,7 +7,7 @@ app = express()
 app.enable('trust proxy')
 app.use(require('./blockcypher'))
 app.use(bodyParser.urlencoded({ extended: true }))
-app.use(bodyParser.json({ type: 'application/vnd.api+json' }))
+app.use(bodyParser.json())
 app.use(passport.initialize())
 
 const users = require("./routes/users")
