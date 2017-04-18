@@ -1,5 +1,6 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const cookieParser = require('cookie-parser')
 const passport = require('./passport')
 const cache = require('./cache')
 
@@ -8,6 +9,7 @@ app.enable('trust proxy')
 app.use(require('./blockcypher'))
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
+app.use(cookieParser())
 app.use(passport.initialize())
 
 const users = require("./routes/users")

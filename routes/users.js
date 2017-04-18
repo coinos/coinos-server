@@ -13,17 +13,18 @@ module.exports = {
         if (result) {
           let payload = { username: user.username }
           let token = jwt.sign(payload, process.env.SECRET)
-          res.json({message: 'ok', token: token})
+          res.cookie('token', token, { expires: new Date(Date.now() + 9999999) })
+          res.json({ token: token })
         } else {
-          res.status(401)
+          res.status(401).end()
         }
       }).catch((err) => {
         console.log(err)
-        res.status(401)
+        res.status(401).end()
       })
     }).catch((err) => {
       console.log(err)
-      res.status(401)
+      res.status(401).end()
     })
   },
   secret (req, res) {

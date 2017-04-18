@@ -2,17 +2,23 @@ const passport = require('passport')
 const db = require('./redis')
 const jwt = require('passport-jwt')
 
+const cookieExtractor = function(req) {
+  let token = null
+  if (req && req.cookies) {
+    token = req.cookies['token']
+    console.log('set')
+  }
+  return token
+}
+
+
 passport.use(new jwt.Strategy({
-    jwtFromRequest: jwt.ExtractJwt.fromAuthHeader(),
+    jwtFromRequest: jwt.ExtractJwt.fromExtractors([cookieExtractor]),
     secretOrKey: process.env.SECRET
   }, function (payload, next) {
-    console.log(payload)
     db.hgetallAsync('user:' + payload.username).then((user) => {
-      console.log(user)
-      console.log(payload.username)
       next(null, user)
     }).catch((err) => {
-      console.log(err)
       next(null, false)
     })
   })
