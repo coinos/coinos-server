@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt')
 const fs = require('fs')
 const request = require('request')
 const jwt = require('jsonwebtoken')
+const l = console.log
 
 module.exports = {
   login (req, res) {
@@ -74,9 +75,9 @@ module.exports = {
         throw error
       }
 
-      bcrypt.hash(req.body.password).then(function(err, hash) {
+      bcrypt.hash(req.body.password, 1).then(function(hash) {
         db.sadd("users", userkey)
-        db.hmset(userkey, {
+        let user = {
           username: req.body.username,
           password: hash,
           email: req.body.email,
@@ -84,7 +85,8 @@ module.exports = {
           unit: req.body.unit || 'CAD',
           pubkey: req.body.pubkey || '',
           privkey: req.body.privkey || ''
-        }, function() {
+        }
+        db.hmset(userkey, user, function() {
           res.status(200)
           require('crypto').randomBytes(48, function(ex, buf) {
             const token = buf.toString('base64').replace(/\//g, '').replace(/\+/g, '')

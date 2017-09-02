@@ -6,6 +6,8 @@ const cache = require('./cache')
 const dotenv = require('dotenv')
 dotenv.config()
 
+require('dotenv').config()
+
 app = express()
 app.enable('trust proxy')
 app.use(require('./blockcypher'))

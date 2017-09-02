@@ -4,6 +4,9 @@ const jwt = require('passport-jwt')
 const dotenv = require('dotenv')
 dotenv.config()
 
+
+require('dotenv').config()
+
 const cookieExtractor = function(req) {
   let token = null
   if (req && req.cookies) {
