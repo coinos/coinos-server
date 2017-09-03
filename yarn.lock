@@ -684,6 +684,14 @@ bip66@^1.1.0, bip66@^1.1.3:
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/bip66/-/bip66-1.1.4.tgz#8a59f8ae16eccb94681c3c2a7b224774605aadfb"
 
+bitcoinaverage@^0.1.4:
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/bitcoinaverage/-/bitcoinaverage-0.1.4.tgz#9850003b47eb84120d1f9e4d73ee8af42a0969b0"
+  dependencies:
+    crypto-js "^3.1.9-1"
+    request "^2.81.0"
+    ws "^3.0.0"
+
 bitcoinjs-lib@^2.3.0:
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/bitcoinjs-lib/-/bitcoinjs-lib-2.3.0.tgz#fa4d27b9696415d5b30357eeac5d222713e1966a"
@@ -1165,6 +1173,10 @@ cryptiles@2.x.x:
   resolved "https://registry.yarnpkg.com/cryptiles/-/cryptiles-2.0.5.tgz#3bdfecdc608147c1c67202fa291e7dca59eaa3b8"
   dependencies:
     boom "2.x.x"
+
+crypto-js@^3.1.9-1:
+  version "3.1.9-1"
+  resolved "https://registry.yarnpkg.com/crypto-js/-/crypto-js-3.1.9-1.tgz#fda19e761fc077e01ffbfdc6e9fdfc59e8806cd8"
 
 csswring@5.0.0:
   version "5.0.0"
@@ -3257,6 +3269,10 @@ safe-buffer@^5.0.1, safe-buffer@~5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.0.1.tgz#d263ca54696cd8a306b5ca6551e92de57918fbe7"
 
+safe-buffer@~5.1.0:
+  version "5.1.1"
+  resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.1.1.tgz#893312af69b2123def71f57889001671eeb2c853"
+
 scmp@0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/scmp/-/scmp-0.0.3.tgz#3648df2d7294641e7f78673ffc29681d9bad9073"
@@ -3857,18 +3873,11 @@ wrappy@1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
 
-ws@1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-1.1.1.tgz#082ddb6c641e85d4bb451f03d52f06eabdb1f018"
+ws@^3.0.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-3.1.0.tgz#8afafecdeab46d572e5397ee880739367aa2f41c"
   dependencies:
-    options ">=0.0.5"
-    ultron "1.0.x"
-
-ws@~2.3.1:
-  version "2.3.1"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-2.3.1.tgz#6b94b3e447cb6a363f785eaf94af6359e8e81c80"
-  dependencies:
-    safe-buffer "~5.0.1"
+    safe-buffer "~5.1.0"
     ultron "~1.1.0"
 
 wtf-8@1.0.0:

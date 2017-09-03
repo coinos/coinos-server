@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser')
 const passport = require('./passport')
 const cache = require('./cache')
 const dotenv = require('dotenv')
+const ba = require('bitcoinaverage')
 dotenv.config()
 
 require('dotenv').config()
@@ -30,11 +31,6 @@ app.post('/transactions/:txid', transactions.update)
 app["delete"]('/:user/transactions/:txid', transactions["delete"])
 app.get('/:user.json', users.json)
 app.get("/secret", passport.authenticate('jwt', { session: false }), users.secret)
-
-const rates = require('./routes/rates')
-rates.fetchRates()
-app.get('/rates', cache, rates.index)
-app.get('/ticker', cache, rates.ticker)
 
 app.use(function(err, req, res, next) {
   res.status(500)
