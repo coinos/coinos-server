@@ -1,6 +1,5 @@
 const Promise = require('bluebird')
 const db = require("../redis")
-const config = require("../config")
 const bcrypt = require('bcrypt')
 const fs = require('fs')
 const request = require('request')
@@ -98,7 +97,7 @@ module.exports = {
             const subject = 'Welcome to CoinOS'
             const content = new helper.Content('text/html', req.body.privkey)
             const mail = new helper.Mail(from_email, subject, to_email, content)
-            const sg = require('sendgrid')(config.sendgrid_token)
+            const sg = require('sendgrid')(process.env.SENDGRID_TOKEN)
             const ereq = sg.emptyRequest({
               method: 'POST',
               path: '/v3/mail/send',

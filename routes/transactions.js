@@ -1,13 +1,7 @@
 (function() {
-  var Promise, config, db, moment, txid;
-
-  Promise = require('bluebird');
-
-  db = require('../redis');
-
-  config = require("../config");
-
-  moment = require('moment');
+  const Promise = require('bluebird')
+  const db = require('../redis')
+  const moment = require('moment')
 
   txid = function(transaction, user) {
     if (transaction.match(/[a-z]/i)) {
@@ -84,7 +78,7 @@
             subject = 'Payment Received';
             content = new helper.Content('text/html', html);
             mail = new helper.Mail(from_email, subject, to_email, content);
-            sg = require('sendgrid')(config.sendgrid_token);
+            sg = require('sendgrid')(process.env.SENDGRID_TOKEN);
             request = sg.emptyRequest({
               method: 'POST',
               path: '/v3/mail/send',

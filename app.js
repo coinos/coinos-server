@@ -3,6 +3,8 @@ const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 const passport = require('./passport')
 const cache = require('./cache')
+const dotenv = require('dotenv')
+dotenv.config()
 
 app = express()
 app.enable('trust proxy')

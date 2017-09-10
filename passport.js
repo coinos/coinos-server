@@ -1,6 +1,8 @@
 const passport = require('passport')
 const db = require('./redis')
 const jwt = require('passport-jwt')
+const dotenv = require('dotenv')
+dotenv.config()
 
 const cookieExtractor = function(req) {
   let token = null
@@ -10,7 +12,6 @@ const cookieExtractor = function(req) {
   }
   return token
 }
-
 
 passport.use(new jwt.Strategy({
     jwtFromRequest: jwt.ExtractJwt.fromExtractors([cookieExtractor]),
