@@ -2,8 +2,6 @@
   const Promise = require('bluebird')
   const db = require('../redis')
   const moment = require('moment')
-  const config = require("../config")
-  const moment = require('moment')
 
   const txid = function(transaction, user) {
     if (transaction.match(/[a-z]/i)) {
@@ -58,16 +56,6 @@
               return global.css
             })
           }, function(err, html) {
-<<<<<<< 20d24a2f4370e8171821cf15f67aa07ac55f08a2
-            var content, from_email, helper, mail, request, sg, subject, to_email;
-            helper = require('sendgrid').mail;
-            from_email = new helper.Email('info@coinos.io');
-            to_email = new helper.Email(user.email);
-            subject = 'Payment Received';
-            content = new helper.Content('text/html', html);
-            mail = new helper.Mail(from_email, subject, to_email, content);
-            sg = require('sendgrid')(process.env.SENDGRID_TOKEN);
-=======
             var content, from_email, helper, mail, request, sg, subject, to_email
             helper = require('sendgrid').mail
             from_email = new helper.Email('info@coinos.io')
@@ -75,8 +63,7 @@
             subject = 'Payment Received'
             content = new helper.Content('text/html', html)
             mail = new helper.Mail(from_email, subject, to_email, content)
-            sg = require('sendgrid')(config.sendgrid_token)
->>>>>>> clean up semi-colons
+            sg = require('sendgrid')(process.env.SENDGRID_TOKEN)
             request = sg.emptyRequest({
               method: 'POST',
               path: '/v3/mail/send',

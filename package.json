@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node -r dotenv/config app.js",
+    "start": "babel-node app.js",
     "postinstall": "cp -n .env.sample .env"
   },
   "dependencies": {
     "async": "2.1.1",
-    "bcoin": "^1.0.0-beta.14",
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
     "bcrypt": "^1.0.2",
     "bip39": "^2.2.0",
     "bitcoinaverage": "^0.1.4",
