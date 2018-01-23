@@ -27,6 +27,7 @@
     "hogan-express": "0.5.2",
     "http-proxy-middleware": "^0.17.2",
     "less": "2.7.1",
+    "lnrpc": "^0.0.3",
     "lodash": "^4.17.4",
     "moment": "^2.10.6",
     "node-http-proxy": "^0.2.3",
