@@ -1,12 +1,14 @@
-import express from 'express'
-import bodyParser from 'body-parser'
-import cookieParser from 'cookie-parser'
-import passport from './passport'
-import cache from './cache'
-import dotenv from 'dotenv'
 import ba from 'bitcoinaverage'
+import bodyParser from 'body-parser'
+import cache from './cache'
+import compression from 'compression'
+import cookieParser from 'cookie-parser'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import express from 'express'
 import fs from 'fs'
 import grpc from 'grpc'
+import passport from './passport'
 import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
 const { makeExecutableSchema } = require('graphql-tools');
 
@@ -40,8 +42,6 @@ const schema = makeExecutableSchema({
 });
 
 dotenv.config()
-
-require('dotenv').config()
 const l = console.log
 
 ;(async () => {
@@ -50,6 +50,8 @@ const l = console.log
   app.use(bodyParser.urlencoded({ extended: true }))
   app.use(bodyParser.json())
   app.use(cookieParser())
+  app.use(cors())
+  app.use(compression())
   app.use(passport.initialize())
 
   const users = require('./routes/users')
@@ -60,16 +62,9 @@ const l = console.log
   const meta = new grpc.Metadata();
   meta.add('macaroon', adminMacaroon.toString('hex'));
 
-
-  app.get('/users.json', transactions.index)
   app.post('/login', users.login)
   app.post('/users', users.create)
   app.get('/verify/:token', users.verify)
-  app.post('/:user', users.update)
-  // app.post('/:user/transactions', transactions.create)
-  app.get('/:user/transactions', transactions.index)
-  app.post('/transactions/:txid', transactions.update)
-  app['delete']('/:user/transactions/:txid', transactions['delete'])
   app.get('/secret', passport.authenticate('jwt', { session: false }), users.secret)
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
@@ -88,8 +83,10 @@ const l = console.log
   })
 
   app.use('/graphql', bodyParser.json(), graphqlExpress({ 
-    schema,
+    schema: schema,
     context: {},
+    tracing: true,
+    cacheControl: true,
   }))
 
   app.use('/graphiql', graphiqlExpress({ endpointURL: '/graphql' }))
