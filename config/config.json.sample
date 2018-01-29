@@ -1,8 +1,8 @@
 {
   "development": {
-    "username": "root",
-    "password": "MPJzfq97",
-    "database": "coinos",
+    "username": "user",
+    "password": "pass",
+    "database": "db",
     "host": "localhost",
     "dialect": "mysql"
   },

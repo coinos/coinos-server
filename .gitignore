@@ -8,3 +8,4 @@ selenium-debug.log
 db
 config.js
 .env
+config/config.json
