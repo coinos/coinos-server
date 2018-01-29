@@ -1,0 +1,41 @@
+{
+  "development": {
+    "username": "root",
+    "password": "MPJzfq97",
+    "database": "coinos",
+    "host": "localhost",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": null,
+    "database": "database_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "root",
+    "password": null,
+    "database": "database_production",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "auto": {
+    "host": "localhost",
+    "dialect": "mysql",
+    "tables": ["Users"],
+    "logging": false,
+    "directory": false,
+    "dialectOptions": {
+      "timeout": 500000,
+      "multipleStatements": true
+    },
+    "pool": {
+      "min": 0,
+      "max": 25
+    },
+    "retry": {
+      "max": 5
+    }
+  }
+}

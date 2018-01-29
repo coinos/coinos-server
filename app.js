@@ -10,42 +10,13 @@ import fs from 'fs'
 import grpc from 'grpc'
 import passport from './passport'
 import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
-const { makeExecutableSchema } = require('graphql-tools');
-
-// Some fake data
-const books = [
-  {
-    title: "Harry Potter and the Sorcerer's stone",
-    author: 'J.K. Rowling',
-  },
-  {
-    title: 'Jurassic Park',
-    author: 'Michael Crichton',
-  },
-];
-
-// The GraphQL schema in string form
-const typeDefs = `
-  type Query { books: [Book] }
-  type Book { title: String, author: String }
-`;
-
-// The resolvers
-const resolvers = {
-  Query: { books: () => books },
-};
-
-// Put together a schema
-const schema = makeExecutableSchema({
-  typeDefs,
-  resolvers,
-});
 
 dotenv.config()
 const l = console.log
 
 ;(async () => {
   const app = express()
+  const db = await require('./db.js')
   app.enable('trust proxy')
   app.use(bodyParser.urlencoded({ extended: true }))
   app.use(bodyParser.json())
@@ -54,18 +25,12 @@ const l = console.log
   app.use(compression())
   app.use(passport.initialize())
 
-  const users = require('./routes/users')
-  const transactions = require('./routes/transactions')
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
   const lnrpc = await require('lnrpc')({ server: 'localhost:10001' })
   const adminMacaroon = fs.readFileSync('/home/adam/.lnd/data/core_test/admin.macaroon');
   const meta = new grpc.Metadata();
   meta.add('macaroon', adminMacaroon.toString('hex'));
 
-  app.post('/login', users.login)
-  app.post('/users', users.create)
-  app.get('/verify/:token', users.verify)
-  app.get('/secret', passport.authenticate('jwt', { session: false }), users.secret)
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
   })
@@ -83,7 +48,7 @@ const l = console.log
   })
 
   app.use('/graphql', bodyParser.json(), graphqlExpress({ 
-    schema: schema,
+    schema: db.gqlschema,
     context: {},
     tracing: true,
     cacheControl: true,
