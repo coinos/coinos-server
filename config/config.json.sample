@@ -23,7 +23,7 @@
   "auto": {
     "host": "localhost",
     "dialect": "mysql",
-    "tables": ["Users"],
+    "tables": ["users"],
     "logging": false,
     "directory": false,
     "dialectOptions": {

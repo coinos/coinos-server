@@ -39,7 +39,7 @@ const l = console.log
 
   let fetchRates
   (fetchRates = () => {
-    restClient.tickerGlobalPerSymbol('BTCUSD', (data) => {
+    restClient.tickerGlobalPerSymbol('BTCCAD', (data) => {
       app.set('rates', JSON.parse(data))
     })
     setTimeout(fetchRates, 120000)
@@ -50,19 +50,17 @@ const l = console.log
   })
 
   app.post('/login', (req, res) => {
-    console.log('logging in')
     db.User.findOne({
       where: {
         username: req.body.username
       } 
     }).then((user) => {
       bcrypt.compare(req.body.password, user.password).then((result) => {
-        console.log('password was good')
         if (result) {
           let payload = { username: user.username }
           let token = jwt.sign(payload, process.env.SECRET)
           res.cookie('token', token, { expires: new Date(Date.now() + 9999999) })
-          res.json({ token: token })
+          res.json({ user, token })
         } else {
           res.status(401).end()
         }

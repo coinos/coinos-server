@@ -22,7 +22,7 @@ const auto = new SequelizeAuto(
   config.development.password, 
   config.auto
 )
-const tables = { 'User': 'Users' }
+const tables = { 'User': 'users' }
 
 const db = new Sequelize(
   config.development.database,
