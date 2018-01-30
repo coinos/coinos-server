@@ -32,7 +32,8 @@ const db = new Sequelize(
     host: config.development.host,
     dialect: config.development.dialect,
     logging: false, 
-    dialectOptions: { multipleStatements: true } 
+    dialectOptions: { multipleStatements: true },
+    operatorsAliases: false,
   },
 )
 const gqlfields = {}
