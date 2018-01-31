@@ -13,8 +13,9 @@
     "babel-preset-env": "^1.6.1",
     "bcrypt": "^1.0.3",
     "bip39": "^2.2.0",
+    "bitcoin-core": "^2.0.0",
     "bitcoinaverage": "^0.1.4",
-    "bitcoinjs-lib": "^2.3.0",
+    "bitcoinjs-lib": "^3.3.2",
     "bluebird": "^3.4.6",
     "body-parser": "^1.5.0",
     "bolt11": "^1.0.0",
@@ -53,7 +54,8 @@
     "sequelize-auto": "^0.4.29",
     "sequelize-cli": "^3.2.0",
     "socket.io-client": "^2.0.3",
-    "twilio": "^2.11.1"
+    "twilio": "^2.11.1",
+    "zeromq": "^4.6.0"
   },
   "devDependencies": {
     "babel-preset-es2015": "^6.24.1"

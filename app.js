@@ -1,4 +1,5 @@
 import ba from 'bitcoinaverage'
+import bitcoin from 'bitcoin-core'
 import bodyParser from 'body-parser'
 import cache from './cache'
 import compression from 'compression'
