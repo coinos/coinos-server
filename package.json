@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "babel-node app.js",
+    "start": "babel-node index.js",
     "postinstall": "cp -n .env.sample .env"
   },
   "dependencies": {

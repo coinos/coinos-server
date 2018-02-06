@@ -8,12 +8,12 @@ const sock = zmq.socket('sub')
   let b = new Bitcoin({
     username: 'adam',
     password: 'MPJzfq97',
-    port: 19332,
+    port: 18332,
   })
   let res = await b.getBlockCount()
   console.log(res)
 
-  sock.connect('tcp://127.0.0.1:18501')
+  sock.connect('tcp://127.0.0.1:18502')
   sock.subscribe('rawtx')
   sock.on('message', (t, m) => {
     let tx = bitcoin.Transaction.fromBuffer(m)
