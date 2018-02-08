@@ -22,7 +22,11 @@ const auto = new SequelizeAuto(
   config.development.password, 
   config.auto
 )
-const tables = { 'User': 'users' }
+
+const tables = { 
+  User: 'users',
+  Transaction: 'transactions',
+}
 
 const db = new Sequelize(
   config.development.database,
@@ -36,6 +40,7 @@ const db = new Sequelize(
     operatorsAliases: false,
   },
 )
+
 const gqlfields = {}
 const gqltypes = {}
 

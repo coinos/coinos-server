@@ -5,7 +5,7 @@ module.exports = {
       script: 'index.js',
       exec_interpreter: './node_modules/.bin/babel-node',
       exec_mode: 'fork',
-      watch: ['*.js'],
+      watch: ['index.js'],
       env: {
         COMMON_VARIABLE: 'true'
       },

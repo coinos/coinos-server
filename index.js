@@ -30,11 +30,23 @@ const l = console.log
 
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
   const lnrpc = await require('lnrpc')({ server: 'localhost:10001' })
-  const adminMacaroon = fs.readFileSync('/home/adam/.lnd/data/core_test/admin.macaroon');
+  const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon');
   const meta = new grpc.Metadata();
   meta.add('macaroon', adminMacaroon.toString('hex'));
 
   app.get('/balance', async (req, res) => {
+    res.json(await lnrpc.walletBalance({witness_only: true}, meta))
+  })
+
+  app.post('/sendPayment', async (req, res) => {
+    let payments = lnrpc.sendPayment(meta, {})
+    payments.on('data', msg => l(msg))
+    payments.write({
+      payment_request: req.body.payreq
+    })
+  }) 
+
+  app.get('/addinvoice', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
   })
 
