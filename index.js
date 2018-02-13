@@ -12,6 +12,7 @@ import grpc from 'grpc'
 import passport from './passport'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
+import deepstream from 'deepstream.io-client-js'
 import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
 
 dotenv.config()
@@ -30,24 +31,31 @@ const l = console.log
 
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
   const lnrpc = await require('lnrpc')({ server: 'localhost:10001' })
-  const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon');
-  const meta = new grpc.Metadata();
-  meta.add('macaroon', adminMacaroon.toString('hex'));
+  const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
+
+
+  const meta = new grpc.Metadata()
+  meta.add('macaroon', adminMacaroon.toString('hex'))
+
+  const invoices = lnrpc.subscribeInvoices({}, meta)
+  invoices.on('data', msg => {
+    const ds = deepstream('0.0.0.0:6020')
+    ds.login()
+    ds.event.emit('invoices', msg)
+  })
 
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
   })
 
   app.post('/sendPayment', async (req, res) => {
-    let payments = lnrpc.sendPayment(meta, {})
-    payments.on('data', msg => l(msg))
-    payments.write({
-      payment_request: req.body.payreq
-    })
+    const payments = lnrpc.sendPayment(meta, {})
+    payments.write({ payment_request: req.body.payreq })
+    res.end()
   }) 
 
-  app.get('/addinvoice', async (req, res) => {
-    res.json(await lnrpc.walletBalance({witness_only: true}, meta))
+  app.post('/addInvoice', async (req, res) => {
+    res.json(await lnrpc.addInvoice({ value: req.body.amount }, meta))
   })
 
   let fetchRates

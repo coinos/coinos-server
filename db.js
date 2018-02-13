@@ -89,6 +89,7 @@ const p = new Promise((resolve, reject) => {
         name: 'RootQueryType',
         fields: gqlfields
       }),
+      mutation: require('./mutations')(db, gqltypes)
     })
 
     resolve(db)
