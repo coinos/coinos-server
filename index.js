@@ -20,7 +20,6 @@ const l = console.log
 
 ;(async () => {
   const app = express()
-  const db = await require('./db.js')
   app.enable('trust proxy')
   app.use(bodyParser.urlencoded({ extended: true }))
   app.use(bodyParser.json())
@@ -32,10 +31,9 @@ const l = console.log
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
   const lnrpc = await require('lnrpc')({ server: 'localhost:10001' })
   const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
-
-
   const meta = new grpc.Metadata()
   meta.add('macaroon', adminMacaroon.toString('hex'))
+  lnrpc.meta = meta
 
   const invoices = lnrpc.subscribeInvoices({}, meta)
   invoices.on('data', msg => {
@@ -43,6 +41,8 @@ const l = console.log
     ds.login()
     ds.event.emit('invoices', msg)
   })
+
+  const db = await require('./db.js')(lnrpc)
 
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))

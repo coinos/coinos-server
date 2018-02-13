@@ -44,56 +44,58 @@ const db = new Sequelize(
 const gqlfields = {}
 const gqltypes = {}
 
-const p = new Promise((resolve, reject) => {
-  return auto.run(() => {
-    Object.keys(tables).forEach((k) => {
-      let t = tables[k]
-      let fields = {}
+const p = (lnrpc) => {
+  return new Promise((resolve, reject) => {
+    return auto.run(() => {
+      Object.keys(tables).forEach((k) => {
+        let t = tables[k]
+        let fields = {}
 
-      Object.keys(auto.tables[t]).forEach(f => {
-        let isKey = f === 'id'
-        let rawtype = auto.tables[t][f].type.toLowerCase()
-        let type = Sequelize.STRING
+        Object.keys(auto.tables[t]).forEach(f => {
+          let isKey = f === 'id'
+          let rawtype = auto.tables[t][f].type.toLowerCase()
+          let type = Sequelize.STRING
 
-        if (rawtype.match(/^int/)) type = Sequelize.INTEGER
-        if (rawtype.match(/^date/)) type = Sequelize.DATE
+          if (rawtype.match(/^int/)) type = Sequelize.INTEGER
+          if (rawtype.match(/^date/)) type = Sequelize.DATE
 
-        fields[f] = {
-          type: type,
-          field: f,
-          primaryKey: isKey,
-          autoIncrement: isKey,
+          fields[f] = {
+            type: type,
+            field: f,
+            primaryKey: isKey,
+            autoIncrement: isKey,
+          }
+        })
+
+        db[k] = db.define(k, fields, { tableName: t })
+
+        let typefields = {}
+        let options = {}
+
+        gqltypes[t] = new GraphQLObjectType({
+          name: t,
+          desc: t,
+          fields: Object.assign(typefields, attributeFields(db[k])),
+        })
+
+        gqlfields[t] = {
+          type: new GraphQLList(gqltypes[t]),
+          args: Object.assign({}, defaultArgs(db[k]), defaultListArgs()),
+          resolve: resolver(db[k], options),
         }
       })
 
-      db[k] = db.define(k, fields, { tableName: t })
-
-      let typefields = {}
-      let options = {}
-
-      gqltypes[t] = new GraphQLObjectType({
-        name: t,
-        desc: t,
-        fields: Object.assign(typefields, attributeFields(db[k])),
+      db.gqlschema = new GraphQLSchema({
+        query: new GraphQLObjectType({
+          name: 'RootQueryType',
+          fields: gqlfields
+        }),
+        mutation: require('./mutations')(db, gqltypes, lnrpc)
       })
 
-      gqlfields[t] = {
-        type: new GraphQLList(gqltypes[t]),
-        args: Object.assign({}, defaultArgs(db[k]), defaultListArgs()),
-        resolve: resolver(db[k], options),
-      }
+      resolve(db)
     })
-
-    db.gqlschema = new GraphQLSchema({
-      query: new GraphQLObjectType({
-        name: 'RootQueryType',
-        fields: gqlfields
-      }),
-      mutation: require('./mutations')(db, gqltypes)
-    })
-
-    resolve(db)
   })
-})
+}
 
 module.exports = p

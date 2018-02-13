@@ -10,7 +10,7 @@ import {
     GraphQLList
 } from 'graphql'
 
-module.exports = (db, gqltypes) => {
+module.exports = (db, gqltypes, lnrpc) => {
   const UserInputType = new GraphQLInputObjectType({
     name: 'UserInput',
     desc: 'UserInput',
@@ -30,6 +30,7 @@ module.exports = (db, gqltypes) => {
           }
         },
         resolve: async (root, { user }) => {
+          user.address = (await lnrpc.newAddress({ type: 1 }, lnrpc.meta)).address
           return db['User'].create(user)
         }
       },
