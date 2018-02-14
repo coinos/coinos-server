@@ -1,5 +1,5 @@
 import ba from 'bitcoinaverage'
-import bitcoin from 'bitcoin-core'
+import bitcoin from 'bitcoinjs-lib'
 import bodyParser from 'body-parser'
 import cache from './cache'
 import compression from 'compression'
@@ -29,33 +29,9 @@ const l = console.log
   app.use(compression())
   app.use(passport.initialize())
 
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:8085')
-    res.header('Access-Control-Allow-Credentials', true)
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,content-type,application/json,Authorization')
-    next()
-  })
-
   const server = require('http').createServer(app)
   const io = require('socket.io').listen(server)
   io.origins('http://localhost:8085')
-
-  let zmqSock = zmq.socket('sub')
-  zmqSock.connect('tcp://127.0.0.1:18503')
-  zmqSock.subscribe('rawblock')
-  zmqSock.subscribe('rawtx')
-
-  zmqSock.on('message', (topic, message, sequence) => {
-    topic = topic.toString('utf8')
-    message = message.toString('hex')
-
-    switch (topic) {
-      case 'rawtx': {
-        io.emit('tx', message)
-      } 
-    }
-  })
 
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
   const lnrpc = await require('lnrpc')({ server: 'localhost:10001' })
@@ -71,6 +47,47 @@ const l = console.log
   })
 
   const db = await require('./db.js')(lnrpc)
+  const addresses = await db['User'].findAll({
+    attributes: ['address'],
+  }).map(u => u.address)
+
+  console.log(addresses)
+
+  const zmqSock = zmq.socket('sub')
+  zmqSock.connect('tcp://127.0.0.1:18503')
+  zmqSock.subscribe('rawblock')
+  zmqSock.subscribe('rawtx')
+
+  zmqSock.on('message', async (topic, message, sequence) => {
+    topic = topic.toString('utf8')
+    message = message.toString('hex')
+
+    switch (topic) {
+      case 'rawtx': {
+        let tx = bitcoin.Transaction.fromHex(message)
+        let total = tx.outs.reduce((a, b) => a + b.value, 0)
+        console.log(total)
+        tx.outs.map(o => {
+          try {
+            let address = bitcoin.address.fromOutputScript(o.script, bitcoin.networks.testnet)
+            console.log(address, o.value)
+            if (addresses.includes(address)) {
+              console.log('HIT!')
+            } 
+          } catch(e) { }
+        })
+
+        io.emit('tx', message)
+        break
+      } 
+
+      case 'rawblock': {
+        let block = bitcoin.Block.fromHex(message)
+        console.log(block.getHash())
+        break
+      } 
+    }
+  })
 
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
