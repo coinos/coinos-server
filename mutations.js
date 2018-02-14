@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt'
 import { resolver, defaultArgs, defaultListArgs, attributeFields } from 'graphql-sequelize'
 import {
     graphql,
@@ -31,6 +32,7 @@ module.exports = (db, gqltypes, lnrpc) => {
         },
         resolve: async (root, { user }) => {
           user.address = (await lnrpc.newAddress({ type: 1 }, lnrpc.meta)).address
+          user.password = await bcrypt.hash(user.password, 1)
           return db['User'].create(user)
         }
       },
