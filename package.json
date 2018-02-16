@@ -39,7 +39,7 @@
     "http-proxy-middleware": "^0.17.2",
     "jsonwebtoken": "^8.1.1",
     "less": "2.7.1",
-    "lnrpc": "https://github.com/asoltys/lnrpc#d3f6196",
+    "lnrpc": "https://github.com/asoltys/lnrpc#b32f349",
     "lodash": "^4.17.4",
     "moment": "^2.10.6",
     "mysql": "^2.15.0",

@@ -34,7 +34,7 @@ const l = console.log
   io.origins('http://localhost:8085')
 
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
-  const lnrpc = await require('lnrpc')({ server: 'localhost:10001' })
+  const lnrpc = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd.testa/tls.cert' })
   const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
   const meta = new grpc.Metadata()
   meta.add('macaroon', adminMacaroon.toString('hex'))
@@ -47,9 +47,10 @@ const l = console.log
   })
 
   const db = await require('./db.js')(lnrpc)
-  const addresses = await db['User'].findAll({
-    attributes: ['address'],
-  }).map(u => u.address)
+  const addresses = {}
+  await db['User'].findAll({
+    attributes: ['username', 'address'],
+  }).map(u => { addresses[u.address] = u.username })
 
   console.log(addresses)
 
@@ -67,17 +68,25 @@ const l = console.log
         let tx = bitcoin.Transaction.fromHex(message)
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
         console.log(total)
-        tx.outs.map(o => {
+        tx.outs.map(async o => {
           try {
             let address = bitcoin.address.fromOutputScript(o.script, bitcoin.networks.testnet)
             console.log(address, o.value)
-            if (addresses.includes(address)) {
+            if (Object.keys(addresses).includes(address)) {
+              let user = await db['User'].findOne({
+                where: {
+                  username: addresses[address],
+                }
+              })
+
+              user.balance += o.value
+              await user.save()
               console.log('HIT!')
+              io.emit('tx', message)
             } 
           } catch(e) { }
         })
 
-        io.emit('tx', message)
         break
       } 
 
@@ -91,6 +100,26 @@ const l = console.log
 
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
+  })
+
+  app.post('/openchannel', async (req, res) => {
+    let user = await db['User'].findOne({
+      where: {
+        username: req.body.username,
+      }
+    })
+
+    let channel = lnrpc.openChannelSync({
+      node_pubkey_string: '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
+      local_funding_amount: user.balance,
+    }, meta, (err, data) => {
+      if (err) {
+        l(err)
+        return res.status(500).send(err)
+      }
+
+      res.json(data)
+    })
   })
 
   app.post('/sendPayment', async (req, res) => {

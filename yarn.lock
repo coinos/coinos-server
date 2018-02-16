@@ -3765,6 +3765,14 @@ limiter@^1.0.5:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/limiter/-/limiter-1.1.0.tgz#6e2bd12ca3fcdaa11f224e2e53c896df3f08d913"
 
+"lnrpc@https://github.com/asoltys/lnrpc#b32f349":
+  version "0.0.3"
+  resolved "https://github.com/asoltys/lnrpc#b32f34914a735e25064365eb036fae620ba13dc7"
+  dependencies:
+    grpc "^1.6.0"
+    napa "^3.0.0"
+    pkg-dir "^2.0.0"
+
 "lnrpc@https://github.com/asoltys/lnrpc#d3f6196":
   version "0.0.3"
   resolved "https://github.com/asoltys/lnrpc#d3f6196af87d4cc86d59d4b39627d9368ee0e988"
