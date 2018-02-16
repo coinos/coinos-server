@@ -1343,6 +1343,10 @@ buffer-equal-constant-time@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/buffer-equal-constant-time/-/buffer-equal-constant-time-1.0.1.tgz#f8e71132f7ffe6e01a5c9697a4c6f3e48d5cc819"
 
+buffer-reverse@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/buffer-reverse/-/buffer-reverse-1.0.1.tgz#49283c8efa6f901bc01fa3304d06027971ae2f60"
+
 buffer-shims@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/buffer-shims/-/buffer-shims-1.0.0.tgz#9978ce317388c649ad8793028c3477ef044a8b51"
@@ -3768,14 +3772,6 @@ limiter@^1.0.5:
 "lnrpc@https://github.com/asoltys/lnrpc#b32f349":
   version "0.0.3"
   resolved "https://github.com/asoltys/lnrpc#b32f34914a735e25064365eb036fae620ba13dc7"
-  dependencies:
-    grpc "^1.6.0"
-    napa "^3.0.0"
-    pkg-dir "^2.0.0"
-
-"lnrpc@https://github.com/asoltys/lnrpc#d3f6196":
-  version "0.0.3"
-  resolved "https://github.com/asoltys/lnrpc#d3f6196af87d4cc86d59d4b39627d9368ee0e988"
   dependencies:
     grpc "^1.6.0"
     napa "^3.0.0"

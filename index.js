@@ -1,7 +1,7 @@
 import ba from 'bitcoinaverage'
+import bcrypt from 'bcrypt'
 import bitcoin from 'bitcoinjs-lib'
 import bodyParser from 'body-parser'
-import cache from './cache'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
@@ -9,11 +9,14 @@ import dotenv from 'dotenv'
 import express from 'express'
 import fs from 'fs'
 import grpc from 'grpc'
-import passport from './passport'
 import jwt from 'jsonwebtoken'
-import bcrypt from 'bcrypt'
-import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
+import reverse from 'buffer-reverse'
 import zmq from 'zmq'
+
+import cache from './cache'
+import passport from './passport'
+
+import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
 
 
 dotenv.config()
@@ -52,7 +55,7 @@ const l = console.log
     attributes: ['username', 'address'],
   }).map(u => { addresses[u.address] = u.username })
 
-  console.log(addresses)
+  l(addresses)
 
   const zmqSock = zmq.socket('sub')
   zmqSock.connect('tcp://127.0.0.1:18503')
@@ -67,11 +70,11 @@ const l = console.log
       case 'rawtx': {
         let tx = bitcoin.Transaction.fromHex(message)
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
-        console.log(total)
+        l(total)
         tx.outs.map(async o => {
           try {
             let address = bitcoin.address.fromOutputScript(o.script, bitcoin.networks.testnet)
-            console.log(address, o.value)
+            l(address, o.value)
             if (Object.keys(addresses).includes(address)) {
               let user = await db['User'].findOne({
                 where: {
@@ -81,7 +84,7 @@ const l = console.log
 
               user.balance += o.value
               await user.save()
-              console.log('HIT!')
+              l('HIT!')
               io.emit('tx', message)
             } 
           } catch(e) { }
@@ -92,7 +95,7 @@ const l = console.log
 
       case 'rawblock': {
         let block = bitcoin.Block.fromHex(message)
-        console.log(block.getHash())
+        l(block.getHash())
         break
       } 
     }
@@ -112,14 +115,33 @@ const l = console.log
     let channel = lnrpc.openChannelSync({
       node_pubkey_string: '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
       local_funding_amount: user.balance,
-    }, meta, (err, data) => {
+    }, meta, async (err, data) => {
       if (err) {
         l(err)
         return res.status(500).send(err)
       }
 
+      user.balance = 0
+      user.channel = reverse(data.funding_txid).toString('hex')
+      await user.save()
       res.json(data)
     })
+  })
+
+  app.get('/channelbalance', async (req, res) => {
+    let user = await db['User'].findOne({
+      where: {
+        username: req.query.username,
+      }
+    })
+
+    let data = await lnrpc.listChannels({}, meta)
+    let channels = data.channels.filter(c => c.channel_point.includes(user.channel))
+    if (channels.length) {
+      res.json({ balance: channels[0].local_balance })
+    } else {
+      res.status(500).send({ error: 'No channel found' })
+    }
   })
 
   app.post('/sendPayment', async (req, res) => {
@@ -160,11 +182,11 @@ const l = console.log
           res.status(401).end()
         }
       }).catch((err) => {
-        console.log(err)
+        l(err)
         res.status(401).end()
       })
     }).catch((err) => {
-      console.log(err)
+      l(err)
       res.status(401).end()
     })
   })
@@ -191,7 +213,7 @@ const l = console.log
   app.use(function (err, req, res, next) {
     res.status(500)
     res.send('An error occurred')
-    console.error(err.stack)
+    l(err.stack)
     return res.end()
   })
 
