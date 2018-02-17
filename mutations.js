@@ -31,8 +31,12 @@ module.exports = (db, gqltypes, lnrpc) => {
           }
         },
         resolve: async (root, { user }) => {
+          let exists = await db['User'].count({ where: { username: user.username } })
+          if (exists) throw new Error('Username taken')
+
           user.address = (await lnrpc.newAddress({ type: 1 }, lnrpc.meta)).address
           user.password = await bcrypt.hash(user.password, 1)
+          user.balance = 0
           return db['User'].create(user)
         }
       },

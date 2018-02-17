@@ -50,19 +50,17 @@ const l = console.log
   })
 
   const db = await require('./db.js')(lnrpc)
-  const addresses = {}
-  await db['User'].findAll({
-    attributes: ['username', 'address'],
-  }).map(u => { addresses[u.address] = u.username })
-
-  l(addresses)
-
   const zmqSock = zmq.socket('sub')
   zmqSock.connect('tcp://127.0.0.1:18503')
   zmqSock.subscribe('rawblock')
   zmqSock.subscribe('rawtx')
 
   zmqSock.on('message', async (topic, message, sequence) => {
+    const addresses = {}
+    await db['User'].findAll({
+      attributes: ['username', 'address'],
+    }).map(u => { addresses[u.address] = u.username })
+
     topic = topic.toString('utf8')
     message = message.toString('hex')
 
@@ -147,7 +145,9 @@ const l = console.log
   app.post('/sendPayment', async (req, res) => {
     const payments = lnrpc.sendPayment(meta, {})
     payments.write({ payment_request: req.body.payreq })
-    res.end()
+    payments.on('data', m => {
+      res.json(m)
+    })
   }) 
 
   app.post('/addInvoice', async (req, res) => {
@@ -166,29 +166,26 @@ const l = console.log
     res.json(app.get('rates'))
   })
 
-  app.post('/login', (req, res) => {
-    db.User.findOne({
-      where: {
-        username: req.body.username
-      } 
-    }).then((user) => {
-      bcrypt.compare(req.body.password, user.password).then((result) => {
-        if (result) {
-          let payload = { username: user.username }
-          let token = jwt.sign(payload, process.env.SECRET)
-          res.cookie('token', token, { expires: new Date(Date.now() + 9999999) })
-          res.json({ user, token })
-        } else {
-          res.status(401).end()
-        }
-      }).catch((err) => {
-        l(err)
-        res.status(401).end()
+  app.post('/login', async (req, res) => {
+    try {
+      let user = await db.User.findOne({
+        where: {
+          username: req.body.username
+        } 
       })
-    }).catch((err) => {
-      l(err)
+
+      let result = await bcrypt.compare(req.body.password, user.password)
+      if (result) {
+        let payload = { username: user.username }
+        let token = jwt.sign(payload, process.env.SECRET)
+        res.cookie('token', token, { expires: new Date(Date.now() + 9999999) })
+        res.json({ user, token })
+      } else {
+        res.status(401).end()
+      }
+    } catch(err) {
       res.status(401).end()
-    })
+    }
   })
 
   app.get('/secret', passport.authenticate('jwt', { session: false }), (req, res) => {
