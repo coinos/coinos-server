@@ -40,6 +40,17 @@ module.exports = (db, gqltypes, lnrpc) => {
           return db['User'].create(user)
         }
       },
+      updateUser: {
+        type: gqltypes['users'],
+        args: {
+          user: {
+            type: UserInputType
+          }
+        },
+        resolve: async (root, { user }) => {
+          await db['User'].update(user, { where: { username: user.username } })
+        }
+      },
     }
   })
 }
