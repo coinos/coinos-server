@@ -37,7 +37,11 @@ const l = console.log
   io.origins('http://localhost:8085')
 
   const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
-  const lnrpc = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd.testa/tls.cert' })
+  const lnrpc = await require('lnrpc')({ 
+    server: 'localhost:10001', 
+    tls: '/home/adam/.lnd.testa/tls.cert',
+    macaroon: '/home/adam/.lnd.testa/admin.macaroon',
+  })
   const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
   const meta = new grpc.Metadata()
   meta.add('macaroon', adminMacaroon.toString('hex'))
@@ -55,6 +59,8 @@ const l = console.log
   zmqSock.subscribe('rawblock')
   zmqSock.subscribe('rawtx')
 
+  const seen = []
+
   zmqSock.on('message', async (topic, message, sequence) => {
     const addresses = {}
     await db['User'].findAll({
@@ -66,6 +72,8 @@ const l = console.log
 
     switch (topic) {
       case 'rawtx': {
+        if (seen.includes(message)) return
+
         let tx = bitcoin.Transaction.fromHex(message)
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
         l(total)
@@ -84,6 +92,7 @@ const l = console.log
               await user.save()
               l('HIT!')
               io.emit('tx', message)
+              seen.push(message)
             } 
           } catch(e) { }
         })
@@ -101,6 +110,10 @@ const l = console.log
 
   app.get('/balance', async (req, res) => {
     res.json(await lnrpc.walletBalance({witness_only: true}, meta))
+  })
+
+  app.get('/pendingchannels', async (req, res) => {
+    res.json(await lnrpc.pendingChannels({}, meta))
   })
 
   app.post('/openchannel', async (req, res) => {
@@ -121,7 +134,16 @@ const l = console.log
 
       user.balance = 0
       user.channel = reverse(data.funding_txid).toString('hex')
+
+      let list = await lnrpc.listChannels({}, meta)
+      let channels = list.channels.filter(c => c.channel_point.includes(user.channel))
+
+      if (channels.length) {
+        user.channelbalance =  channels[0].local_balance
+      }
+      
       await user.save()
+
       res.json(data)
     })
   })
