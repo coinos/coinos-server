@@ -14,15 +14,31 @@ import reverse from 'buffer-reverse'
 import zmq from 'zmq'
 
 import cache from './cache'
-import passport from './passport'
 
 import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
-
 
 dotenv.config()
 const l = console.log
 
 ;(async () => {
+  const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
+
+  const lna = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd.testa/tls.cert' })
+  const maca = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
+  const meta = new grpc.Metadata()
+  meta.add('macaroon', maca.toString('hex'))
+  lna.meta = meta
+
+  const lnb = await require('lnrpc')({ server: 'localhost:10002', tls: '/home/adam/.lnd.testb/tls.cert' })
+  const macb = fs.readFileSync('/home/adam/.lnd.testb/admin.macaroon')
+  const metab = new grpc.Metadata()
+  metab.add('macaroon', macb.toString('hex'))
+  lnb.meta = metab
+
+  const db = await require('./db')(lna)
+  const passport = require('./passport')(db)
+  const auth = passport.authenticate('jwt', { session: false })
+
   const app = express()
   app.enable('trust proxy')
   app.use(bodyParser.urlencoded({ extended: true }))
@@ -36,20 +52,16 @@ const l = console.log
   const io = require('socket.io').listen(server)
   io.origins('http://localhost:8085')
 
-  const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
-  const lnrpc = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd.testa/tls.cert' })
-  const adminMacaroon = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
-  const meta = new grpc.Metadata()
-  meta.add('macaroon', adminMacaroon.toString('hex'))
-  lnrpc.meta = meta
-
-  const invoices = lnrpc.subscribeInvoices({}, meta)
+  const invoices = lna.subscribeInvoices({})
   invoices.on('data', msg => {
-    let io = socketio()
     io.emit('invoices', msg)
   })
 
-  const db = await require('./db.js')(lnrpc)
+  const invoicesb = lnb.subscribeInvoices({})
+  invoicesb.on('data', msg => {
+    io.emit('invoices', msg)
+  })
+
   const zmqSock = zmq.socket('sub')
   zmqSock.connect('tcp://127.0.0.1:18503')
   zmqSock.subscribe('rawblock')
@@ -99,10 +111,6 @@ const l = console.log
     }
   })
 
-  app.get('/balance', async (req, res) => {
-    res.json(await lnrpc.walletBalance({witness_only: true}, meta))
-  })
-
   app.post('/openchannel', async (req, res) => {
     let user = await db['User'].findOne({
       where: {
@@ -110,10 +118,10 @@ const l = console.log
       }
     })
 
-    let channel = lnrpc.openChannelSync({
+    let channel = lna.openChannelSync({
       node_pubkey_string: '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
       local_funding_amount: user.balance,
-    }, meta, async (err, data) => {
+    }, async (err, data) => {
       if (err) {
         l(err)
         return res.status(500).send(err)
@@ -126,32 +134,25 @@ const l = console.log
     })
   })
 
-  app.get('/channelbalance', async (req, res) => {
-    let user = await db['User'].findOne({
-      where: {
-        username: req.query.username,
-      }
-    })
-
-    let data = await lnrpc.listChannels({}, meta)
-    let channels = data.channels.filter(c => c.channel_point.includes(user.channel))
-    if (channels.length) {
-      res.json({ balance: channels[0].local_balance })
-    } else {
-      res.status(500).send({ error: 'No channel found' })
-    }
-  })
-
-  app.post('/sendPayment', async (req, res) => {
-    const payments = lnrpc.sendPayment(meta, {})
+  app.post('/sendPayment', auth, (req, res) => {
+    const payments = lna.sendPayment(meta, {})
     payments.write({ payment_request: req.body.payreq })
-    payments.on('data', m => {
+    payments.on('data', async m => {
+      req.user.channelbalance -= m.value
+      await req.user.save()
       res.json(m)
     })
   }) 
 
-  app.post('/addInvoice', async (req, res) => {
-    res.json(await lnrpc.addInvoice({ value: req.body.amount }, meta))
+  app.post('/addInvoice', auth, async (req, res) => {
+    let invoice = await lnb.addInvoice({ value: req.body.amount })
+    
+    await db.Invoice.create({
+      user_id: req.user.id,
+      payreq: invoice.payment_request,
+    })
+
+    res.json(invoice)
   })
 
   let fetchRates

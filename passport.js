@@ -1,33 +1,31 @@
-const passport = require('passport')
-const jwt = require('passport-jwt')
-const dotenv = require('dotenv')
+import passport from 'passport'
+import jwt from 'passport-jwt'
+import dotenv from 'dotenv'
 dotenv.config()
 
-require('dotenv').config()
-
-const cookieExtractor = function(req) {
-  let token = null
-  if (req && req.cookies) {
-    token = req.cookies['token']
-  }
-  return token
+function cookieExtractor (req) {
+  if (req && req.cookies) return req.cookies['token']
+  return null
 }
 
-passport.use(new jwt.Strategy({
-    jwtFromRequest: jwt.ExtractJwt.fromExtractors([cookieExtractor]),
-    secretOrKey: process.env.SECRET
-  }, async function (payload, next) {
-    const db = await require('./db')
-    db.User.findOne({
-      where: {
-        username: payload.username
-      } 
-    }).then((user) => {
-      next(null, user)
-    }).catch((err) => {
-      next(null, false)
+module.exports = (db) => {
+  passport.use(new jwt.Strategy({
+      jwtFromRequest: jwt.ExtractJwt.fromExtractors([cookieExtractor]),
+      secretOrKey: process.env.SECRET
+    }, async function (payload, next) {
+      try {
+        let user = await db.User.findOne({
+          where: {
+            username: payload.username
+          } 
+        })
+        next(null, user)
+      } catch(err) {
+        next(null, false)
+      }
     })
-  })
-)
+  )
 
-module.exports = passport
+  return passport
+}
+
