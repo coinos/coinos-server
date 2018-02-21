@@ -26,6 +26,7 @@ const auto = new SequelizeAuto(
 const tables = { 
   User: 'users',
   Transaction: 'transactions',
+  Invoice: 'invoices',
 }
 
 const db = new Sequelize(

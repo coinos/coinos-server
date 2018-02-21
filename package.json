@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "babel-node index.js",
+    "debug": "babel-node --inspect-brk index.js",
     "postinstall": "cp -n .env.sample .env"
   },
   "dependencies": {
