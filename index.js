@@ -4,6 +4,7 @@ import bitcoin from 'bitcoinjs-lib'
 import bodyParser from 'body-parser'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
+import core from 'bitcoin-core'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
@@ -39,18 +40,23 @@ const l = console.log
   const passport = require('./passport')(db)
   const auth = passport.authenticate('jwt', { session: false })
 
+  const bc = new core({ 
+    username: 'adam',
+    password: 'MPJzfq97',
+    network: 'testnet',
+  })
+
   const app = express()
   app.enable('trust proxy')
   app.use(bodyParser.urlencoded({ extended: true }))
   app.use(bodyParser.json())
   app.use(cookieParser())
-  app.use(cors())
+  app.use(cors({ credentials: true, origin: 'http://*:*' }))
   app.use(compression())
   app.use(passport.initialize())
 
-  const server = require('http').createServer(app)
-  const io = require('socket.io').listen(server)
-  io.origins('http://localhost:8085')
+  const server = require('http').Server(app)
+  const io = require('socket.io')(server, { origins: '*:*' })
 
   const invoices = lna.subscribeInvoices({})
   invoices.on('data', msg => {
@@ -68,6 +74,12 @@ const l = console.log
   zmqSock.subscribe('rawtx')
 
   const seen = []
+  const channelpeers = [
+    '02fa77e0f4ca666f7d158c4bb6675d1436e339903a9feeeaacbd6e55021b98e7ee',
+    '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
+    '0231eee2441073c86d38f6085aedaf2bb7ad3d43af4c0e2669c1edd1a7d566ce31',
+    '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
+  ]
 
   zmqSock.on('message', async (topic, message, sequence) => {
     const addresses = {}
@@ -116,36 +128,47 @@ const l = console.log
     }
   })
 
-  app.post('/openchannel', async (req, res) => {
-    let user = await db['User'].findOne({
-      where: {
-        username: req.body.username,
-      }
-    })
-
-    let channel = lna.openChannelSync({
-      node_pubkey_string: '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
-      local_funding_amount: user.balance,
-    }, async (err, data) => {
-      if (err) {
-        l(err)
-        return res.status(500).send(err)
-      }
-
-      user.balance = 0
-      user.channel = reverse(data.funding_txid).toString('hex')
-
-      let list = await lnrpc.listChannels({}, meta)
-      let channels = list.channels.filter(c => c.channel_point.includes(user.channel))
-
-      if (channels.length) {
-        user.channelbalance =  channels[0].local_balance
-      }
+  app.post('/openchannel', auth, async (req, res) => {
+    let pending = await lna.pendingChannels({}, meta)
+    let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
+    let peer = channelpeers.find(p => !busypeers.includes(p))
+    
+    if (!peer) {
+      return res.status(500).send(
+        { error: 'All peers have pending channel opens' }
+      )
+    } 
+    
+    try {
+      let channel = await lna.openChannel({
+        node_pubkey: new Buffer(peer, 'hex'),
+        local_funding_amount: req.user.balance,
+      })
       
-      await user.save()
+      channel.on('data', async data => {
+        l(data)
+        req.user.channelbalance += req.user.balance
+        req.user.balance = 0
+        req.user.channel = reverse(data.chan_pending.txid).toString('hex')
+        await req.user.save()
+        res.send(data)
+      })
+    } catch (err) {
+      l(err)
+      return res.status(500).send(err)
+    } 
+  })
 
-      res.json(data)
-    })
+  app.post('/closechannels', auth, async (req, res) => {
+    req.user.balance += req.user.channelbalance
+    req.user.channelbalance = 0
+    await req.user.save()
+    res.send(req.user)
+  })
+
+
+  app.post('/faucet', auth, async (req, res) => {
+    req.user.balance += bc.sendToAddress(req.user.address, 0.001)
   })
 
   app.post('/sendPayment', auth, (req, res) => {
@@ -154,7 +177,7 @@ const l = console.log
     payments.on('data', async m => {
       req.user.channelbalance -= m.value
       await req.user.save()
-      res.json(m)
+      res.send(m)
     })
   }) 
 
@@ -166,7 +189,7 @@ const l = console.log
       payreq: invoice.payment_request,
     })
 
-    res.json(invoice)
+    res.send(invoice)
   })
 
   let fetchRates
@@ -178,7 +201,7 @@ const l = console.log
   })()
 
   app.get('/rates', (req, res) => {
-    res.json(app.get('rates'))
+    res.send(app.get('rates'))
   })
 
   app.post('/login', async (req, res) => {
@@ -194,7 +217,7 @@ const l = console.log
         let payload = { username: user.username }
         let token = jwt.sign(payload, process.env.SECRET)
         res.cookie('token', token, { expires: new Date(Date.now() + 9999999) })
-        res.json({ user, token })
+        res.send({ user, token })
       } else {
         res.status(401).end()
       }
@@ -204,13 +227,13 @@ const l = console.log
   })
 
   app.get('/secret', passport.authenticate('jwt', { session: false }), (req, res) => {
-    res.json({message: 'Success! You can not see this without a token'})
+    res.send({message: 'Success! You can not see this without a token'})
   })
 
   app.get('/api/users/me',
     passport.authenticate('basic', { session: false }),
     function(req, res) {
-      res.json({ id: req.user.id, username: req.user.username });
+      res.send({ id: req.user.id, username: req.user.username });
   });
 
   app.use('/graphql', bodyParser.json(), graphqlExpress({ 
