@@ -168,7 +168,8 @@ const l = console.log
 
 
   app.post('/faucet', auth, async (req, res) => {
-    req.user.balance += bc.sendToAddress(req.user.address, 0.001)
+    await bc.walletPassphrase('kek', 30000)
+    await bc.sendToAddress(req.user.address, 0.001)
   })
 
   app.post('/sendPayment', auth, (req, res) => {
