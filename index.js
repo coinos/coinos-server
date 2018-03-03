@@ -10,6 +10,7 @@ import dotenv from 'dotenv'
 import express from 'express'
 import fs from 'fs'
 import grpc from 'grpc'
+import io from 'socket.io'
 import jwt from 'jsonwebtoken'
 import reverse from 'buffer-reverse'
 import zmq from 'zmq'
@@ -36,10 +37,6 @@ const l = console.log
   metab.add('macaroon', macb.toString('hex'))
   lnb.meta = metab
 
-  const db = await require('./db')(lna)
-  const passport = require('./passport')(db)
-  const auth = passport.authenticate('jwt', { session: false })
-
   const bc = new core({ 
     username: 'adam',
     password: 'MPJzfq97',
@@ -53,20 +50,55 @@ const l = console.log
   app.use(cookieParser())
   app.use(cors({ credentials: true, origin: 'http://*:*' }))
   app.use(compression())
-  app.use(passport.initialize())
 
   const server = require('http').Server(app)
-  const io = require('socket.io')(server, { origins: '*:*' })
+  const socket = io(server, { origins: '*:*' })
+  const db = await require('./db')(lna)
+  const passport = require('./passport')(db)
+  const auth = passport.authenticate('jwt', { session: false })
+  const sids = {}
+
+  socket.use((socket, next) => {
+    try {
+      let token = socket.request.headers.cookie.match(`;\\s*token=([^;]+)`)[1]
+      let user = jwt.decode(token).username
+      socket.request.user = user
+      sids[user] = socket.id
+      l(sids)
+    } catch (e) { l(e) }
+    next()
+  })
+
+  socket.sockets.on('connect', socket => {
+    socket.emit('success', {
+      message: 'success logged in!',
+      user: socket.request.user
+    })
+  })
+
+  app.use(passport.initialize())
+
+  const handlePayment = async msg => {
+    let invoice = await db['Invoice'].findOne({
+      include: { model: db['User'], as: 'user' },
+      where: {
+        payreq: msg.payment_request
+      }
+    })
+
+    if (!invoice) return
+
+    invoice.user.channelbalance += parseInt(msg.value)
+    await invoice.user.save()
+ 
+    socket.to(sids[invoice.user.username]).emit('invoice', msg)
+  } 
 
   const invoices = lna.subscribeInvoices({})
-  invoices.on('data', msg => {
-    io.emit('invoices', msg)
-  })
+  invoices.on('data', handlePayment)
 
   const invoicesb = lnb.subscribeInvoices({})
-  invoicesb.on('data', msg => {
-    io.emit('invoices', msg)
-  })
+  invoicesb.on('data', handlePayment)
 
   const zmqSock = zmq.socket('sub')
   zmqSock.connect('tcp://127.0.0.1:18503')
@@ -75,7 +107,6 @@ const l = console.log
 
   const seen = []
   const channelpeers = [
-    '02fa77e0f4ca666f7d158c4bb6675d1436e339903a9feeeaacbd6e55021b98e7ee',
     '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
     '0231eee2441073c86d38f6085aedaf2bb7ad3d43af4c0e2669c1edd1a7d566ce31',
     '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
@@ -111,7 +142,7 @@ const l = console.log
               user.balance += o.value
               await user.save()
               l('HIT!')
-              io.emit('tx', message)
+              socket.emit('tx', message)
               seen.push(message)
             } 
           } catch(e) { }
@@ -170,15 +201,22 @@ const l = console.log
   app.post('/faucet', auth, async (req, res) => {
     await bc.walletPassphrase('kek', 30000)
     await bc.sendToAddress(req.user.address, 0.001)
+    res.send('success')
   })
 
   app.post('/sendPayment', auth, (req, res) => {
     const payments = lna.sendPayment(meta, {})
     payments.write({ payment_request: req.body.payreq })
     payments.on('data', async m => {
-      req.user.channelbalance -= m.value
-      await req.user.save()
-      res.send(m)
+      if (m.payment_error) {
+        l(m)
+        res.status(500).send({ error: m.payment_error })
+      } else {
+        l(m, req.user.channelbalance)
+        req.user.channelbalance -= parseInt(m.payment_route.total_amt)
+        await req.user.save()
+        res.send(m)
+      }
     })
   }) 
 
@@ -198,7 +236,7 @@ const l = console.log
     restClient.tickerGlobalPerSymbol('BTCCAD', (data) => {
       app.set('rates', JSON.parse(data))
     })
-    setTimeout(fetchRates, 120000)
+    setTimeout(fetchRates, 150000)
   })()
 
   app.get('/rates', (req, res) => {
@@ -223,6 +261,7 @@ const l = console.log
         res.status(401).end()
       }
     } catch(err) {
+      l(err)
       res.status(401).end()
     }
   })

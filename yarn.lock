@@ -3759,6 +3759,10 @@ jws@^3.0.0, jws@^3.1.4:
     jwa "^1.1.4"
     safe-buffer "^5.0.1"
 
+jwt-simple@^0.5:
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/jwt-simple/-/jwt-simple-0.5.1.tgz#79ea01891b61de6b68e13e67c0b4b5bda937b294"
+
 kind-of@^3.0.2:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-3.1.0.tgz#475d698a5e49ff5e53d14e3e732429dc8bf4cf47"
@@ -4650,6 +4654,12 @@ parseuri@0.0.5:
 parseurl@~1.3.1:
   version "1.3.1"
   resolved "https://registry.yarnpkg.com/parseurl/-/parseurl-1.3.1.tgz#c8ab8c9223ba34888aa64a297b28853bec18da56"
+
+"passport-jwt.socketio@https://github.com/erreina/passport-jwt.socketio":
+  version "0.1.1"
+  resolved "https://github.com/erreina/passport-jwt.socketio#a2b50969a62166442aba8f15b88036b7b2d79ee3"
+  dependencies:
+    passport-jwt "^2.2.1"
 
 passport-jwt@^2.2.1:
   version "2.2.1"
@@ -5750,6 +5760,13 @@ socket.io@^2.0.4:
     socket.io-adapter "~1.1.0"
     socket.io-client "2.0.4"
     socket.io-parser "~3.1.1"
+
+"socketio-jwt-auth@https://github.com/adcentury/socketio-jwt-auth":
+  version "0.0.6"
+  resolved "https://github.com/adcentury/socketio-jwt-auth#2d267ac397a2dcfed32c8862e6f1669dc933b8b8"
+  dependencies:
+    jwt-simple "^0.5"
+    xtend "^4.0.0"
 
 sort-keys-length@^1.0.0:
   version "1.0.1"

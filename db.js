@@ -70,6 +70,13 @@ const p = (lnrpc) => {
 
         db[k] = db.define(k, fields, { tableName: t })
 
+        if (t === 'invoices') {
+          db['Invoice'].belongsTo(db['User'], { 
+            as: 'user',
+            foreignKey: 'user_id' 
+          })
+        }
+
         let typefields = {}
         let options = {}
 
