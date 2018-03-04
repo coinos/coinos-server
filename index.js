@@ -65,7 +65,7 @@ const l = console.log
       socket.request.user = user
       sids[user] = socket.id
       l(sids)
-    } catch (e) { l(e) }
+    } catch (e) { /* */ }
     next()
   })
 
@@ -108,8 +108,9 @@ const l = console.log
   const seen = []
   const channelpeers = [
     '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
-    '0231eee2441073c86d38f6085aedaf2bb7ad3d43af4c0e2669c1edd1a7d566ce31',
     '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
+    '02ece82b43452154392772d63c0a244f1592f0d29037c88020118889b76851173f',
+    '02fa77e0f4ca666f7d158c4bb6675d1436e339903a9feeeaacbd6e55021b98e7ee',
   ]
 
   zmqSock.on('message', async (topic, message, sequence) => {
@@ -220,6 +221,24 @@ const l = console.log
     })
   }) 
 
+  app.post('/sendCoins', auth, async (req, res) => {
+    let sumOuts = tx => tx.outs.reduce((a, b) => a + b.value, 0)
+    let { address, amount } = req.body
+    let txhash = (await lna.sendCoins({ addr: address, amount })).txid
+    let txhex = await bc.getRawTransaction(txhash)
+    let tx = bitcoin.Transaction.fromHex(txhex)
+    let input_total = await tx.ins.reduce(async (a, input) => {
+      let h = await bc.getRawTransaction(reverse(input.hash).toString('hex'))
+      return a + bitcoin.Transaction.fromHex(h).outs[input.index].value
+    }, 0)
+    let output_total = sumOuts(tx)
+    let fees = input_total - output_total
+    l(output_total, input_total, fees)
+    req.user.balance -= amount
+    await req.user.save()
+    res.send({ txid: txhash, tx: tx, total: output_total, fees: fees })
+  }) 
+
   app.post('/addInvoice', auth, async (req, res) => {
     let invoice = await lnb.addInvoice({ value: req.body.amount })
     
@@ -255,7 +274,7 @@ const l = console.log
       if (result) {
         let payload = { username: user.username }
         let token = jwt.sign(payload, process.env.SECRET)
-        res.cookie('token', token, { expires: new Date(Date.now() + 9999999) })
+        res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
         res.send({ user, token })
       } else {
         res.status(401).end()
