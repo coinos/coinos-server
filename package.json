@@ -20,7 +20,7 @@
     "bitcoinjs-lib": "^3.3.2",
     "bluebird": "^3.4.6",
     "body-parser": "^1.5.0",
-    "bolt11": "^1.0.0",
+    "bolt11": "https://github.com/asoltys/bolt11#wip",
     "browser-sync": "^2.11.0",
     "buffer-reverse": "^1.0.1",
     "compression": "^1.7.1",

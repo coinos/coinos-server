@@ -11,6 +11,8 @@ import {
     GraphQLList
 } from 'graphql'
 
+const l = console.log
+
 module.exports = (db, gqltypes, lnrpc) => {
   const UserInputType = new GraphQLInputObjectType({
     name: 'UserInput',
@@ -31,6 +33,9 @@ module.exports = (db, gqltypes, lnrpc) => {
           }
         },
         resolve: async (root, { user }) => {
+          if (!user.username) throw new Error('Username required')
+          if (user.password.length < 2) throw new Error('Password too short')
+
           let exists = await db['User'].count({ where: { username: user.username } })
           if (exists) throw new Error('Username taken')
 
