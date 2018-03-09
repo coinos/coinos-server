@@ -100,8 +100,6 @@ const l = console.log
   const invoicesb = lnb.subscribeInvoices({})
   invoicesb.on('data', handlePayment)
 
-  const payments = lna.sendPayment(meta, {})
-
   const zmqSock = zmq.socket('sub')
   zmqSock.connect('tcp://127.0.0.1:18503')
   zmqSock.subscribe('rawblock')
@@ -221,8 +219,24 @@ const l = console.log
       return res.status(500).send('Not enough satoshis')
     } 
     
+    const payments = lna.sendPayment(meta, {})
     payments.write({ payment_request: req.body.payreq })
-    res.send(req.body.payreq)
+
+    payments.on('data', async m => {
+      if (m.payment_error) {
+        res.status(500).send({ error: m.payment_error })
+      } else {
+        if (seen.includes(m.payment_preimage)) return
+        seen.push(m.payment_preimage)
+        req.user.channelbalance -= parseInt(m.payment_route.total_amt)
+        await req.user.save()
+        res.send(m)
+      }
+    })
+
+    payments.on('error', e => {
+      res.status(500).send(e.message)
+    })
   }) 
 
   app.post('/sendCoins', auth, async (req, res) => {
