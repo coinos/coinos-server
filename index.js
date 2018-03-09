@@ -88,8 +88,7 @@ const l = console.log
 
     if (!invoice) return
 
-    l(msg)
-    invoice.user.channelbalance += msg.value
+    invoice.user.channelbalance += parseInt(msg.value)
     await invoice.user.save()
  
     socket.to(sids[invoice.user.username]).emit('invoice', msg)
@@ -131,11 +130,9 @@ const l = console.log
 
         let tx = bitcoin.Transaction.fromHex(message)
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
-        l(total)
         tx.outs.map(async o => {
           try {
             let address = bitcoin.address.fromOutputScript(o.script, bitcoin.networks.testnet)
-            l(address, o.value)
             if (Object.keys(addresses).includes(address)) {
               let user = await db['User'].findOne({
                 where: {
@@ -145,7 +142,6 @@ const l = console.log
 
               user.balance += o.value
               await user.save()
-              l('HIT!')
               socket.emit('tx', message)
               seen.push(message)
             } 
@@ -171,25 +167,32 @@ const l = console.log
     let pending = await lna.pendingChannels({}, meta)
     let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
     let peer = channelpeers.find(p => !busypeers.includes(p))
+    let sent = false
     
     if (!peer) {
-      res.status(500).send('All peers have pending channel opens')
+      res.status(500).send('All peers have pending channel requests, try again later')
     }
     
     try {
-      l('opening', req.user, peer)
+      let amount = Math.min(req.user.balance, 16777216)
+      
       let channel = await lna.openChannel({
         node_pubkey: new Buffer(peer, 'hex'),
-        local_funding_amount: req.user.balance,
+        local_funding_amount: amount,
       })
       
       channel.on('data', async data => {
-        if (!data.chan_pending) return
-        req.user.channelbalance += req.user.balance
-        req.user.balance = 0
+        if (sent || !data.chan_pending) return
+        req.user.channelbalance += amount
+        req.user.balance -= amount
         req.user.channel = reverse(data.chan_pending.txid).toString('hex')
         await req.user.save()
         res.send(data)
+        sent = true
+      })
+
+      channel.on('error', err => {
+        return res.status(500).send(err.message)
       })
     } catch (err) {
       l(err)
@@ -218,30 +221,8 @@ const l = console.log
       return res.status(500).send('Not enough satoshis')
     } 
     
-    try {
-      payments.write({ payment_request: req.body.payreq })
-    } catch (e) { l('here', e) }
-
-    payments.on('data', async m => {
-      if (m.payment_error) {
-        l(m)
-        res.status(500).send({ error: m.payment_error })
-      } else {
-        req.user.channelbalance -= parseInt(m.payment_route.total_amt)
-        await req.user.save()
-        res.send(m)
-      }
-
-      payments.cancel()
-    })
-
-    payments.on('error', e => {
-      l(e)
-      l(e.message)
-      if (e.message === 'Cancelled') return
-      res.status(500).send(e.message)
-      payments.cancel()
-    })
+    payments.write({ payment_request: req.body.payreq })
+    res.send(req.body.payreq)
   }) 
 
   app.post('/sendCoins', auth, async (req, res) => {
@@ -250,28 +231,33 @@ const l = console.log
 
     let { address, amount } = req.body
 
-    if (amount === user.balance) {
-      amount = user.balance - MINFEE
+    if (amount === req.user.balance) {
+      amount = req.user.balance - MINFEE
     } 
 
-    if (user.balance < amount - MINFEE) {
-      res.status(500).send({ error: 'not enough funds' })
+    if (req.user.balance < amount - MINFEE) {
+      res.status(500).send('Not enough funds')
+      return
     }
 
     try {
-      let txhash = (await lna.sendCoins({ addr: address, amount })).txid
-      let txhex = await bc.getRawTransaction(txhash)
+      let txid = (await lna.sendCoins({ addr: address, amount })).txid
+      let txhex = await bc.getRawTransaction(txid)
       let tx = bitcoin.Transaction.fromHex(txhex)
+
       let input_total = await tx.ins.reduce(async (a, input) => {
         let h = await bc.getRawTransaction(reverse(input.hash).toString('hex'))
         return a + bitcoin.Transaction.fromHex(h).outs[input.index].value
       }, 0)
       let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
+
       let fees = input_total - output_total
-      l(output_total, input_total, fees)
-      req.user.balance -= amount
+      let total = parseInt(amount) + fees
+
+      req.user.balance -= total
       await req.user.save()
-      res.send({ txid: txhash, tx: tx, total: output_total, fees: fees })
+
+      res.send({ txid, tx, amount, fees })
     } catch (e) {
       res.status(500).send(e.message)
     } 
