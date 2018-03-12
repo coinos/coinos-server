@@ -89,6 +89,7 @@ const l = console.log
     if (!invoice) return
 
     invoice.user.channelbalance += parseInt(msg.value)
+    l(invoice.user.username, msg.value)
     await invoice.user.save()
  
     socket.to(sids[invoice.user.username]).emit('invoice', msg)
@@ -151,7 +152,7 @@ const l = console.log
 
       case 'rawblock': {
         let block = bitcoin.Block.fromHex(message)
-        l(block.getHash())
+        l('block', block.getHash().toString('hex'))
         break
       } 
     }
@@ -160,6 +161,7 @@ const l = console.log
   app.post('/openchannel', auth, async (req, res) => {
     if (req.user.balance < 200000) {
       res.status(500).send('Need at least 200000 satoshis for channel opening')
+      return
     }
 
     let pending = await lna.pendingChannels({}, meta)
@@ -212,6 +214,10 @@ const l = console.log
     res.send('success')
   })
 
+  app.post('/test', auth, async (req, res) => {
+    res.send(req.user)
+  })
+
   app.post('/sendPayment', auth, async (req, res) => {
     await req.user.reload()
 
@@ -224,11 +230,14 @@ const l = console.log
 
     payments.on('data', async m => {
       if (m.payment_error) {
-        res.status(500).send({ error: m.payment_error })
+        res.status(500).send(m.payment_error)
       } else {
         if (seen.includes(m.payment_preimage)) return
         seen.push(m.payment_preimage)
-        req.user.channelbalance -= parseInt(m.payment_route.total_amt)
+
+        let total = parseInt(m.payment_route.total_amt) + parseInt(m.payment_route.total_fees)
+        req.user.channelbalance -= total
+
         await req.user.save()
         res.send(m)
       }
@@ -268,11 +277,12 @@ const l = console.log
       let fees = input_total - output_total
       let total = parseInt(amount) + fees
 
-      req.user.balance -= total
+      req.user.balance -= Math.min(req.user.balance, total)
       await req.user.save()
 
       res.send({ txid, tx, amount, fees })
     } catch (e) {
+      l(e)
       res.status(500).send(e.message)
     } 
   }) 
@@ -307,6 +317,8 @@ const l = console.log
           username: req.body.username
         } 
       })
+
+      if (!user) throw new Error('User not found')
 
       let result = await bcrypt.compare(req.body.password, user.password)
       if (result) {
