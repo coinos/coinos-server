@@ -31,6 +31,7 @@
     "cors": "^2.8.4",
     "dotenv": "^4.0.0",
     "express": "4.14.0",
+    "express-graphql": "^0.6.12",
     "express-session": "^1.6.5",
     "graphql": "^0.12.3",
     "graphql-redis-subscriptions": "^1.4.0",

@@ -18,7 +18,7 @@ import zmq from 'zmq'
 
 import cache from './cache'
 
-import { graphqlExpress, graphiqlExpress } from 'apollo-server-express'
+import graphqlHTTP from 'express-graphql'
 
 dotenv.config()
 const l = console.log
@@ -59,13 +59,20 @@ const l = console.log
   const auth = passport.authenticate('jwt', { session: false })
   const sids = {}
 
+  app.use(passport.initialize())
+
+  app.use('/graphql', auth, graphqlHTTP({
+    schema: db.gqlschema,
+    graphiql: true
+  }))
+
   socket.use((socket, next) => {
     try {
       let token = socket.request.headers.cookie.match(`;\\s*token=([^;]+)`)[1]
       let user = jwt.decode(token).username
       socket.request.user = user
       sids[user] = socket.id
-    } catch (e) { /* */ }
+    } catch (e) { /**/ }
     next()
   })
 
@@ -76,23 +83,21 @@ const l = console.log
     })
   })
 
-  app.use(passport.initialize())
-
   const handlePayment = async msg => {
-    let invoice = await db['Invoice'].findOne({
+    let payment = await db['Payment'].findOne({
       include: { model: db['User'], as: 'user' },
       where: {
-        payreq: msg.payment_request
+        hash: msg.payment_request
       }
     })
 
-    if (!invoice) return
+    if (!payment) return
 
-    invoice.user.channelbalance += parseInt(msg.value)
-    l(invoice.user.username, msg.value)
-    await invoice.user.save()
+    payment.user.channelbalance += parseInt(msg.value)
+    l(payment.user.username, msg.value)
+    await payment.user.save()
  
-    socket.to(sids[invoice.user.username]).emit('invoice', msg)
+    socket.to(sids[payment.user.username]).emit('invoice', msg)
   } 
 
   const invoices = lna.subscribeInvoices({})
@@ -106,7 +111,6 @@ const l = console.log
   zmqSock.subscribe('rawblock')
   zmqSock.subscribe('rawtx')
 
-  const seen = []
   const channelpeers = [
     '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
     '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
@@ -125,8 +129,8 @@ const l = console.log
 
     switch (topic) {
       case 'rawtx': {
-        if (seen.includes(message)) return
-
+        let hash = (await bc.decodeRawTransaction(message)).hash
+        if (await db.Payment.findOne({ where: { hash } })) return
         let tx = bitcoin.Transaction.fromHex(message)
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
         tx.outs.map(async o => {
@@ -141,10 +145,18 @@ const l = console.log
 
               user.balance += o.value
               await user.save()
+              
+              await db.Payment.create({
+                user_id: user.id,
+                hash: hash,
+                amount: o.value,
+                currency: 'CAD',
+                rate: app.get('rates').ask,
+              })
+
               socket.emit('tx', message)
-              seen.push(message)
             } 
-          } catch(e) { }
+          } catch(e) {}
         })
 
         break
@@ -238,6 +250,14 @@ const l = console.log
         let total = parseInt(m.payment_route.total_amt) + parseInt(m.payment_route.total_fees)
         req.user.channelbalance -= total
 
+        await db['Payment'].create({
+          amount: -total,
+          user_id: req.user.id,
+          hash: req.body.payreq,
+          rate: app.get('rates').ask,
+          currency: 'CAD',
+        })
+
         await req.user.save()
         res.send(m)
       }
@@ -275,10 +295,17 @@ const l = console.log
       let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
 
       let fees = input_total - output_total
-      let total = parseInt(amount) + fees
-
-      req.user.balance -= Math.min(req.user.balance, total)
+      let total = Math.min(parseInt(amount) + fees, req.user.balance)
+      req.user.balance -= total
       await req.user.save()
+
+      await db['Payment'].create({
+        amount: -total,
+        user_id: req.user.id,
+        hash: txid,
+        rate: app.get('rates').ask,
+        currency: 'CAD',
+      })
 
       res.send({ txid, tx, amount, fees })
     } catch (e) {
@@ -290,9 +317,12 @@ const l = console.log
   app.post('/addInvoice', auth, async (req, res) => {
     let invoice = await lnb.addInvoice({ value: req.body.amount })
     
-    await db.Invoice.create({
+    await db.Payment.create({
       user_id: req.user.id,
-      payreq: invoice.payment_request,
+      hash: invoice.payment_request,
+      amount: req.body.amount,
+      currency: 'CAD',
+      rate: app.get('rates').ask,
     })
 
     res.send(invoice)
@@ -334,25 +364,6 @@ const l = console.log
       res.status(401).end()
     }
   })
-
-  app.get('/secret', passport.authenticate('jwt', { session: false }), (req, res) => {
-    res.send({message: 'Success! You can not see this without a token'})
-  })
-
-  app.get('/api/users/me',
-    passport.authenticate('basic', { session: false }),
-    function(req, res) {
-      res.send({ id: req.user.id, username: req.user.username });
-  });
-
-  app.use('/graphql', bodyParser.json(), graphqlExpress({ 
-    schema: db.gqlschema,
-    context: {},
-    tracing: true,
-    cacheControl: true,
-  }))
-
-  app.use('/graphiql', graphiqlExpress({ endpointURL: '/graphql' }))
 
   app.use(function (err, req, res, next) {
     res.status(500)

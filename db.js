@@ -25,8 +25,7 @@ const auto = new SequelizeAuto(
 
 const tables = { 
   User: 'users',
-  Transaction: 'transactions',
-  Invoice: 'invoices',
+  Payment: 'payments',
 }
 
 const db = new Sequelize(
@@ -70,15 +69,32 @@ const p = (lnrpc) => {
 
         db[k] = db.define(k, fields, { tableName: t })
 
-        if (t === 'invoices') {
-          db['Invoice'].belongsTo(db['User'], { 
+        let typefields = {}
+
+        let options = {}
+
+        if (t === 'users') {
+          options = {
+            before: (findOptions, args, context) => {
+              findOptions.where = { id: context.user.id }
+              return findOptions
+            } 
+          }
+        }
+
+        if (t === 'payments') {
+          db['Payment'].belongsTo(db['User'], { 
             as: 'user',
             foreignKey: 'user_id' 
           })
-        }
 
-        let typefields = {}
-        let options = {}
+          options = {
+            before: (findOptions, args, context) => {
+              findOptions.where = { user_id: context.user.id }
+              return findOptions
+            } 
+          }
+        }
 
         gqltypes[t] = new GraphQLObjectType({
           name: t,
