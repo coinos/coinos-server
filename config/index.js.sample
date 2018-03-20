@@ -36,5 +36,10 @@ module.exports = {
     retry: {
       max: 5
     }
-  }
+  },
+  quad: {
+    "key": "",
+    "secret": "",
+    "client_id": "",
+  },
 }

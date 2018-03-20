@@ -1,5 +1,5 @@
 Arguments: 
-  /usr/local/bin/node /usr/share/yarn/bin/yarn.js babel-node test.js
+  /usr/local/bin/node /usr/share/yarn/bin/yarn.js add https://github.com/asoltys/lnrpc#0.0.4
 
 PATH: 
   /home/adam/bin:/home/adam/miniconda3/bin:/home/adam/.npm-packages/bin:/home/adam/miniconda3/bin:/home/adam/.npm-packages/bin:/home/adam/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin:/usr/sbin:/usr/local/bin:/home/adam/.yarn/bin:/home/adam/bin:/usr/local/go/bin:/home/adam/go/bin:/home/adam/Android/Sdk/tools:/home/adam/Android/Sdk/platform-tools:/home/adam/.fzf/bin:/usr/lib/jvm/java-8-oracle/bin:/usr/lib/jvm/java-8-oracle/db/bin:/usr/lib/jvm/java-8-oracle/jre/bin:/usr/sbin:/usr/local/bin:/home/adam/.yarn/bin:/home/adam/bin:/usr/local/go/bin:/home/adam/go/bin:/home/adam/Android/Sdk/tools:/home/adam/Android/Sdk/platform-tools
@@ -26,6 +26,7 @@ npm manifest:
     "dependencies": {
       "apollo-server-express": "^1.3.2",
       "async": "2.1.1",
+      "axios": "^0.18.0",
       "babel-cli": "^6.26.0",
       "babel-plugin-transform-object-rest-spread": "^6.26.0",
       "babel-preset-env": "^1.6.1",
@@ -59,7 +60,7 @@ npm manifest:
       "http-proxy-middleware": "^0.17.2",
       "jsonwebtoken": "^8.1.1",
       "less": "2.7.1",
-      "lnrpc": "https://github.com/asoltys/lnrpc#ab71ae4ea79da3e9ea74d47ab50f8dba31c41322",
+      "lnrpc": "https://github.com/asoltys/lnrpc#master",
       "lodash": "^4.17.4",
       "moment": "^2.10.6",
       "morgan": "^1.9.0",
@@ -487,6 +488,13 @@ Lockfile:
   aws4@^1.2.1, aws4@^1.6.0:
     version "1.6.0"
     resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.6.0.tgz#83ef5ca860b2b32e4a0deedee8c771b9db57471e"
+  
+  axios@^0.18.0:
+    version "0.18.0"
+    resolved "https://registry.yarnpkg.com/axios/-/axios-0.18.0.tgz#32d53e4851efdc0a11993b6cd000789d70c05102"
+    dependencies:
+      follow-redirects "^1.3.0"
+      is-buffer "^1.1.5"
   
   babel-cli@^6.26.0:
     version "6.26.0"
@@ -2894,6 +2902,12 @@ Lockfile:
     version "0.0.6"
     resolved "https://registry.yarnpkg.com/flexbuffer/-/flexbuffer-0.0.6.tgz#039fdf23f8823e440c38f3277e6fef1174215b30"
   
+  follow-redirects@^1.3.0:
+    version "1.4.1"
+    resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.4.1.tgz#d8120f4518190f55aac65bb6fc7b85fcd666d6aa"
+    dependencies:
+      debug "^3.1.0"
+  
   for-in@^1.0.1:
     version "1.0.2"
     resolved "https://registry.yarnpkg.com/for-in/-/for-in-1.0.2.tgz#81068d295a8142ec0ac726c6e2200c30fb6d5e80"
@@ -3663,6 +3677,10 @@ Lockfile:
     version "1.1.5"
     resolved "https://registry.yarnpkg.com/is-buffer/-/is-buffer-1.1.5.tgz#1f3b26ef613b214b88cbca23cc6c01d87961eecc"
   
+  is-buffer@^1.1.5:
+    version "1.1.6"
+    resolved "https://registry.yarnpkg.com/is-buffer/-/is-buffer-1.1.6.tgz#efaa2ea9daa0d7ab2ea13a97b2b8ad51fefbe8be"
+  
   is-builtin-module@^1.0.0:
     version "1.0.0"
     resolved "https://registry.yarnpkg.com/is-builtin-module/-/is-builtin-module-1.0.0.tgz#540572d34f7ac3119f8f76c30cbc1b1e037affbe"
@@ -4064,9 +4082,9 @@ Lockfile:
     version "1.1.0"
     resolved "https://registry.yarnpkg.com/limiter/-/limiter-1.1.0.tgz#6e2bd12ca3fcdaa11f224e2e53c896df3f08d913"
   
-  "lnrpc@https://github.com/asoltys/lnrpc#ab71ae4ea79da3e9ea74d47ab50f8dba31c41322":
+  "lnrpc@https://github.com/asoltys/lnrpc#master":
     version "0.0.3"
-    resolved "https://github.com/asoltys/lnrpc#ab71ae4ea79da3e9ea74d47ab50f8dba31c41322"
+    resolved "https://github.com/asoltys/lnrpc#4b428b8d190360e5c0b73a85e44cc09a84b5361c"
     dependencies:
       grpc "^1.6.0"
       napa "^3.0.0"
@@ -6899,16 +6917,10 @@ Lockfile:
       nan "~2.3.0"
 
 Trace: 
-  Error: Command failed.
-  Exit code: 1
-  Command: sh
-  Arguments: -c /home/adam/coinos-server/node_modules/.bin/babel-node test.js
-  Directory: /home/adam/coinos-server
-  Output:
-  
-      at ProcessTermError.MessageError (/usr/share/yarn/lib/cli.js:186:110)
-      at new ProcessTermError (/usr/share/yarn/lib/cli.js:226:113)
-      at ChildProcess.<anonymous> (/usr/share/yarn/lib/cli.js:30281:17)
-      at ChildProcess.emit (events.js:160:13)
-      at maybeClose (internal/child_process.js:943:16)
-      at Process.ChildProcess._handle.onexit (internal/child_process.js:220:5)
+  Error: Couldn't find match for "0.0.4" in "refs/heads/master,refs/heads/release/v0.3-alpha,refs/tags/0.0.1,refs/tags/0.0.3,refs/tags/v0.3-alpha" for "https://github.com/asoltys/lnrpc".
+      at new MessageError (/usr/share/yarn/lib/cli.js:186:110)
+      at Git.<anonymous> (/usr/share/yarn/lib/cli.js:52343:15)
+      at Generator.next (<anonymous>)
+      at step (/usr/share/yarn/lib/cli.js:98:30)
+      at /usr/share/yarn/lib/cli.js:109:13
+      at <anonymous>

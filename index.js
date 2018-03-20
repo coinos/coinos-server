@@ -359,7 +359,7 @@ const l = console.log
     try {
       let res = await axios.get('https://api.quadrigacx.com/v2/order_book')
       let ask = res.data.asks[0][0]
-      l('Quadriga ask price: ', ask)
+      l('quadriga ask price: ', ask)
       app.set('rates', { ask })
     } catch (e) { l(e) }
 
