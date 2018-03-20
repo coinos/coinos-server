@@ -114,7 +114,6 @@ const p = (lnrpc) => {
           name: 'RootQueryType',
           fields: gqlfields
         }),
-        mutation: require('./mutations')(db, gqltypes, lnrpc)
       })
 
       resolve(db)

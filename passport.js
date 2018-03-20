@@ -25,7 +25,7 @@ module.exports = (db) => {
         next(null, user)
       } catch(err) {
         l(err)
-        next(null, false)
+        next(null, { username: 'guest' })
       }
     })
   )

@@ -58,6 +58,7 @@ const l = console.log
   const passport = require('./passport')(db)
   const auth = passport.authenticate('jwt', { session: false })
   const sids = {}
+  const seen = []
 
   app.use(passport.initialize())
 
@@ -67,12 +68,13 @@ const l = console.log
   }))
 
   socket.use((socket, next) => {
+    console.log(sids)
     try {
-      let token = socket.request.headers.cookie.match(`;\\s*token=([^;]+)`)[1]
+      let token = socket.request.headers.cookie.match(`token=([^;]+)`)[1]
       let user = jwt.decode(token).username
       socket.request.user = user
       sids[user] = socket.id
-    } catch (e) { /**/ }
+    } catch (e) { return }
     next()
   })
 
@@ -84,8 +86,8 @@ const l = console.log
   })
 
   const handlePayment = async msg => {
-    let payment = await db['Payment'].findOne({
-      include: { model: db['User'], as: 'user' },
+    let payment = await db.Payment.findOne({
+      include: { model: db.User, as: 'user' },
       where: {
         hash: msg.payment_request
       }
@@ -94,7 +96,6 @@ const l = console.log
     if (!payment) return
 
     payment.user.channelbalance += parseInt(msg.value)
-    l(payment.user.username, msg.value)
     await payment.user.save()
  
     socket.to(sids[payment.user.username]).emit('invoice', msg)
@@ -112,15 +113,14 @@ const l = console.log
   zmqSock.subscribe('rawtx')
 
   const channelpeers = [
-    '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
-    '022ea315e5052b152579e70a90bacfd6aa7420f2ce94674d4ca8da29d709bc70fd',
     '02ece82b43452154392772d63c0a244f1592f0d29037c88020118889b76851173f',
-    '02fa77e0f4ca666f7d158c4bb6675d1436e339903a9feeeaacbd6e55021b98e7ee',
+    '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
+    '02cac5ed1028d161cd01a9b39eddab672f047e965ea2a0fe031ca220be09c1bd31',
   ]
 
   zmqSock.on('message', async (topic, message, sequence) => {
     const addresses = {}
-    await db['User'].findAll({
+    await db.User.findAll({
       attributes: ['username', 'address'],
     }).map(u => { addresses[u.address] = u.username })
 
@@ -137,7 +137,7 @@ const l = console.log
           try {
             let address = bitcoin.address.fromOutputScript(o.script, bitcoin.networks.testnet)
             if (Object.keys(addresses).includes(address)) {
-              let user = await db['User'].findOne({
+              let user = await db.User.findOne({
                 where: {
                   username: addresses[address],
                 }
@@ -170,11 +170,27 @@ const l = console.log
     }
   })
 
+  app.post('/register', async (req, res) => {
+    let err = m => res.status(500).send(m)
+    let user = req.body
+    if (!user.username) return err('Username required')
+    if (user.password.length < 2) return err('Password too short')
+
+    let exists = await db.User.count({ where: { username: user.username } })
+    if (exists) return err('Username taken')
+
+    user.address = (await lna.newAddress({ type: 1 }, meta)).address
+    user.password = await bcrypt.hash(user.password, 1)
+    res.send(await db.User.create(user))
+  })
+
+  app.post('/user', async (req, res) => {
+    await db['User'].update(user, { where: { username: user.username } })
+  })
+
   app.post('/openchannel', auth, async (req, res) => {
-    if (req.user.balance < 200000) {
-      res.status(500).send('Need at least 200000 satoshis for channel opening')
-      return
-    }
+    let err = m => res.status(500).send(m)
+    if (req.user.balance < 200000) return err('Need at least 200000 satoshis for channel opening')
 
     let pending = await lna.pendingChannels({}, meta)
     let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
@@ -250,7 +266,7 @@ const l = console.log
         let total = parseInt(m.payment_route.total_amt) + parseInt(m.payment_route.total_fees)
         req.user.channelbalance -= total
 
-        await db['Payment'].create({
+        await db.Payment.create({
           amount: -total,
           user_id: req.user.id,
           hash: req.body.payreq,
@@ -299,7 +315,7 @@ const l = console.log
       req.user.balance -= total
       await req.user.save()
 
-      await db['Payment'].create({
+      await db.Payment.create({
         amount: -total,
         user_id: req.user.id,
         hash: txid,
