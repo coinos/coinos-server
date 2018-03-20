@@ -1,4 +1,4 @@
-import config from './config/config.json'
+import config from './config'
 import Sequelize from 'sequelize'
 import SequelizeAuto from 'sequelize-auto'
 import { resolver, defaultArgs, defaultListArgs, attributeFields } from 'graphql-sequelize'
@@ -14,8 +14,7 @@ import {
 } from 'graphql'
 
 const Op = Sequelize.Op
-const l = console.log
-const conf = config[process.env.NODE_ENV]
+const conf = config.db[process.env.NODE_ENV]
 
 const auto = new SequelizeAuto(
   conf.database, 

@@ -16,7 +16,7 @@ import morgan from 'morgan'
 import reverse from 'buffer-reverse'
 import zmq from 'zmq'
 
-import cache from './cache'
+import config from './config'
 
 import graphqlHTTP from 'express-graphql'
 
@@ -24,23 +24,17 @@ dotenv.config()
 const l = console.log
 
 ;(async () => {
-  const lna = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd/tls.cert' })
-  const maca = fs.readFileSync('/home/adam/.lnd/test.macaroon')
-  const meta = new grpc.Metadata()
-  meta.add('macaroon', maca.toString('hex'))
-  lna.meta = meta
+  const ln = async ({ server, tls, macaroon }) => {
+    const ln = await require('lnrpc')({ server, tls })
+    ln.meta = new grpc.Metadata()
+    ln.meta.add('macaroon', fs.readFileSync(macaroon).toString('hex'))
+    return ln
+  }
 
-  const lnb = await require('lnrpc')({ server: 'localhost:10002', tls: '/home/adam/.lndb/tls.cert' })
-  const macb = fs.readFileSync('/home/adam/.lndb/test.macaroon')
-  const metab = new grpc.Metadata()
-  metab.add('macaroon', macb.toString('hex'))
-  lnb.meta = metab
+  const lna = await ln(config.lna)
+  const lnb = await ln(config.lnb)
 
-  const bc = new core({ 
-    username: 'adam',
-    password: 'hk79c7dI8ysAHY42eglqrJLo9A8CoyvWINMAcwuPzhQ=',
-    network: 'mainnet',
-  })
+  const bc = new core(config.bitcoin)
 
   const app = express()
   app.enable('trust proxy')

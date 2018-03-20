@@ -1,0 +1,39 @@
+import db from './config.json'
+
+module.exports = {
+  db,
+  bitcoin: {
+    username: '',
+    password: '',
+    network: 'mainnet',
+  },
+  lna: {
+    server: 'localhost:10001',
+    tls: '/home/adam/.lnd/tls.cert',
+    macaroon: '/home/adam/.lnd/test.macaroon',
+  },
+  lnb: {
+    server: 'localhost:10002',
+    tls: '/home/adam/.lndb/tls.cert',
+    macaroon: '/home/adam/.lndb/test.macaroon',
+  },
+  auto: {
+    host: "localhost",
+    dialect: "mysql",
+    tables: ["users", "payments"],
+    logging: false,
+    directory: false,
+    operatorsAliases: false,
+    dialectOptions: {
+      timeout: 500000,
+      multipleStatements: true
+    },
+    pool: {
+      min: 0,
+      max: 25
+    },
+    retry: {
+      max: 5
+    }
+  }
+}
