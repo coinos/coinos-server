@@ -107,40 +107,49 @@ const l = console.log
   invoicesb.on('data', handlePayment)
 
   const zmqSock = zmq.socket('sub')
-  zmqSock.connect('tcp://127.0.0.1:18503')
+  zmqSock.connect('tcp://127.0.0.1:18502')
   zmqSock.subscribe('rawblock')
   zmqSock.subscribe('rawtx')
 
   const channelpeers = [
-    '02ece82b43452154392772d63c0a244f1592f0d29037c88020118889b76851173f',
-    '039cc950286a8fa99218283d1adc2456e0d5e81be558da77dd6e85ba9a1fff5ad3',
-    '02cac5ed1028d161cd01a9b39eddab672f047e965ea2a0fe031ca220be09c1bd31',
+    '024e37c9521a54e1095988ea459d39997dc5101c88f0b313cc29610a216733823d',
+    '021f2cbffc4045ca2d70678ecf8ed75e488290874c9da38074f6d378248337062b',
+    '02f6725f9c1c40333b67faea92fd211c183050f28df32cac3f9d69685fe9665432',
+    '02ad6fb8d693dc1e4569bcedefadf5f72a931ae027dc0f0c544b34c1c6f3b9a02b',
+    '023668a30d0a27304695df3fb1af55a4fb75153eac34840817cae0e6a57894fd51',
   ]
 
-  zmqSock.on('message', async (topic, message, sequence) => {
-    const addresses = {}
-    await db.User.findAll({
-      attributes: ['username', 'address'],
-    }).map(u => { addresses[u.address] = u.username })
+  const addresses = {}
+  await db.User.findAll({
+    attributes: ['username', 'address'],
+  }).map(u => { addresses[u.address] = u.username })
 
+  const payments = (await db.Payment.findAll({ 
+    attributes: ['hash']
+  })).map(p => p.hash)
+
+  zmqSock.on('message', async (topic, message, sequence) => {
     topic = topic.toString('utf8')
     message = message.toString('hex')
 
     switch (topic) {
       case 'rawtx': {
-        let hash = (await bc.decodeRawTransaction(message)).hash
-        if (await db.Payment.findOne({ where: { hash } })) return
         let tx = bitcoin.Transaction.fromHex(message)
+        let hash = tx.getHash()
+        if (seen.includes(hash) || payments.includes(hash)) return
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
         tx.outs.map(async o => {
           try {
-            let address = bitcoin.address.fromOutputScript(o.script, bitcoin.networks.testnet)
+            let address = bitcoin.address.fromOutputScript(o.script)
             if (Object.keys(addresses).includes(address)) {
               let user = await db.User.findOne({
                 where: {
                   username: addresses[address],
                 }
               })
+
+              seen.push(hash)
+              while (seen.length > 1000) seen.shift()
 
               user.balance += o.value
               await user.save()
@@ -189,7 +198,7 @@ const l = console.log
 
   app.post('/openchannel', auth, async (req, res) => {
     let err = m => res.status(500).send(m)
-    if (req.user.balance < 200000) return err('Need at least 200000 satoshis for channel opening')
+    if (req.user.balance < 50000) return err('Need at least 50000 satoshis for channel opening')
 
     let pending = await lna.pendingChannels({}, meta)
     let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
