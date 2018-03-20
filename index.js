@@ -1,3 +1,4 @@
+import axios from 'axios'
 import bcrypt from 'bcrypt'
 import bitcoin from 'bitcoinjs-lib'
 import bodyParser from 'body-parser'
@@ -6,6 +7,7 @@ import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import core from 'bitcoin-core'
 import cors from 'cors'
+import crypto from 'crypto-js'
 import dotenv from 'dotenv'
 import express from 'express'
 import fs from 'fs'
@@ -101,7 +103,7 @@ const l = console.log
   invoicesb.on('data', handlePayment)
 
   const zmqSock = zmq.socket('sub')
-  zmqSock.connect('tcp://127.0.0.1:18502')
+  zmqSock.connect(config.bitcoin.zmq)
   zmqSock.subscribe('rawblock')
   zmqSock.subscribe('rawtx')
 
@@ -134,8 +136,10 @@ const l = console.log
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
         tx.outs.map(async o => {
           try {
-            let address = bitcoin.address.fromOutputScript(o.script)
+            let address = bitcoin.address.fromOutputScript(o.script, config.bitcoin.network)
+            l(address)
             if (Object.keys(addresses).includes(address)) {
+              l('HIT!')
               let user = await db.User.findOne({
                 where: {
                   username: addresses[address],
@@ -181,7 +185,7 @@ const l = console.log
     let exists = await db.User.count({ where: { username: user.username } })
     if (exists) return err('Username taken')
 
-    user.address = (await lna.newAddress({ type: 1 }, meta)).address
+    user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
     user.password = await bcrypt.hash(user.password, 1)
     res.send(await db.User.create(user))
   })
@@ -194,7 +198,7 @@ const l = console.log
     let err = m => res.status(500).send(m)
     if (req.user.balance < 50000) return err('Need at least 50000 satoshis for channel opening')
 
-    let pending = await lna.pendingChannels({}, meta)
+    let pending = await lna.pendingChannels({}, lna.meta)
     let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
     let peer = channelpeers.find(p => !busypeers.includes(p))
     let sent = false
@@ -252,7 +256,7 @@ const l = console.log
       return res.status(500).send('Not enough satoshis')
     } 
     
-    const payments = lna.sendPayment(meta, {})
+    const payments = lna.sendPayment(lna.meta, {})
     payments.write({ payment_request: req.body.payreq })
 
     payments.on('data', async m => {
@@ -344,8 +348,21 @@ const l = console.log
   })
 
   let fetchRates
-  (fetchRates = () => {
-    app.set('rates', { ask: 11202.50 })
+  (fetchRates = async () => {
+    const nonce = Date.now().toString()
+    const conf = config.quad
+    const signature = crypto.HmacSHA256(
+      nonce + conf.client_id + conf.key, 
+      conf.secret
+    ).toString()
+
+    try {
+      let res = await axios.get('https://api.quadrigacx.com/v2/order_book')
+      let ask = res.data.asks[0][0]
+      l('Quadriga ask price: ', ask)
+      app.set('rates', { ask })
+    } catch (e) { l(e) }
+
     setTimeout(fetchRates, 150000)
   })()
 

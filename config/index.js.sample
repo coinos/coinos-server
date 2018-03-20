@@ -6,6 +6,7 @@ module.exports = {
     username: '',
     password: '',
     network: 'mainnet',
+    zmq: 'tcp://127.0.0.1:18502',
   },
   lna: {
     server: 'localhost:10001',

@@ -14,7 +14,7 @@ import {
 } from 'graphql'
 
 const Op = Sequelize.Op
-const conf = config.db[process.env.NODE_ENV]
+const conf = config.db[process.env.NODE_ENV || 'development']
 
 const auto = new SequelizeAuto(
   conf.database, 
