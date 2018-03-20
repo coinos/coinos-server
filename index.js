@@ -1,4 +1,3 @@
-import ba from 'bitcoinaverage'
 import bcrypt from 'bcrypt'
 import bitcoin from 'bitcoinjs-lib'
 import bodyParser from 'body-parser'
@@ -13,6 +12,7 @@ import fs from 'fs'
 import grpc from 'grpc'
 import io from 'socket.io'
 import jwt from 'jsonwebtoken'
+import morgan from 'morgan'
 import reverse from 'buffer-reverse'
 import zmq from 'zmq'
 
@@ -24,24 +24,22 @@ dotenv.config()
 const l = console.log
 
 ;(async () => {
-  const restClient = ba.restfulClient(process.env.BITCOINAVERAGE_PUBLIC, process.env.BITCOINAVERAGE_SECRET)
-
-  const lna = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd.testa/tls.cert' })
-  const maca = fs.readFileSync('/home/adam/.lnd.testa/admin.macaroon')
+  const lna = await require('lnrpc')({ server: 'localhost:10001', tls: '/home/adam/.lnd/tls.cert' })
+  const maca = fs.readFileSync('/home/adam/.lnd/test.macaroon')
   const meta = new grpc.Metadata()
   meta.add('macaroon', maca.toString('hex'))
   lna.meta = meta
 
-  const lnb = await require('lnrpc')({ server: 'localhost:10002', tls: '/home/adam/.lnd.testb/tls.cert' })
-  const macb = fs.readFileSync('/home/adam/.lnd.testb/admin.macaroon')
+  const lnb = await require('lnrpc')({ server: 'localhost:10002', tls: '/home/adam/.lndb/tls.cert' })
+  const macb = fs.readFileSync('/home/adam/.lndb/test.macaroon')
   const metab = new grpc.Metadata()
   metab.add('macaroon', macb.toString('hex'))
   lnb.meta = metab
 
   const bc = new core({ 
     username: 'adam',
-    password: 'MPJzfq97',
-    network: 'testnet',
+    password: 'hk79c7dI8ysAHY42eglqrJLo9A8CoyvWINMAcwuPzhQ=',
+    network: 'mainnet',
   })
 
   const app = express()
@@ -51,6 +49,7 @@ const l = console.log
   app.use(cookieParser())
   app.use(cors({ credentials: true, origin: 'http://*:*' }))
   app.use(compression())
+  app.use(morgan('combined'))
 
   const server = require('http').Server(app)
   const socket = io(server, { origins: '*:*' })
@@ -237,13 +236,10 @@ const l = console.log
 
 
   app.post('/faucet', auth, async (req, res) => {
-    await bc.walletPassphrase('kek', 30000)
-    await bc.sendToAddress(req.user.address, 0.001)
-    res.send('success')
-  })
-
-  app.post('/test', auth, async (req, res) => {
-    res.send(req.user)
+    return res.send('not for mainnet')
+    // await bc.walletPassphrase('kek', 30000)
+    // await bc.sendToAddress(req.user.address, 0.001)
+    // res.send('success')
   })
 
   app.post('/sendPayment', auth, async (req, res) => {
@@ -346,9 +342,7 @@ const l = console.log
 
   let fetchRates
   (fetchRates = () => {
-    restClient.tickerGlobalPerSymbol('BTCCAD', (data) => {
-      app.set('rates', JSON.parse(data))
-    })
+    app.set('rates', { ask: 11202.50 })
     setTimeout(fetchRates, 150000)
   })()
 

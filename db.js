@@ -15,11 +15,12 @@ import {
 
 const Op = Sequelize.Op
 const l = console.log
+const conf = config[process.env.NODE_ENV]
 
 const auto = new SequelizeAuto(
-  config.development.database, 
-  config.development.username, 
-  config.development.password, 
+  conf.database, 
+  conf.username, 
+  conf.password, 
   config.auto
 )
 
@@ -29,12 +30,12 @@ const tables = {
 }
 
 const db = new Sequelize(
-  config.development.database,
-  config.development.username,
-  config.development.password,
+  conf.database,
+  conf.username,
+  conf.password,
   {
-    host: config.development.host,
-    dialect: config.development.dialect,
+    host: conf.host,
+    dialect: conf.dialect,
     logging: false, 
     dialectOptions: { multipleStatements: true },
     operatorsAliases: false,
