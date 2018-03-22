@@ -89,7 +89,10 @@ const l = console.log
 
     if (!payment) return
 
+    payment.received = true
     payment.user.channelbalance += parseInt(msg.value)
+
+    await payment.save()
     await payment.user.save()
     payments.push(msg.payment_request)
  
@@ -353,6 +356,7 @@ const l = console.log
       amount: req.body.amount,
       currency: 'CAD',
       rate: app.get('rates').ask,
+      tip: req.body.tip,
     })
 
     res.send(invoice)
