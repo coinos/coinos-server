@@ -63,7 +63,6 @@ const l = console.log
   }))
 
   socket.use((socket, next) => {
-    console.log(sids)
     try {
       let token = socket.request.headers.cookie.match(`token=([^;]+)`)[1]
       let user = jwt.decode(token).username
@@ -92,6 +91,7 @@ const l = console.log
 
     payment.user.channelbalance += parseInt(msg.value)
     await payment.user.save()
+    payments.push(msg.payment_request)
  
     socket.to(sids[payment.user.username]).emit('invoice', msg)
   } 
@@ -109,8 +109,8 @@ const l = console.log
 
   const channelpeers = [
     '024e37c9521a54e1095988ea459d39997dc5101c88f0b313cc29610a216733823d',
-    '021f2cbffc4045ca2d70678ecf8ed75e488290874c9da38074f6d378248337062b',
-    '02f6725f9c1c40333b67faea92fd211c183050f28df32cac3f9d69685fe9665432',
+//    '021f2cbffc4045ca2d70678ecf8ed75e488290874c9da38074f6d378248337062b',
+//    '02f6725f9c1c40333b67faea92fd211c183050f28df32cac3f9d69685fe9665432',
     '02ad6fb8d693dc1e4569bcedefadf5f72a931ae027dc0f0c544b34c1c6f3b9a02b',
     '023668a30d0a27304695df3fb1af55a4fb75153eac34840817cae0e6a57894fd51',
   ]
@@ -131,23 +131,29 @@ const l = console.log
     switch (topic) {
       case 'rawtx': {
         let tx = bitcoin.Transaction.fromHex(message)
-        let hash = tx.getHash()
-        if (seen.includes(hash) || payments.includes(hash)) return
+        let hash = reverse(tx.getHash()).toString('hex')
+        if (payments.includes(hash)) return
         let total = tx.outs.reduce((a, b) => a + b.value, 0)
         tx.outs.map(async o => {
           try {
-            let address = bitcoin.address.fromOutputScript(o.script, config.bitcoin.network)
-            l(address)
+            let network = config.bitcoin.network
+            if (network === 'mainnet') {
+              network = 'bitcoin'
+            } 
+
+            let address = bitcoin.address.fromOutputScript(
+              o.script, 
+              bitcoin.networks[network],
+            )
+
             if (Object.keys(addresses).includes(address)) {
-              l('HIT!')
+              payments.push(hash)
+
               let user = await db.User.findOne({
                 where: {
                   username: addresses[address],
                 }
               })
-
-              seen.push(hash)
-              while (seen.length > 1000) seen.shift()
 
               user.balance += o.value
               await user.save()
@@ -187,6 +193,7 @@ const l = console.log
 
     user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
     user.password = await bcrypt.hash(user.password, 1)
+    addresses[user.address] = user.username
     res.send(await db.User.create(user))
   })
 
@@ -196,15 +203,18 @@ const l = console.log
 
   app.post('/openchannel', auth, async (req, res) => {
     let err = m => res.status(500).send(m)
-    if (req.user.balance < 50000) return err('Need at least 50000 satoshis for channel opening')
+    if (req.user.balance < 10000) return err('Need at least 10000 satoshis for channel opening')
 
     let pending = await lna.pendingChannels({}, lna.meta)
     let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
     let peer = channelpeers.find(p => !busypeers.includes(p))
     let sent = false
+
+    l('channeling')
     
     if (!peer) {
       res.status(500).send('All peers have pending channel requests, try again later')
+      return
     }
     
     try {
@@ -226,10 +236,11 @@ const l = console.log
       })
 
       channel.on('error', err => {
+        l(peer, err)
         return res.status(500).send(err.message)
       })
     } catch (err) {
-      l(err)
+      l(peer, err)
       return res.status(500).send(err)
     } 
   })
@@ -256,10 +267,10 @@ const l = console.log
       return res.status(500).send('Not enough satoshis')
     } 
     
-    const payments = lna.sendPayment(lna.meta, {})
-    payments.write({ payment_request: req.body.payreq })
+    const stream = lna.sendPayment(lna.meta, {})
+    stream.write({ payment_request: req.body.payreq })
 
-    payments.on('data', async m => {
+    stream.on('data', async m => {
       if (m.payment_error) {
         res.status(500).send(m.payment_error)
       } else {
@@ -282,7 +293,7 @@ const l = console.log
       }
     })
 
-    payments.on('error', e => {
+    stream.on('error', e => {
       res.status(500).send(e.message)
     })
   }) 
