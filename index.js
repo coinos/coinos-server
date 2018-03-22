@@ -26,10 +26,11 @@ dotenv.config()
 const l = console.log
 
 ;(async () => {
-  const ln = async ({ server, tls, macaroon }) => {
+  const ln = async ({ server, tls, macaroon, channelpeers }) => {
     const ln = await require('lnrpc')({ server, tls })
     ln.meta = new grpc.Metadata()
     ln.meta.add('macaroon', fs.readFileSync(macaroon).toString('hex'))
+    ln.channelpeers = channelpeers
     return ln
   }
 
@@ -109,14 +110,6 @@ const l = console.log
   zmqSock.connect(config.bitcoin.zmq)
   zmqSock.subscribe('rawblock')
   zmqSock.subscribe('rawtx')
-
-  const channelpeers = [
-    '024e37c9521a54e1095988ea459d39997dc5101c88f0b313cc29610a216733823d',
-//    '021f2cbffc4045ca2d70678ecf8ed75e488290874c9da38074f6d378248337062b',
-//    '02f6725f9c1c40333b67faea92fd211c183050f28df32cac3f9d69685fe9665432',
-    '02ad6fb8d693dc1e4569bcedefadf5f72a931ae027dc0f0c544b34c1c6f3b9a02b',
-    '023668a30d0a27304695df3fb1af55a4fb75153eac34840817cae0e6a57894fd51',
-  ]
 
   const addresses = {}
   await db.User.findAll({
@@ -210,7 +203,7 @@ const l = console.log
 
     let pending = await lna.pendingChannels({}, lna.meta)
     let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
-    let peer = channelpeers.find(p => !busypeers.includes(p))
+    let peer = lna.channelpeers.find(p => !busypeers.includes(p))
     let sent = false
 
     l('channeling')
