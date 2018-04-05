@@ -234,13 +234,19 @@ const l = console.log
 
         channel.on('error', err => {
           l('channel error', peer, err)
-          if (err.message.startsWith('Multiple')) {
+          let msg = err.message
+
+          if (msg.startsWith('Multiple')) {
             busypeers.push(peer)
             peer = lna.channelpeers.find(p => !busypeers.includes(p))
             return openchannel(peer, amount)
           } 
 
-          return res.status(500).send(err.message)
+          if (msg.startsWith('not enough')) {
+            msg = 'Server wallet is busy. Wait for a block and try again'
+          } 
+
+          return res.status(500).send(msg)
         })
       }
 
@@ -307,7 +313,9 @@ const l = console.log
     })
 
     stream.on('error', e => {
-      res.status(500).send(e.message)
+      let msg = e.message
+
+      res.status(500).send(msg)
     })
   }) 
 
@@ -353,7 +361,13 @@ const l = console.log
       res.send({ txid, tx, amount, fees })
     } catch (e) {
       l(e)
-      res.status(500).send(e.message)
+      let msg = e.message
+
+      if (msg.startsWith('insufficient')) {
+        msg = 'Server wallet is busy. Wait a block and try again'
+      } 
+
+      res.status(500).send(msg)
     } 
   }) 
 
