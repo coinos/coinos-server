@@ -268,8 +268,14 @@ const l = console.log
 
   app.post('/sendPayment', auth, async (req, res) => {
     await req.user.reload()
+    let hash = req.body.payreq
+    let payreq = bolt11.decode(hash)
 
-    if (req.user.channelbalance < bolt11.decode(req.body.payreq).satoshis) {
+    if (seen.includes(hash)) {
+      return res.status(500).send('Invoice has been paid, can\'t pay again')
+    } 
+
+    if (req.user.channelbalance < payreq.satoshis) {
       return res.status(500).send('Not enough satoshis')
     } 
     
@@ -289,12 +295,13 @@ const l = console.log
         await db.Payment.create({
           amount: -total,
           user_id: req.user.id,
-          hash: req.body.payreq,
+          hash,
           rate: app.get('rates').ask,
           currency: 'CAD',
         })
 
         await req.user.save()
+        seen.push(hash)
         res.send(m)
       }
     })
