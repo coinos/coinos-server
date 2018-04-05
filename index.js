@@ -216,27 +216,37 @@ const l = console.log
     try {
       let amount = Math.min(req.user.balance, 16777216)
       
-      let channel = await lna.openChannel({
-        node_pubkey: new Buffer(peer, 'hex'),
-        local_funding_amount: amount,
-      })
-      
-      channel.on('data', async data => {
-        if (sent || !data.chan_pending) return
-        req.user.channelbalance += amount
-        req.user.balance -= amount
-        req.user.channel = reverse(data.chan_pending.txid).toString('hex')
-        await req.user.save()
-        res.send(data)
-        sent = true
-      })
+      let openchannel = async (peer, amount) => {
+        let channel = await lna.openChannel({
+          node_pubkey: new Buffer(peer, 'hex'),
+          local_funding_amount: amount,
+        })
+        
+        channel.on('data', async data => {
+          if (sent || !data.chan_pending) return
+          req.user.channelbalance += amount
+          req.user.balance -= amount
+          req.user.channel = reverse(data.chan_pending.txid).toString('hex')
+          await req.user.save()
+          res.send(data)
+          sent = true
+        })
 
-      channel.on('error', err => {
-        l(peer, err)
-        return res.status(500).send(err.message)
-      })
+        channel.on('error', err => {
+          l('channel error', peer, err)
+          if (err.message.startsWith('Multiple')) {
+            busypeers.push(peer)
+            peer = lna.channelpeers.find(p => !busypeers.includes(p))
+            return openchannel(peer, amount)
+          } 
+
+          return res.status(500).send(err.message)
+        })
+      }
+
+      openchannel(peer, amount)
     } catch (err) {
-      l(peer, err)
+      l('rpc error', peer, err)
       return res.status(500).send(err)
     } 
   })
