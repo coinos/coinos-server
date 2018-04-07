@@ -240,7 +240,11 @@ const l = console.log
           if (msg.startsWith('Multiple')) {
             busypeers.push(peer)
             peer = lna.channelpeers.find(p => !busypeers.includes(p))
-            return openchannel(peer, amount)
+            if (peer) {
+              return openchannel(peer, amount)
+            } else {
+              return res.status(500).send('All peers are busy, couldn\'t open a channel, wait a few blocks and try again')
+            } 
           } 
 
           if (msg.startsWith('not enough')) {
@@ -303,7 +307,7 @@ const l = console.log
           amount: -total,
           user_id: req.user.id,
           hash,
-          rate: app.get('rates').ask,
+          rate: app.get('rates').bid,
           currency: 'CAD',
         })
 
@@ -355,7 +359,7 @@ const l = console.log
         amount: -total,
         user_id: req.user.id,
         hash: txid,
-        rate: app.get('rates').ask,
+        rate: app.get('rates').bid,
         currency: 'CAD',
       })
 
@@ -418,7 +422,7 @@ const l = console.log
         } 
       })
 
-      if (!user) throw new Error('User not found')
+      if (!user) return res.status(401).end()
 
       let result = await bcrypt.compare(req.body.password, user.password)
       if (result) {
