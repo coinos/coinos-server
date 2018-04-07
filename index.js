@@ -160,6 +160,7 @@ const l = console.log
                 amount: o.value,
                 currency: 'CAD',
                 rate: app.get('rates').ask,
+                received: true,
               })
 
               socket.emit('tx', message)
