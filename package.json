@@ -69,6 +69,7 @@
     "zeromq": "^4.6.0"
   },
   "devDependencies": {
-    "babel-preset-es2015": "^6.24.1"
+    "babel-preset-es2015": "^6.24.1",
+    "pm2": "^2.10.4"
   }
 }

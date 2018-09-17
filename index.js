@@ -16,7 +16,7 @@ import io from 'socket.io'
 import jwt from 'jsonwebtoken'
 import morgan from 'morgan'
 import reverse from 'buffer-reverse'
-import zmq from 'zmq'
+import zmq from 'zeromq'
 
 import config from './config'
 
@@ -285,6 +285,14 @@ const l = console.log
     // await bc.walletPassphrase('kek', 30000)
     // await bc.sendToAddress(req.user.address, 0.001)
     // res.send('success')
+  })
+
+  app.get('/channels', auth, async (req, res) => {
+    return res.send(await lna.listChannels())
+  })
+
+  app.get('/peers', auth, async (req, res) => {
+    return res.send(await lna.listPeers())
   })
 
   app.post('/sendPayment', auth, async (req, res) => {
