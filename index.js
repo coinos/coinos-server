@@ -106,10 +106,13 @@ const l = console.log
   const invoicesb = lnb.subscribeInvoices({})
   invoicesb.on('data', handlePayment)
 
-  const zmqSock = zmq.socket('sub')
-  zmqSock.connect(config.bitcoin.zmq)
-  zmqSock.subscribe('rawblock')
-  zmqSock.subscribe('rawtx')
+  const zmqRawBlock = zmq.socket('sub')
+  zmqRawBlock.connect(config.bitcoin.zmqrawblock)
+  zmqRawBlock.subscribe('rawblock')
+
+  const zmqRawTx = zmq.socket('sub')
+  zmqRawTx.connect(config.bitcoin.zmqrawtx)
+  zmqRawTx.subscribe('rawtx')
 
   const addresses = {}
   await db.User.findAll({
@@ -120,7 +123,7 @@ const l = console.log
     attributes: ['hash']
   })).map(p => p.hash)
 
-  zmqSock.on('message', async (topic, message, sequence) => {
+  zmqRawTx.on('message', async (topic, message, sequence) => {
     topic = topic.toString('utf8')
     message = message.toString('hex')
 
@@ -170,7 +173,14 @@ const l = console.log
 
         break
       } 
+    }
+  })
 
+  zmqRawBlock.on('message', async (topic, message, sequence) => {
+    topic = topic.toString('utf8')
+    message = message.toString('hex')
+
+    switch (topic) {
       case 'rawblock': {
         let block = bitcoin.Block.fromHex(message)
         l('block', block.getHash().toString('hex'))
@@ -237,7 +247,7 @@ const l = console.log
           l('channel error', peer, err)
           let msg = err.message
 
-          if (msg.startsWith('Multiple')) {
+          if (msg.startsWith('Multiple') || msg.startsWith('You gave')) {
             busypeers.push(peer)
             peer = lna.channelpeers.find(p => !busypeers.includes(p))
             if (peer) {
