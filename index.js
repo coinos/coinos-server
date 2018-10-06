@@ -81,6 +81,8 @@ const l = console.log
   })
 
   const handlePayment = async msg => {
+    if (!msg.settled) return
+
     let payment = await db.Payment.findOne({
       include: { model: db.User, as: 'user' },
       where: {
