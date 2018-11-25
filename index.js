@@ -66,6 +66,10 @@ const l = console.log
   socket.use((socket, next) => {
     try {
       let token = socket.request.headers.cookie.match(`token=([^;]+)`)[1]
+      if (!token && socket.handshake.query) {
+        token = socket.handshake.query.token
+      }
+
       let user = jwt.decode(token).username
       socket.request.user = user
       sids[user] = socket.id
@@ -79,6 +83,7 @@ const l = console.log
       user: socket.request.user
     })
   })
+
 
   const handlePayment = async msg => {
     if (!msg.settled) return
@@ -466,5 +471,5 @@ const l = console.log
     return res.end()
   })
 
-  server.listen(3000)
+  server.listen(3119)
 })()
