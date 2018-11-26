@@ -99,6 +99,8 @@ const l = console.log
 
     payment.received = true
     payment.user.channelbalance += parseInt(msg.value)
+    payment.rate = app.get('rates').ask
+    console.log(payment.rate)
 
     await payment.save()
     await payment.user.save()
@@ -332,7 +334,7 @@ const l = console.log
           amount: -total,
           user_id: req.user.id,
           hash,
-          rate: app.get('rates').bid,
+          rate: app.get('rates').ask,
           currency: 'CAD',
         })
 
@@ -384,7 +386,7 @@ const l = console.log
         amount: -total,
         user_id: req.user.id,
         hash: txid,
-        rate: app.get('rates').bid,
+        rate: app.get('rates').ask,
         currency: 'CAD',
       })
 
