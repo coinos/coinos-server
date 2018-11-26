@@ -13,7 +13,7 @@ function cookieExtractor (req) {
 module.exports = (db) => {
   passport.use(
     new jwt.Strategy({
-      jwtFromRequest: jwt.ExtractJwt.fromExtractors([cookieExtractor]),
+      jwtFromRequest: jwt.ExtractJwt.fromExtractors([jwt.ExtractJwt.fromAuthHeaderAsBearerToken(), cookieExtractor]),
       secretOrKey: process.env.SECRET
     }, async (payload, next) => {
       try {
