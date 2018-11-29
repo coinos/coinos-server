@@ -256,7 +256,7 @@ const l = console.log
           l('channel error', peer, err)
           let msg = err.message
 
-          if (msg.startsWith('Multiple') || msg.startsWith('You gave')) {
+          if (msg.startsWith('Multiple') || msg.startsWith('You gave') || msg.startsWith('peer')) {
             busypeers.push(peer)
             peer = lna.channelpeers.find(p => !busypeers.includes(p))
             if (peer) {
@@ -314,7 +314,11 @@ const l = console.log
     } 
 
     if (req.user.channelbalance < payreq.satoshis) {
-      return res.status(500).send('Not enough satoshis')
+      if (req.user.balance + req.user.channelbalance < payreq.satoshis) {
+        return res.status(500).send('Not enough satoshis')
+      }
+      req.user.balance -= (payreq.satoshis - req.user.channelbalance)
+      req.user.channelbalance = 0
     } 
     
     const stream = lna.sendPayment(lna.meta, {})
@@ -362,8 +366,11 @@ const l = console.log
     } 
 
     if (req.user.balance < amount - MINFEE) {
-      res.status(500).send('Not enough funds')
-      return
+      if (req.user.balance + req.user.channelbalance < amount - MINFEE) {
+        return res.status(500).send('Not enough satoshis')
+      }
+      req.user.channelbalance -= (payreq.satoshis - req.user.balance)
+      req.user.balance = 0
     }
 
     try {
