@@ -377,7 +377,7 @@ const l = console.log
       if (req.user.balance + req.user.channelbalance < amount - MINFEE) {
         return res.status(500).send('Not enough satoshis')
       }
-      req.user.channelbalance -= (payreq.satoshis - req.user.balance)
+      req.user.channelbalance -= ((amount - MINFEE) - req.user.balance)
       req.user.balance = 0
     }
 
