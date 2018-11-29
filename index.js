@@ -419,7 +419,14 @@ const l = console.log
   }) 
 
   app.post('/addInvoice', auth, async (req, res) => {
-    let invoice = await lnb.addInvoice({ value: req.body.amount })
+    let err = m => res.status(500).send(m)
+
+    let invoice
+    try {
+      invoice = await lnb.addInvoice({ value: req.body.amount })
+    } catch (e) {
+      return err(e.message)
+    } 
     
     await db.Payment.create({
       user_id: req.user.id,
