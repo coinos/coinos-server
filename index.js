@@ -343,6 +343,14 @@ const l = console.log
         })
 
         await req.user.save()
+
+        if (payreq.payeeNodeKey === config.lnb.id) {
+          let invoice = await lna.addInvoice({ value: payreq.satoshis })
+          let payback = lnb.sendPayment(lnb.meta, {})
+          let { payment_request } = invoice
+          payback.write({ payment_request })
+        }
+
         seen.push(hash)
         res.send(m)
       }
