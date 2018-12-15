@@ -317,8 +317,14 @@ const l = console.log
       if (req.user.balance + req.user.channelbalance < payreq.satoshis) {
         return res.status(500).send('Not enough satoshis')
       }
-      req.user.balance -= (payreq.satoshis - req.user.channelbalance)
-      req.user.channelbalance = 0
+
+      req.user.balance -= payreq.satoshis
+      req.user.channelbalance += payreq.satoshis
+
+      if (req.user.balance < 0) {
+        req.user.channelbalance += req.user.balance
+        req.user.balance = 0
+      }
     } 
     
     const stream = lna.sendPayment(lna.meta, {})
@@ -369,16 +375,16 @@ const l = console.log
 
     let { address, amount } = req.body
 
-    if (amount === req.user.balance) {
-      amount = req.user.balance - MINFEE
+    if (amount === req.user.balance + req.user.channelbalance) {
+      amount = req.user.balance + req.user.channelbalance - MINFEE
     } 
 
     if (req.user.balance < amount - MINFEE) {
       if (req.user.balance + req.user.channelbalance < amount - MINFEE) {
         return res.status(500).send('Not enough satoshis')
       }
-      req.user.channelbalance -= ((amount - MINFEE) - req.user.balance)
-      req.user.balance = 0
+      req.user.channelbalance -= (amount + MINFEE)
+      req.user.balance += amount
     }
 
     try {
