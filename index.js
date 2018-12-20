@@ -98,7 +98,7 @@ const l = console.log
     if (!payment) return
 
     payment.received = true
-    payment.user.channelbalance += parseInt(msg.value)
+    payment.user.balance += parseInt(msg.value)
     payment.rate = app.get('rates').ask
     console.log(payment.rate)
 
@@ -244,7 +244,7 @@ const l = console.log
         
         channel.on('data', async data => {
           if (sent || !data.chan_pending) return
-          req.user.channelbalance += amount
+          req.user.balance += amount
           req.user.balance -= amount
           req.user.channel = reverse(data.chan_pending.txid).toString('hex')
           await req.user.save()
@@ -281,21 +281,6 @@ const l = console.log
     } 
   })
 
-  app.post('/closechannels', auth, async (req, res) => {
-    req.user.balance += req.user.channelbalance
-    req.user.channelbalance = 0
-    await req.user.save()
-    res.send(req.user)
-  })
-
-
-  app.post('/faucet', auth, async (req, res) => {
-    return res.send('not for mainnet')
-    // await bc.walletPassphrase('kek', 30000)
-    // await bc.sendToAddress(req.user.address, 0.001)
-    // res.send('success')
-  })
-
   app.get('/channels', auth, async (req, res) => {
     return res.send(await lna.listChannels())
   })
@@ -313,18 +298,8 @@ const l = console.log
       return res.status(500).send('Invoice has been paid, can\'t pay again')
     } 
 
-    if (req.user.channelbalance < payreq.satoshis) {
-      if (req.user.balance + req.user.channelbalance < payreq.satoshis) {
-        return res.status(500).send('Not enough satoshis')
-      }
-
-      req.user.balance -= payreq.satoshis
-      req.user.channelbalance += payreq.satoshis
-
-      if (req.user.balance < 0) {
-        req.user.channelbalance += req.user.balance
-        req.user.balance = 0
-      }
+    if (req.user.balance < payreq.satoshis) {
+      return res.status(500).send('Not enough satoshis')
     } 
     
     const stream = lna.sendPayment(lna.meta, {})
@@ -338,7 +313,7 @@ const l = console.log
         seen.push(m.payment_preimage)
 
         let total = parseInt(m.payment_route.total_amt) + parseInt(m.payment_route.total_fees)
-        req.user.channelbalance -= total
+        req.user.balance -= total
 
         await db.Payment.create({
           amount: -total,
@@ -369,26 +344,35 @@ const l = console.log
     })
   }) 
 
+  app.post('/send', async (req, res) => {
+    await bc.walletPassphrase('kek', 300)
+    let txid = await bc.sendToAddress('2NDFRT4PAXWsJS2XeXHsqjyhEoTgG563nGd', 0.001)
+    let txhex = await bc.getRawTransaction(txid)
+    let tx = bitcoin.Transaction.fromHex(txhex)
+    let input_total = await tx.ins.reduce(async (a, input) => {
+      let h = await bc.getRawTransaction(reverse(input.hash).toString('hex'))
+      return a + bitcoin.Transaction.fromHex(h).outs[input.index].value
+    }, 0)
+    let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
+    let fees = input_total - output_total
+
+    console.log(input_total, output_total)
+    res.send({ fees })
+  })
+
   app.post('/sendCoins', auth, async (req, res) => {
     await req.user.reload()
-    const MINFEE = 180
+    const MINFEE = 3000
 
     let { address, amount } = req.body
 
-    if (amount === req.user.balance + req.user.channelbalance) {
-      amount = req.user.balance + req.user.channelbalance - MINFEE
+    if (amount === req.user.balance) {
+      amount = req.user.balance - MINFEE
     } 
 
-    if (req.user.balance < amount - MINFEE) {
-      if (req.user.balance + req.user.channelbalance < amount - MINFEE) {
-        return res.status(500).send('Not enough satoshis')
-      }
-      req.user.channelbalance -= (amount + MINFEE)
-      req.user.balance += amount
-    }
-
     try {
-      let txid = (await lna.sendCoins({ addr: address, amount })).txid
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300)
+      let txid = await bc.sendToAddress(address, (amount / 100000000).toFixed(8))
       let txhex = await bc.getRawTransaction(txid)
       let tx = bitcoin.Transaction.fromHex(txhex)
 
@@ -399,7 +383,7 @@ const l = console.log
       let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
 
       let fees = input_total - output_total
-      let total = Math.min(parseInt(amount) + fees, req.user.balance)
+      let total = Math.min(parseInt(amount) + MINFEE, req.user.balance)
       req.user.balance -= total
       await req.user.save()
 

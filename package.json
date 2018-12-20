@@ -70,6 +70,7 @@
   },
   "devDependencies": {
     "babel-preset-es2015": "^6.24.1",
+    "eslint-plugin-html": "^5.0.0",
     "pm2": "^2.10.4"
   }
 }
