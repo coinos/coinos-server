@@ -302,7 +302,6 @@ const l = console.log
   })
 
   app.post('/sendPayment', auth, async (req, res) => {
-    await req.user.reload()
     let hash = req.body.payreq
     let payreq = bolt11.decode(hash)
 
@@ -357,7 +356,6 @@ const l = console.log
   }) 
 
   app.post('/sendCoins', auth, async (req, res) => {
-    await req.user.reload()
     const MINFEE = 3000
 
     let { address, amount } = req.body
