@@ -16,6 +16,7 @@ import io from 'socket.io'
 import jwt from 'jsonwebtoken'
 import morgan from 'morgan'
 import reverse from 'buffer-reverse'
+import Sequelize from 'sequelize'
 import zmq from 'zeromq'
 
 import config from './config'
@@ -100,7 +101,6 @@ const l = console.log
     payment.received = true
     payment.user.balance += parseInt(msg.value)
     payment.rate = app.get('rates').ask
-    console.log(payment.rate)
 
     await payment.save()
     await payment.user.save()
@@ -133,56 +133,68 @@ const l = console.log
   })).map(p => p.hash)
 
   zmqRawTx.on('message', async (topic, message, sequence) => {
-    topic = topic.toString('utf8')
     message = message.toString('hex')
 
-    switch (topic) {
-      case 'rawtx': {
-        let tx = bitcoin.Transaction.fromHex(message)
-        let hash = reverse(tx.getHash()).toString('hex')
-        if (payments.includes(hash)) return
-        let total = tx.outs.reduce((a, b) => a + b.value, 0)
-        tx.outs.map(async o => {
+    let tx = bitcoin.Transaction.fromHex(message)
+    let hash = reverse(tx.getHash()).toString('hex')
+
+    if (payments.includes(hash)) return
+    let total = tx.outs.reduce((a, b) => a + b.value, 0)
+    tx.outs.map(async o => {
+      try {
+        let network = config.bitcoin.network
+        if (network === 'mainnet') {
+          network = 'bitcoin'
+        } 
+
+        let address = bitcoin.address.fromOutputScript(
+          o.script, 
+          bitcoin.networks[network],
+        )
+
+        if (Object.keys(addresses).includes(address)) {
           try {
-            let network = config.bitcoin.network
-            if (network === 'mainnet') {
-              network = 'bitcoin'
-            } 
+            payments.push(hash)
 
-            let address = bitcoin.address.fromOutputScript(
-              o.script, 
-              bitcoin.networks[network],
-            )
+            let user = await db.User.findOne({
+              where: {
+                username: addresses[address],
+              }
+            })
+    
+            let invoices = await db.Payment.findAll({
+              limit: 1,
+              where: {
+                hash: address,
+                received: null,
+                amount: {
+                  [Sequelize.Op.gt]: 0
+                } 
+              },
+              order: [ [ 'createdAt', 'DESC' ]]
+            })
 
-            if (Object.keys(addresses).includes(address)) {
-              payments.push(hash)
+            let tip = null
+            if (invoices.length) tip = invoices[0].tip
 
-              let user = await db.User.findOne({
-                where: {
-                  username: addresses[address],
-                }
-              })
+            user.balance += o.value
+            await user.save()
+            
+            await db.Payment.create({
+              user_id: user.id,
+              hash,
+              amount: o.value,
+              currency: 'CAD',
+              rate: app.get('rates').ask,
+              received: true,
+              tip
+            })
 
-              user.balance += o.value
-              await user.save()
-              
-              await db.Payment.create({
-                user_id: user.id,
-                hash: hash,
-                amount: o.value,
-                currency: 'CAD',
-                rate: app.get('rates').ask,
-                received: true,
-              })
-
-              socket.emit('tx', message)
-            } 
-          } catch(e) {}
-        })
-
-        break
-      } 
-    }
+            socket.emit('tx', message)
+          } catch (e) { console.log(e) }
+        } 
+      } catch(e) {}
+    })
   })
 
   zmqRawBlock.on('message', async (topic, message, sequence) => {
@@ -344,22 +356,6 @@ const l = console.log
     })
   }) 
 
-  app.post('/send', async (req, res) => {
-    await bc.walletPassphrase('kek', 300)
-    let txid = await bc.sendToAddress('2NDFRT4PAXWsJS2XeXHsqjyhEoTgG563nGd', 0.001)
-    let txhex = await bc.getRawTransaction(txid)
-    let tx = bitcoin.Transaction.fromHex(txhex)
-    let input_total = await tx.ins.reduce(async (a, input) => {
-      let h = await bc.getRawTransaction(reverse(input.hash).toString('hex'))
-      return a + bitcoin.Transaction.fromHex(h).outs[input.index].value
-    }, 0)
-    let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
-    let fees = input_total - output_total
-
-    console.log(input_total, output_total)
-    res.send({ fees })
-  })
-
   app.post('/sendCoins', auth, async (req, res) => {
     await req.user.reload()
     const MINFEE = 3000
@@ -410,21 +406,25 @@ const l = console.log
 
   app.post('/addInvoice', auth, async (req, res) => {
     let err = m => res.status(500).send(m)
+    let { amount, address, tip } = req.body
 
     let invoice
     try {
-      invoice = await lnb.addInvoice({ value: req.body.amount })
+      invoice = await lnb.addInvoice({ value: amount })
     } catch (e) {
       return err(e.message)
     } 
+
+    let hash = invoice.payment_request
+    if (address) hash = address
     
     await db.Payment.create({
       user_id: req.user.id,
-      hash: invoice.payment_request,
-      amount: req.body.amount,
+      hash,
+      amount,
       currency: 'CAD',
       rate: app.get('rates').ask,
-      tip: req.body.tip,
+      tip,
     })
 
     res.send(invoice)
