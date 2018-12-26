@@ -65,6 +65,7 @@
     "socket.io-client": "^2.0.4",
     "socketio-jwt-auth": "https://github.com/adcentury/socketio-jwt-auth",
     "sql-template-strings": "^2.2.2",
+    "stripe": "^6.20.0",
     "twilio": "^2.11.1",
     "zeromq": "^4.6.0"
   },

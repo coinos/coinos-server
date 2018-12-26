@@ -476,6 +476,23 @@ const l = console.log
     }
   })
 
+  app.post('/buy', auth, async (req, res) => {
+    const stripe = require('stripe')(config.stripe);
+    const { token, amount, sats } = req.body
+
+    const charge = stripe.charges.create({
+      amount,
+      currency: 'cad',
+      description: 'Bitcoin',
+      source: token,
+    })
+
+    req.user.balance += parseInt(sats)
+    await req.user.save()
+
+    res.send(`Bought ${amount}`)
+  })
+
   app.use(function (err, req, res, next) {
     res.status(500)
     res.send('An error occurred')
