@@ -477,6 +477,12 @@ const l = console.log
   })
 
   app.post('/facebookLogin', async (req, res) => {
+    let { accessToken, userID } = req.body
+
+    let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${config.facebook}`
+    let check = await axios.get(url)
+    if (!check.data.data.is_valid) return res.status(401).end()
+
     try {
       let user = await db.User.findOne({
         where: {
@@ -488,8 +494,7 @@ const l = console.log
         user = await db.User.create(user)
         user.username = req.body.userID
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
-        user.password = await bcrypt.hash(req.body.accessToken, 1)
-        console.log(user)
+        user.password = await bcrypt.hash(accessToken, 1)
         await user.save()
         addresses[user.address] = user.username
       } 
@@ -509,7 +514,7 @@ const l = console.log
     const { token, amount, sats } = req.body
 
     try {
-      const charge = stripe.charges.create({
+      const charge = await stripe.charges.create({
         amount,
         currency: 'cad',
         description: 'Bitcoin',
