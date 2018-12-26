@@ -377,7 +377,7 @@ const l = console.log
       let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
 
       let fees = input_total - output_total
-      let total = Math.min(parseInt(amount) + MINFEE, req.user.balance)
+      let total = Math.min(parseInt(amount) + fees, req.user.balance)
       req.user.balance -= total
       await req.user.save()
 
