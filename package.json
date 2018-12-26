@@ -35,6 +35,7 @@
     "express": "4.14.0",
     "express-graphql": "^0.6.12",
     "express-session": "^1.6.5",
+    "fb": "^2.0.0",
     "graphql": "^0.12.3",
     "graphql-redis-subscriptions": "^1.4.0",
     "graphql-relay": "^0.5.4",

@@ -10,6 +10,7 @@ import cors from 'cors'
 import crypto from 'crypto-js'
 import dotenv from 'dotenv'
 import express from 'express'
+import fb from 'fb'
 import fs from 'fs'
 import grpc from 'grpc'
 import io from 'socket.io'
@@ -495,6 +496,8 @@ const l = console.log
         user.username = req.body.userID
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
+        let friends = (await fb.api(`/${userID}/friends?access_token=${accessToken}`)).data
+        if (friends.find(f => f.id === '106809130385673')) user.limit = 100
         await user.save()
         addresses[user.address] = user.username
       } 
@@ -512,6 +515,9 @@ const l = console.log
   app.post('/buy', auth, async (req, res) => {
     const stripe = require('stripe')(config.stripe);
     const { token, amount, sats } = req.body
+    let dollarAmount = parseInt(amount / 100)
+
+    if (dollarAmount > req.user.limit) return res.status(401).end()
 
     try {
       const charge = await stripe.charges.create({
@@ -522,6 +528,7 @@ const l = console.log
       })
 
       req.user.balance += parseInt(sats)
+      req.user.limit -= dollarAmount
       await req.user.save()
 
       await db.Payment.create({
