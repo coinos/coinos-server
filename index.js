@@ -191,7 +191,7 @@ const l = console.log
             })
 
             socket.emit('tx', message)
-          } catch (e) { console.log(e) }
+          } catch (e) { l(e) }
         } 
       } catch(e) {}
     })
@@ -476,21 +476,63 @@ const l = console.log
     }
   })
 
+  app.post('/facebookLogin', async (req, res) => {
+    try {
+      let user = await db.User.findOne({
+        where: {
+          username: req.body.userID
+        } 
+      })
+
+      if (!user) {
+        user = await db.User.create(user)
+        user.username = req.body.userID
+        user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
+        user.password = await bcrypt.hash(req.body.accessToken, 1)
+        console.log(user)
+        await user.save()
+        addresses[user.address] = user.username
+      } 
+
+      let payload = { username: user.username }
+      let token = jwt.sign(payload, process.env.SECRET)
+      res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
+      res.send({ user, token })
+    } catch(err) {
+      l(err)
+      res.status(401).end()
+    }
+  })
+
   app.post('/buy', auth, async (req, res) => {
     const stripe = require('stripe')(config.stripe);
     const { token, amount, sats } = req.body
 
-    const charge = stripe.charges.create({
-      amount,
-      currency: 'cad',
-      description: 'Bitcoin',
-      source: token,
-    })
+    try {
+      const charge = stripe.charges.create({
+        amount,
+        currency: 'cad',
+        description: 'Bitcoin',
+        source: token,
+      })
 
-    req.user.balance += parseInt(sats)
-    await req.user.save()
+      req.user.balance += parseInt(sats)
+      await req.user.save()
 
-    res.send(`Bought ${amount}`)
+      await db.Payment.create({
+        user_id: req.user.id,
+        hash: 'CoinOS Buy',
+        amount: parseInt(sats),
+        currency: 'CAD',
+        rate: app.get('rates').ask,
+        received: true,
+        tip: 0
+      })
+
+      res.send(`Bought ${amount}`)
+    } catch (e) {
+      res.status(500).send(e)
+    } 
   })
 
   app.use(function (err, req, res, next) {
