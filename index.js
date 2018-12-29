@@ -396,9 +396,7 @@ const l = console.log
       res.send({ txid, tx, amount, fees })
     } catch (e) {
       l(e)
-      let msg = e.message
-
-      res.status(500).send(msg)
+      res.status(500).send(e.message)
     } 
   }) 
 
@@ -554,5 +552,5 @@ const l = console.log
     return res.end()
   })
 
-  server.listen(3119)
+  server.listen(config.port)
 })()
