@@ -365,6 +365,9 @@ const l = console.log
       amount = req.user.balance - MINFEE
     } 
 
+    if (amount > req.user.balance)
+      return res.status(401).send('Insufficient funds')
+
     try {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300)
       let txid = await bc.sendToAddress(address, (amount / 100000000).toFixed(8))
@@ -394,10 +397,6 @@ const l = console.log
     } catch (e) {
       l(e)
       let msg = e.message
-
-      if (msg.startsWith('insufficient')) {
-        msg = 'Server wallet is busy. Wait a block and try again'
-      } 
 
       res.status(500).send(msg)
     } 
@@ -493,7 +492,8 @@ const l = console.log
 
       if (!user) {
         user = await db.User.create(user)
-        user.username = req.body.userID
+        user.username = userID
+        user.fbtoken = accessToken
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
         let friends = (await fb.api(`/${userID}/friends?access_token=${accessToken}`)).data
