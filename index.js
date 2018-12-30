@@ -566,7 +566,7 @@ const l = console.log
 
       await db.Payment.create({
         user_id: req.user.id,
-        hash: 'CoinOS Buy',
+        hash: charge.balance_transaction,
         amount: parseInt(sats),
         currency: 'CAD',
         rate: app.get('rates').ask,
