@@ -473,11 +473,13 @@ const l = console.log
     try {
       let res = await axios.get('https://api.quadrigacx.com/v2/order_book')
       let ask = res.data.asks[0][0]
-      l('quadriga ask price: ', ask)
+      let now = new Date()
+      let ts = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
+      l(ts, 'quadriga ask price:', ask)
       app.set('rates', { ask })
     } catch (e) { l(e) }
 
-    setTimeout(fetchRates, 150000)
+    setTimeout(fetchRates, 30000)
   })()
 
   app.get('/rates', (req, res) => {
