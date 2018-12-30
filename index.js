@@ -324,7 +324,7 @@ const l = console.log
         if (seen.includes(m.payment_preimage)) return
         seen.push(m.payment_preimage)
 
-        let total = parseInt(m.payment_route.total_amt) + parseInt(m.payment_route.total_fees)
+        let total = parseInt(m.payment_route.total_amt)
         req.user.balance -= total
 
         await db.Payment.create({
@@ -355,6 +355,41 @@ const l = console.log
       res.status(500).send(msg)
     })
   }) 
+
+  app.post('/payUser', auth, async (req, res) => {
+    let { payuser, amount } = req.body
+
+    let user = await db.User.findOne({
+      where: {
+        username: payuser
+      } 
+    })
+
+    if (!user) return res.status(401).end()
+    let err = m => res.status(500).send(m)
+
+    let invoice
+    try {
+      invoice = await lnb.addInvoice({ value: amount })
+    } catch (e) {
+      return err(e.message)
+    } 
+
+    let hash = invoice.payment_request
+    
+    await db.Payment.create({
+      user_id: user.id,
+      hash,
+      amount,
+      currency: 'CAD',
+      rate: app.get('rates').ask,
+      tip: 0,
+    })
+
+    req.url = '/sendPayment'
+    req.body.payreq = invoice.payment_request
+    return app._router.handle(req, res)
+  })
 
   app.post('/sendCoins', auth, async (req, res) => {
     const MINFEE = 3000
