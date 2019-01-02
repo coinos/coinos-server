@@ -219,7 +219,6 @@ const l = console.log
         l('block', block.getHash().toString('hex'))
 
         await db.User.findAll({
-          attributes: ['id', 'balance', 'pending'],
           where: { 
             pending: { 
               [Sequelize.Op.ne]: null,
