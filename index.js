@@ -80,7 +80,8 @@ const l = console.log
   })
 
   socket.sockets.on('connect', async socket => {
-    socket.emit('rate', app.get('rates').ask)
+    if (app.get('rates'))
+      socket.emit('rate', app.get('rates').ask)
     socket.on('getuser', async (data, callback) => {
       callback(await db.User.findOne({
         where: {
@@ -218,7 +219,7 @@ const l = console.log
         l('block', block.getHash().toString('hex'))
 
         await db.User.findAll({
-          attributes: ['id', 'pending'],
+          attributes: ['id', 'balance', 'pending'],
           where: { 
             pending: { 
               [Sequelize.Op.ne]: null,
