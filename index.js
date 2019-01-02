@@ -199,7 +199,8 @@ const l = console.log
               currency: 'CAD',
               rate: app.get('rates').ask,
               received: true,
-              tip
+              tip,
+              confirmed: false,
             })
 
             socket.to(sids[user.username]).emit('tx', message)
@@ -218,24 +219,21 @@ const l = console.log
         let block = bitcoin.Block.fromHex(message)
         l('block', block.getHash().toString('hex'))
 
-        await db.User.findAll({
-          where: { 
-            pending: { 
-              [Sequelize.Op.ne]: null,
-              [Sequelize.Op.ne]: 0,
-            } 
-          },
-        }).map(async user => { 
-          user.balance += user.pending
-          user.pending = 0
-          await user.save() 
-          socket.to(sids[user.username]).emit('user', user)
+        let payments = await db.Payment.findAll({
+          include: { model: db.User, as: 'user' },
+          where: { confirmed: false },
+        }).map(async p => {
+          if ((await bc.getRawTransaction(p.hash, true)).confirmations > 0) {
+            let user = p.user
+            p.confirmed = true
+            user.balance += p.amount
+            user.pending -= p.amount
+            await user.save() 
+            await p.save()
+            socket.to(sids[user.username]).emit('user', user)
+          }
         })
         
-        await db.Payment.update({
-          confirmed: true,
-        }, { where: {} })
-
         socket.emit('block', message)
         break
       } 
