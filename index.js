@@ -79,11 +79,14 @@ const l = console.log
     next()
   })
 
-  socket.sockets.on('connect', socket => {
-    socket.emit('success', {
-      message: 'success logged in!',
-      user: socket.request.user
-    })
+  socket.sockets.on('connect', async socket => {
+    socket.on('getuser', async (data, callback) => {
+      callback(await db.User.findOne({
+        where: {
+          username: socket.request.user,
+        }
+      }));
+    });
   })
 
 
@@ -108,6 +111,7 @@ const l = console.log
     payments.push(msg.payment_request)
  
     socket.to(sids[payment.user.username]).emit('invoice', msg)
+    socket.to(sids[payment.user.username]).emit('user', payment.user)
   } 
 
   const invoices = lna.subscribeInvoices({})
@@ -162,7 +166,7 @@ const l = console.log
                 username: addresses[address],
               }
             })
-    
+
             let invoices = await db.Payment.findAll({
               limit: 1,
               where: {
@@ -178,8 +182,13 @@ const l = console.log
             let tip = null
             if (invoices.length) tip = invoices[0].tip
 
-            user.balance += o.value
+            if (user.friend)
+              user.balance += o.value
+            else 
+              user.pending += o.value
+
             await user.save()
+            socket.to(sids[user.username]).emit('user', user)
             
             await db.Payment.create({
               user_id: user.id,
@@ -191,7 +200,7 @@ const l = console.log
               tip
             })
 
-            socket.emit('tx', message)
+            socket.to(sids[user.username]).emit('tx', message)
           } catch (e) { l(e) }
         } 
       } catch(e) {}
@@ -206,6 +215,17 @@ const l = console.log
       case 'rawblock': {
         let block = bitcoin.Block.fromHex(message)
         l('block', block.getHash().toString('hex'))
+
+        await db.User.findAll({
+          attributes: ['id', 'pending'],
+          where: { pending: { [Sequelize.Op.ne]: null } },
+        }).map(async u => { u.balance = u.pending; u.pending = 0; await u.save() })
+        
+        await db.Payment.update({
+          confirmed: true,
+        }, { where: {} })
+
+        socket.emit('block', message)
         break
       } 
     }
@@ -261,6 +281,7 @@ const l = console.log
           req.user.balance -= amount
           req.user.channel = reverse(data.chan_pending.txid).toString('hex')
           await req.user.save()
+          socket.to(sids[req.user.username]).emit('user', req.user)
           res.send(data)
           sent = true
         })
@@ -336,6 +357,7 @@ const l = console.log
         })
 
         await req.user.save()
+        socket.to(sids[req.user.username]).emit('user', req.user)
 
         if (payreq.payeeNodeKey === config.lnb.id) {
           let invoice = await lna.addInvoice({ value: payreq.satoshis })
@@ -419,6 +441,7 @@ const l = console.log
       let total = Math.min(parseInt(amount) + fees, req.user.balance)
       req.user.balance -= total
       await req.user.save()
+      socket.to(sids[req.user.username]).emit('user', req.user)
 
       await db.Payment.create({
         amount: -total,
@@ -475,8 +498,10 @@ const l = console.log
       let ask = res.data.asks[0][0]
       let now = new Date()
       let ts = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
+      l(sids)
       l(ts, 'quadriga ask price:', ask)
       app.set('rates', { ask })
+      socket.emit('rate', ask)
     } catch (e) { l(e) }
 
     setTimeout(fetchRates, 30000)
@@ -532,7 +557,10 @@ const l = console.log
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
         let friends = (await fb.api(`/${userID}/friends?access_token=${accessToken}`)).data
-        if (friends.find(f => f.id === config.facebook.specialFriend)) user.limit = 100
+        if (friends.find(f => f.id === config.facebook.specialFriend)) {
+          user.friend = true
+          user.limit = 100
+        }
         await user.save()
         addresses[user.address] = user.username
       } 
@@ -565,6 +593,7 @@ const l = console.log
       req.user.balance += parseInt(sats)
       req.user.limit -= dollarAmount
       await req.user.save()
+      socket.to(sids[req.user.username]).emit('user', req.user)
 
       await db.Payment.create({
         user_id: req.user.id,
