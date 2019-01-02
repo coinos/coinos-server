@@ -225,10 +225,11 @@ const l = console.log
               [Sequelize.Op.ne]: 0,
             } 
           },
-        }).map(async u => { 
-          u.balance = u.pending
-          u.pending = 0
-          await u.save() 
+        }).map(async user => { 
+          user.balance += user.pending
+          user.pending = 0
+          await user.save() 
+          socket.to(sids[user.username]).emit('user', user)
         })
         
         await db.Payment.update({
