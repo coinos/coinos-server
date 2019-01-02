@@ -80,6 +80,7 @@ const l = console.log
   })
 
   socket.sockets.on('connect', async socket => {
+    socket.emit('rate', app.get('rates').ask)
     socket.on('getuser', async (data, callback) => {
       callback(await db.User.findOne({
         where: {
