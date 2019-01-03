@@ -184,8 +184,11 @@ const l = console.log
             let tip = null
             if (invoices.length) tip = invoices[0].tip
 
+            let confirmed = false
+
             if (user.friend)
               user.balance += o.value
+              confirmed = true
             else 
               user.pending += o.value
 
@@ -200,7 +203,7 @@ const l = console.log
               rate: app.get('rates').ask,
               received: true,
               tip,
-              confirmed: false,
+              confirmed,
             })
 
             socket.to(sids[user.username]).emit('tx', message)
