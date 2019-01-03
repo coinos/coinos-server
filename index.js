@@ -564,6 +564,8 @@ const l = console.log
         user.fbtoken = accessToken
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
+        user.balance = 0
+        user.pending = 0
         let friends = (await fb.api(`/${userID}/friends?access_token=${accessToken}`)).data
         if (friends.find(f => f.id === config.facebook.specialFriend)) {
           user.friend = true
