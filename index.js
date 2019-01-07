@@ -186,11 +186,12 @@ const l = console.log
 
             let confirmed = false
 
-            if (user.friend)
+            if (user.friend) {
               user.balance += o.value
               confirmed = true
-            else 
+            } else {
               user.pending += o.value
+            }
 
             await user.save()
             socket.to(sids[user.username]).emit('user', user)
@@ -572,7 +573,7 @@ const l = console.log
         let friends = (await fb.api(`/${userID}/friends?access_token=${accessToken}`)).data
         if (friends.find(f => f.id === config.facebook.specialFriend)) {
           user.friend = true
-          user.limit = 100
+          user.limit = 200
         }
         await user.save()
         addresses[user.address] = user.username
