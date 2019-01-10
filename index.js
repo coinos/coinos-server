@@ -67,19 +67,16 @@ const l = console.log
 
   socket.use((socket, next) => {
     try {
-      let token = socket.request.headers.cookie.match(`token=([^;]+)`)[1]
-      if (!token && socket.handshake.query) {
-        token = socket.handshake.query.token
-      }
-
+      let token = socket.handshake.query.token
       let user = jwt.decode(token).username
       socket.request.user = user
       sids[user] = socket.id
-    } catch (e) { return }
+    } catch (e) { l(e) }
     next()
   })
 
   socket.sockets.on('connect', async socket => {
+    socket.emit('connected')
     if (app.get('rates'))
       socket.emit('rate', app.get('rates').ask)
     socket.on('getuser', async (data, callback) => {

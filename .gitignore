@@ -10,3 +10,4 @@ config.js
 .env
 config/config.json
 config/index.js
+yarn-error.log
