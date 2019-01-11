@@ -388,6 +388,21 @@ const l = console.log
     })
   }) 
 
+  app.get('/friends', auth, async (req, res) => {
+    try {
+      let friends = (await fb.api(`/${req.user.username}/friends?access_token=${req.user.fbtoken}`)).data
+      friends = await Promise.all(friends.map(async f => {
+        let pic = (await fb.api(`/${f.id}/picture?redirect=false&type=small&accessToken=${req.user.fbtoken}`)).data
+        f.pic = pic.url
+        return f
+      }))
+
+      res.send(friends)
+    } catch (e) {
+      res.status(500).send('There was a problem getting your facebook friends: ', e)
+    }
+  }) 
+
   app.post('/payUser', auth, async (req, res) => {
     let { payuser, amount } = req.body
 
@@ -397,7 +412,7 @@ const l = console.log
       } 
     })
 
-    if (!user) return res.status(401).end()
+    if (!user) return res.status(401).send("Couldn't find the user you're trying to pay")
     let err = m => res.status(500).send(m)
 
     let invoice
@@ -575,6 +590,9 @@ const l = console.log
         await user.save()
         addresses[user.address] = user.username
       } 
+
+      user.fbtoken = accessToken
+      await user.save()
 
       let payload = { username: user.username }
       let token = jwt.sign(payload, process.env.SECRET)
