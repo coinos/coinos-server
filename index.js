@@ -1,3 +1,4 @@
+import { Client } from 'authy-client'
 import axios from 'axios'
 import bcrypt from 'bcrypt'
 import bitcoin from 'bitcoinjs-lib'
@@ -12,20 +13,23 @@ import dotenv from 'dotenv'
 import express from 'express'
 import fb from 'fb'
 import fs from 'fs'
+import graphqlHTTP from 'express-graphql'
 import grpc from 'grpc'
 import io from 'socket.io'
 import jwt from 'jsonwebtoken'
 import morgan from 'morgan'
+import mailgun from 'mailgun-js'
+import uuidv4 from 'uuid/v4'
 import reverse from 'buffer-reverse'
 import Sequelize from 'sequelize'
 import zmq from 'zeromq'
 
+import authyVerify from './authy'
 import config from './config'
-
-import graphqlHTTP from 'express-graphql'
 
 dotenv.config()
 const l = console.log
+const authy = new Client({ key: config.authy.key })
 
 ;(async () => {
   const ln = async ({ server, tls, macaroon, channelpeers }) => {
@@ -252,12 +256,126 @@ const l = console.log
 
     user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
     user.password = await bcrypt.hash(user.password, 1)
+    user.name = user.username
     addresses[user.address] = user.username
+
     res.send(await db.User.create(user))
   })
 
-  app.post('/user', async (req, res) => {
-    await db['User'].update(user, { where: { username: user.username } })
+  const verifyEmail = async (user) => {
+    user.emailToken = uuidv4()
+    await user.save() 
+
+    let mg = mailgun(config.mailgun)
+    let msg = {
+      from: 'CoinOS <webmaster@coinos.io>',
+      to: user.email,
+      subject: 'CoinOS Email Verification',
+      html: `Visit <a href="https://localhost/verifyEmail/${user.username}/${user.emailToken}">https://localhost/verify/${user.username}/${user.emailToken}</a> to verify your email address.`
+    }
+
+    mg.messages().send(msg)
+  } 
+
+  const verifyPhone = async (user) => {
+    user.phoneToken = Math.floor(100000 + Math.random() * 900000)
+    await user.save() 
+    const client = require('twilio')(config.twilio.sid, config.twilio.authToken);
+
+    await client.messages.create({
+       body: user.phoneToken,
+       from: config.twilio.number,
+       to: user.phone,
+     })
+  } 
+
+  app.get('/verifyEmail', auth, async (req, res) => {
+    verifyEmail(req.user)
+  })
+
+  app.get('/verifyPhone', auth, async (req, res) => {
+    verifyPhone(req.user)
+  })
+
+  app.post('/user', auth, async (req, res) => {
+    let { user } = req
+    let { email, phone, twofa, pin, pinconfirm, password, passconfirm } = req.body
+
+    if (user.email !== email && require("email-validator").validate(email)) {
+      user.email = email
+      verifyEmail(user)
+    }
+
+    if (user.phone !== phone) {
+      user.phone = phone 
+      verifyPhone(user)
+    }
+
+    user.email = email
+    user.phone = phone
+    user.twofa = twofa
+
+    if (password && password === passconfirm)
+      user.password = await bcrypt.hash(password, 1)
+
+    if (pin && pin === pinconfirm)
+      user.pin = await bcrypt.hash(pin, 1)
+
+    if (twofa && !user.authyId && user.phoneVerified) {
+      let r = await authy.registerUser({ countryCode: 'CA', email, phone })
+      user.authyId = r.user.id
+    }
+
+    await user.save() 
+    socket.to(sids[req.user.username]).emit('user', req.user)
+    res.send(user)
+  })
+
+  app.post('/forgot', async (req, res) => {
+    let mg = mailgun(config.mailgun)
+    let msg = {
+      from: 'CoinOS <webmaster@coinos.io>',
+      to: user.email,
+      subject: 'CoinOS Password Reset',
+      html: `Visit <a href="https://localhost/reset/${user.username}/${user.token}">https://localhost/reset/${user.username}/${user.token}</a> to reset your password.`
+    }
+  })
+
+  app.get('/verifyEmail/:username/:token', auth, async (req, res) => {
+    let user = await db.User.findOne({
+      where: {
+        username: req.params.username
+      } 
+    })
+
+    l(user, req.params)
+    if (user) {
+      user.emailVerified = true
+      await user.save()
+
+      socket.to(sids[user.username]).emit('user', user)
+      socket.to(sids[user.username]).emit('emailVerified', true)
+    }
+
+    res.end()
+  })
+
+  app.get('/verifyPhone/:username/:token', auth, async (req, res) => {
+    let user = await db.User.findOne({
+      where: {
+        username: req.params.username
+      } 
+    })
+
+    if (user) {
+      user.phoneVerified = true
+      await user.save()
+
+      socket.to(sids[user.username]).emit('user', user)
+      socket.to(sids[user.username]).emit('phoneVerified', true)
+    }
+
+    res.end()
   })
 
   app.post('/openchannel', auth, async (req, res) => {
@@ -392,7 +510,7 @@ const l = console.log
     try {
       let friends = (await fb.api(`/${req.user.username}/friends?access_token=${req.user.fbtoken}`)).data
       friends = await Promise.all(friends.map(async f => {
-        let pic = (await fb.api(`/${f.id}/picture?redirect=false&type=small&accessToken=${req.user.fbtoken}`)).data
+        let pic = (await fb.api(`/${f.id}/picture?redirect=false&type=small&access_token=${req.user.fbtoken}`)).data
         f.pic = pic.url
         return f
       }))
@@ -543,19 +661,17 @@ const l = console.log
         } 
       })
 
-      if (!user) return res.status(401).end()
+      if (
+        !user || 
+        !(await bcrypt.compare(req.body.password, user.password)) || 
+        (user.twofa && !(await authyVerify(user)))
+      ) return res.status(401).end()
 
-      let result = await bcrypt.compare(req.body.password, user.password)
-      if (result) {
-        let payload = { username: user.username }
-        let token = jwt.sign(payload, process.env.SECRET)
-        res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
-        res.send({ user, token })
-      } else {
-        res.status(401).end()
-      }
+      let payload = { username: user.username }
+      let token = jwt.sign(payload, process.env.SECRET)
+      res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
+      res.send({ user, token })
     } catch(err) {
-      l(err)
       res.status(401).end()
     }
   })
@@ -577,6 +693,8 @@ const l = console.log
       if (!user) {
         user = await db.User.create(user)
         user.username = userID
+        user.name = (await fb.api(`/me?access_token=${accessToken}`)).name
+        user.pic = (await fb.api(`/me/picture?access_token=${accessToken}&redirect=false`)).data.url
         user.fbtoken = accessToken
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
@@ -593,6 +711,8 @@ const l = console.log
 
       user.fbtoken = accessToken
       await user.save()
+
+      if (user.twofa && !(await authyVerify(user))) res.status(401).end()
 
       let payload = { username: user.username }
       let token = jwt.sign(payload, process.env.SECRET)
@@ -638,6 +758,20 @@ const l = console.log
     } catch (e) {
       res.status(500).send(e)
     } 
+  })
+
+  app.post('/order', auth, async (req, res) => {
+    await db.Order.create({
+      amount: 1,
+      price: 2,
+      type: 'BUY',
+      pair: 'BTC/CAD',
+    })
+  })
+
+  app.get('/me', async(req, res) => {
+    let data = (await fb.api('/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false')).data
+    res.send(data.url)
   })
 
   app.use(function (err, req, res, next) {

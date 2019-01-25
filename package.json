@@ -10,6 +10,7 @@
   "dependencies": {
     "apollo-server-express": "^1.3.2",
     "async": "2.1.1",
+    "authy-client": "^1.1.2",
     "axios": "^0.18.0",
     "babel-cli": "^6.26.0",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
@@ -32,6 +33,7 @@
     "cors": "^2.8.4",
     "crypto-js": "^3.1.9-1",
     "dotenv": "^4.0.0",
+    "email-validator": "^2.0.4",
     "express": "4.14.0",
     "express-graphql": "^0.6.12",
     "express-session": "^1.6.5",
@@ -47,6 +49,7 @@
     "less": "2.7.1",
     "lnrpc": "https://github.com/asoltys/lnrpc#master",
     "lodash": "^4.17.4",
+    "mailgun-js": "^0.22.0",
     "moment": "^2.10.6",
     "morgan": "^1.9.0",
     "mysql": "^2.15.0",
@@ -67,7 +70,8 @@
     "socketio-jwt-auth": "https://github.com/adcentury/socketio-jwt-auth",
     "sql-template-strings": "^2.2.2",
     "stripe": "^6.20.0",
-    "twilio": "^2.11.1",
+    "twilio": "^3.27.1",
+    "uuid": "^3.3.2",
     "zeromq": "^4.6.0"
   },
   "devDependencies": {
