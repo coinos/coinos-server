@@ -74,7 +74,8 @@ const authy = new Client({ key: config.authy.key })
       let token = socket.handshake.query.token
       let user = jwt.decode(token).username
       socket.request.user = user
-      sids[user] = socket.id
+      sids[user] ? sids[user].push(socket.id) : sids[user] = [socket.id]
+      sids[socket.id] = user
     } catch (e) { l(e) }
     next()
   })
@@ -90,8 +91,26 @@ const authy = new Client({ key: config.authy.key })
         }
       }));
     });
+
+    socket.on('disconnect', s => {
+      l('disconnecting', socket.id)
+      let user = sids[socket.id]
+      sids[user].splice(sids[user].indexOf(socket.id), 1)
+      delete sids[socket.id]
+    })
   })
 
+  const emit = (username, msg, data) => {
+    sids[username].map((sid, i) => {
+      try {
+        socket.to(sid).emit(msg, data)
+        l('tellin', sid)
+      } catch (e) {
+        sids[username].splice(i, 1)
+        l('poppin', sid)
+      } 
+    })
+  } 
 
   const handlePayment = async msg => {
     if (!msg.settled) return
@@ -113,8 +132,8 @@ const authy = new Client({ key: config.authy.key })
     await payment.user.save()
     payments.push(msg.payment_request)
  
-    socket.to(sids[payment.user.username]).emit('invoice', msg)
-    socket.to(sids[payment.user.username]).emit('user', payment.user)
+    emit(payment.user.username, 'invoice', msg)
+    emit(payment.user.username, 'user', payment.user)
   } 
 
   const invoices = lna.subscribeInvoices({})
@@ -195,7 +214,7 @@ const authy = new Client({ key: config.authy.key })
             }
 
             await user.save()
-            socket.to(sids[user.username]).emit('user', user)
+            emit(user.username, 'user', user)
             
             await db.Payment.create({
               user_id: user.id,
@@ -208,7 +227,7 @@ const authy = new Client({ key: config.authy.key })
               confirmed,
             })
 
-            socket.to(sids[user.username]).emit('tx', message)
+            emit(user.username, 'tx', message)
           } catch (e) { l(e) }
         } 
       } catch(e) {}
@@ -235,7 +254,7 @@ const authy = new Client({ key: config.authy.key })
             user.pending -= p.amount
             await user.save() 
             await p.save()
-            socket.to(sids[user.username]).emit('user', user)
+            emit(user.username, 'user', user)
           }
         })
         
@@ -262,7 +281,7 @@ const authy = new Client({ key: config.authy.key })
     res.send(await db.User.create(user))
   })
 
-  const verifyEmail = async (user) => {
+  const requestEmail = async (user) => {
     user.emailToken = uuidv4()
     await user.save() 
 
@@ -274,10 +293,12 @@ const authy = new Client({ key: config.authy.key })
       html: `Visit <a href="https://localhost/verifyEmail/${user.username}/${user.emailToken}">https://localhost/verify/${user.username}/${user.emailToken}</a> to verify your email address.`
     }
 
-    mg.messages().send(msg)
+    try {
+      mg.messages().send(msg)
+    } catch (e) { l(e) }
   } 
 
-  const verifyPhone = async (user) => {
+  const requestPhone = async (user) => {
     user.phoneToken = Math.floor(100000 + Math.random() * 900000)
     await user.save() 
     const client = require('twilio')(config.twilio.sid, config.twilio.authToken);
@@ -289,12 +310,15 @@ const authy = new Client({ key: config.authy.key })
      })
   } 
 
-  app.get('/verifyEmail', auth, async (req, res) => {
-    verifyEmail(req.user)
+  app.post('/requestEmail', auth, async (req, res) => {
+    req.user.email = req.body.email
+    requestEmail(req.user)
   })
 
-  app.get('/verifyPhone', auth, async (req, res) => {
-    verifyPhone(req.user)
+  app.post('/requestPhone', auth, async (req, res) => {
+    req.user.phone = req.body.phone
+    l('kongfoo', req.body)
+    requestPhone(req.user)
   })
 
   app.post('/user', auth, async (req, res) => {
@@ -303,12 +327,14 @@ const authy = new Client({ key: config.authy.key })
 
     if (user.email !== email && require("email-validator").validate(email)) {
       user.email = email
-      verifyEmail(user)
+      user.emailVerified = false
+      requestEmail(user)
     }
 
     if (user.phone !== phone) {
       user.phone = phone 
-      verifyPhone(user)
+      user.phoneVerified = false
+      requestPhone(user)
     }
 
     user.email = email
@@ -327,7 +353,7 @@ const authy = new Client({ key: config.authy.key })
     }
 
     await user.save() 
-    socket.to(sids[req.user.username]).emit('user', req.user)
+    emit(req.user.username, 'user', req.user)
     res.send(user)
   })
 
@@ -348,13 +374,12 @@ const authy = new Client({ key: config.authy.key })
       } 
     })
 
-    l(user, req.params)
     if (user) {
       user.emailVerified = true
       await user.save()
 
-      socket.to(sids[user.username]).emit('user', user)
-      socket.to(sids[user.username]).emit('emailVerified', true)
+      emit(user.username, 'user', user)
+      emit(user.username, 'emailVerified', true)
     }
 
     res.end()
@@ -371,8 +396,8 @@ const authy = new Client({ key: config.authy.key })
       user.phoneVerified = true
       await user.save()
 
-      socket.to(sids[user.username]).emit('user', user)
-      socket.to(sids[user.username]).emit('phoneVerified', true)
+      emit(user.username, 'user', user)
+      emit(user.username, 'phoneVerified', true)
     }
 
     res.end()
@@ -409,7 +434,7 @@ const authy = new Client({ key: config.authy.key })
           req.user.balance -= amount
           req.user.channel = reverse(data.chan_pending.txid).toString('hex')
           await req.user.save()
-          socket.to(sids[req.user.username]).emit('user', req.user)
+          emit(req.user.username, 'user', req.user)
           res.send(data)
           sent = true
         })
@@ -485,7 +510,7 @@ const authy = new Client({ key: config.authy.key })
         })
 
         await req.user.save()
-        socket.to(sids[req.user.username]).emit('user', req.user)
+        emit(req.user.username, 'user', req.user)
 
         if (payreq.payeeNodeKey === config.lnb.id) {
           let invoice = await lna.addInvoice({ value: payreq.satoshis })
@@ -584,7 +609,7 @@ const authy = new Client({ key: config.authy.key })
       let total = Math.min(parseInt(amount) + fees, req.user.balance)
       req.user.balance -= total
       await req.user.save()
-      socket.to(sids[req.user.username]).emit('user', req.user)
+      emit(req.user.username, 'user', req.user)
 
       await db.Payment.create({
         amount: -total,
@@ -637,16 +662,17 @@ const authy = new Client({ key: config.authy.key })
     ).toString()
 
     try {
-      let res = await axios.get('https://api.quadrigacx.com/v2/order_book')
-      let ask = res.data.asks[0][0]
+      let res = await axios.get('https://api.kraken.com/0/public/Ticker?pair=XBTCAD')
+      let ask = res.data.result.XXBTZCAD.c[0]
       let now = new Date()
       let ts = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
       l(ts, 'quadriga ask price:', ask)
+      l(sids)
       app.set('rates', { ask })
       socket.emit('rate', ask)
     } catch (e) { l(e) }
 
-    setTimeout(fetchRates, 30000)
+    setTimeout(fetchRates, 3000)
   })()
 
   app.get('/rates', (req, res) => {
@@ -742,7 +768,7 @@ const authy = new Client({ key: config.authy.key })
       req.user.balance += parseInt(sats)
       req.user.limit -= dollarAmount
       await req.user.save()
-      socket.to(sids[req.user.username]).emit('user', req.user)
+      emit(req.user.username, 'user', req.user)
 
       await db.Payment.create({
         user_id: req.user.id,
