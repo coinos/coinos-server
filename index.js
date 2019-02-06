@@ -666,8 +666,7 @@ const authy = new Client({ key: config.authy.key })
       let ask = res.data.result.XXBTZCAD.c[0]
       let now = new Date()
       let ts = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
-      l(ts, 'quadriga ask price:', ask)
-      l(sids)
+      l(ts, 'ask price:', ask)
       app.set('rates', { ask })
       socket.emit('rate', ask)
     } catch (e) { l(e) }
