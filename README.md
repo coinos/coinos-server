@@ -14,17 +14,15 @@ There are also integrations with Facebook's API for single sign-in and contacts,
 
 You can configure the connection info and API keys for all the external services in config/index.js 
 
-There's a sample config at config/index.sample.js
+Check out the [sample config](https://github.com/asoltys/coinos-server/blob/master/config/index.sample.js)
 
 ## Database
 
-There's a sample of the MariaDB database schema at schema.sql
-
-For a while I was writing Sequelize migrations to keep it in sync with the codebase but right now there are a handful of columns that aren't captured in any migration.
+For a while I was writing Sequelize migrations to keep the database schema in sync with the codebase but right now there are a handful of columns that aren't captured in any migration. There's a [sample schema](https://github.com/asoltys/coinos-server/blob/master/schema.sql) that you can use though.
 
 ## Installation
 
-git clone https://github.com/asoltys/coinos-server
-yarn
-yarn start
+    git clone https://github.com/asoltys/coinos-server
+    yarn
+    yarn start
 
