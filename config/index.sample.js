@@ -1,6 +1,7 @@
 import db from './config.json'
 
 module.exports = {
+  jwt: '2ad260b2202ad557b205ba17c7d8d62c69ffc95021b6147597c32eb30e3cf899',
   authy: {
     key: 'I6KdqjAKMZg7uMHLUrswMQ1PSEZ2gFZ4',
     sid: 'SK0d7263ed9a3f4a4bdbdcd77791b67381',
