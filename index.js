@@ -9,7 +9,6 @@ import cookieParser from 'cookie-parser'
 import core from 'bitcoin-core'
 import cors from 'cors'
 import crypto from 'crypto-js'
-import dotenv from 'dotenv'
 import express from 'express'
 import fb from 'fb'
 import fs from 'fs'
@@ -27,7 +26,6 @@ import zmq from 'zeromq'
 import authyVerify from './authy'
 import config from './config'
 
-dotenv.config()
 const l = console.log
 const authy = new Client({ key: config.authy.key })
 
@@ -654,13 +652,6 @@ const authy = new Client({ key: config.authy.key })
 
   let fetchRates
   (fetchRates = async () => {
-    const nonce = Date.now().toString()
-    const conf = config.quad
-    const signature = crypto.HmacSHA256(
-      nonce + conf.client_id + conf.key, 
-      conf.secret
-    ).toString()
-
     try {
       let res = await axios.get('https://api.kraken.com/0/public/Ticker?pair=XBTCAD')
       let ask = res.data.result.XXBTZCAD.c[0]
@@ -693,7 +684,7 @@ const authy = new Client({ key: config.authy.key })
       ) return res.status(401).end()
 
       let payload = { username: user.username }
-      let token = jwt.sign(payload, process.env.SECRET)
+      let token = jwt.sign(payload, config.jwt)
       res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
       res.send({ user, token })
     } catch(err) {
@@ -740,7 +731,7 @@ const authy = new Client({ key: config.authy.key })
       if (user.twofa && !(await authyVerify(user))) res.status(401).end()
 
       let payload = { username: user.username }
-      let token = jwt.sign(payload, process.env.SECRET)
+      let token = jwt.sign(payload, config.jwt)
       res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
       res.send({ user, token })
     } catch(err) {

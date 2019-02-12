@@ -1,7 +1,6 @@
 import passport from 'passport'
 import jwt from 'passport-jwt'
-import dotenv from 'dotenv'
-dotenv.config()
+import config from './config'
 
 const l = console.log
 
@@ -14,7 +13,7 @@ module.exports = (db) => {
   passport.use(
     new jwt.Strategy({
       jwtFromRequest: jwt.ExtractJwt.fromExtractors([jwt.ExtractJwt.fromAuthHeaderAsBearerToken(), cookieExtractor]),
-      secretOrKey: process.env.SECRET
+      secretOrKey: config.jwt
     }, async (payload, next) => {
       try {
         let user = await db.User.findOne({
