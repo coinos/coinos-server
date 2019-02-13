@@ -25,8 +25,10 @@ import zmq from 'zeromq'
 
 import authyVerify from './authy'
 import config from './config'
+import whitelist from './whitelist'
 
 const l = console.log
+const pick = (O, ...K) => K.reduce((o, k) => (o[k]=O[k], o), {})
 const authy = new Client({ key: config.authy.key })
 
 ;(async () => {
@@ -91,7 +93,6 @@ const authy = new Client({ key: config.authy.key })
     });
 
     socket.on('disconnect', s => {
-      l('disconnecting', socket.id)
       let user = sids[socket.id]
       sids[user].splice(sids[user].indexOf(socket.id), 1)
       delete sids[socket.id]
@@ -99,13 +100,14 @@ const authy = new Client({ key: config.authy.key })
   })
 
   const emit = (username, msg, data) => {
+    if (data.username !== undefined) data = pick(data, ...whitelist)
+
+    if (!sids[username]) return
     sids[username].map((sid, i) => {
       try {
         socket.to(sid).emit(msg, data)
-        l('tellin', sid)
       } catch (e) {
         sids[username].splice(i, 1)
-        l('poppin', sid)
       } 
     })
   } 
@@ -276,7 +278,8 @@ const authy = new Client({ key: config.authy.key })
     user.name = user.username
     addresses[user.address] = user.username
 
-    res.send(await db.User.create(user))
+    await db.User.create(user)
+    res.send(pick(user, ...whitelist))
   })
 
   const requestEmail = async (user) => {
@@ -310,13 +313,14 @@ const authy = new Client({ key: config.authy.key })
 
   app.post('/requestEmail', auth, async (req, res) => {
     req.user.email = req.body.email
-    requestEmail(req.user)
+    await requestEmail(req.user)
+    res.end()
   })
 
   app.post('/requestPhone', auth, async (req, res) => {
     req.user.phone = req.body.phone
-    l('kongfoo', req.body)
-    requestPhone(req.user)
+    await requestPhone(req.user)
+    res.end()
   })
 
   app.post('/user', auth, async (req, res) => {
@@ -686,6 +690,8 @@ const authy = new Client({ key: config.authy.key })
       let payload = { username: user.username }
       let token = jwt.sign(payload, config.jwt)
       res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
+
+      user = pick(user, ...whitelist)
       res.send({ user, token })
     } catch(err) {
       res.status(401).end()
