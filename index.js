@@ -748,7 +748,7 @@ const authy = new Client({ key: config.authy.key })
 
   app.post('/buy', auth, async (req, res) => {
     const stripe = require('stripe')(config.stripe);
-    const { token, amount, sats } = req.body
+    const { token, amount, sat } = req.body
     let dollarAmount = parseInt(amount / 100)
 
     if (dollarAmount > req.user.limit) return res.status(401).end()
@@ -761,7 +761,7 @@ const authy = new Client({ key: config.authy.key })
         source: token,
       })
 
-      req.user.balance += parseInt(sats)
+      req.user.balance += parseInt(sat)
       req.user.limit -= dollarAmount
       await req.user.save()
       emit(req.user.username, 'user', req.user)
@@ -769,7 +769,7 @@ const authy = new Client({ key: config.authy.key })
       await db.Payment.create({
         user_id: req.user.id,
         hash: charge.balance_transaction,
-        amount: parseInt(sats),
+        amount: parseInt(sat),
         currency: 'CAD',
         rate: app.get('rates').ask,
         received: true,
@@ -778,6 +778,7 @@ const authy = new Client({ key: config.authy.key })
 
       res.send(`Bought ${amount}`)
     } catch (e) {
+      console.log(e);
       res.status(500).send(e)
     } 
   })
