@@ -6,9 +6,8 @@ import bodyParser from 'body-parser'
 import bolt11 from 'bolt11'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
-import core from 'bitcoin-core'
+import BitcoinCore from 'bitcoin-core'
 import cors from 'cors'
-import crypto from 'crypto-js'
 import express from 'express'
 import fb from 'fb'
 import fs from 'fs'
@@ -28,10 +27,10 @@ import config from './config'
 import whitelist from './whitelist'
 
 const l = console.log
-const pick = (O, ...K) => K.reduce((o, k) => (o[k]=O[k], o), {})
-const authy = new Client({ key: config.authy.key })
-
-;(async () => {
+/* eslint-disable-next-line */
+const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {})
+const authy = new Client({ key: config.authy.key });
+(async () => {
   const ln = async ({ server, tls, macaroon, channelpeers }) => {
     const ln = await require('lnrpc')({ server, tls })
     ln.meta = new grpc.Metadata()
@@ -43,7 +42,7 @@ const authy = new Client({ key: config.authy.key })
   const lna = await ln(config.lna)
   const lnb = await ln(config.lnb)
 
-  const bc = new core(config.bitcoin)
+  const bc = new BitcoinCore(config.bitcoin)
 
   const app = express()
   app.enable('trust proxy')
@@ -64,33 +63,41 @@ const authy = new Client({ key: config.authy.key })
 
   app.use(passport.initialize())
 
-  app.use('/graphql', auth, graphqlHTTP({
-    schema: db.gqlschema,
-    graphiql: true
-  }))
+  app.use(
+    '/graphql',
+    auth,
+    graphqlHTTP({
+      schema: db.gqlschema,
+      graphiql: true,
+    })
+  )
 
   socket.use((socket, next) => {
     try {
       let token = socket.handshake.query.token
       let user = jwt.decode(token).username
       socket.request.user = user
-      sids[user] ? sids[user].push(socket.id) : sids[user] = [socket.id]
+      sids[user] ? sids[user].push(socket.id) : (sids[user] = [socket.id])
       sids[socket.id] = user
-    } catch (e) { l(e) }
+    } catch (e) {
+      l(e)
+    }
     next()
   })
 
   socket.sockets.on('connect', async socket => {
     socket.emit('connected')
-    if (app.get('rates'))
-      socket.emit('rate', app.get('rates').ask)
+    if (app.get('rates')) socket.emit('rate', app.get('rates').ask)
     socket.on('getuser', async (data, callback) => {
-      callback(await db.User.findOne({
-        where: {
-          username: socket.request.user,
-        }
-      }));
-    });
+      /* eslint-disable-next-line */
+      callback(
+        await db.User.findOne({
+          where: {
+            username: socket.request.user,
+          },
+        })
+      )
+    })
 
     socket.on('disconnect', s => {
       let user = sids[socket.id]
@@ -108,9 +115,9 @@ const authy = new Client({ key: config.authy.key })
         socket.to(sid).emit(msg, data)
       } catch (e) {
         sids[username].splice(i, 1)
-      } 
+      }
     })
-  } 
+  }
 
   const handlePayment = async msg => {
     if (!msg.settled) return
@@ -118,8 +125,8 @@ const authy = new Client({ key: config.authy.key })
     let payment = await db.Payment.findOne({
       include: { model: db.User, as: 'user' },
       where: {
-        hash: msg.payment_request
-      }
+        hash: msg.payment_request,
+      },
     })
 
     if (!payment) return
@@ -131,10 +138,10 @@ const authy = new Client({ key: config.authy.key })
     await payment.save()
     await payment.user.save()
     payments.push(msg.payment_request)
- 
+
     emit(payment.user.username, 'invoice', msg)
     emit(payment.user.username, 'user', payment.user)
-  } 
+  }
 
   const invoices = lna.subscribeInvoices({})
   invoices.on('data', handlePayment)
@@ -153,10 +160,12 @@ const authy = new Client({ key: config.authy.key })
   const addresses = {}
   await db.User.findAll({
     attributes: ['username', 'address'],
-  }).map(u => { addresses[u.address] = u.username })
+  }).map(u => {
+    addresses[u.address] = u.username
+  })
 
-  const payments = (await db.Payment.findAll({ 
-    attributes: ['hash']
+  const payments = (await db.Payment.findAll({
+    attributes: ['hash'],
   })).map(p => p.hash)
 
   zmqRawTx.on('message', async (topic, message, sequence) => {
@@ -166,17 +175,17 @@ const authy = new Client({ key: config.authy.key })
     let hash = reverse(tx.getHash()).toString('hex')
 
     if (payments.includes(hash)) return
-    let total = tx.outs.reduce((a, b) => a + b.value, 0)
+
     tx.outs.map(async o => {
       try {
         let network = config.bitcoin.network
         if (network === 'mainnet') {
           network = 'bitcoin'
-        } 
+        }
 
         let address = bitcoin.address.fromOutputScript(
-          o.script, 
-          bitcoin.networks[network],
+          o.script,
+          bitcoin.networks[network]
         )
 
         if (Object.keys(addresses).includes(address)) {
@@ -186,7 +195,7 @@ const authy = new Client({ key: config.authy.key })
             let user = await db.User.findOne({
               where: {
                 username: addresses[address],
-              }
+              },
             })
 
             let invoices = await db.Payment.findAll({
@@ -195,10 +204,10 @@ const authy = new Client({ key: config.authy.key })
                 hash: address,
                 received: null,
                 amount: {
-                  [Sequelize.Op.gt]: 0
-                } 
+                  [Sequelize.Op.gt]: 0,
+                },
               },
-              order: [ [ 'createdAt', 'DESC' ]]
+              order: [['createdAt', 'DESC']],
             })
 
             let tip = null
@@ -215,7 +224,7 @@ const authy = new Client({ key: config.authy.key })
 
             await user.save()
             emit(user.username, 'user', user)
-            
+
             await db.Payment.create({
               user_id: user.id,
               hash,
@@ -228,9 +237,11 @@ const authy = new Client({ key: config.authy.key })
             })
 
             emit(user.username, 'tx', message)
-          } catch (e) { l(e) }
-        } 
-      } catch(e) {}
+          } catch (e) {
+            l(e)
+          }
+        }
+      } catch (e) {}
     })
   })
 
@@ -252,15 +263,15 @@ const authy = new Client({ key: config.authy.key })
             p.confirmed = true
             user.balance += p.amount
             user.pending -= p.amount
-            await user.save() 
+            await user.save()
             await p.save()
             emit(user.username, 'user', user)
           }
         })
-        
+
         socket.emit('block', message)
         break
-      } 
+      }
     }
   })
 
@@ -282,34 +293,43 @@ const authy = new Client({ key: config.authy.key })
     res.send(pick(user, ...whitelist))
   })
 
-  const requestEmail = async (user) => {
+  const requestEmail = async user => {
     user.emailToken = uuidv4()
-    await user.save() 
+    await user.save()
 
     let mg = mailgun(config.mailgun)
     let msg = {
       from: 'CoinOS <webmaster@coinos.io>',
       to: user.email,
       subject: 'CoinOS Email Verification',
-      html: `Visit <a href="https://coinos.io/verifyEmail/${user.username}/${user.emailToken}">https://coinos.io/verify/${user.username}/${user.emailToken}</a> to verify your email address.`
+      html: `Visit <a href="https://coinos.io/verifyEmail/${user.username}/${
+        user.emailToken
+      }">https://coinos.io/verify/${user.username}/${
+        user.emailToken
+      }</a> to verify your email address.`,
     }
 
     try {
       mg.messages().send(msg)
-    } catch (e) { l(e) }
-  } 
+    } catch (e) {
+      l(e)
+    }
+  }
 
-  const requestPhone = async (user) => {
+  const requestPhone = async user => {
     user.phoneToken = Math.floor(100000 + Math.random() * 900000)
-    await user.save() 
-    const client = require('twilio')(config.twilio.sid, config.twilio.authToken);
+    await user.save()
+    const client = require('twilio')(
+      config.twilio.sid,
+      config.twilio.authToken
+    )
 
     await client.messages.create({
-       body: user.phoneToken,
-       from: config.twilio.number,
-       to: user.phone,
-     })
-  } 
+      body: user.phoneToken,
+      from: config.twilio.number,
+      to: user.phone,
+    })
+  }
 
   app.post('/requestEmail', auth, async (req, res) => {
     req.user.email = req.body.email
@@ -325,16 +345,24 @@ const authy = new Client({ key: config.authy.key })
 
   app.post('/user', auth, async (req, res) => {
     let { user } = req
-    let { email, phone, twofa, pin, pinconfirm, password, passconfirm } = req.body
+    let {
+      email,
+      phone,
+      twofa,
+      pin,
+      pinconfirm,
+      password,
+      passconfirm,
+    } = req.body
 
-    if (user.email !== email && require("email-validator").validate(email)) {
+    if (user.email !== email && require('email-validator').validate(email)) {
       user.email = email
       user.emailVerified = false
       requestEmail(user)
     }
 
     if (user.phone !== phone) {
-      user.phone = phone 
+      user.phone = phone
       user.phoneVerified = false
       requestPhone(user)
     }
@@ -343,18 +371,24 @@ const authy = new Client({ key: config.authy.key })
     user.phone = phone
     user.twofa = twofa
 
-    if (password && password === passconfirm)
+    console.log(user.twofa, email, phone)
+
+    if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1)
-
-    if (pin && pin === pinconfirm)
-      user.pin = await bcrypt.hash(pin, 1)
-
-    if (twofa && !user.authyId && user.phoneVerified) {
-      let r = await authy.registerUser({ countryCode: 'CA', email, phone })
-      user.authyId = r.user.id
     }
 
-    await user.save() 
+    if (pin && pin === pinconfirm) user.pin = await bcrypt.hash(pin, 1)
+
+    if (twofa && !user.authyId && user.phoneVerified) {
+      try {
+        let r = await authy.registerUser({ countryCode: 'CA', email, phone })
+        user.authyId = r.user.id
+      } catch (e) {
+        l(e)
+      }
+    }
+
+    await user.save()
     emit(req.user.username, 'user', req.user)
     res.send(user)
   })
@@ -365,15 +399,20 @@ const authy = new Client({ key: config.authy.key })
       from: 'CoinOS <webmaster@coinos.io>',
       to: user.email,
       subject: 'CoinOS Password Reset',
-      html: `Visit <a href="https://localhost/reset/${user.username}/${user.token}">https://localhost/reset/${user.username}/${user.token}</a> to reset your password.`
+      html: `Visit <a href="https://localhost/reset/${user.username}/${
+        user.token
+      }">https://localhost/reset/${user.username}/${
+        user.token
+      }</a> to reset your password.`,
     }
   })
 
   app.get('/verifyEmail/:username/:token', auth, async (req, res) => {
     let user = await db.User.findOne({
       where: {
-        username: req.params.username
-      } 
+        username: req.params.username,
+        emailToken: req.params.token,
+      },
     })
 
     if (user) {
@@ -382,17 +421,22 @@ const authy = new Client({ key: config.authy.key })
 
       emit(user.username, 'user', user)
       emit(user.username, 'emailVerified', true)
-    }
 
-    res.end()
+      res.end()
+    } else {
+      res.status(500).send('invalid token or username')
+    }
   })
 
   app.get('/verifyPhone/:username/:token', auth, async (req, res) => {
     let user = await db.User.findOne({
       where: {
-        username: req.params.username
-      } 
+        username: req.params.username,
+        phoneToken: req.params.token,
+      },
     })
+
+    console.log(user, req.params)
 
     if (user) {
       user.phoneVerified = true
@@ -400,36 +444,43 @@ const authy = new Client({ key: config.authy.key })
 
       emit(user.username, 'user', user)
       emit(user.username, 'phoneVerified', true)
+      res.end()
+    } else {
+      res.status(500).send('invalid token or username')
     }
-
-    res.end()
   })
 
   app.post('/openchannel', auth, async (req, res) => {
     let err = m => res.status(500).send(m)
-    if (req.user.balance < 10000) return err('Need at least 10000 satoshis for channel opening')
+    if (req.user.balance < 10000) {
+      return err('Need at least 10000 satoshis for channel opening')
+    }
 
     let pending = await lna.pendingChannels({}, lna.meta)
-    let busypeers = pending.pending_open_channels.map(c => c.channel.remote_node_pub)
+    let busypeers = pending.pending_open_channels.map(
+      c => c.channel.remote_node_pub
+    )
     let peer = lna.channelpeers.find(p => !busypeers.includes(p))
     let sent = false
 
     l('channeling')
-    
+
     if (!peer) {
-      res.status(500).send('All peers have pending channel requests, try again later')
+      res
+        .status(500)
+        .send('All peers have pending channel requests, try again later')
       return
     }
-    
+
     try {
       let amount = Math.min(req.user.balance, 16777216)
-      
+
       let openchannel = async (peer, amount) => {
         let channel = await lna.openChannel({
           node_pubkey: new Buffer(peer, 'hex'),
           local_funding_amount: amount,
         })
-        
+
         channel.on('data', async data => {
           if (sent || !data.chan_pending) return
           req.user.balance += amount
@@ -445,19 +496,27 @@ const authy = new Client({ key: config.authy.key })
           l('channel error', peer, err)
           let msg = err.message
 
-          if (msg.startsWith('Multiple') || msg.startsWith('You gave') || msg.startsWith('peer')) {
+          if (
+            msg.startsWith('Multiple') ||
+            msg.startsWith('You gave') ||
+            msg.startsWith('peer')
+          ) {
             busypeers.push(peer)
             peer = lna.channelpeers.find(p => !busypeers.includes(p))
             if (peer) {
               return openchannel(peer, amount)
             } else {
-              return res.status(500).send('All peers are busy, couldn\'t open a channel, wait a few blocks and try again')
-            } 
-          } 
+              return res
+                .status(500)
+                .send(
+                  "All peers are busy, couldn't open a channel, wait a few blocks and try again"
+                )
+            }
+          }
 
           if (msg.startsWith('not enough')) {
             msg = 'Server wallet is busy. Wait for a block and try again'
-          } 
+          }
 
           return res.status(500).send(msg)
         })
@@ -467,7 +526,7 @@ const authy = new Client({ key: config.authy.key })
     } catch (err) {
       l('rpc error', peer, err)
       return res.status(500).send(err)
-    } 
+    }
   })
 
   app.get('/channels', auth, async (req, res) => {
@@ -483,13 +542,13 @@ const authy = new Client({ key: config.authy.key })
     let payreq = bolt11.decode(hash)
 
     if (seen.includes(hash)) {
-      return res.status(500).send('Invoice has been paid, can\'t pay again')
-    } 
+      return res.status(500).send("Invoice has been paid, can't pay again")
+    }
 
     if (req.user.balance < payreq.satoshis) {
       return res.status(500).send('Not enough satoshis')
-    } 
-    
+    }
+
     const stream = lna.sendPayment(lna.meta, {})
     stream.write({ payment_request: req.body.payreq })
 
@@ -517,7 +576,9 @@ const authy = new Client({ key: config.authy.key })
         if (payreq.payeeNodeKey === config.lnb.id) {
           let invoice = await lna.addInvoice({ value: payreq.satoshis })
           let payback = lnb.sendPayment(lnb.meta, {})
+          /* eslint-disable-next-line */
           let { payment_request } = invoice
+          /* eslint-disable-next-line */
           payback.write({ payment_request })
         }
 
@@ -531,33 +592,47 @@ const authy = new Client({ key: config.authy.key })
 
       res.status(500).send(msg)
     })
-  }) 
+  })
 
   app.get('/friends', auth, async (req, res) => {
     try {
-      let friends = (await fb.api(`/${req.user.username}/friends?access_token=${req.user.fbtoken}`)).data
-      friends = await Promise.all(friends.map(async f => {
-        let pic = (await fb.api(`/${f.id}/picture?redirect=false&type=small&access_token=${req.user.fbtoken}`)).data
-        f.pic = pic.url
-        return f
-      }))
+      let friends = (await fb.api(
+        `/${req.user.username}/friends?access_token=${req.user.fbtoken}`
+      )).data
+      friends = await Promise.all(
+        friends.map(async f => {
+          let pic = (await fb.api(
+            `/${f.id}/picture?redirect=false&type=small&access_token=${
+              req.user.fbtoken
+            }`
+          )).data
+          f.pic = pic.url
+          return f
+        })
+      )
 
       res.send(friends)
     } catch (e) {
-      res.status(500).send('There was a problem getting your facebook friends: ', e)
+      res
+        .status(500)
+        .send('There was a problem getting your facebook friends: ', e)
     }
-  }) 
+  })
 
   app.post('/payUser', auth, async (req, res) => {
     let { payuser, amount } = req.body
 
     let user = await db.User.findOne({
       where: {
-        username: payuser
-      } 
+        username: payuser,
+      },
     })
 
-    if (!user) return res.status(401).send("Couldn't find the user you're trying to pay")
+    if (!user) {
+      return res
+        .status(401)
+        .send("Couldn't find the user you're trying to pay")
+    }
     let err = m => res.status(500).send(m)
 
     let invoice
@@ -565,10 +640,10 @@ const authy = new Client({ key: config.authy.key })
       invoice = await lnb.addInvoice({ value: amount })
     } catch (e) {
       return err(e.message)
-    } 
+    }
 
     let hash = invoice.payment_request
-    
+
     await db.Payment.create({
       user_id: user.id,
       hash,
@@ -590,24 +665,28 @@ const authy = new Client({ key: config.authy.key })
 
     if (amount === req.user.balance) {
       amount = req.user.balance - MINFEE
-    } 
+    }
 
-    if (amount > req.user.balance)
+    if (amount > req.user.balance) {
       return res.status(401).send('Insufficient funds')
+    }
 
     try {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300)
-      let txid = await bc.sendToAddress(address, (amount / 100000000).toFixed(8))
+      let txid = await bc.sendToAddress(
+        address,
+        (amount / 100000000).toFixed(8)
+      )
       let txhex = await bc.getRawTransaction(txid)
       let tx = bitcoin.Transaction.fromHex(txhex)
 
-      let input_total = await tx.ins.reduce(async (a, input) => {
+      let inputTotal = await tx.ins.reduce(async (a, input) => {
         let h = await bc.getRawTransaction(reverse(input.hash).toString('hex'))
         return a + bitcoin.Transaction.fromHex(h).outs[input.index].value
       }, 0)
-      let output_total = tx.outs.reduce((a, b) => a + b.value, 0)
+      let outputTotal = tx.outs.reduce((a, b) => a + b.value, 0)
 
-      let fees = input_total - output_total
+      let fees = inputTotal - outputTotal
       let total = Math.min(parseInt(amount) + fees, req.user.balance)
       req.user.balance -= total
       await req.user.save()
@@ -625,8 +704,8 @@ const authy = new Client({ key: config.authy.key })
     } catch (e) {
       l(e)
       res.status(500).send(e.message)
-    } 
-  }) 
+    }
+  })
 
   app.post('/addInvoice', auth, async (req, res) => {
     let err = m => res.status(500).send(m)
@@ -637,11 +716,11 @@ const authy = new Client({ key: config.authy.key })
       invoice = await lnb.addInvoice({ value: amount })
     } catch (e) {
       return err(e.message)
-    } 
+    }
 
     let hash = invoice.payment_request
     if (address) hash = address
-    
+
     await db.Payment.create({
       user_id: req.user.id,
       hash,
@@ -654,17 +733,21 @@ const authy = new Client({ key: config.authy.key })
     res.send(invoice)
   })
 
-  let fetchRates
+  let fetchRates;
   (fetchRates = async () => {
     try {
-      let res = await axios.get('https://api.kraken.com/0/public/Ticker?pair=XBTCAD')
+      let res = await axios.get(
+        'https://api.kraken.com/0/public/Ticker?pair=XBTCAD'
+      )
       let ask = res.data.result.XXBTZCAD.c[0]
       let now = new Date()
       let ts = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
       l(ts, 'ask price:', ask)
       app.set('rates', { ask })
       socket.emit('rate', ask)
-    } catch (e) { l(e) }
+    } catch (e) {
+      l(e)
+    }
 
     setTimeout(fetchRates, 3000)
   })()
@@ -677,15 +760,17 @@ const authy = new Client({ key: config.authy.key })
     try {
       let user = await db.User.findOne({
         where: {
-          username: req.body.username
-        } 
+          username: req.body.username,
+        },
       })
 
       if (
-        !user || 
-        !(await bcrypt.compare(req.body.password, user.password)) || 
+        !user ||
+        !(await bcrypt.compare(req.body.password, user.password)) ||
         (user.twofa && !(await authyVerify(user)))
-      ) return res.status(401).end()
+      ) {
+        return res.status(401).end()
+      }
 
       let payload = { username: user.username }
       let token = jwt.sign(payload, config.jwt)
@@ -693,7 +778,7 @@ const authy = new Client({ key: config.authy.key })
 
       user = pick(user, ...whitelist)
       res.send({ user, token })
-    } catch(err) {
+    } catch (err) {
       res.status(401).end()
     }
   })
@@ -701,35 +786,41 @@ const authy = new Client({ key: config.authy.key })
   app.post('/facebookLogin', async (req, res) => {
     let { accessToken, userID } = req.body
 
-    let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${config.facebook.appToken}`
+    let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${
+      config.facebook.appToken
+    }`
     let check = await axios.get(url)
     if (!check.data.data.is_valid) return res.status(401).end()
 
     try {
       let user = await db.User.findOne({
         where: {
-          username: req.body.userID
-        } 
+          username: req.body.userID,
+        },
       })
 
       if (!user) {
         user = await db.User.create(user)
         user.username = userID
         user.name = (await fb.api(`/me?access_token=${accessToken}`)).name
-        user.pic = (await fb.api(`/me/picture?access_token=${accessToken}&redirect=false`)).data.url
+        user.pic = (await fb.api(
+          `/me/picture?access_token=${accessToken}&redirect=false`
+        )).data.url
         user.fbtoken = accessToken
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
         user.balance = 0
         user.pending = 0
-        let friends = (await fb.api(`/${userID}/friends?access_token=${accessToken}`)).data
+        let friends = (await fb.api(
+          `/${userID}/friends?access_token=${accessToken}`
+        )).data
         if (friends.find(f => f.id === config.facebook.specialFriend)) {
           user.friend = true
           user.limit = 200
         }
         await user.save()
         addresses[user.address] = user.username
-      } 
+      }
 
       user.fbtoken = accessToken
       await user.save()
@@ -740,15 +831,15 @@ const authy = new Client({ key: config.authy.key })
       let token = jwt.sign(payload, config.jwt)
       res.cookie('token', token, { expires: new Date(Date.now() + 432000000) })
       res.send({ user, token })
-    } catch(err) {
+    } catch (err) {
       l(err)
       res.status(401).end()
     }
   })
 
   app.post('/buy', auth, async (req, res) => {
-    const stripe = require('stripe')(config.stripe);
-    const { token, amount, sat } = req.body
+    const stripe = require('stripe')(config.stripe)
+    const { token, amount, sats } = req.body
     let dollarAmount = parseInt(amount / 100)
 
     if (dollarAmount > req.user.limit) return res.status(401).end()
@@ -761,7 +852,7 @@ const authy = new Client({ key: config.authy.key })
         source: token,
       })
 
-      req.user.balance += parseInt(sat)
+      req.user.balance += parseInt(sats)
       req.user.limit -= dollarAmount
       await req.user.save()
       emit(req.user.username, 'user', req.user)
@@ -769,18 +860,18 @@ const authy = new Client({ key: config.authy.key })
       await db.Payment.create({
         user_id: req.user.id,
         hash: charge.balance_transaction,
-        amount: parseInt(sat),
+        amount: parseInt(sats),
         currency: 'CAD',
         rate: app.get('rates').ask,
         received: true,
-        tip: 0
+        tip: 0,
       })
 
       res.send(`Bought ${amount}`)
     } catch (e) {
-      console.log(e);
+      console.log(e)
       res.status(500).send(e)
-    } 
+    }
   })
 
   app.post('/order', auth, async (req, res) => {
@@ -792,8 +883,10 @@ const authy = new Client({ key: config.authy.key })
     })
   })
 
-  app.get('/me', async(req, res) => {
-    let data = (await fb.api('/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false')).data
+  app.get('/me', async (req, res) => {
+    let data = (await fb.api(
+      '/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false'
+    )).data
     res.send(data.url)
   })
 
