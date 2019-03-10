@@ -291,7 +291,7 @@ const authy = new Client({ key: config.authy.key })
       from: 'CoinOS <webmaster@coinos.io>',
       to: user.email,
       subject: 'CoinOS Email Verification',
-      html: `Visit <a href="https://localhost/verifyEmail/${user.username}/${user.emailToken}">https://localhost/verify/${user.username}/${user.emailToken}</a> to verify your email address.`
+      html: `Visit <a href="https://coinos.io/verifyEmail/${user.username}/${user.emailToken}">https://coinos.io/verify/${user.username}/${user.emailToken}</a> to verify your email address.`
     }
 
     try {
