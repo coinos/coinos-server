@@ -803,10 +803,6 @@ const authy = new Client({ key: config.authy.key });
         user = await db.User.create(user)
         user.username = userID
         user.name = (await fb.api(`/me?access_token=${accessToken}`)).name
-        user.pic = (await fb.api(
-          `/me/picture?access_token=${accessToken}&redirect=false`
-        )).data.url
-        user.fbtoken = accessToken
         user.address = (await lna.newAddress({ type: 1 }, lna.meta)).address
         user.password = await bcrypt.hash(accessToken, 1)
         user.balance = 0
@@ -822,6 +818,9 @@ const authy = new Client({ key: config.authy.key });
         addresses[user.address] = user.username
       }
 
+      user.pic = (await fb.api(
+        `/me/picture?access_token=${accessToken}&redirect=false`
+      )).data.url
       user.fbtoken = accessToken
       await user.save()
 
