@@ -545,9 +545,20 @@ const authy = new Client({ key: config.authy.key });
       return res.status(500).send("Invoice has been paid, can't pay again")
     }
 
-    if (req.user.balance < payreq.satoshis) {
-      return res.status(500).send('Not enough satoshis')
-    }
+    await db.transaction(async transaction => {
+      let { balance } = await db.User.findOne({
+        where: {
+          username: req.user.username,
+        },
+      })
+
+      if (balance < payreq.satoshis) {
+        return res.status(500).send('Not enough satoshis')
+      }
+
+      req.user.balance -= payreq.satoshis
+      await req.user.save()
+    })
 
     const stream = lna.sendPayment(lna.meta, {})
     stream.write({ payment_request: req.body.payreq })
@@ -560,22 +571,26 @@ const authy = new Client({ key: config.authy.key });
         seen.push(m.payment_preimage)
 
         let total = parseInt(m.payment_route.total_amt)
-        req.user.balance -= total
+        req.user.balance -= total - payreq.satoshis
 
-        await db.Payment.create({
-          amount: -total,
-          user_id: req.user.id,
-          hash,
-          rate: app.get('rates').ask,
-          currency: 'CAD',
+        await db.transaction(async transaction => {
+          await req.user.save({ transaction })
+
+          await db.Payment.create({
+            amount: -total,
+            user_id: req.user.id,
+            hash,
+            rate: app.get('rates').ask,
+            currency: 'CAD',
+          })
         })
 
-        await req.user.save()
         emit(req.user.username, 'user', req.user)
 
         if (payreq.payeeNodeKey === config.lnb.id) {
           let invoice = await lna.addInvoice({ value: payreq.satoshis })
           let payback = lnb.sendPayment(lnb.meta, {})
+
           /* eslint-disable-next-line */
           let { payment_request } = invoice
           /* eslint-disable-next-line */
@@ -887,6 +902,139 @@ const authy = new Client({ key: config.authy.key });
       '/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false'
     )).data
     res.send(data.url)
+  })
+
+  app.get('/exchanges', async (req, res) => {
+    let r = await axios.get(
+      'https://min-api.cryptocompare.com/data/v2/all/exchanges?fsym=BTC&api_key=6dc6d605ac45dcdbbc44d67111a2f03ba42ca8f54c5d4bf21069d2d3e99a89f0'
+    )
+    res.send(r.data)
+  })
+
+  app.get('/currencies', async (req, res) => {
+    res.send([
+      'ARS',
+      'TTD',
+      'EUR',
+      'LBP',
+      'LTC',
+      'KZT',
+      'PGK',
+      'MAD',
+      'RWF',
+      'XOF',
+      'AFN',
+      'MDL',
+      'SZL',
+      'BGN',
+      'CNH',
+      'IQD',
+      'RON',
+      'UZS',
+      'MYR',
+      'MWK',
+      'BOB',
+      'XRP',
+      'RSD',
+      'KRW',
+      'LKR',
+      'VES',
+      'PAB',
+      'BWP',
+      'ISK',
+      'CUC',
+      'LSL',
+      'KHR',
+      'USD',
+      'UAH',
+      'MMK',
+      'SAR',
+      'XAG',
+      'DZD',
+      'ETH',
+      'NZD',
+      'ZMW',
+      'ALL',
+      'PEN',
+      'ILS',
+      'CAD',
+      'HKD',
+      'THB',
+      'BND',
+      'UYU',
+      'TND',
+      'COP',
+      'MXN',
+      'EGP',
+      'AUD',
+      'BYN',
+      'TZS',
+      'KWD',
+      'SEK',
+      'PHP',
+      'DASH',
+      'JOD',
+      'HUF',
+      'INR',
+      'SGD',
+      'PLN',
+      'GGP',
+      'VND',
+      'CLP',
+      'XMR',
+      'BHD',
+      'XAR',
+      'JPY',
+      'XAU',
+      'GHS',
+      'AMD',
+      'BAM',
+      'OMR',
+      'KGS',
+      'CHF',
+      'IRR',
+      'GEL',
+      'DKK',
+      'CZK',
+      'XAF',
+      'BDT',
+      'MUR',
+      'GIP',
+      'BIF',
+      'PYG',
+      'NPR',
+      'NGN',
+      'VEF',
+      'GBP',
+      'CRC',
+      'GTQ',
+      'PKR',
+      'NAD',
+      'AOA',
+      'HNL',
+      'MZN',
+      'QAR',
+      'JMD',
+      'ETB',
+      'BYR',
+      'NOK',
+      'TWD',
+      'KES',
+      'MOP',
+      'HRK',
+      'CNY',
+      'AED',
+      'RUB',
+      'BRL',
+      'TRY',
+      'DOP',
+      'UGX',
+      'ZAR',
+      'IDR',
+      'CDF',
+      'MGA',
+      'AZN',
+    ])
   })
 
   app.use(function (err, req, res, next) {
