@@ -254,7 +254,7 @@ const authy = new Client({ key: config.authy.key });
         let block = bitcoin.Block.fromHex(message)
         l('block', block.getHash().toString('hex'))
 
-        let payments = await db.Payment.findAll({
+        await db.Payment.findAll({
           include: { model: db.User, as: 'user' },
           where: { confirmed: false },
         }).map(async p => {
@@ -394,16 +394,23 @@ const authy = new Client({ key: config.authy.key });
   })
 
   app.post('/forgot', async (req, res) => {
+    let { user } = req
     let mg = mailgun(config.mailgun)
     let msg = {
       from: 'CoinOS <webmaster@coinos.io>',
       to: user.email,
       subject: 'CoinOS Password Reset',
-      html: `Visit <a href="https://localhost/reset/${user.username}/${
+      html: `Visit <a href="https://coinos.io/reset/${user.username}/${
         user.token
-      }">https://localhost/reset/${user.username}/${
+      }">https://coinos.io/reset/${user.username}/${
         user.token
       }</a> to reset your password.`,
+    }
+
+    try {
+      mg.messages().send(msg)
+    } catch (e) {
+      l(e)
     }
   })
 
