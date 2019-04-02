@@ -689,9 +689,20 @@ const authy = new Client({ key: config.authy.key });
       amount = req.user.balance - MINFEE
     }
 
-    if (amount > req.user.balance) {
-      return res.status(401).send('Insufficient funds')
-    }
+    await db.transaction(async transaction => {
+      let { balance } = await db.User.findOne({
+        where: {
+          username: req.user.username,
+        },
+      })
+
+      if (amount > balance) {
+        return res.status(401).send('Insufficient funds')
+      }
+
+      req.user.balance -= amount + 10000
+      await req.user.save()
+    })
 
     try {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300)
@@ -710,16 +721,19 @@ const authy = new Client({ key: config.authy.key });
 
       let fees = inputTotal - outputTotal
       let total = Math.min(parseInt(amount) + fees, req.user.balance)
-      req.user.balance -= total
-      await req.user.save()
-      emit(req.user.username, 'user', req.user)
+      req.user.balance += 10000 - fees
 
-      await db.Payment.create({
-        amount: -total,
-        user_id: req.user.id,
-        hash: txid,
-        rate: app.get('rates').ask,
-        currency: 'CAD',
+      await db.transaction(async transaction => {
+        await req.user.save()
+        emit(req.user.username, 'user', req.user)
+
+        await db.Payment.create({
+          amount: -total,
+          user_id: req.user.id,
+          hash: txid,
+          rate: app.get('rates').ask,
+          currency: 'CAD',
+        })
       })
 
       res.send({ txid, tx, amount, fees })
