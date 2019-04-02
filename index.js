@@ -552,20 +552,27 @@ const authy = new Client({ key: config.authy.key });
       return res.status(500).send("Invoice has been paid, can't pay again")
     }
 
-    await db.transaction(async transaction => {
-      let { balance } = await db.User.findOne({
-        where: {
-          username: req.user.username,
-        },
+    try {
+      await db.transaction(async transaction => {
+        let { balance } = await db.User.findOne(
+          {
+            where: {
+              username: req.user.username,
+            },
+          },
+          { transaction }
+        )
+
+        if (balance < payreq.satoshis) {
+          throw new Error()
+        }
+
+        req.user.balance -= payreq.satoshis
+        await req.user.save({ transaction })
       })
-
-      if (balance < payreq.satoshis) {
-        return res.status(500).send('Not enough satoshis')
-      }
-
-      req.user.balance -= payreq.satoshis
-      await req.user.save()
-    })
+    } catch (e) {
+      return res.status(500).send('Not enough satoshis')
+    }
 
     const stream = lna.sendPayment(lna.meta, {})
     stream.write({ payment_request: req.body.payreq })
@@ -583,13 +590,16 @@ const authy = new Client({ key: config.authy.key });
         await db.transaction(async transaction => {
           await req.user.save({ transaction })
 
-          await db.Payment.create({
-            amount: -total,
-            user_id: req.user.id,
-            hash,
-            rate: app.get('rates').ask,
-            currency: 'CAD',
-          })
+          await db.Payment.create(
+            {
+              amount: -total,
+              user_id: req.user.id,
+              hash,
+              rate: app.get('rates').ask,
+              currency: 'CAD',
+            },
+            { transaction }
+          )
         })
 
         emit(req.user.username, 'user', req.user)
@@ -652,7 +662,7 @@ const authy = new Client({ key: config.authy.key });
 
     if (!user) {
       return res
-        .status(401)
+        .status(500)
         .send("Couldn't find the user you're trying to pay")
     }
     let err = m => res.status(500).send(m)
@@ -689,20 +699,27 @@ const authy = new Client({ key: config.authy.key });
       amount = req.user.balance - MINFEE
     }
 
-    await db.transaction(async transaction => {
-      let { balance } = await db.User.findOne({
-        where: {
-          username: req.user.username,
-        },
+    try {
+      await db.transaction(async transaction => {
+        let { balance } = await db.User.findOne(
+          {
+            where: {
+              username: req.user.username,
+            },
+          },
+          { transaction }
+        )
+
+        if (amount > balance) {
+          throw new Error()
+        }
+
+        req.user.balance -= parseInt(amount) + 10000
+        await req.user.save({ transaction })
       })
-
-      if (amount > balance) {
-        return res.status(401).send('Insufficient funds')
-      }
-
-      req.user.balance -= amount + 10000
-      await req.user.save()
-    })
+    } catch (e) {
+      return res.status(500).send('Not enough satoshis')
+    }
 
     try {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300)
@@ -722,18 +739,22 @@ const authy = new Client({ key: config.authy.key });
       let fees = inputTotal - outputTotal
       let total = Math.min(parseInt(amount) + fees, req.user.balance)
       req.user.balance += 10000 - fees
+      if (req.user.balance < 0) req.user.balance = 0
 
       await db.transaction(async transaction => {
-        await req.user.save()
+        await req.user.save({ transaction })
         emit(req.user.username, 'user', req.user)
 
-        await db.Payment.create({
-          amount: -total,
-          user_id: req.user.id,
-          hash: txid,
-          rate: app.get('rates').ask,
-          currency: 'CAD',
-        })
+        await db.Payment.create(
+          {
+            amount: -total,
+            user_id: req.user.id,
+            hash: txid,
+            rate: app.get('rates').ask,
+            currency: 'CAD',
+          },
+          { transaction }
+        )
       })
 
       res.send({ txid, tx, amount, fees })
@@ -877,7 +898,7 @@ const authy = new Client({ key: config.authy.key });
     const { token, amount, sat } = req.body
     let dollarAmount = parseInt(amount / 100)
 
-    if (dollarAmount > req.user.limit) return res.status(401).end()
+    if (dollarAmount > req.user.limit) return res.status(500).end()
 
     try {
       const charge = await stripe.charges.create({
