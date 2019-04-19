@@ -547,7 +547,7 @@ const authy = new Client({ key: config.authy.key });
   app.post('/sendPayment', auth, async (req, res) => {
     let hash = req.body.payreq
     let payreq = bolt11.decode(hash)
-    l("sending lightning", req.user.username, payreq.satoshis)
+    l('sending lightning', req.user.username, payreq.satoshis)
 
     if (seen.includes(hash)) {
       return res.status(500).send("Invoice has been paid, can't pay again")
@@ -696,7 +696,7 @@ const authy = new Client({ key: config.authy.key });
 
     let { address, amount } = req.body
 
-    l("sending coins", req.user.username, amount, address)
+    l('sending coins', req.user.username, amount, address)
 
     if (amount === req.user.balance) {
       amount = req.user.balance - MINFEE
@@ -714,8 +714,8 @@ const authy = new Client({ key: config.authy.key });
         )
 
         if (amount > balance) {
-          l("amount exceeds balance", amount, balance)
-          throw new Error("insufficient funds")
+          l('amount exceeds balance', amount, balance)
+          throw new Error('insufficient funds')
         }
 
         req.user.balance -= parseInt(amount) + 10000
@@ -727,12 +727,12 @@ const authy = new Client({ key: config.authy.key });
 
     try {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300)
-      l("sending transaction")
+      l('sending transaction')
       let txid = await bc.sendToAddress(
         address,
         (amount / 100000000).toFixed(8)
       )
-      l("transaction sent", txid)
+      l('transaction sent', txid)
       let txhex = await bc.getRawTransaction(txid)
       let tx = bitcoin.Transaction.fromHex(txhex)
 
@@ -967,11 +967,16 @@ const authy = new Client({ key: config.authy.key });
     let network = config.bitcoin.network === 'mainnet' ? 'main' : 'test3'
     let { address } = req.params
 
-    res.send(
-      await axios.get(
+    try {
+      res.send(
+        (await axios.get(
           `https://api.blockcypher.com/v1/btc/${network}/addrs/${address}/balance`
+        )).data
       )
-  )
+    } catch (e) {
+      res.status(500).send('Problem getting address balance')
+    }
+  })
 
   app.use(function (err, req, res, next) {
     res.status(500)
