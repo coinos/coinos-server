@@ -1,7 +1,6 @@
 import { Client } from 'authy-client'
 import axios from 'axios'
 import bcrypt from 'bcrypt'
-import bitcoin from 'bitcoinjs-lib'
 import bodyParser from 'body-parser'
 import bolt11 from 'bolt11'
 import compression from 'compression'
@@ -26,10 +25,13 @@ import authyVerify from './authy'
 import config from './config'
 import whitelist from './whitelist'
 
+const bitcoin = require('bitcoinjs-lib')
 const l = console.log
+
 /* eslint-disable-next-line */
-const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {})
+const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 const authy = new Client({ key: config.authy.key });
+
 (async () => {
   const ln = async ({ server, tls, macaroon, channelpeers }) => {
     const ln = await require('lnrpc')({ server, tls })
@@ -302,11 +304,7 @@ const authy = new Client({ key: config.authy.key });
       from: 'CoinOS <webmaster@coinos.io>',
       to: user.email,
       subject: 'CoinOS Email Verification',
-      html: `Visit <a href="https://coinos.io/verifyEmail/${user.username}/${
-        user.emailToken
-      }">https://coinos.io/verify/${user.username}/${
-        user.emailToken
-      }</a> to verify your email address.`,
+      html: `Visit <a href="https://coinos.io/verifyEmail/${user.username}/${user.emailToken}">https://coinos.io/verify/${user.username}/${user.emailToken}</a> to verify your email address.`,
     }
 
     try {
@@ -400,11 +398,7 @@ const authy = new Client({ key: config.authy.key });
       from: 'CoinOS <webmaster@coinos.io>',
       to: user.email,
       subject: 'CoinOS Password Reset',
-      html: `Visit <a href="https://coinos.io/reset/${user.username}/${
-        user.token
-      }">https://coinos.io/reset/${user.username}/${
-        user.token
-      }</a> to reset your password.`,
+      html: `Visit <a href="https://coinos.io/reset/${user.username}/${user.token}">https://coinos.io/reset/${user.username}/${user.token}</a> to reset your password.`,
     }
 
     try {
@@ -610,9 +604,9 @@ const authy = new Client({ key: config.authy.key });
           let payback = lnb.sendPayment(lnb.meta, {})
 
           /* eslint-disable-next-line */
-          let { payment_request } = invoice
+          let { payment_request } = invoice;
           /* eslint-disable-next-line */
-          payback.write({ payment_request })
+          payback.write({ payment_request });
         }
 
         seen.push(hash)
@@ -635,9 +629,7 @@ const authy = new Client({ key: config.authy.key });
       friends = await Promise.all(
         friends.map(async f => {
           let pic = (await fb.api(
-            `/${f.id}/picture?redirect=false&type=small&access_token=${
-              req.user.fbtoken
-            }`
+            `/${f.id}/picture?redirect=false&type=small&access_token=${req.user.fbtoken}`
           )).data
           f.pic = pic.url
           return f
@@ -849,9 +841,7 @@ const authy = new Client({ key: config.authy.key });
   app.post('/facebookLogin', async (req, res) => {
     let { accessToken, userID } = req.body
 
-    let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${
-      config.facebook.appToken
-    }`
+    let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${config.facebook.appToken}`
     let check = await axios.get(url)
     if (!check.data.data.is_valid) return res.status(401).end()
 
