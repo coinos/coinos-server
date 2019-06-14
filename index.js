@@ -9,9 +9,7 @@ import BitcoinCore from 'bitcoin-core'
 import cors from 'cors'
 import express from 'express'
 import fb from 'fb'
-import fs from 'fs'
 import graphqlHTTP from 'express-graphql'
-import grpc from 'grpc'
 import io from 'socket.io'
 import jwt from 'jsonwebtoken'
 import morgan from 'morgan'
@@ -24,6 +22,7 @@ import zmq from 'zeromq'
 import authyVerify from './authy'
 import config from './config'
 import whitelist from './whitelist'
+import createLnrpc from './lib/createLnrpc'
 
 const bitcoin = require('bitcoinjs-lib')
 const l = console.log
@@ -33,17 +32,9 @@ const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 const authy = new Client({ key: config.authy.key });
 
 (async () => {
-  const ln = async ({ server, tls, macaroon, channelpeers }) => {
-    const ln = await require('lnrpc')({ server, tls })
-    ln.meta = new grpc.Metadata()
-    ln.meta.add('macaroon', fs.readFileSync(macaroon).toString('hex'))
-    ln.channelpeers = channelpeers
-    return ln
-  }
-
-  const lna = await ln(config.lna)
-  const lnb = await ln(config.lnb)
-
+  debugger;
+  const lna = await createLnrpc(config.lna)
+  const lnb = await createLnrpc(config.lnb)
   const bc = new BitcoinCore(config.bitcoin)
 
   const app = express()
