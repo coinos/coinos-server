@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "start": "babel-node index.js",
-    "debug": "babel-node --inspect-brk index.js",
-    "postinstall": "cp -n .env.sample .env"
+    "debug": "babel-node --inspect-brk index.js"
   },
   "dependencies": {
     "apollo-server-express": "^2.6.3",
