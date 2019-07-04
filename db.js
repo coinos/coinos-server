@@ -1,12 +1,12 @@
-import config from "./config";
-import Sequelize from "sequelize";
-import SequelizeAuto from "sequelize-auto";
+import config from './config';
+import Sequelize from 'sequelize';
+import SequelizeAuto from 'sequelize-auto';
 import {
   resolver,
   defaultArgs,
   defaultListArgs,
-  attributeFields
-} from "graphql-sequelize";
+  attributeFields,
+} from 'graphql-sequelize';
 import {
   graphql,
   GraphQLSchema,
@@ -15,10 +15,10 @@ import {
   GraphQLString,
   GraphQLInt,
   GraphQLNonNull,
-  GraphQLList
-} from "graphql";
+  GraphQLList,
+} from 'graphql';
 
-const conf = config.db[process.env.NODE_ENV || "development"];
+const conf = config.db[process.env.NODE_ENV || 'development'];
 
 const auto = new SequelizeAuto(
   conf.database,
@@ -28,15 +28,15 @@ const auto = new SequelizeAuto(
 );
 
 const tables = {
-  User: "users",
-  Payment: "payments"
+  User: 'users',
+  Payment: 'payments',
 };
 
 const db = new Sequelize(conf.database, conf.username, conf.password, {
   host: conf.host,
   dialect: conf.dialect,
   logging: false,
-  dialectOptions: { multipleStatements: true }
+  dialectOptions: { multipleStatements: true },
 });
 
 const gqlfields = {};
@@ -50,7 +50,7 @@ const p = lnrpc => {
         let fields = {};
 
         Object.keys(auto.tables[t]).forEach(f => {
-          let isKey = f === "id";
+          let isKey = f === 'id';
           let rawtype = auto.tables[t][f].type.toLowerCase();
           let type = Sequelize.STRING;
 
@@ -61,7 +61,7 @@ const p = lnrpc => {
             type: type,
             field: f,
             primaryKey: isKey,
-            autoIncrement: isKey
+            autoIncrement: isKey,
           };
         });
 
@@ -71,47 +71,47 @@ const p = lnrpc => {
 
         let options = {};
 
-        if (t === "users") {
+        if (t === 'users') {
           options = {
             before: (findOptions, args, context) => {
               findOptions.where = { id: context.user.id };
               return findOptions;
-            }
+            },
           };
         }
 
-        if (t === "payments") {
-          db["Payment"].belongsTo(db["User"], {
-            as: "user",
-            foreignKey: "user_id"
+        if (t === 'payments') {
+          db['Payment'].belongsTo(db['User'], {
+            as: 'user',
+            foreignKey: 'user_id',
           });
 
           options = {
             before: (findOptions, args, context) => {
               findOptions.where = { user_id: context.user.id };
               return findOptions;
-            }
+            },
           };
         }
 
         gqltypes[t] = new GraphQLObjectType({
           name: t,
           desc: t,
-          fields: Object.assign(typefields, attributeFields(db[k]))
+          fields: Object.assign(typefields, attributeFields(db[k])),
         });
 
         gqlfields[t] = {
           type: new GraphQLList(gqltypes[t]),
           args: Object.assign({}, defaultArgs(db[k]), defaultListArgs()),
-          resolve: resolver(db[k], options)
+          resolve: resolver(db[k], options),
         };
       });
 
       db.gqlschema = new GraphQLSchema({
         query: new GraphQLObjectType({
-          name: "RootQueryType",
-          fields: gqlfields
-        })
+          name: 'RootQueryType',
+          fields: gqlfields,
+        }),
       });
 
       resolve(db);

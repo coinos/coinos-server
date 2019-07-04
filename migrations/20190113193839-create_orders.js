@@ -7,7 +7,7 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       amount: { type: Sequelize.INTEGER },
       price: { type: Sequelize.INTEGER },
@@ -15,7 +15,7 @@ module.exports = {
       pair: { type: Sequelize.STRING },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
     });
   },

@@ -17,16 +17,16 @@ module.exports = {
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
-    })
+    });
   },
 
   down: (queryInterface, Sequelize) => {
-    return queryInterface.dropTable('invoices')
+    return queryInterface.dropTable('invoices');
   },
 };

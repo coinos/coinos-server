@@ -1,4 +1,4 @@
-import db from './config.json'
+import db from './config.json';
 
 module.exports = {
   jwt: '2ad260b2202ad557b205ba17c7d8d62c69ffc95021b6147597c32eb30e3cf899',
@@ -16,12 +16,12 @@ module.exports = {
   facebook: {
     appToken: '290368338052652|WorpE7Brn61TTKUOQUyy1T8cKvc',
     specialFriend: '10102176487832944',
-  }, 
+  },
   mailgun: {
     domain: 'coinos.io',
     apiKey: 'key-59cd7fa2322ae2511d6b50cf9adf924d',
   },
-  stripe: "sk_test_mBv5cAeehiYFDyFZJNsDwjht",
+  stripe: 'sk_test_mBv5cAeehiYFDyFZJNsDwjht',
   bitcoin: {
     username: 'bitcoin',
     password: 'f-7mLj4rOxcrkqreXyTflLNaj927UsKtNapuQcHv7Kk=',
@@ -35,8 +35,8 @@ module.exports = {
     tls: '/home/user/.lnd.testa/tls.cert',
     macaroon: '/home/user/.lnd.testa/data/chain/bitcoin/testnet/admin.macaroon',
     channelpeers: [
-      '029654df009c909c3f513d944fc9456c6cac5f3a9c34dab85289e1425856c1b0fe'
-    ]
+      '029654df009c909c3f513d944fc9456c6cac5f3a9c34dab85289e1425856c1b0fe',
+    ],
   },
   lnb: {
     server: 'localhost:10002',
@@ -45,27 +45,27 @@ module.exports = {
     id: '029654df009f907a2f513d944fc9456c6cac5f3a9c34dab85289e1425856c1b0fe',
   },
   auto: {
-    host: "localhost",
-    dialect: "mysql",
-    tables: ["users", "payments"],
+    host: 'localhost',
+    dialect: 'mysql',
+    tables: ['users', 'payments'],
     logging: false,
     directory: false,
     operatorsAliases: false,
     dialectOptions: {
       timeout: 500000,
-      multipleStatements: true
+      multipleStatements: true,
     },
     pool: {
       min: 0,
-      max: 25
+      max: 25,
     },
     retry: {
-      max: 5
-    }
+      max: 5,
+    },
   },
   quad: {
-    "key": "",
-    "secret": "",
-    "client_id": "",
+    key: '',
+    secret: '',
+    client_id: '',
   },
-}
+};

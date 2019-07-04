@@ -7,11 +7,11 @@ module.exports = {
       exec_mode: 'fork',
       watch: ['*.js'],
       env: {
-        COMMON_VARIABLE: 'true'
+        COMMON_VARIABLE: 'true',
       },
       env_production: {
-        NODE_ENV: 'production'
-      }
+        NODE_ENV: 'production',
+      },
     },
-  ]
-}
+  ],
+};
