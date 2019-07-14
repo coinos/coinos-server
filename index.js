@@ -10,14 +10,12 @@ import cors from "cors";
 import express from "express";
 import fb from "fb";
 import graphqlHTTP from "express-graphql";
-import io from "socket.io";
 import jwt from "jsonwebtoken";
 import morgan from "morgan";
 import mailgun from "mailgun-js";
 import uuidv4 from "uuid/v4";
 import reverse from "buffer-reverse";
 import Sequelize from "sequelize";
-import zmq from "zeromq";
 
 import authyVerify from "./authy";
 import config from "./config";
@@ -46,11 +44,10 @@ const authy = new Client({ key: config.authy.key });
   app.use(morgan("combined"));
 
   const server = require("http").Server(app);
-  const socket = io(server, { origins: "*:*" });
   const db = await require("./db")(lna);
+  const [socket, emit] = require("./sockets")(app, db, server);
   const passport = require("./passport")(db);
   const auth = passport.authenticate("jwt", { session: false });
-  const sids = {};
   const seen = [];
 
   app.use(passport.initialize());
@@ -63,53 +60,6 @@ const authy = new Client({ key: config.authy.key });
       graphiql: true
     })
   );
-
-  socket.use((socket, next) => {
-    try {
-      let token = socket.handshake.query.token;
-      let user = jwt.decode(token).username;
-      socket.request.user = user;
-      sids[user] ? sids[user].push(socket.id) : (sids[user] = [socket.id]);
-      sids[socket.id] = user;
-    } catch (e) {
-      l(e);
-    }
-    next();
-  });
-
-  socket.sockets.on("connect", async socket => {
-    socket.emit("connected");
-    if (app.get("rates")) socket.emit("rate", app.get("rates").ask);
-    socket.on("getuser", async (data, callback) => {
-      /* eslint-disable-next-line */
-      callback(
-        await db.User.findOne({
-          where: {
-            username: socket.request.user
-          }
-        })
-      );
-    });
-
-    socket.on("disconnect", s => {
-      let user = sids[socket.id];
-      sids[user].splice(sids[user].indexOf(socket.id), 1);
-      delete sids[socket.id];
-    });
-  });
-
-  const emit = (username, msg, data) => {
-    if (data.username !== undefined) data = pick(data, ...whitelist);
-
-    if (!sids[username]) return;
-    sids[username].map((sid, i) => {
-      try {
-        socket.to(sid).emit(msg, data);
-      } catch (e) {
-        sids[username].splice(i, 1);
-      }
-    });
-  };
 
   const handlePayment = async msg => {
     if (!msg.settled) return;
@@ -141,14 +91,6 @@ const authy = new Client({ key: config.authy.key });
   const invoicesb = lnb.subscribeInvoices({});
   invoicesb.on("data", handlePayment);
 
-  const zmqRawBlock = zmq.socket("sub");
-  zmqRawBlock.connect(config.bitcoin.zmqrawblock);
-  zmqRawBlock.subscribe("rawblock");
-
-  const zmqRawTx = zmq.socket("sub");
-  zmqRawTx.connect(config.bitcoin.zmqrawtx);
-  zmqRawTx.subscribe("rawtx");
-
   const addresses = {};
   await db.User.findAll({
     attributes: ["username", "address"]
@@ -160,112 +102,7 @@ const authy = new Client({ key: config.authy.key });
     attributes: ["hash"]
   })).map(p => p.hash);
 
-  zmqRawTx.on("message", async (topic, message, sequence) => {
-    message = message.toString("hex");
-
-    let tx = bitcoin.Transaction.fromHex(message);
-    let hash = reverse(tx.getHash()).toString("hex");
-
-    if (payments.includes(hash)) return;
-
-    tx.outs.map(async o => {
-      try {
-        let network = config.bitcoin.network;
-        if (network === "mainnet") {
-          network = "bitcoin";
-        }
-
-        let address = bitcoin.address.fromOutputScript(
-          o.script,
-          bitcoin.networks[network]
-        );
-
-        if (Object.keys(addresses).includes(address)) {
-          try {
-            payments.push(hash);
-
-            let user = await db.User.findOne({
-              where: {
-                username: addresses[address]
-              }
-            });
-
-            let invoices = await db.Payment.findAll({
-              limit: 1,
-              where: {
-                hash: address,
-                received: null,
-                amount: {
-                  [Sequelize.Op.gt]: 0
-                }
-              },
-              order: [["createdAt", "DESC"]]
-            });
-
-            let tip = null;
-            if (invoices.length) tip = invoices[0].tip;
-
-            let confirmed = false;
-
-            if (user.friend) {
-              user.balance += o.value;
-              confirmed = true;
-            } else {
-              user.pending += o.value;
-            }
-
-            await user.save();
-            emit(user.username, "user", user);
-
-            await db.Payment.create({
-              user_id: user.id,
-              hash,
-              amount: o.value,
-              currency: "CAD",
-              rate: app.get("rates").ask,
-              received: true,
-              tip,
-              confirmed
-            });
-
-            emit(user.username, "tx", message);
-          } catch (e) {
-            l(e);
-          }
-        }
-      } catch (e) {}
-    });
-  });
-
-  zmqRawBlock.on("message", async (topic, message, sequence) => {
-    topic = topic.toString("utf8");
-    message = message.toString("hex");
-
-    switch (topic) {
-      case "rawblock": {
-        let block = bitcoin.Block.fromHex(message);
-        l("block", block.getHash().toString("hex"));
-
-        await db.Payment.findAll({
-          include: { model: db.User, as: "user" },
-          where: { confirmed: false }
-        }).map(async p => {
-          if ((await bc.getRawTransaction(p.hash, true)).confirmations > 0) {
-            let user = p.user;
-            p.confirmed = true;
-            user.balance += p.amount;
-            user.pending -= p.amount;
-            await user.save();
-            await p.save();
-            emit(user.username, "user", user);
-          }
-        });
-
-        socket.emit("block", message);
-        break;
-      }
-    }
-  });
+  require("./zmq")(bc, db, addresses, payments);
 
   app.post("/register", async (req, res) => {
     let err = m => res.status(500).send(m);
@@ -358,8 +195,6 @@ const authy = new Client({ key: config.authy.key });
     user.email = email;
     user.phone = phone;
     user.twofa = twofa;
-
-    console.log(user.twofa, email, phone);
 
     if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1);
