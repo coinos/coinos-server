@@ -5284,10 +5284,10 @@ limiter@^1.0.5:
   resolved "https://registry.yarnpkg.com/limiter/-/limiter-1.1.4.tgz#87c9c3972d389fdb0ba67a45aadbc5d2f8413bc1"
   integrity sha512-XCpr5bElgDI65vVgstP8TWjv6/QKWm9GU5UG0Pr5sLQ3QLo8NVKsioe+Jed5/3vFOe3IQuqE7DKwTvKQkjTHvg==
 
-lnrpc@^0.5.0:
-  version "0.5.0"
-  resolved "https://registry.yarnpkg.com/lnrpc/-/lnrpc-0.5.0.tgz#90b966ad70fa59546be30fc7ffbfc5a6c6c291b3"
-  integrity sha512-Zh31Wr1oiY4LSFNecMvs/d9jH2YQ9d17EjkljjPPfNtE2wfVrIuYgpsleFPPbJh45Q75xIjvFGbpae62MJA5GQ==
+lnrpc@^0.6.1:
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/lnrpc/-/lnrpc-0.6.1.tgz#b38c60b5abe8e5a67e91c875a2e99a5a4298a6b6"
+  integrity sha512-+pY3iG51+kDdC3MWmrtQWokVIS+3o/l7LSYHY2hRutgMw6Xt7FS/Runj2nsEZuggNjPsaSR0cLd549mwJPUvzQ==
   dependencies:
     "@grpc/proto-loader" "^0.3.0"
     grpc "^1.14.0-pre2"
