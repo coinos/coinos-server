@@ -1,10 +1,11 @@
 import io from "socket.io";
+import jwt from "jsonwebtoken";
 
 /* eslint-disable-next-line */
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 const l = console.log;
 
-module.exports = (app, server) => {
+module.exports = (app, db, server) => {
   const socket = io(server, { origins: "*:*" });
   const sids = {};
 

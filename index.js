@@ -46,6 +46,7 @@ const authy = new Client({ key: config.authy.key });
   const server = require("http").Server(app);
   const db = await require("./db")(lna);
   const [socket, emit] = require("./sockets")(app, db, server);
+  socket.listen(server);
   const passport = require("./passport")(db);
   const auth = passport.authenticate("jwt", { session: false });
   const seen = [];
