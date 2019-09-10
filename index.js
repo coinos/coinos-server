@@ -102,7 +102,7 @@ const authy = new Client({ key: config.authy.key });
     attributes: ["hash"]
   })).map(p => p.hash);
 
-  require("./zmq")(bc, db, addresses, payments);
+  require("./zmq")(app, bc, db, addresses, payments, emit);
 
   app.post("/register", async (req, res) => {
     let err = m => res.status(500).send(m);

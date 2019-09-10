@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import io from "socket.io";
+import whitelist from "./whitelist";
 
 /* eslint-disable-next-line */
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});

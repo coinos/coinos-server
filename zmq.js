@@ -1,6 +1,7 @@
 import reverse from "buffer-reverse";
 import zmq from "zeromq";
 import config from "./config";
+import Sequelize from "sequelize";
 
 const bitcoin = require("bitcoinjs-lib");
 const l = console.log;
@@ -13,7 +14,7 @@ const zmqRawTx = zmq.socket("sub");
 zmqRawTx.connect(config.bitcoin.zmqrawtx);
 zmqRawTx.subscribe("rawtx");
 
-module.exports = (bc, db, addresses, payments) => {
+module.exports = (app, bc, db, addresses, payments, emit) => {
   zmqRawTx.on("message", (topic, message, sequence) => {
     message = message.toString("hex");
 
@@ -36,10 +37,8 @@ module.exports = (bc, db, addresses, payments) => {
             bitcoin.networks[network]
           );
         } catch (e) {
-          l(e);
           return;
         }
-        l(o);
 
         if (Object.keys(addresses).includes(address)) {
           payments.push(hash);
@@ -88,6 +87,7 @@ module.exports = (bc, db, addresses, payments) => {
             confirmed
           });
 
+          l("tx", message);
           emit(user.username, "tx", message);
         }
       })
@@ -103,22 +103,27 @@ module.exports = (bc, db, addresses, payments) => {
         let block = bitcoin.Block.fromHex(message);
         l("block", block.getHash().toString("hex"));
 
-        await db.Payment.findAll({
-          include: { model: db.User, as: "user" },
-          where: { confirmed: false }
-        }).map(async p => {
+        const processPayment = async p => {
           if ((await bc.getRawTransaction(p.hash, true)).confirmations > 0) {
-            let user = p.user;
+            let user = await db.User.findByPk(p.user_id);
+            l(user.pending);
             p.confirmed = true;
             user.balance += p.amount;
             user.pending -= p.amount;
             await user.save();
             await p.save();
             emit(user.username, "user", user);
+            emit(user.username, "block", message);
           }
-        });
+        };
 
-        socket.emit("block", message);
+        await db.Payment.findAll({
+          where: { confirmed: false }
+        }).reduce(async (prev, payment) => {
+          const result = await prev;
+          return [...result, await processPayment(payment)];
+        }, Promise.resolve([]));
+
         break;
       }
     }
