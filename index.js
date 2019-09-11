@@ -543,13 +543,14 @@ const authy = new Client({ key: config.authy.key });
     }
 
     try {
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-      l("sending transaction");
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
       let txid = await bc.sendToAddress(
         address,
         (amount / 100000000).toFixed(8)
       );
-      l("transaction sent", txid);
+      
       let txhex = await bc.getRawTransaction(txid);
       let tx = bitcoin.Transaction.fromHex(txhex);
 
