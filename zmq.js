@@ -1,7 +1,7 @@
-import reverse from "buffer-reverse";
-import zmq from "zeromq";
-import config from "./config";
-import Sequelize from "sequelize";
+const reverse = require("buffer-reverse");
+const zmq = require("zeromq");
+const config = require("./config");
+const Sequelize = require("sequelize");
 
 const bitcoin = require("bitcoinjs-lib");
 const l = console.log;

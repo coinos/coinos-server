@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
-import io from "socket.io";
-import whitelist from "./whitelist";
+const jwt = require("jsonwebtoken");
+const io = require("socket.io");
+const whitelist = require("./whitelist");
 
 /* eslint-disable-next-line */
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});

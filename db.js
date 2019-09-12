@@ -1,13 +1,13 @@
-import config from "./config";
-import Sequelize from "sequelize";
-import SequelizeAuto from "sequelize-auto";
-import {
+const config = require("./config");
+const Sequelize = require("sequelize");
+const SequelizeAuto = require("sequelize-auto");
+const {
   resolver,
   defaultArgs,
   defaultListArgs,
   attributeFields
-} from "graphql-sequelize";
-import {
+} = require("graphql-sequelize");
+const {
   graphql,
   GraphQLSchema,
   GraphQLObjectType,
@@ -16,7 +16,7 @@ import {
   GraphQLInt,
   GraphQLNonNull,
   GraphQLList
-} from "graphql";
+} = require("graphql");
 
 const conf = config.db[process.env.NODE_ENV || "development"];
 
