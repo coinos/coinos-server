@@ -66,6 +66,7 @@
     "stripe": "^7.2.0",
     "twilio": "^3.32.0",
     "uuid": "^3.3.2",
+    "ws": "^7.1.2",
     "zeromq": "^5.1.0"
   },
   "devDependencies": {
