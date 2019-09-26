@@ -1,3 +1,4 @@
+const axios = require("axios");
 const config = require("./config");
 
 module.exports = async (req, res) => {
@@ -11,6 +12,7 @@ module.exports = async (req, res) => {
       )).data
     );
   } catch (e) {
+    console.log(e);
     res.status(500).send("Problem getting address balance");
   }
 };

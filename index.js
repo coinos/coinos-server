@@ -1,4 +1,3 @@
-const axios = require("axios");
 const bodyParser = require("body-parser");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
@@ -72,5 +71,7 @@ const l = console.log;
     return res.end();
   });
 
-  server.listen(config.port);
+  server.listen(config.port, () =>
+    console.log(`CoinOS Server listening on port ${config.port}`)
+  );
 })();
