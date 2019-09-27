@@ -205,7 +205,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         !(await bcrypt.compare(req.body.password, user.password)) ||
         (user.twofa && !(await authyVerify(user)))
       ) {
-        console.log("MeoWWW");
         return res.status(401).end();
       }
 
