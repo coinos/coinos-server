@@ -85,6 +85,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   app.post("/user", auth, async (req, res) => {
     let { user } = req;
     let {
+      currency,
       email,
       phone,
       twofa,
@@ -106,6 +107,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       requestPhone(user);
     }
 
+    user.currency = currency;
     user.email = email;
     user.phone = phone;
     user.twofa = twofa;
