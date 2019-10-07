@@ -39,8 +39,8 @@ const l = console.log;
     })
   );
 
-  require("./binance")(app);
-  require("./kraken")(app, socket);
+  require("./binance")(app, socket);
+  require("./rates")(app);
 
   const seen = [];
   const addresses = {};
