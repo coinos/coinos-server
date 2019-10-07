@@ -26,6 +26,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     user.address = await bc.getNewAddress("", "bech32");
     user.password = await bcrypt.hash(user.password, 1);
     user.name = user.username;
+    user.currency = "USD";
     addresses[user.address] = user.username;
 
     await db.User.create(user);
