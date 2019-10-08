@@ -13,11 +13,16 @@ module.exports = app => {
 
       let fx = res.data.rates;
 
-      Object.keys(fx).map(symbol => {
-        rates[symbol] = fx[symbol] / fx["USD"];
-      });
+      if (fx) {
+        Object.keys(fx).map(symbol => {
+          rates[symbol] = fx[symbol] / fx["USD"];
+          if (symbol === "VEF") rates[symbol] *= 5;
+        });
 
-      app.set("rates", rates);
+        app.set("rates", rates);
+      } else {
+        l("Problem fetching rates", res);
+      }
     } catch (e) {
       l(e);
     }
