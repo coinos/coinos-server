@@ -13,7 +13,7 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
     auth,
     require("./sendPayment")(app, db, emit, seen, lna, lnb)
   );
-  app.post("/payUser", auth, require("./payUser")(db, lnb));
+  app.post("/payUser", auth, require("./payUser")(app, db, lnb));
   app.post("/sendCoins", auth, require("./sendCoins")(app, bc, db, emit));
   app.post("/addInvoice", auth, require("./addInvoice")(app, db, lnb));
 };
