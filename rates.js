@@ -31,6 +31,6 @@ module.exports = app => {
       l(e);
     }
 
-    setTimeout(fetchRates, 180000);
+    setTimeout(fetchRates, 3600000);
   })();
 };
