@@ -13,16 +13,20 @@ module.exports = app => {
 
       let fx = res.data.rates;
 
-      if (fx) {
+      fx &&
         Object.keys(fx).map(symbol => {
           rates[symbol] = fx[symbol] / fx["USD"];
-          if (symbol === "VEF") rates[symbol] *= 5;
         });
 
-        app.set("rates", rates);
-      } else {
-        l("Problem fetching rates", res);
-      }
+      res = await axios.get(
+        "https://api.bitcoinvenezuela.com/?html=no&currency=VEF"
+      );
+
+      rates.VEF = res.data["exchange_rates"].VEF_USD;
+      rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
+      rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
+
+      app.set("rates", rates);
     } catch (e) {
       l(e);
     }
