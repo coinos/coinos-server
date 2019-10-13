@@ -12,7 +12,7 @@
     "axios": "^0.19.0",
     "bcrypt": "^3.0.6",
     "bip39": "^3.0.2",
-    "bitcoin-core": "^2.0.0",
+    "bitcoin-core": "^3.0.0",
     "bitcoinaverage": "^1.2.1",
     "bitcoinjs-lib": "^5.0.5",
     "bluebird": "^3.5.5",

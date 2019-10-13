@@ -3,17 +3,24 @@ const config = require("./config");
 const reverse = require("buffer-reverse");
 
 const l = console.log;
+const SATS = 100000000;
 
 module.exports = (app, bc, db, emit) => async (req, res) => {
-  const MINFEE = 3000;
-
   let { address, amount } = req.body;
+  amount = parseInt(amount);
+
+  let rawtx = await bc.createRawTransaction([], {
+    [address]: (amount / SATS).toFixed(8)
+  });
+  rawtx = await bc.fundRawTransaction(rawtx, {
+    subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
+  });
+  let { hex, fee } = rawtx;
+  fee = parseInt(fee * SATS);
+
+  rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
 
   l("sending coins", req.user.username, amount, address);
-
-  if (amount === req.user.balance) {
-    amount = req.user.balance - MINFEE;
-  }
 
   try {
     await db.transaction(async transaction => {
@@ -26,12 +33,12 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
         { transaction }
       );
 
-      if (amount > balance) {
-        l("amount exceeds balance", amount, balance);
+      if (amount !== balance && amount + fee > balance) {
+        l("amount exceeds balance", amount, fee, balance);
         throw new Error("insufficient funds");
       }
 
-      req.user.balance -= parseInt(amount) + 10000;
+      req.user.balance -= amount + fee;
       await req.user.save({ transaction });
     });
   } catch (e) {
@@ -42,20 +49,12 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    let txid = await bc.sendToAddress(address, (amount / 100000000).toFixed(8));
+    let txid = await bc.sendRawTransaction(rawtx);
 
     let txhex = await bc.getRawTransaction(txid);
     let tx = bitcoin.Transaction.fromHex(txhex);
 
-    let inputTotal = await tx.ins.reduce(async (a, input) => {
-      let h = await bc.getRawTransaction(reverse(input.hash).toString("hex"));
-      return a + bitcoin.Transaction.fromHex(h).outs[input.index].value;
-    }, 0);
-    let outputTotal = tx.outs.reduce((a, b) => a + b.value, 0);
-
-    let fees = inputTotal - outputTotal;
-    let total = Math.min(parseInt(amount) + fees, req.user.balance);
-    req.user.balance += 10000 - fees;
+    let total = Math.min(amount + fee, req.user.balance);
     if (req.user.balance < 0) req.user.balance = 0;
 
     await db.transaction(async transaction => {
@@ -74,7 +73,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       );
     });
 
-    res.send({ txid, tx, amount, fees });
+    res.send({ txid, tx, amount, fees: fee });
   } catch (e) {
     l(e);
     res.status(500).send(e.message);
