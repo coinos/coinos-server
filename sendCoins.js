@@ -24,14 +24,13 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
 
   try {
     await db.transaction(async transaction => {
-      let { balance } = await db.User.findOne(
-        {
-          where: {
-            username: req.user.username
-          }
+      let { balance } = await db.User.findOne({
+        where: {
+          username: req.user.username
         },
-        { transaction }
-      );
+        lock: transaction.LOCK.UPDATE,
+        transaction
+      });
 
       if (amount !== balance && amount + fee > balance) {
         l("amount exceeds balance", amount, fee, balance);

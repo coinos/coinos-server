@@ -103,26 +103,40 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
         let block = bitcoin.Block.fromHex(message);
         l("block", block.getHash().toString("hex"));
 
-        const processPayment = async p => {
-          if ((await bc.getRawTransaction(p.hash, true)).confirmations > 0) {
-            let user = await db.User.findByPk(p.user_id);
-            l(user.pending);
-            p.confirmed = true;
-            user.balance += p.amount;
-            user.pending -= p.amount;
-            await user.save();
-            await p.save();
+        const processPayment = async (payment, transaction) => {
+          if (
+            (await bc.getRawTransaction(payment.hash, true)).confirmations > 0
+          ) {
+            let user = await db.User.findByPk(payment.user_id, { transaction });
+            payment.confirmed = true;
+            user.balance += payment.amount;
+            user.pending -= payment.amount;
+            await user.save({ transaction });
+            await payment.save({ transaction });
             emit(user.username, "user", user);
             emit(user.username, "block", message);
           }
         };
 
-        await db.Payment.findAll({
-          where: { confirmed: false }
-        }).reduce(async (prev, payment) => {
-          const result = await prev;
-          return [...result, await processPayment(payment)];
-        }, Promise.resolve([]));
+        const transaction = await db.transaction();
+        try {
+          const payments = await db.Payment.findAll({
+            where: { confirmed: false },
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
+
+          await Promise.all(
+            payments.map(async payment => {
+              await processPayment(payment, transaction);
+              return;
+            })
+          );
+        } catch (e) {
+          transaction.rollback();
+        }
+
+        await transaction.commit();
 
         break;
       }

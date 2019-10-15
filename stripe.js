@@ -1,4 +1,5 @@
 const config = require("./config");
+const l = console.log;
 
 module.exports = (auth, app, db, emit) => {
   app.post("/buy", auth, async (req, res) => {
@@ -33,7 +34,7 @@ module.exports = (auth, app, db, emit) => {
 
       res.send(`Bought ${amount}`);
     } catch (e) {
-      console.log(e);
+      l(e);
       res.status(500).send(e);
     }
   });
