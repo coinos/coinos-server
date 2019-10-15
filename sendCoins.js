@@ -18,8 +18,6 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
   let { hex, fee } = rawtx;
   fee = parseInt(fee * SATS);
 
-  rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
-
   l("sending coins", req.user.username, amount, address);
 
   try {
@@ -48,10 +46,10 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
+    rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
     let txid = await bc.sendRawTransaction(rawtx);
 
-    let txhex = await bc.getRawTransaction(txid);
-    let tx = bitcoin.Transaction.fromHex(txhex);
+    let tx = bitcoin.Transaction.fromHex(rawtx);
 
     let total = Math.min(amount + fee, req.user.balance);
     if (req.user.balance < 0) req.user.balance = 0;
