@@ -81,7 +81,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
             hash,
             amount: o.value,
             currency: "CAD",
-            rate: app.get("rates").ask,
+            rate: app.get("ask"),
             received: true,
             tip,
             confirmed

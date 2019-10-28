@@ -55,7 +55,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
             amount: -total,
             user_id: req.user.id,
             hash,
-            rate: app.get("rates").ask,
+            rate: app.get("ask"),
             currency: "CAD"
           },
           { transaction }

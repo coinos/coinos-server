@@ -63,7 +63,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
           amount: -total,
           user_id: req.user.id,
           hash: txid,
-          rate: app.get("rates").ask,
+          rate: app.get("ask"),
           currency: "CAD"
         },
         { transaction }

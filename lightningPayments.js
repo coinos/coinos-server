@@ -13,7 +13,7 @@ module.exports = (app, db, lna, lnb, emit, payments) => {
 
     payment.received = true;
     payment.user.balance += parseInt(msg.value);
-    payment.rate = app.get("rates").ask;
+    payment.rate = app.get("ask");
 
     await payment.save();
     await payment.user.save();
