@@ -1,5 +1,6 @@
 module.exports = [
 'id',
+'fbtoken',
 'username',
 'email',
 'address',
