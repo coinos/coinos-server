@@ -39,8 +39,7 @@ const l = console.log;
     })
   );
 
-  require("./binance")(app, socket);
-  require("./rates")(app);
+  require("./rates")(app, socket);
 
   const seen = [];
   const addresses = {};

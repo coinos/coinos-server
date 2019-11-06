@@ -2,7 +2,9 @@ const axios = require("axios");
 const config = require("./config");
 const l = console.log;
 
-module.exports = app => {
+module.exports = (app, socket) => {
+  let binance = require("./binance")(app, socket);
+
   let fetchRates;
   (fetchRates = async () => {
     try {
@@ -26,11 +28,20 @@ module.exports = app => {
       rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
       rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
 
-      app.set("rates", rates);
+      app.set("fxrates", rates);
     } catch (e) {
       l(e);
     }
 
-    setTimeout(fetchRates, 3600000);
+    setTimeout(fetchRates, 7200000);
   })();
+
+  setInterval(() => {
+    socket.emit("rates", app.get("rates"));
+  }, 1000);
+
+  setInterval(() => {
+    binance.terminate();
+    binance = require("./binance")(app, socket);
+  }, 360000);
 };

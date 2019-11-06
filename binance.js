@@ -1,5 +1,4 @@
 const WebSocket = require("ws");
-
 module.exports = (app, socket) => {
   const binance = new WebSocket(
     "wss://stream.binance.com:9443/ws/btcusdt@ticker"
@@ -11,7 +10,7 @@ module.exports = (app, socket) => {
     app.set("ask", msg.a);
     app.set("last", msg.l);
 
-    let fx = app.get("rates");
+    let fx = app.get("fxrates");
     if (!fx) return;
     let rates = {};
 
@@ -19,6 +18,8 @@ module.exports = (app, socket) => {
       rates[symbol] = msg.a * fx[symbol];
     });
 
-    socket.emit("rates", rates);
+    app.set("rates", rates);
   };
+
+  return binance;
 };
