@@ -7,20 +7,28 @@ const SATS = 100000000;
 
 module.exports = (app, bc, db, emit) => async (req, res) => {
   let { address, amount } = req.body;
-  amount = parseInt(amount);
-
-  let rawtx = await bc.createRawTransaction([], {
-    [address]: (amount / SATS).toFixed(8)
-  });
-  rawtx = await bc.fundRawTransaction(rawtx, {
-    subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
-  });
-  let { hex, fee } = rawtx;
-  fee = parseInt(fee * SATS);
-
-  l("sending coins", req.user.username, amount, address);
+  let rawtex, hex, fee;
 
   try {
+    amount = parseInt(amount);
+
+    rawtx = await bc.createRawTransaction([], {
+      [address]: (amount / SATS).toFixed(8)
+    });
+
+    rawtx = await bc.fundRawTransaction(rawtx, {
+      subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
+    });
+
+    ({ hex, fee } = rawtx);
+    fee = parseInt(fee * SATS);
+  } catch (e) {
+    l(e);
+    return res.status(500).send(e.message);
+  }
+
+  try {
+    l("sending coins", req.user.username, amount, address);
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({
         where: {
@@ -39,6 +47,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       await req.user.save({ transaction });
     });
   } catch (e) {
+    l(e);
     return res.status(500).send("Not enough satoshis");
   }
 
@@ -64,7 +73,8 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
           user_id: req.user.id,
           hash: txid,
           rate: app.get("ask"),
-          currency: "CAD"
+          currency: "CAD",
+          address
         },
         { transaction }
       );
@@ -73,6 +83,6 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     res.send({ txid, tx, amount, fees: fee });
   } catch (e) {
     l(e);
-    res.status(500).send(e.message);
+    return res.status(500).send(e.message);
   }
 };

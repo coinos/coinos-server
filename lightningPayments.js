@@ -11,16 +11,18 @@ module.exports = (app, db, lna, lnb, emit, payments) => {
 
     if (!payment) return;
 
+    const { user } = payment;
+
     payment.received = true;
-    payment.user.balance += parseInt(msg.value);
-    payment.rate = app.get("ask");
+    user.balance += parseInt(msg.value);
+    payment.rate = app.get("rates")[user.currency];
 
     await payment.save();
-    await payment.user.save();
+    await user.save();
     payments.push(msg.payment_request);
 
-    emit(payment.user.username, "invoice", msg);
-    emit(payment.user.username, "user", payment.user);
+    emit(user.username, "invoice", msg);
+    emit(user.username, "user", user);
   };
 
   const invoices = lna.subscribeInvoices({});
