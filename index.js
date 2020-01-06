@@ -4,10 +4,10 @@ const cookieParser = require("cookie-parser");
 const BitcoinCore = require("bitcoin-core");
 const cors = require("cors");
 const express = require("express");
-const graphqlHTTP = require("express-graphql");
 const morgan = require("morgan");
 
 const config = require("./config");
+const bolt11 = require("bolt11");
 
 const l = console.log;
 
@@ -29,15 +29,6 @@ const l = console.log;
   const auth = passport.authenticate("jwt", { session: false });
 
   app.use(passport.initialize());
-
-  app.use(
-    "/graphql",
-    auth,
-    graphqlHTTP({
-      schema: db.gqlschema,
-      graphiql: true
-    })
-  );
 
   require("./rates")(app, socket);
 

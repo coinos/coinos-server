@@ -29,7 +29,8 @@ module.exports = (auth, app, db, emit) => {
         currency: "CAD",
         rate: app.get("rates").ask,
         received: true,
-        tip: 0
+        tip: 0,
+        confirmed: true,
       });
 
       res.send(`Bought ${amount}`);

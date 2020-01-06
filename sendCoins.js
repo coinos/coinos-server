@@ -74,7 +74,8 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
           hash: txid,
           rate: app.get("ask"),
           currency: "CAD",
-          address
+          address,
+          confirmed: true
         },
         { transaction }
       );

@@ -16,12 +16,14 @@ module.exports = (app, db, lna, lnb, emit, payments) => {
     payment.received = true;
     user.balance += parseInt(msg.value);
     payment.rate = app.get("rates")[user.currency];
+    payment.confirmed = true;
 
     await payment.save();
     await user.save();
     payments.push(msg.payment_request);
 
     emit(user.username, "invoice", msg);
+    emit(user.username, "payment", payment);
     emit(user.username, "user", user);
   };
 

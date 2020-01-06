@@ -22,6 +22,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
 
     let tx = bitcoin.Transaction.fromHex(message);
     let hash = reverse(tx.getHash()).toString("hex");
+    console.log(hash);
 
     if (payments.includes(hash)) return;
 
@@ -74,7 +75,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
           await user.save();
           emit(user.username, "user", user);
 
-          await db.Payment.create({
+          const payment = await db.Payment.create({
             user_id: user.id,
             hash,
             amount: o.value,
@@ -86,6 +87,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
             address
           });
 
+          emit(user.username, "payment", payment);
           emit(user.username, "tx", message);
         }
       })
@@ -99,54 +101,41 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
       where: { confirmed: false }
     });
 
-    const addresses = payments.map(p => p.address);
+    const hashes = payments.map(p => p.hash);
 
     let block = bitcoin.Block.fromHex(message.toString("hex"));
     block.transactions.map(tx => {
-      tx.outs.map(o => {
-        try {
-          let address = bitcoin.address.fromOutputScript(o.script, NETWORK);
-          if (addresses.includes(address)) {
-            queue[address] || (queue[address] = 0)
-            queue[address] += o.value;
-          } 
-        } catch (e) {
-          return;
-        }
-      })
+      let hash = reverse(tx.getHash()).toString("hex");
+      if (hashes.includes(hash)) queue[hash] = 1;
     }); 
   });
 
-  setInterval(() => {
-    Object.keys(queue).map(async address => {
-      l(address);
+  setInterval(async () => {
+    let arr = Object.keys(queue);
+    for (let i = 0; i < arr.length; i++) {
+      let hash = arr[i];
 
-      let user = await db.User.findOne({
-        where: {
-          username: addresses[address],
-        }
+      let p = await db.Payment.findOne({
+        include: [{ model: db.User, as: "user" }],
+        where: { hash, confirmed: 0 }
+      })
+
+      p.confirmed = 1;
+
+      let user = await p.getUser();
+      user.balance += p.amount;
+      user.pending -= p.amount;
+      emit(user.username, "user", user);
+
+      await user.save();
+      await p.save();
+
+      let payments = await db.Payment.findAll({
+        where: { user_id: user.id }
       });
 
-      l(user.pending);
-
-      const payments = await db.Payment.findAll({
-        where: { confirmed: false, address }
-      });
-
-      await Promise.all(payments.map(async p => {
-        if (p.amount <= queue[address]) {
-          l(user.pending, p.amount, queue[address]);
-          queue[address] -= p.amount;
-          if (queue[address] <= 0) delete queue[address];
-          p.confirmed = 1;
-          await p.save();
-          user.balance += p.amount;
-          user.pending -= p.amount;
-          await user.save();
-          emit(user.username, "user", user);
-          emit(user.username, "block", 1);
-        } 
-      }));
-    });
+      emit(user.username, "payments", payments);
+      delete queue[hash];
+    }
   }, 1000);
 };

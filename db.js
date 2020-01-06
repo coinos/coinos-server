@@ -1,22 +1,6 @@
 const config = require("./config");
 const Sequelize = require("sequelize");
 const SequelizeAuto = require("sequelize-auto");
-const {
-  resolver,
-  defaultArgs,
-  defaultListArgs,
-  attributeFields
-} = require("graphql-sequelize");
-const {
-  graphql,
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLInputObjectType,
-  GraphQLString,
-  GraphQLInt,
-  GraphQLNonNull,
-  GraphQLList
-} = require("graphql");
 
 const conf = config.db[process.env.NODE_ENV || "development"];
 
@@ -38,9 +22,6 @@ const db = new Sequelize(conf.database, conf.username, conf.password, {
   logging: false,
   dialectOptions: { multipleStatements: true }
 });
-
-const gqlfields = {};
-const gqltypes = {};
 
 const p = new Promise((resolve, reject) => {
   return auto.run(() => {
@@ -92,26 +73,13 @@ const p = new Promise((resolve, reject) => {
           }
         };
       }
-
-      gqltypes[t] = new GraphQLObjectType({
-        name: t,
-        desc: t,
-        fields: Object.assign(typefields, attributeFields(db[k]))
-      });
-
-      gqlfields[t] = {
-        type: new GraphQLList(gqltypes[t]),
-        args: Object.assign({}, defaultArgs(db[k]), defaultListArgs()),
-        resolve: resolver(db[k], options)
-      };
     });
 
-    db.gqlschema = new GraphQLSchema({
-      query: new GraphQLObjectType({
-        name: "RootQueryType",
-        fields: gqlfields
-      })
+    db["User"].hasMany(db["Payment"], {
+      as: "payments",
+      foreignKey: "user_id"
     });
+
 
     resolve(db);
   });

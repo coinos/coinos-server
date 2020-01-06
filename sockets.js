@@ -10,6 +10,19 @@ module.exports = (app, db, server) => {
   const socket = io(server, { origins: "*:*" });
   const sids = {};
 
+  const emit = (username, msg, data) => {
+    if (data.username !== undefined) data = pick(data, ...whitelist);
+
+    if (!sids[username]) return;
+    sids[username].map((sid, i) => {
+      try {
+        socket.to(sid).emit(msg, data);
+      } catch (e) {
+        sids[username].splice(i, 1);
+      }
+    });
+  };
+
   socket.use((socket, next) => {
     try {
       let token = socket.handshake.query.token;
@@ -28,13 +41,15 @@ module.exports = (app, db, server) => {
     if (app.get("rates")) socket.emit("rate", app.get("rates").ask);
     socket.on("getuser", async (data, callback) => {
       /* eslint-disable-next-line */
-      callback(
+      const user = 
         await db.User.findOne({
+          include: [{ model: db.Payment, as: "payments" }],
           where: {
             username: socket.request.user
           }
         })
-      );
+
+      callback(user);
     });
 
     socket.on("disconnect", s => {
@@ -43,19 +58,6 @@ module.exports = (app, db, server) => {
       delete sids[socket.id];
     });
   });
-
-  const emit = (username, msg, data) => {
-    if (data.username !== undefined) data = pick(data, ...whitelist);
-
-    if (!sids[username]) return;
-    sids[username].map((sid, i) => {
-      try {
-        socket.to(sid).emit(msg, data);
-      } catch (e) {
-        sids[username].splice(i, 1);
-      }
-    });
-  };
 
   return [socket, emit];
 };

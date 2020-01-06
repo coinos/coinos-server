@@ -56,7 +56,8 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
             user_id: req.user.id,
             hash,
             rate: app.get("ask"),
-            currency: "CAD"
+            currency: "CAD",
+            confirmed: true
           },
           { transaction }
         );
