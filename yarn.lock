@@ -1771,7 +1771,6 @@ __metadata:
     email-validator: ^2.0.4
     express: 4.17.1
     express-session: ^1.16.2
-    fb: ^2.0.0
     grpc: ^1.23.3
     http-proxy-middleware: ^0.20.0
     jsonwebtoken: ^8.5.1
@@ -2069,13 +2068,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"core-decorators@npm:^0.17.0":
-  version: 0.17.0
-  resolution: "core-decorators@npm:0.17.0"
-  checksum: 24ac8fffb3cc67bb47122e148b9918567c8462c825a68434d0c2134dfe84acde62e7ee416e48ef747977c7322414fb0196a165e4a09ee74caf375fb43ccf4d0f
-  languageName: node
-  linkType: hard
-
 "core-js@npm:^2.4.0":
   version: 2.6.9
   resolution: "core-js@npm:2.6.9"
@@ -2205,7 +2197,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"debug@npm:2.6.9, debug@npm:^2.2.0, debug@npm:^2.3.3, debug@npm:^2.6.3, debug@npm:^2.6.8":
+"debug@npm:2.6.9, debug@npm:^2.2.0, debug@npm:^2.3.3, debug@npm:^2.6.8":
   version: 2.6.9
   resolution: "debug@npm:2.6.9"
   dependencies:
@@ -3127,19 +3119,6 @@ __metadata:
   version: 2.0.6
   resolution: "fast-levenshtein@npm:2.0.6"
   checksum: 1b86a0643f2b1023cff80f933f88cc479dee4d7c138a71d980f72ca6810ec0b9173651e52292054db1e2b4bd879a16b3507f04d92a408b469900a1b825734cd2
-  languageName: node
-  linkType: hard
-
-"fb@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "fb@npm:2.0.0"
-  dependencies:
-    any-promise: ^1.3.0
-    babel-runtime: ^6.23.0
-    core-decorators: ^0.17.0
-    debug: ^2.6.3
-    request: ^2.81.0
-  checksum: a93bca6b3b663ba32b6882a8795059e20174abcad9987962269880b091f469ebdc735df30e1968edafae03b8b374cdec728f7e9225398ec7d0a0478dcdeeae7b
   languageName: node
   linkType: hard
 
@@ -6720,7 +6699,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"request@npm:^2.53.0, request@npm:^2.81.0, request@npm:^2.88.0, request@npm:~2.88.0":
+"request@npm:^2.53.0, request@npm:^2.88.0, request@npm:~2.88.0":
   version: 2.88.0
   resolution: "request@npm:2.88.0"
   dependencies:

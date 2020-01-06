@@ -1,7 +1,6 @@
 const { Client } = require("authy-client");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
-const fb = require("fb");
 const jwt = require("jsonwebtoken");
 const mailgun = require("mailgun-js");
 const uuidv4 = require("uuid/v4");
@@ -10,6 +9,7 @@ const authyVerify = require("./authy");
 const config = require("./config");
 const authy = new Client({ key: config.authy.key });
 const whitelist = require("./whitelist");
+const fb = "https://graph.facebook.com/";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -242,14 +242,14 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       if (!user) {
         user = await db.User.create(user);
         user.username = userID;
-        user.name = (await fb.api(`/me?access_token=${accessToken}`)).name;
+        user.name = (await axios.get(`${fb}/me?access_token=${accessToken}`)).data.name;
         user.address = await bc.getNewAddress("", "bech32");
         user.password = await bcrypt.hash(accessToken, 1);
         user.balance = 0;
         user.pending = 0;
-        let friends = (await fb.api(
-          `/${userID}/friends?access_token=${accessToken}`
-        )).data;
+        let friends = (await axios.get(
+          `${fb}/${userID}/friends?access_token=${accessToken}`
+        )).data.data;
         if (friends.find(f => f.id === config.facebook.specialFriend)) {
           user.friend = true;
           user.limit = 200;
@@ -258,9 +258,9 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         addresses[user.address] = user.username;
       }
 
-      user.pic = (await fb.api(
-        `/me/picture?access_token=${accessToken}&redirect=false`
-      )).data.url;
+      user.pic = (await axios.get(
+        `${fb}/me/picture?access_token=${accessToken}&redirect=false`
+      )).data.data.url;
       user.fbtoken = accessToken;
       await user.save();
 
@@ -277,25 +277,23 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   });
 
   app.get("/me", async (req, res) => {
-    let data = (await fb.api(
-      "/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false"
-    )).data;
-    res.send(data.url);
+    let { data: { data: { url } } } = (await axios.get(
+      `${fb}/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false`
+    ));
+    res.send(url);
   });
 
   app.get("/friends", auth, async (req, res) => {
     try {
-      let friends = (await fb.api(
-        `/${req.user.username}/friends?access_token=${req.user.fbtoken}`
-      )).data;
-      friends = await Promise.all(
-        friends.map(async f => {
-          let pic = (await fb.api(
-            `/${f.id}/picture?redirect=false&type=small&access_token=${
+      const { data: { data } } = await axios.get(`${fb}/${req.user.username}/friends?access_token=${req.user.fbtoken}`);
+
+      const friends = await Promise.all(
+        data.map(async f => {
+          f.pic = (await axios.get(
+            `${fb}/${f.id}/picture?redirect=false&type=small&access_token=${
               req.user.fbtoken
             }`
-          )).data;
-          f.pic = pic.url;
+          )).data.data.url;
           return f;
         })
       );
@@ -304,7 +302,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     } catch (e) {
       res
         .status(500)
-        .send("There was a problem getting your facebook friends: ", e);
+        .send("There was a problem getting your facebook friends: " + e);
     }
   });
 };
