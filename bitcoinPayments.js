@@ -22,7 +22,6 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
 
     let tx = bitcoin.Transaction.fromHex(message);
     let hash = reverse(tx.getHash()).toString("hex");
-    console.log(hash);
 
     if (payments.includes(hash)) return;
 
