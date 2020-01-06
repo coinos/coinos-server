@@ -16,4 +16,13 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   app.post("/payUser", auth, require("./payUser")(app, db, lnb));
   app.post("/sendCoins", auth, require("./sendCoins")(app, bc, db, emit));
   app.post("/addInvoice", auth, require("./addInvoice")(app, db, lnb));
+  app.get("/payments", auth, async (req, res) => {
+    const payments = await db.Payment.findAll({
+      where: { user_id: req.user.id },
+      order: [['id', 'DESC']],
+    });
+
+    emit(req.user.username, "payments", payments);
+    res.send(payments);
+  });
 };
