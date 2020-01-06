@@ -50,7 +50,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
       await db.transaction(async transaction => {
         await req.user.save({ transaction });
 
-        await db.Payment.create(
+        const payment = await db.Payment.create(
           {
             amount: -total,
             user_id: req.user.id,
@@ -61,6 +61,8 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
           },
           { transaction }
         );
+
+        emit(req.user.username, "payment", payment);
       });
 
       emit(req.user.username, "user", req.user);

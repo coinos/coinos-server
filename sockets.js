@@ -40,14 +40,19 @@ module.exports = (app, db, server) => {
     socket.emit("connected");
     if (app.get("rates")) socket.emit("rate", app.get("rates").ask);
     socket.on("getuser", async (data, callback) => {
-      /* eslint-disable-next-line */
-      const user = 
-        await db.User.findOne({
-          include: [{ model: db.Payment, as: "payments" }],
-          where: {
-            username: socket.request.user
+      const user = await db.User.findOne({
+        include: [
+          {
+            model: db.Payment,
+            as: "payments",
+            order: [["id", "DESC"]],
+            limit: 20
           }
-        })
+        ],
+        where: {
+          username: socket.request.user
+        }
+      });
 
       callback(user);
     });
