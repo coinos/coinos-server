@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "yarn node index.js"
+    "start": "yarn node index.js",
+    "generate": "sequelize-automate -c config/index.js"
   },
   "dependencies": {
     "@sendgrid/client": "^6.4.0",
@@ -44,7 +45,6 @@
     "redis": "2.8.0",
     "request": "~2.88.0",
     "sequelize": "^5.21.3",
-    "sequelize-auto": "^0.4.29",
     "sequelize-cli": "^5.5.0",
     "socket.io": "^2.2.0",
     "socket.io-client": "^2.2.0",
@@ -57,9 +57,13 @@
   },
   "devDependencies": {
     "pm2": "^3.5.1",
-    "prettier": "^1.18.2"
+    "prettier": "^1.18.2",
+    "sequelize-automate": "^1.1.1"
   },
   "installConfig": {
     "pnp": true
+  },
+  "resolutions": {
+    "coinos": "portal:/home/adam/coinos-server"
   }
 }

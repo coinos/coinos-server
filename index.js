@@ -23,7 +23,7 @@ const l = console.log;
   app.use(morgan("combined"));
 
   const server = require("http").Server(app);
-  const db = await require("./db");
+  const db = require("./db");
   const [socket, emit] = require("./sockets")(app, db, server);
   const passport = require("./passport")(db);
   const auth = passport.authenticate("jwt", { session: false });

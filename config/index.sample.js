@@ -1,4 +1,4 @@
-import db from './config.json'
+const dbOptions = require("./config.json")[process.env.NODE_ENV || "development"];
 
 module.exports = {
   jwt: '2ad260b2202ad557b205ba17c7d8d62c69ffc95021b6147597c32eb30e3cf899',
@@ -12,7 +12,7 @@ module.exports = {
     sid: 'AC2836311228c04e499e4eeb3a139a352b',
   },
   port: 3119,
-  db,
+  dbOptions,
   facebook: {
     appToken: '290368338052652|WorpE7Brn61TTKUOQUyy1T8cKvc',
     specialFriend: '10102176487832944',
@@ -48,24 +48,5 @@ module.exports = {
     host: "localhost",
     dialect: "mysql",
     tables: ["users", "payments"],
-    logging: false,
-    directory: false,
-    operatorsAliases: false,
-    dialectOptions: {
-      timeout: 500000,
-      multipleStatements: true
-    },
-    pool: {
-      min: 0,
-      max: 25
-    },
-    retry: {
-      max: 5
-    }
-  },
-  quad: {
-    "key": "",
-    "secret": "",
-    "client_id": "",
   },
 }

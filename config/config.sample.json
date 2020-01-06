@@ -19,23 +19,5 @@
     "database": "database_production",
     "host": "127.0.0.1",
     "dialect": "mysql"
-  },
-  "auto": {
-    "host": "localhost",
-    "dialect": "mysql",
-    "tables": ["users"],
-    "logging": false,
-    "directory": false,
-    "dialectOptions": {
-      "timeout": 500000,
-      "multipleStatements": true
-    },
-    "pool": {
-      "min": 0,
-      "max": 25
-    },
-    "retry": {
-      "max": 5
-    }
   }
 }
