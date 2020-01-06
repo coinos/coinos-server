@@ -6,6 +6,7 @@
     "start": "yarn node index.js"
   },
   "dependencies": {
+    "@sendgrid/client": "^6.4.0",
     "authy-client": "^1.1.4",
     "axios": "^0.19.0",
     "bcrypt": "^3.0.6",
@@ -42,7 +43,6 @@
     "passport-local": "1.0.0",
     "redis": "2.8.0",
     "request": "~2.88.0",
-    "sendgrid": "^5.2.3",
     "sequelize": "^5.21.3",
     "sequelize-auto": "^0.4.29",
     "sequelize-cli": "^5.5.0",
