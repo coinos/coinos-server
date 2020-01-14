@@ -4,12 +4,13 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const mailgun = require("mailgun-js");
 const uuidv4 = require("uuid/v4");
-
+const BitcoinCore = require("bitcoin-core");
 const authyVerify = require("./authy");
 const config = require("./config");
 const authy = new Client({ key: config.authy.key });
 const whitelist = require("./whitelist");
 const fb = "https://graph.facebook.com/";
+const liquid = new BitcoinCore(config.liquid);
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -24,6 +25,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     if (exists) return err("Username taken");
 
     user.address = await bc.getNewAddress("", "bech32");
+    user.confidential = await liquid.getNewAddress();
+    user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
     user.password = await bcrypt.hash(user.password, 1);
     user.name = user.username;
     user.currency = "USD";
@@ -91,7 +94,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       phone,
       twofa,
       pin,
-      pinconfirm,
       password,
       passconfirm
     } = req.body;
@@ -112,12 +114,11 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     user.email = email;
     user.phone = phone;
     user.twofa = twofa;
+    user.pin = pin;
 
     if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1);
     }
-
-    if (pin && pin === pinconfirm) user.pin = await bcrypt.hash(pin, 1);
 
     if (twofa && !user.authyId && user.phoneVerified) {
       try {
@@ -244,6 +245,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         user.username = userID;
         user.name = (await axios.get(`${fb}/me?access_token=${accessToken}`)).data.name;
         user.address = await bc.getNewAddress("", "bech32");
+        user.confidential = await liquid.getNewAddress();
+        user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
         user.password = await bcrypt.hash(accessToken, 1);
         user.balance = 0;
         user.pending = 0;

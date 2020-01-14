@@ -35,9 +35,10 @@ const l = console.log;
   const seen = [];
   const addresses = {};
   await db.User.findAll({
-    attributes: ["username", "address"]
+    attributes: ["username", "address", "liquid"]
   }).map(u => {
     addresses[u.address] = u.username;
+    if (u.liquid) addresses[u.liquid] = u.username;
   });
 
   const payments = (await db.Payment.findAll({
