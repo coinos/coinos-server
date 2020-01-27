@@ -11,7 +11,6 @@ const bc = new BitcoinCore(config.liquid);
 module.exports = (app, db, emit) => async (req, res) => {
   let { address, amount } = req.body;
   let rawtx, hex, fee;
-  l(address, amount);
 
   try {
     amount = parseInt(amount);

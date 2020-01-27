@@ -3,7 +3,7 @@ const zmq = require("zeromq");
 const config = require("./config");
 const Sequelize = require("sequelize");
 const BitcoinCore = require("bitcoin-core");
-const bitcoin = require("bitcoinjs-lib");
+const bitcoin = require("elementsjs-lib");
 const l = console.log;
 
 const zmqRawBlock = zmq.socket("sub");
@@ -111,7 +111,6 @@ module.exports = (app, db, addresses, payments, emit) => {
     for (let i = 0; i < arr.length; i++) {
       let hash = arr[i];
 
-      l(hash);
       let p = await db.Payment.findOne({
         include: [{ model: db.User, as: "user" }],
         where: { hash, confirmed: 0, received: 1 }
