@@ -25,7 +25,6 @@ module.exports = (app, db, addresses, payments, emit) => {
     const unblinded = await bc.unblindRawTransaction(hex);
     const tx = await bc.decodeRawTransaction(unblinded.hex);
     const blinded = await bc.decodeRawTransaction(hex);
-    l(payments);
     if (payments.includes(blinded.txid)) return;
 
     Promise.all(

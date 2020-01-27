@@ -20,19 +20,15 @@ module.exports = (app, db, emit) => async (req, res) => {
       [address]: (amount / SATS).toFixed(8)
     });
 
-    l("funding", rawtx, amount, req.user.balance);
-
     rawtx = await bc.fundRawTransaction(rawtx, {
       subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
     });
-    l("raw tx", rawtx.hex);
 
     hex = await bc.blindRawTransaction(rawtx.hex);
 
     ({ fee } = rawtx);
     fee = parseInt(fee * SATS);
   } catch (e) {
-    l("wawaw", e);
     return res.status(500).send(e.message);
   }
 
@@ -60,7 +56,7 @@ module.exports = (app, db, emit) => async (req, res) => {
   }
 
   try {
-    if (config.bitcoin.walletpass)
+    if (config.liquid.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
     rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
