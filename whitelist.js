@@ -17,4 +17,6 @@ module.exports = [
 'phoneVerified',
 'twofa',
 'emailVerified',
+'liquid',
+'confidential',
 ]

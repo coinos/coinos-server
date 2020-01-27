@@ -19,7 +19,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     let users = await db.User.findAll();
     for (let i = 0; i < users.length; i++) {
       let user = users[i];
-      console.log("meow");
       if (!user.confidential) {
         user.confidential = await liquid.getNewAddress();
         user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
@@ -46,6 +45,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     user.name = user.username;
     user.currency = "USD";
     addresses[user.address] = user.username;
+    addresses[user.liquid] = user.username;
 
     await db.User.create(user);
     res.send(pick(user, ...whitelist));

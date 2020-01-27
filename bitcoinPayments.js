@@ -71,9 +71,10 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
             user.pending += o.value;
           }
 
+          user.address = await bc.getNewAddress("", "bech32");
+          addresses[user.address] = user.username;
           await user.save();
           emit(user.username, "user", user);
-          l("output:", o);
 
           const payment = await db.Payment.create({
             user_id: user.id,

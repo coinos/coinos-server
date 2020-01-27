@@ -65,6 +65,10 @@ module.exports = (app, db, addresses, payments, emit) => {
             user.pending += value;
           }
 
+          user.confidential = await bc.getNewAddress();
+          user.liquid = (await bc.getAddressInfo(user.confidential)).unconfidential;
+          addresses[user.liquid] = user.username;
+
           await user.save();
           emit(user.username, "user", user);
 
