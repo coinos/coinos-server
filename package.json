@@ -13,7 +13,7 @@
     "bcrypt": "^3.0.6",
     "bip39": "^3.0.2",
     "bitcoin-core": "https://github.com/asoltys/bitcoin-core",
-    "bitcoinjs-lib": "portal:/home/adam/bitcoinjs-lib",
+    "elementsjs-lib": "https://github.com/asoltys/elementsjs-lib",
     "bluebird": "^3.5.5",
     "body-parser": "^1.19.0",
     "bolt11": "^1.2.5",
@@ -59,8 +59,5 @@
     "pm2": "^3.5.1",
     "prettier": "^1.18.2",
     "sequelize-automate": "^1.1.1"
-  },
-  "resolutions": {
-    "bitcoinjs-lib": "portal:/home/adam/bitcoinjs-lib"
   }
 }
