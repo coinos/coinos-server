@@ -6,7 +6,7 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   const lnb = await createLnrpc(config.lnb);
 
   require("./bitcoinPayments")(app, bc, db, addresses, payments, emit);
-  require("./liquidPayments")(app, bc, db, addresses, payments, emit);
+  require("./liquidPayments")(app, db, addresses, payments, emit);
   require("./lightningPayments")(app, db, lna, lnb, emit, payments);
 
   app.post(
@@ -16,6 +16,7 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   );
   app.post("/payUser", auth, require("./payUser")(app, db, lnb));
   app.post("/sendCoins", auth, require("./sendCoins")(app, bc, db, emit));
+  app.post("/sendLiquid", auth, require("./sendLiquid")(app, db, emit));
   app.post("/addInvoice", auth, require("./addInvoice")(app, db, lnb));
   app.get("/payments", auth, async (req, res) => {
     const payments = await db.Payment.findAll({

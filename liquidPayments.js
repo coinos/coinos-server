@@ -17,18 +17,25 @@ zmqRawTx.subscribe("rawtx");
 let NETWORK = bitcoin.networks[config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network];
 const bc = new BitcoinCore(config.liquid);
 
+const SATS = 100000000;
+
 module.exports = (app, db, addresses, payments, emit) => {
   zmqRawTx.on("message", async (topic, message, sequence) => {
-    const tx = await bc.decodeRawTransaction(message.toString("hex"));
+    const hex = message.toString("hex");
+    const unblinded = await bc.unblindRawTransaction(hex);
+    const tx = await bc.decodeRawTransaction(unblinded.hex);
+    const blinded = await bc.decodeRawTransaction(hex);
+    l(payments);
+    if (payments.includes(blinded.txid)) return;
 
     Promise.all(
       tx.vout.map(async o => {
         if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
+        let { value } = o;
+        value *= SATS
         const address = o.scriptPubKey.addresses[0];
 
         if (Object.keys(addresses).includes(address)) {
-          payments.push(hash);
-
           let user = await db.User.findOne({
             where: {
               username: addresses[address]
@@ -50,13 +57,13 @@ module.exports = (app, db, addresses, payments, emit) => {
           let tip = null;
           if (invoices.length) tip = invoices[0].tip;
 
-          let confirmed = false;
+          let confirmed = 0;
 
           if (user.friend) {
-            user.balance += o.value;
-            confirmed = true;
+            user.balance += value;
+            confirmed = 1;
           } else {
-            user.pending += o.value;
+            user.pending += value;
           }
 
           await user.save();
@@ -64,8 +71,8 @@ module.exports = (app, db, addresses, payments, emit) => {
 
           const payment = await db.Payment.create({
             user_id: user.id,
-            hash,
-            amount: o.value,
+            hash: blinded.txid,
+            amount: value,
             currency: "CAD",
             rate: app.get("ask"),
             received: true,
@@ -73,9 +80,9 @@ module.exports = (app, db, addresses, payments, emit) => {
             confirmed,
             address
           });
+          payments.push(blinded.txid);
 
           emit(user.username, "payment", payment);
-          emit(user.username, "tx", message);
         }
       })
     );
@@ -84,30 +91,31 @@ module.exports = (app, db, addresses, payments, emit) => {
   let queue = {};
 
   zmqRawBlock.on("message", async (topic, message, sequence) => {
-    /*
     const payments = await db.Payment.findAll({
-      where: { confirmed: false }
+      where: { confirmed: 0 }
     });
 
     const hashes = payments.map(p => p.hash);
 
-    let block = bitcoin.Block.fromHex(message.toString("hex"));
-    block.transactions.map(tx => {
-      let hash = reverse(tx.getHash()).toString("hex");
-      if (hashes.includes(hash)) queue[hash] = 1;
-    }); 
-  */
+    const block = bitcoin.Block.fromHex(message.toString("hex"), true);
+    const hash = await bc.getBlockHash(block.height);
+    const json = await bc.getBlock(hash, 2);
+
+    json.tx.map(tx => {
+      if (hashes.includes(tx.txid)) queue[tx.txid] = 1;
+    });
   });
 
-  /*
   setInterval(async () => {
     let arr = Object.keys(queue);
+
     for (let i = 0; i < arr.length; i++) {
       let hash = arr[i];
 
+      l(hash);
       let p = await db.Payment.findOne({
         include: [{ model: db.User, as: "user" }],
-        where: { hash, confirmed: 0 }
+        where: { hash, confirmed: 0, received: 1 }
       })
 
       p.confirmed = 1;
@@ -130,5 +138,4 @@ module.exports = (app, db, addresses, payments, emit) => {
       delete queue[hash];
     }
   }, 1000);
-  */
 };

@@ -19,7 +19,7 @@ module.exports = (app, db, lnb) => async (req, res) => {
     currency: "CAD",
     rate: app.get("rates").ask,
     tip,
-    confirmed: true,
+    confirmed: 1,
   });
 
   res.send(invoice);

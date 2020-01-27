@@ -1,13 +1,17 @@
 const bitcoin = require("bitcoinjs-lib");
 const config = require("./config");
 const reverse = require("buffer-reverse");
+const BitcoinCore = require("bitcoin-core");
 
 const l = console.log;
 const SATS = 100000000;
 
-module.exports = (app, bc, db, emit) => async (req, res) => {
+const bc = new BitcoinCore(config.liquid);
+
+module.exports = (app, db, emit) => async (req, res) => {
   let { address, amount } = req.body;
   let rawtx, hex, fee;
+  l(address, amount);
 
   try {
     amount = parseInt(amount);
@@ -16,19 +20,23 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       [address]: (amount / SATS).toFixed(8)
     });
 
+    l("funding", rawtx, amount, req.user.balance);
+
     rawtx = await bc.fundRawTransaction(rawtx, {
       subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
     });
+    l("raw tx", rawtx.hex);
 
-    ({ hex, fee } = rawtx);
+    hex = await bc.blindRawTransaction(rawtx.hex);
+
+    ({ fee } = rawtx);
     fee = parseInt(fee * SATS);
   } catch (e) {
-    l(e);
+    l("wawaw", e);
     return res.status(500).send(e.message);
   }
 
   try {
-    l("sending coins", req.user.username, amount, address);
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({
         where: {
@@ -58,8 +66,6 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
     let txid = await bc.sendRawTransaction(rawtx);
 
-    let tx = bitcoin.Transaction.fromHex(rawtx);
-
     let total = Math.min(amount + fee, req.user.balance);
     if (req.user.balance < 0) req.user.balance = 0;
 
@@ -75,7 +81,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
           rate: app.get("ask"),
           currency: "CAD",
           address,
-          confirmed: true
+          confirmed: 1
         },
         { transaction }
       );
@@ -83,7 +89,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       emit(req.user.username, "payment", payment);
     });
 
-    res.send({ txid, tx, amount, fees: fee });
+    res.send({ txid, amount, fees: fee });
   } catch (e) {
     l(e);
     return res.status(500).send(e.message);

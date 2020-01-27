@@ -73,6 +73,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
 
           await user.save();
           emit(user.username, "user", user);
+          l("output:", o);
 
           const payment = await db.Payment.create({
             user_id: user.id,
@@ -87,7 +88,6 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
           });
 
           emit(user.username, "payment", payment);
-          emit(user.username, "tx", message);
         }
       })
     );

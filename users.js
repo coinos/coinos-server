@@ -15,6 +15,21 @@ const liquid = new BitcoinCore(config.liquid);
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
 module.exports = (addresses, auth, app, bc, db, emit) => {
+  app.get("/liquidate", async (req, res) => {
+    let users = await db.User.findAll();
+    for (let i = 0; i < users.length; i++) {
+      let user = users[i];
+      console.log("meow");
+      if (!user.confidential) {
+        user.confidential = await liquid.getNewAddress();
+        user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
+        await user.save();
+      } 
+    };
+    res.end();
+  });
+
+
   app.post("/register", async (req, res) => {
     let err = m => res.status(500).send(m);
     let user = req.body;
