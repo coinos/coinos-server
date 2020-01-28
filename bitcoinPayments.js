@@ -133,7 +133,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
       let payments = await db.Payment.findAll({
         where: { user_id: user.id },
         order: [['id', 'DESC']],
-        limit: 20
+        limit: 12
       });
 
       emit(user.username, "payments", payments);

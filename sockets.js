@@ -46,7 +46,7 @@ module.exports = (app, db, server) => {
             model: db.Payment,
             as: "payments",
             order: [["id", "DESC"]],
-            limit: 20
+            limit: 12
           }
         ],
         where: {

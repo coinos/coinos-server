@@ -104,6 +104,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   app.post("/user", auth, async (req, res) => {
     let { user } = req;
     let {
+      username,
       currency,
       email,
       phone,
@@ -123,6 +124,18 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       user.phone = phone;
       user.phoneVerified = false;
       requestPhone(user);
+    }
+
+    let exists = await db.User.findOne({
+      where: {
+        username
+      }
+    });
+
+    if (username !== user.username && exists) {
+      res.status(500).send("username taken");
+    } else {
+      user.username = username;
     }
 
     user.currency = currency;
@@ -145,7 +158,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     }
 
     await user.save();
-    emit(req.user.username, "user", req.user);
+    emit(user.username, "user", req.user);
     res.send(user);
   });
 
