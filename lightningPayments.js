@@ -17,6 +17,7 @@ module.exports = (app, db, lna, lnb, emit, payments) => {
     user.balance += parseInt(msg.value);
     payment.rate = app.get("rates")[user.currency];
     payment.confirmed = true;
+    payment.currency = user.currency;
 
     await payment.save();
     await user.save();

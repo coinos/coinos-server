@@ -7,6 +7,7 @@ module.exports = [
 'unit',
 'symbol',
 'currency',
+'currencies',
 'commission',
 'title',
 'balance',

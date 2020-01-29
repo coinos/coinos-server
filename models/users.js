@@ -94,6 +94,15 @@ module.exports = sequelize => {
       comment: null,
       field: "currency"
     },
+    currencies: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: ["USD"],
+      primaryKey: false,
+      autoIncrement: false,
+      comment: null,
+      field: "currencies"
+    },
     commission: {
       type: DataTypes.STRING(255),
       allowNull: true,

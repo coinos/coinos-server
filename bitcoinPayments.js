@@ -80,7 +80,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
             user_id: user.id,
             hash,
             amount: o.value,
-            currency: "CAD",
+            currency: user.currency,
             rate: app.get("ask"),
             received: true,
             tip,

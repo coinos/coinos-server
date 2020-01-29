@@ -44,6 +44,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     user.password = await bcrypt.hash(user.password, 1);
     user.name = user.username;
     user.currency = "USD";
+    user.currencies = ["USD"];
     addresses[user.address] = user.username;
     addresses[user.liquid] = user.username;
 
@@ -106,6 +107,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     let {
       username,
       currency,
+      currencies,
       email,
       phone,
       twofa,
@@ -139,10 +141,13 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     }
 
     user.currency = currency;
+    user.currencies = currencies;
     user.email = email;
     user.phone = phone;
     user.twofa = twofa;
     user.pin = pin;
+
+    console.log(user.currencies);
 
     if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1);
