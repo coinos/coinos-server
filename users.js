@@ -13,6 +13,7 @@ const fb = "https://graph.facebook.com/";
 const liquid = new BitcoinCore(config.liquid);
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
+const l = console.log;
 
 module.exports = (addresses, auth, app, bc, db, emit) => {
   app.get("/liquidate", async (req, res) => {
