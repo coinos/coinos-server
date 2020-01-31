@@ -87,7 +87,7 @@ module.exports = sequelize => {
     },
     currency: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
       defaultValue: "CAD",
       primaryKey: false,
       autoIncrement: false,

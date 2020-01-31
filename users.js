@@ -141,14 +141,18 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       user.username = username;
     }
 
-    user.currency = currency;
     user.currencies = currencies;
+    user.currency = currency;
+    if (currencies.length) {
+      if(!currencies.includes(currency)) user.currency = currencies[0];
+    } else {
+      user.currency = null;
+    } 
+
     user.email = email;
     user.phone = phone;
     user.twofa = twofa;
     user.pin = pin;
-
-    console.log(user.currencies);
 
     if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1);

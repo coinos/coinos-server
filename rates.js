@@ -7,31 +7,34 @@ module.exports = (app, socket) => {
 
   let fetchRates;
   (fetchRates = async () => {
-    try {
-      let rates = {};
-      let res = await axios.get(
-        `http://data.fixer.io/api/latest?access_key=${config.fixer}`
-      );
+    let rates = require("./devrates");
 
-      let fx = res.data.rates;
+    if (process.env.NODE_ENV === "production") {
+      try {
+        let res = await axios.get(
+          `http://data.fixer.io/api/latest?access_key=${config.fixer}`
+        );
 
-      fx &&
-        Object.keys(fx).map(symbol => {
-          rates[symbol] = fx[symbol] / fx["USD"];
-        });
+        let fx = res.data.rates;
 
-      res = await axios.get(
-        "https://api.bitcoinvenezuela.com/?html=no&currency=VEF"
-      );
+        fx &&
+          Object.keys(fx).map(symbol => {
+            rates[symbol] = fx[symbol] / fx["USD"];
+          });
 
-      rates.VEF = res.data["exchange_rates"].VEF_USD;
-      rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
-      rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
+        res = await axios.get(
+          "https://api.bitcoinvenezuela.com/?html=no&currency=VEF"
+        );
 
-      app.set("fxrates", rates);
-    } catch (e) {
-      l(e);
+        rates.VEF = res.data["exchange_rates"].VEF_USD;
+        rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
+        rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
+      } catch (e) {
+        l(e);
+      }
     }
+
+    app.set("fxrates", rates);
 
     setTimeout(fetchRates, 7200000);
   })();
