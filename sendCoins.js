@@ -7,7 +7,7 @@ const SATS = 100000000;
 
 module.exports = (app, bc, db, emit) => async (req, res) => {
   let { address, amount } = req.body;
-  let rawtx, hex, fee;
+  let rawtx, hex, fee, total;
 
   try {
     amount = parseInt(amount);
@@ -22,13 +22,14 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
 
     ({ hex, fee } = rawtx);
     fee = parseInt(fee * SATS);
+    total = amount + fee;
   } catch (e) {
     l(e);
     return res.status(500).send(e.message);
   }
 
   try {
-    l("sending coins", req.user.username, amount, address);
+    l("sending coins", req.user.username, amount, fee, address);
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({
         where: {
@@ -38,12 +39,12 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
         transaction
       });
 
-      if (amount !== balance && amount + fee > balance) {
+      if (amount !== balance && total > balance) {
         l("amount exceeds balance", amount, fee, balance);
         throw new Error("insufficient funds");
       }
 
-      req.user.balance -= amount + fee;
+      req.user.balance -= total;
       await req.user.save({ transaction });
     });
   } catch (e) {
@@ -60,9 +61,6 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
 
     let tx = bitcoin.Transaction.fromHex(rawtx);
 
-    let total = Math.min(amount + fee, req.user.balance);
-    if (req.user.balance < 0) req.user.balance = 0;
-
     await db.transaction(async transaction => {
       await req.user.save({ transaction });
       emit(req.user.username, "user", req.user);
@@ -70,20 +68,21 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       const payment = await db.Payment.create(
         {
           amount: -total,
+          fee,
           user_id: req.user.id,
           hash: txid,
-          rate: app.get("ask"),
-          currency: "CAD",
+          rate: app.get("rates")[req.user.currency],
+          currency: req.user.currency,
           address,
-          confirmed: true
+          confirmed: true,
+          received: false
         },
         { transaction }
       );
 
       emit(req.user.username, "payment", payment);
+      res.send(payment);
     });
-
-    res.send({ txid, tx, amount, fees: fee });
   } catch (e) {
     l(e);
     return res.status(500).send(e.message);

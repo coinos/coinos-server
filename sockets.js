@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const io = require("socket.io");
 const whitelist = require("./whitelist");
+const Sequelize = require("sequelize");
 
 /* eslint-disable-next-line */
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
@@ -47,6 +48,9 @@ module.exports = (app, db, server) => {
             model: db.Payment,
             as: "payments",
             order: [["id", "DESC"]],
+            received: { 
+              [Sequelize.Op.ne]: null
+            },
             limit: 12
           }
         ],

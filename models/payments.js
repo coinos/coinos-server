@@ -94,6 +94,15 @@ module.exports = sequelize => {
       comment: null,
       field: "amount"
     },
+    fee: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+      defaultValue: null,
+      primaryKey: false,
+      autoIncrement: false,
+      comment: null,
+      field: "fee"
+    },
     tip: {
       type: DataTypes.DOUBLE,
       allowNull: true,

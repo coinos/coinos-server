@@ -6,7 +6,9 @@ const l = console.log;
 module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let hash = req.body.payreq;
   let payreq = bolt11.decode(hash);
-  l("sending lightning", req.user.username, payreq.satoshis);
+  let { user } = req;
+
+  l("sending lightning", user.username, payreq.satoshis);
 
   if (seen.includes(hash)) {
     return res.status(500).send("Invoice has been paid, can't pay again");
@@ -17,7 +19,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
       let { balance } = await db.User.findOne(
         {
           where: {
-            username: req.user.username
+            username: user.username
           }
         },
         { transaction }
@@ -27,8 +29,8 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
         throw new Error();
       }
 
-      req.user.balance -= payreq.satoshis;
-      await req.user.save({ transaction });
+      user.balance -= payreq.satoshis;
+      await user.save({ transaction });
     });
   } catch (e) {
     return res.status(500).send("Not enough satoshis");
@@ -45,40 +47,42 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
       seen.push(m.payment_preimage);
 
       let total = parseInt(m.payment_route.total_amt);
-      req.user.balance -= total - payreq.satoshis;
+      let fee = m.payment_route.total_fees;
+
+      user.balance -= total - payreq.satoshis;
 
       await db.transaction(async transaction => {
-        await req.user.save({ transaction });
+        await user.save({ transaction });
 
         const payment = await db.Payment.create(
           {
             amount: -total,
-            user_id: req.user.id,
+            fee,
+            user_id: user.id,
             hash,
-            rate: app.get("ask"),
-            currency: "CAD",
+            rate: app.get("rates")[user.currency],
+            currency: user.currency,
             confirmed: true
           },
           { transaction }
         );
 
-        emit(req.user.username, "payment", payment);
+        emit(user.username, "payment", payment);
+        emit(user.username, "user", user);
+
+        if (payreq.payeeNodeKey === config.lnb.id) {
+          let invoice = await lna.addInvoice({ value: payreq.satoshis });
+          let payback = lnb.sendPayment(lnb.meta, {});
+
+          /* eslint-disable-next-line */
+          let { payment_request } = invoice;
+          /* eslint-disable-next-line */
+          payback.write({ payment_request });
+        }
+
+        seen.push(hash);
+        res.send(payment);
       });
-
-      emit(req.user.username, "user", req.user);
-
-      if (payreq.payeeNodeKey === config.lnb.id) {
-        let invoice = await lna.addInvoice({ value: payreq.satoshis });
-        let payback = lnb.sendPayment(lnb.meta, {});
-
-        /* eslint-disable-next-line */
-        let { payment_request } = invoice;
-        /* eslint-disable-next-line */
-        payback.write({ payment_request });
-      }
-
-      seen.push(hash);
-      res.send(m);
     }
   });
 

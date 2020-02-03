@@ -77,7 +77,7 @@ module.exports = (app, db, addresses, payments, emit) => {
             hash: blinded.txid,
             amount: value,
             currency: liquid.currency,
-            rate: app.get("ask"),
+            rate: app.get("rates")[user.currency],
             received: true,
             tip,
             confirmed,
@@ -131,7 +131,12 @@ module.exports = (app, db, addresses, payments, emit) => {
       await p.save();
 
       let payments = await db.Payment.findAll({
-        where: { user_id: user.id },
+        where: { 
+          user_id: user.id,
+          received: { 
+            [Sequelize.Op.ne]: null
+          },
+        },
         order: [['id', 'DESC']],
         limit: 12
       });

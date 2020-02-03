@@ -25,10 +25,11 @@ module.exports = (app, db, lnb) => async (req, res) => {
     user_id: user.id,
     hash,
     amount,
-    currency: "CAD",
-    rate: app.get("rates").ask,
+    rate: app.get("rates")[req.user.currency],
+    currency: req.user.currency,
     tip: 0,
-    confirmed: true
+    confirmed: true,
+    received: false,
   });
 
   req.url = "/sendPayment";

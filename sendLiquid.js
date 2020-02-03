@@ -10,7 +10,8 @@ const bc = new BitcoinCore(config.liquid);
 
 module.exports = (app, db, emit) => async (req, res) => {
   let { address, amount } = req.body;
-  let rawtx, hex, fee;
+  let rawtx, hex, fee, total;
+  let { user } = req;
 
   try {
     amount = parseInt(amount);
@@ -20,13 +21,14 @@ module.exports = (app, db, emit) => async (req, res) => {
     });
 
     rawtx = await bc.fundRawTransaction(rawtx, {
-      subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
+      subtractFeeFromOutputs: amount === user.balance ? [0] : []
     });
 
     hex = await bc.blindRawTransaction(rawtx.hex);
 
     ({ fee } = rawtx);
     fee = parseInt(fee * SATS);
+    total = amount + fee;
   } catch (e) {
     return res.status(500).send(e.message);
   }
@@ -35,19 +37,19 @@ module.exports = (app, db, emit) => async (req, res) => {
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({
         where: {
-          username: req.user.username
+          username: user.username
         },
         lock: transaction.LOCK.UPDATE,
         transaction
       });
 
-      if (amount !== balance && amount + fee > balance) {
+      if (amount !== balance && total > balance) {
         l("amount exceeds balance", amount, fee, balance);
         throw new Error("insufficient funds");
       }
 
-      req.user.balance -= amount + fee;
-      await req.user.save({ transaction });
+      req.user.balance -= total;
+      await user.save({ transaction });
     });
   } catch (e) {
     l(e);
@@ -61,30 +63,28 @@ module.exports = (app, db, emit) => async (req, res) => {
     rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
     let txid = await bc.sendRawTransaction(rawtx);
 
-    let total = Math.min(amount + fee, req.user.balance);
-    if (req.user.balance < 0) req.user.balance = 0;
-
     await db.transaction(async transaction => {
-      await req.user.save({ transaction });
-      emit(req.user.username, "user", req.user);
+      await user.save({ transaction });
+      emit(user.username, "user", user);
 
       const payment = await db.Payment.create(
         {
           amount: -total,
-          user_id: req.user.id,
+          fee,
+          user_id: user.id,
           hash: txid,
-          rate: app.get("ask"),
-          currency: "CAD",
+          rate: app.get("rates")[user.currency],
+          currency: user.currency,
           address,
-          confirmed: 1
+          confirmed: true,
+          received: false
         },
         { transaction }
       );
 
-      emit(req.user.username, "payment", payment);
+      emit(user.username, "payment", payment);
+      res.send(payment);
     });
-
-    res.send({ txid, amount, fees: fee });
   } catch (e) {
     l(e);
     return res.status(500).send(e.message);
