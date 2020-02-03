@@ -136,7 +136,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     });
 
     if (username !== user.username && exists) {
-      res.status(500).send("username taken");
+      return res.status(500).send("username taken");
     } else {
       user.username = username;
     }
