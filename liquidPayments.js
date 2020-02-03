@@ -76,7 +76,7 @@ module.exports = (app, db, addresses, payments, emit) => {
             user_id: user.id,
             hash: blinded.txid,
             amount: value,
-            currency: liquid.currency,
+            currency: user.currency,
             rate: app.get("rates")[user.currency],
             received: true,
             tip,
