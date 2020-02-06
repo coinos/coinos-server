@@ -58,6 +58,15 @@ module.exports = sequelize => {
       comment: null,
       field: "rate"
     },
+    asset: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
+      primaryKey: false,
+      autoIncrement: false,
+      comment: null,
+      field: "asset"
+    },
     currency: {
       type: DataTypes.STRING(255),
       allowNull: true,
