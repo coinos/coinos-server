@@ -62,7 +62,8 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
             hash,
             rate: app.get("rates")[user.currency],
             currency: user.currency,
-            confirmed: true
+            confirmed: true,
+            asset: 'LNBTC',
           },
           { transaction }
         );

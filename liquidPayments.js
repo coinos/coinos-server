@@ -81,7 +81,8 @@ module.exports = (app, db, addresses, payments, emit) => {
             received: true,
             tip,
             confirmed,
-            address
+            address,
+            asset: 'LBTC',
           });
           payments.push(blinded.txid);
 

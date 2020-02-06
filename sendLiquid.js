@@ -77,7 +77,8 @@ module.exports = (app, db, emit) => async (req, res) => {
           currency: user.currency,
           address,
           confirmed: true,
-          received: false
+          received: false,
+          asset: 'LBTC'
         },
         { transaction }
       );

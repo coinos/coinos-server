@@ -75,7 +75,8 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
           currency: req.user.currency,
           address,
           confirmed: true,
-          received: false
+          received: false,
+          asset: 'BTC',
         },
         { transaction }
       );

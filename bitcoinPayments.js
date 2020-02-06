@@ -85,7 +85,8 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
             received: true,
             tip,
             confirmed,
-            address
+            address,
+            asset: 'BTC',
           });
 
           emit(user.username, "payment", payment);

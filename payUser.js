@@ -30,6 +30,7 @@ module.exports = (app, db, lnb) => async (req, res) => {
     tip: 0,
     confirmed: true,
     received: false,
+    asset: 'LNBTC',
   });
 
   req.url = "/sendPayment";
