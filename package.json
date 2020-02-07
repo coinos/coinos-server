@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "yarn node index.js",
+    "start": "nodemon index.js",
     "generate": "sequelize-automate -c config/index.js"
   },
   "dependencies": {
@@ -57,7 +57,8 @@
     "zeromq": "^5.1.0"
   },
   "devDependencies": {
-    "pm2": "^3.5.1",
+    "nodemon": "^2.0.2",
+    "pm2": "^4.2.3",
     "prettier": "^1.18.2",
     "sequelize-automate": "^1.1.1"
   }

@@ -4,7 +4,6 @@ module.exports = {
       name: "coinos",
       script: "index.js",
       watch: ["./"],
-      interpreter: "node",
       env: {
         COMMON_VARIABLE: "true",
         NODE_OPTIONS: "--require ./.pnp.js"

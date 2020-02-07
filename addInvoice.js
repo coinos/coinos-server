@@ -17,9 +17,10 @@ module.exports = (app, db, lnb) => async (req, res) => {
     hash,
     amount,
     currency: "CAD",
-    rate: app.get("rates").ask,
+    rate: app.get("rates")[req.user.currency],
     tip,
     confirmed: 1,
+    asset: 'LNBTC',
   });
 
   res.send(invoice);

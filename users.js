@@ -11,9 +11,12 @@ const authy = new Client({ key: config.authy.key });
 const whitelist = require("./whitelist");
 const fb = "https://graph.facebook.com/";
 const liquid = new BitcoinCore(config.liquid);
+const Sequelize = require("sequelize");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 const l = console.log;
+let faucet = 1000;
+const DAY = 24 * 60 * 60 * 1000;
 
 module.exports = (addresses, auth, app, bc, db, emit) => {
   app.get("/liquidate", async (req, res) => {
@@ -22,34 +25,54 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       let user = users[i];
       if (!user.confidential) {
         user.confidential = await liquid.getNewAddress();
-        user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
+        user.liquid = (await liquid.getAddressInfo(
+          user.confidential
+        )).unconfidential;
         await user.save();
-      } 
-    };
+      }
+    }
     res.end();
   });
 
+  const gift = async user => {
+    if (faucet > 0) {
+      user.balance = 100;
+      faucet -= 100;
+      const payment = await db.Payment.create({
+        user_id: user.id,
+        hash: 'Welcome Gift',
+        amount: 100,
+        currency: user.currency,
+        rate: app.get("rates")[user.currency],
+        received: true,
+        confirmed: 1,
+        asset: 'GIFT',
+      });
+      await user.save();
+    }
+  } 
 
   app.post("/register", async (req, res) => {
     let err = m => res.status(500).send(m);
     let user = req.body;
     if (!user.username) return err("Username required");
-    if (user.password.length < 2) return err("Password too short");
 
     let exists = await db.User.count({ where: { username: user.username } });
     if (exists) return err("Username taken");
 
     user.address = await bc.getNewAddress("", "bech32");
     user.confidential = await liquid.getNewAddress();
-    user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
-    user.password = await bcrypt.hash(user.password, 1);
+    user.liquid = (await liquid.getAddressInfo(
+      user.confidential
+    )).unconfidential;
     user.name = user.username;
     user.currency = "USD";
     user.currencies = ["USD"];
     addresses[user.address] = user.username;
     addresses[user.liquid] = user.username;
+    user = await db.User.create(user);
+    await gift(user);
 
-    await db.User.create(user);
     res.send(pick(user, ...whitelist));
   });
 
@@ -62,7 +85,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       from: "CoinOS <webmaster@coinos.io>",
       to: user.email,
       subject: "CoinOS Email Verification",
-      html: `Visit <a href="https://coinos.io/verifyEmail/${user.username}/${
+      html: `Visit <a href="https://coinos.io/verify/${user.username}/${
         user.emailToken
       }">https://coinos.io/verify/${user.username}/${
         user.emailToken
@@ -104,93 +127,109 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   });
 
   app.post("/user", auth, async (req, res) => {
-    let { user } = req;
-    let {
-      username,
-      currency,
-      currencies,
-      email,
-      phone,
-      twofa,
-      pin,
-      password,
-      passconfirm
-    } = req.body;
+    try {
+      let { user } = req;
+      let {
+        username,
+        currency,
+        currencies,
+        email,
+        phone,
+        twofa,
+        pin,
+        password,
+        passconfirm
+      } = req.body;
 
-    if (user.email !== email && require("email-validator").validate(email)) {
+      let exists = await db.User.findOne({
+        where: { username }
+      });
+
+      if (user.username !== username && exists) {
+        return res.status(500).send("username taken");
+      } else {
+        user.username = username;
+      }
+
+      if (email && user.email !== email) {
+        if (!require("email-validator").validate(email)) {
+          return res.status(500).send("invalid email");
+        }
+
+        user.email = email;
+        user.emailVerified = false;
+        requestEmail(user);
+      }
+
+      if (user.phone !== phone) {
+        user.phone = phone;
+        user.phoneVerified = false;
+        requestPhone(user);
+      }
+
+
+      user.currencies = currencies;
+      user.currency = currency;
+      if (currencies.length) {
+        if (!currencies.includes(currency)) user.currency = currencies[0];
+      } else {
+        user.currency = null;
+      }
+
       user.email = email;
-      user.emailVerified = false;
-      requestEmail(user);
-    }
-
-    if (user.phone !== phone) {
       user.phone = phone;
-      user.phoneVerified = false;
-      requestPhone(user);
-    }
+      user.twofa = twofa;
+      user.pin = pin;
 
-    let exists = await db.User.findOne({
+      if (password && password === passconfirm) {
+        user.password = await bcrypt.hash(password, 1);
+      }
+
+      if (twofa && !user.authyId && user.phoneVerified) {
+        try {
+          let r = await authy.registerUser({ countryCode: "CA", email, phone });
+          user.authyId = r.user.id;
+        } catch (e) {
+          l(e);
+        }
+      }
+
+      await user.save();
+      emit(user.username, "user", req.user);
+      res.send(user);
+    } catch (e) {
+      l(e);
+    }
+  });
+
+  app.post("/forgot", async (req, res) => {
+    let user = await db.User.findOne({
       where: {
-        username
+        email: req.body.email
       }
     });
 
-    if (username !== user.username && exists) {
-      return res.status(500).send("username taken");
-    } else {
-      user.username = username;
-    }
+    if (user) {
+      let mg = mailgun(config.mailgun);
+      let msg = {
+        from: "CoinOS <webmaster@coinos.io>",
+        to: user.email,
+        subject: "CoinOS Password Reset",
+        html: `Visit <a href="https://coinos.io/reset/${user.username}/${
+          user.token
+        }">https://coinos.io/reset/${user.username}/${
+          user.token
+        }</a> to reset your password.`
+      };
 
-    user.currencies = currencies;
-    user.currency = currency;
-    if (currencies.length) {
-      if(!currencies.includes(currency)) user.currency = currencies[0];
-    } else {
-      user.currency = null;
-    } 
-
-    user.email = email;
-    user.phone = phone;
-    user.twofa = twofa;
-    user.pin = pin;
-
-    if (password && password === passconfirm) {
-      user.password = await bcrypt.hash(password, 1);
-    }
-
-    if (twofa && !user.authyId && user.phoneVerified) {
       try {
-        let r = await authy.registerUser({ countryCode: "CA", email, phone });
-        user.authyId = r.user.id;
+        mg.messages().send(msg);
       } catch (e) {
         l(e);
       }
     }
 
-    await user.save();
-    emit(user.username, "user", req.user);
-    res.send(user);
-  });
-
-  app.post("/forgot", async (req, res) => {
-    let { user } = req;
-    let mg = mailgun(config.mailgun);
-    let msg = {
-      from: "CoinOS <webmaster@coinos.io>",
-      to: user.email,
-      subject: "CoinOS Password Reset",
-      html: `Visit <a href="https://coinos.io/reset/${user.username}/${
-        user.token
-      }">https://coinos.io/reset/${user.username}/${
-        user.token
-      }</a> to reset your password.`
-    };
-
-    try {
-      mg.messages().send(msg);
-    } catch (e) {
-      l(e);
-    }
+    res.end();
   });
 
   app.get("/verifyEmail/:username/:token", auth, async (req, res) => {
@@ -200,6 +239,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         emailToken: req.params.token
       }
     });
+
+    user.emailToken = uuidv4();
 
     if (user) {
       user.emailVerified = true;
@@ -244,7 +285,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
 
       if (
         !user ||
-        !(await bcrypt.compare(req.body.password, user.password)) ||
+        (user.password && !(await bcrypt.compare(req.body.password, user.password))) ||
         (user.twofa && !(await authyVerify(user)))
       ) {
         return res.status(401).end();
@@ -281,10 +322,14 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       if (!user) {
         user = await db.User.create(user);
         user.username = userID;
-        user.name = (await axios.get(`${fb}/me?access_token=${accessToken}`)).data.name;
+        user.name = (await axios.get(
+          `${fb}/me?access_token=${accessToken}`
+        )).data.name;
         user.address = await bc.getNewAddress("", "bech32");
         user.confidential = await liquid.getNewAddress();
-        user.liquid = (await liquid.getAddressInfo(user.confidential)).unconfidential;
+        user.liquid = (await liquid.getAddressInfo(
+          user.confidential
+        )).unconfidential;
         user.password = await bcrypt.hash(accessToken, 1);
         user.balance = 0;
         user.pending = 0;
@@ -297,6 +342,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         }
         await user.save();
         addresses[user.address] = user.username;
+        await gift(user);
       }
 
       user.pic = (await axios.get(
@@ -318,15 +364,23 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   });
 
   app.get("/me", async (req, res) => {
-    let { data: { data: { url } } } = (await axios.get(
+    let {
+      data: {
+        data: { url }
+      }
+    } = await axios.get(
       `${fb}/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false`
-    ));
+    );
     res.send(url);
   });
 
   app.get("/friends", auth, async (req, res) => {
     try {
-      const { data: { data } } = await axios.get(`${fb}/${req.user.username}/friends?access_token=${req.user.fbtoken}`);
+      const {
+        data: { data }
+      } = await axios.get(
+        `${fb}/${req.user.username}/friends?access_token=${req.user.fbtoken}`
+      );
 
       const friends = await Promise.all(
         data.map(async f => {
@@ -346,4 +400,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         .send("There was a problem getting your facebook friends: " + e);
     }
   });
+
+  setInterval(() => faucet = 2000, DAY)
 };
