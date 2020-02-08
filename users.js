@@ -66,8 +66,23 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       user.confidential
     )).unconfidential;
     user.name = user.username;
-    user.currency = "USD";
-    user.currencies = ["USD"];
+    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let countries = {
+      CA: "CAD",
+      US: "USD",
+      JP: "JPY",
+      CN: "CNY",
+      AU: "AUD",
+      GB: "GBP",
+    };
+
+    if (ip === "127.0.0.1")
+      user.currency = "CAD";
+    else 
+      user.currency = countries[(await axios.get(`http://api.ipstack.com/${ip}?access_key=${config.ipstack}`)).data.country_code] || "EUR";
+
+    user.currencies = [user.currency];
+
     addresses[user.address] = user.username;
     addresses[user.liquid] = user.username;
     user = await db.User.create(user);
@@ -145,10 +160,14 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         where: { username }
       });
 
+      let token;
       if (user.username !== username && exists) {
-        return res.status(500).send("username taken");
+        return res.status(500).send("Username taken");
       } else {
         user.username = username;
+        addresses[user.address] = username;
+        token = jwt.sign({ username }, config.jwt);
+        res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       }
 
       if (email && user.email !== email) {
@@ -166,7 +185,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         user.phoneVerified = false;
         requestPhone(user);
       }
-
 
       user.currencies = currencies;
       user.currency = currency;
@@ -196,7 +214,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
 
       await user.save();
       emit(user.username, "user", req.user);
-      res.send(user);
+      res.send({ user, token });
     } catch (e) {
       l(e);
     }
