@@ -1,13 +1,10 @@
-const { Client } = require("authy-client");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const mailgun = require("mailgun-js");
 const uuidv4 = require("uuid/v4");
 const BitcoinCore = require("bitcoin-core");
-const authyVerify = require("./authy");
 const config = require("./config");
-const authy = new Client({ key: config.authy.key });
 const whitelist = require("./whitelist");
 const fb = "https://graph.facebook.com/";
 const liquid = new BitcoinCore(config.liquid);
@@ -20,9 +17,12 @@ let faucet = 1000;
 const DAY = 24 * 60 * 60 * 1000;
 
 const twofa = (req, res, next) => {
-  let { user, body: { token } } = req;
+  let {
+    user,
+    body: { token }
+  } = req;
   if (!user.twofa || authenticator.check(token, user.otpsecret)) next();
-  else res.status(401).end();
+  else res.status(401).send("2fa required");
 };
 
 module.exports = (addresses, auth, app, bc, db, emit) => {
@@ -41,7 +41,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       if (!user.otpsecret) {
         user.otpsecret = authenticator.generateSecret();
         await user.save();
-      } 
+      }
     }
     res.end();
   });
@@ -181,10 +181,9 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         user.twofa = true;
         user.save();
         emit(user.username, "user", req.user);
-      }
-      else {
+      } else {
         return res.status(500).send("Invalid token");
-      } 
+      }
     } catch (e) {
       l(e);
     }
@@ -253,15 +252,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
 
       if (password && password === passconfirm) {
         user.password = await bcrypt.hash(password, 1);
-      }
-
-      if (twofa && !user.authyId && user.phoneVerified) {
-        try {
-          let r = await authy.registerUser({ countryCode: "CA", email, phone });
-          user.authyId = r.user.id;
-        } catch (e) {
-          l(e);
-        }
       }
 
       await user.save();
@@ -356,8 +346,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       if (
         !user ||
         (user.password &&
-          !(await bcrypt.compare(req.body.password, user.password))) ||
-        (user.twofa && !(await authyVerify(user)))
+          !(await bcrypt.compare(req.body.password, user.password)))
       ) {
         return res.status(401).end();
       }
@@ -375,7 +364,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   });
 
   app.post("/facebookLogin", async (req, res) => {
-    let { accessToken, userID } = req.body;
+    let { accessToken, userID, token } = req.body;
 
     let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${
       config.facebook.appToken
@@ -416,17 +405,18 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         await gift(user);
       }
 
+      if (user.twofa && (token === undefined || !authenticator.check(token, user.otpsecret)))
+        return res.status(401).send("2fa required");
+
       user.pic = (await axios.get(
         `${fb}/me/picture?access_token=${accessToken}&redirect=false`
       )).data.data.url;
       user.fbtoken = accessToken;
       await user.save();
 
-      if (user.twofa && !(await authyVerify(user))) res.status(401).end();
-
       let payload = { username: user.username };
-      let token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      let jwtToken = jwt.sign(payload, config.jwt);
+      res.cookie("token", jwtToken, { expires: new Date(Date.now() + 432000000) });
       res.send({ user, token });
     } catch (err) {
       l(err);
