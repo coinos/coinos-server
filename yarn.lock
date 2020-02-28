@@ -1925,7 +1925,7 @@ __metadata:
     grpc: ^1.23.3
     http-proxy-middleware: ^0.20.0
     jsonwebtoken: ^8.5.1
-    lnrpc: ^0.6.1
+    lnrpc: ^0.6.2
     lodash: ^4.17.13
     mailgun-js: ^0.22.0
     moment: ^2.24.0
@@ -5019,7 +5019,7 @@ fsevents@~2.1.2:
   languageName: node
   linkType: hard
 
-"lnrpc@npm:^0.6.1":
+"lnrpc@npm:^0.6.2":
   version: 0.6.2
   resolution: "lnrpc@npm:0.6.2"
   dependencies:

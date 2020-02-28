@@ -59,7 +59,7 @@ module.exports = (app, db, emit) => async (req, res) => {
 
   try {
     if (config.liquid.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+      await bc.walletPassphrase(config.liquid.walletpass, 300);
 
     rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
     let txid = await bc.sendRawTransaction(rawtx);
