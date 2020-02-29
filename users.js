@@ -88,7 +88,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       GB: "GBP"
     };
 
-    if (ip === "127.0.0.1") user.currency = "CAD";
+    if (ip.startsWith('127') || ip.startsWith('192')) user.currency = "CAD";
     else { 
       let info = await axios.get(`http://api.ipstack.com/${ip}?access_key=${config.ipstack}`);
       user.currency = countries[info.data.country_code] || "USD";
