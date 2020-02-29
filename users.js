@@ -336,6 +336,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   });
 
   app.post("/login", async (req, res) => {
+    let twofa = req.body.token;
+
     try {
       let user = await db.User.findOne({
         where: {
@@ -351,6 +353,9 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         return res.status(401).end();
       }
 
+      if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret)))
+        return res.status(401).send("2fa required");
+
       let payload = { username: user.username };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
@@ -358,13 +363,14 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       user = pick(user, ...whitelist);
       res.send({ user, token });
     } catch (err) {
-      console.log(err);
+      l(err);
       res.status(401).end();
     }
   });
 
   app.post("/facebookLogin", async (req, res) => {
-    let { accessToken, userID, token } = req.body;
+    let { accessToken, userID } = req.body;
+    let twofa = req.body.token;
 
     let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${
       config.facebook.appToken
@@ -405,7 +411,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         await gift(user);
       }
 
-      if (user.twofa && (token === undefined || !authenticator.check(token, user.otpsecret)))
+      if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret)))
         return res.status(401).send("2fa required");
 
       user.pic = (await axios.get(
@@ -415,8 +421,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       await user.save();
 
       let payload = { username: user.username };
-      let jwtToken = jwt.sign(payload, config.jwt);
-      res.cookie("token", jwtToken, { expires: new Date(Date.now() + 432000000) });
+      let token = jwt.sign(payload, config.jwt);
+      res.cookie("token", token , { expires: new Date(Date.now() + 432000000) });
       res.send({ user, token });
     } catch (err) {
       l(err);
