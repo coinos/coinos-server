@@ -168,6 +168,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       } else {
         user.username = username;
         addresses[user.address] = username;
+        addresses[user.liquid] = user.username;
         token = jwt.sign({ username }, config.jwt);
         res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       }
@@ -362,6 +363,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         }
         await user.save();
         addresses[user.address] = user.username;
+        addresses[user.liquid] = user.username;
         await gift(user);
       }
 
