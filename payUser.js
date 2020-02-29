@@ -1,4 +1,6 @@
-module.exports = (app, db, lnb) => async (req, res) => {
+const bolt11 = require("bolt11");
+
+module.exports = (app, db, lna, lnb) => async (req, res) => {
   let { payuser, amount } = req.body;
 
   let user = await db.User.findOne({
@@ -34,6 +36,11 @@ module.exports = (app, db, lnb) => async (req, res) => {
   });
 
   req.url = "/sendPayment";
-  req.body.payreq = invoice.payment_request;
+  let payreq = bolt11.decode(hash);
+  const { routes } = await lna.queryRoutes({ "pub_key": payreq.payeeNodeKey, "amt": payreq.satoshis });
+  if (routes.length) req.body.route = routes[0];
+  else return res.status(500).send("No route available");
+  req.body.payreq = hash;
+
   return app._router.handle(req, res);
 };

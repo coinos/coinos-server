@@ -10,11 +10,16 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   require("./lightningPayments")(app, db, lna, lnb, emit, payments);
 
   app.post(
+    "/queryRoutes",
+    auth,
+    require("./queryRoutes")(app, db, emit, seen, lna, lnb)
+  );
+  app.post(
     "/sendPayment",
     auth,
     require("./sendPayment")(app, db, emit, seen, lna, lnb)
   );
-  app.post("/payUser", auth, require("./payUser")(app, db, lnb));
+  app.post("/payUser", auth, require("./payUser")(app, db, lna, lnb));
   app.post("/sendCoins", auth, require("./sendCoins")(app, bc, db, emit));
   app.post("/sendLiquid", auth, require("./sendLiquid")(app, db, emit));
   app.post("/addInvoice", auth, require("./addInvoice")(app, db, lnb));

@@ -1,22 +1,29 @@
-const { Client } = require("authy-client");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const mailgun = require("mailgun-js");
 const uuidv4 = require("uuid/v4");
 const BitcoinCore = require("bitcoin-core");
-const authyVerify = require("./authy");
 const config = require("./config");
-const authy = new Client({ key: config.authy.key });
 const whitelist = require("./whitelist");
 const fb = "https://graph.facebook.com/";
 const liquid = new BitcoinCore(config.liquid);
 const Sequelize = require("sequelize");
+const authenticator = require("otplib").authenticator;
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 const l = console.log;
 let faucet = 1000;
 const DAY = 24 * 60 * 60 * 1000;
+
+const twofa = (req, res, next) => {
+  let {
+    user,
+    body: { token }
+  } = req;
+  if (!user.twofa || authenticator.check(token, user.otpsecret)) next();
+  else res.status(401).send("2fa required");
+};
 
 module.exports = (addresses, auth, app, bc, db, emit) => {
   app.get("/liquidate", async (req, res) => {
@@ -30,6 +37,11 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         )).unconfidential;
         await user.save();
       }
+
+      if (!user.otpsecret) {
+        user.otpsecret = authenticator.generateSecret();
+        await user.save();
+      }
     }
     res.end();
   });
@@ -40,17 +52,17 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       faucet -= 100;
       const payment = await db.Payment.create({
         user_id: user.id,
-        hash: 'Welcome Gift',
+        hash: "Welcome Gift",
         amount: 100,
         currency: user.currency,
         rate: app.get("rates")[user.currency],
         received: true,
         confirmed: 1,
-        asset: 'GIFT',
+        asset: "GIFT"
       });
       await user.save();
     }
-  } 
+  };
 
   app.post("/register", async (req, res) => {
     let err = m => res.status(500).send(m);
@@ -66,24 +78,24 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       user.confidential
     )).unconfidential;
     user.name = user.username;
-    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
     let countries = {
       CA: "CAD",
       US: "USD",
       JP: "JPY",
       CN: "CNY",
       AU: "AUD",
-      GB: "GBP",
+      GB: "GBP"
     };
 
-    if (ip === "127.0.0.1")
-      user.currency = "CAD";
+    if (ip === "127.0.0.1") user.currency = "CAD";
     else { 
       let info = await axios.get(`http://api.ipstack.com/${ip}?access_key=${config.ipstack}`);
       user.currency = countries[info.data.country_code] || "USD";
     }
 
     user.currencies = [user.currency];
+    user.otpsecret = authenticator.generateSecret();
 
     addresses[user.address] = user.username;
     addresses[user.liquid] = user.username;
@@ -143,6 +155,38 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     res.end();
   });
 
+  app.post("/disable2fa", auth, twofa, async (req, res) => {
+    let { user } = req;
+    user.twofa = false;
+    await user.save();
+    emit(user.username, "user", user);
+    emit(user.username, "otpsecret", user.otpsecret);
+    res.end();
+  });
+
+  app.get("/otpsecret", auth, twofa, async (req, res) => {
+    let { user } = req;
+    emit(user.username, "otpsecret", user.otpsecret);
+    res.end();
+  });
+
+  app.post("/2fa", auth, async (req, res) => {
+    let { user } = req;
+    try {
+      const isValid = authenticator.check(req.body.token, req.user.otpsecret);
+      if (isValid) {
+        user.twofa = true;
+        user.save();
+        emit(user.username, "user", req.user);
+      } else {
+        return res.status(500).send("Invalid token");
+      }
+    } catch (e) {
+      l(e);
+    }
+    res.end();
+  });
+
   app.post("/user", auth, async (req, res) => {
     try {
       let { user } = req;
@@ -170,7 +214,9 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         addresses[user.address] = username;
         addresses[user.liquid] = user.username;
         token = jwt.sign({ username }, config.jwt);
-        res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+        res.cookie("token", token, {
+          expires: new Date(Date.now() + 432000000)
+        });
       }
 
       if (email && user.email !== email) {
@@ -204,15 +250,6 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
 
       if (password && password === passconfirm) {
         user.password = await bcrypt.hash(password, 1);
-      }
-
-      if (twofa && !user.authyId && user.phoneVerified) {
-        try {
-          let r = await authy.registerUser({ countryCode: "CA", email, phone });
-          user.authyId = r.user.id;
-        } catch (e) {
-          l(e);
-        }
       }
 
       await user.save();
@@ -297,6 +334,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
   });
 
   app.post("/login", async (req, res) => {
+    let twofa = req.body.token;
+
     try {
       let user = await db.User.findOne({
         where: {
@@ -306,11 +345,14 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
 
       if (
         !user ||
-        (user.password && !(await bcrypt.compare(req.body.password, user.password))) ||
-        (user.twofa && !(await authyVerify(user)))
+        (user.password &&
+          !(await bcrypt.compare(req.body.password, user.password)))
       ) {
         return res.status(401).end();
       }
+
+      if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret)))
+        return res.status(401).send("2fa required");
 
       let payload = { username: user.username };
       let token = jwt.sign(payload, config.jwt);
@@ -319,13 +361,14 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       user = pick(user, ...whitelist);
       res.send({ user, token });
     } catch (err) {
-      console.log(err);
+      l(err);
       res.status(401).end();
     }
   });
 
   app.post("/facebookLogin", async (req, res) => {
     let { accessToken, userID } = req.body;
+    let twofa = req.body.token;
 
     let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${
       config.facebook.appToken
@@ -367,17 +410,18 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         await gift(user);
       }
 
+      if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret)))
+        return res.status(401).send("2fa required");
+
       user.pic = (await axios.get(
         `${fb}/me/picture?access_token=${accessToken}&redirect=false`
       )).data.data.url;
       user.fbtoken = accessToken;
       await user.save();
 
-      if (user.twofa && !(await authyVerify(user))) res.status(401).end();
-
       let payload = { username: user.username };
       let token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      res.cookie("token", token , { expires: new Date(Date.now() + 432000000) });
       res.send({ user, token });
     } catch (err) {
       l(err);
@@ -423,5 +467,5 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     }
   });
 
-  setInterval(() => faucet = 2000, DAY)
+  setInterval(() => (faucet = 2000), DAY);
 };

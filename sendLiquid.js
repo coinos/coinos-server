@@ -30,6 +30,7 @@ module.exports = (app, db, emit) => async (req, res) => {
     fee = parseInt(fee * SATS);
     total = amount + fee;
   } catch (e) {
+    l("funding failed", e);
     return res.status(500).send(e.message);
   }
 
@@ -52,13 +53,13 @@ module.exports = (app, db, emit) => async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l(e);
+    l("balance check failed", e);
     return res.status(500).send("Not enough satoshis");
   }
 
   try {
     if (config.liquid.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+      await bc.walletPassphrase(config.liquid.walletpass, 300);
 
     rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
     let txid = await bc.sendRawTransaction(rawtx);
@@ -87,7 +88,7 @@ module.exports = (app, db, emit) => async (req, res) => {
       res.send(payment);
     });
   } catch (e) {
-    l(e);
+    l("send failed", e);
     return res.status(500).send(e.message);
   }
 };

@@ -161,6 +161,54 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@otplib/core@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@otplib/core@npm:12.0.1"
+  checksum: 3a73c409dc4e9a3dbb8d1e4bd3cb438883c0c7f287c8a7485ef558b47e8e72af18e23e4817d085b9f5e40ce970d7b0ce11ae5524692927c964c80ce399840480
+  languageName: node
+  linkType: hard
+
+"@otplib/plugin-crypto@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@otplib/plugin-crypto@npm:12.0.1"
+  dependencies:
+    "@otplib/core": ^12.0.1
+  checksum: f83458ed5a4ac91118d7bc113385d0ab296c7b97e243903a887f2097c1b03421e5f670be60f808d96a9934f3a0049aceb2af02f71e54d5f22f065000b841a0c6
+  languageName: node
+  linkType: hard
+
+"@otplib/plugin-thirty-two@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@otplib/plugin-thirty-two@npm:12.0.1"
+  dependencies:
+    "@otplib/core": ^12.0.1
+    thirty-two: ^1.0.2
+  checksum: 4deec8586480f880239a087f6f6599eb4425abdda184e383112f97993bb5961943fdb435fbea086b1f9d1116768ec0c2fb6df9e8a0dbb854b7c0765dbbdcd9fe
+  languageName: node
+  linkType: hard
+
+"@otplib/preset-default@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@otplib/preset-default@npm:12.0.1"
+  dependencies:
+    "@otplib/core": ^12.0.1
+    "@otplib/plugin-crypto": ^12.0.1
+    "@otplib/plugin-thirty-two": ^12.0.1
+  checksum: 32b214c0f750c793147f1e988093959aef8eded36c9d7df2c2c7ff4e4fb54de85b76b5ff28ee8ee39b1572c933d205c081a3c8f2df192199813b3572e61a7305
+  languageName: node
+  linkType: hard
+
+"@otplib/preset-v11@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "@otplib/preset-v11@npm:12.0.1"
+  dependencies:
+    "@otplib/core": ^12.0.1
+    "@otplib/plugin-crypto": ^12.0.1
+    "@otplib/plugin-thirty-two": ^12.0.1
+  checksum: 89366b1c52a8de2a1cd434c9fd534d97fcde0b103f92d15ff3cf37ed1d3579746b7b4b70efe398aa532ab44e15daa008d471f90f8b4de04f8cba81c05dfda7de
+  languageName: node
+  linkType: hard
+
 "@pm2/agent-node@npm:^1.1.10":
   version: 1.1.10
   resolution: "@pm2/agent-node@npm:1.1.10"
@@ -1877,7 +1925,7 @@ __metadata:
     grpc: ^1.23.3
     http-proxy-middleware: ^0.20.0
     jsonwebtoken: ^8.5.1
-    lnrpc: ^0.6.1
+    lnrpc: ^0.6.2
     lodash: ^4.17.13
     mailgun-js: ^0.22.0
     moment: ^2.24.0
@@ -1885,6 +1933,7 @@ __metadata:
     mysql: ^2.17.1
     mysql2: ^1.6.5
     nodemon: ^2.0.2
+    otplib: ^12.0.1
     passport: 0.4.0
     passport-jwt: ^4.0.0
     passport-local: 1.0.0
@@ -4970,7 +5019,7 @@ fsevents@~2.1.2:
   languageName: node
   linkType: hard
 
-"lnrpc@npm:^0.6.1":
+"lnrpc@npm:^0.6.2":
   version: 0.6.2
   resolution: "lnrpc@npm:0.6.2"
   dependencies:
@@ -6067,6 +6116,17 @@ fsevents@~2.1.2:
     os-homedir: ^1.0.0
     os-tmpdir: ^1.0.0
   checksum: 87f8cd7bb82e0366e70c9f6df550eaf2788e80339bc1def027c25ac5db1f0c456716e39e63a04d721c660d69ca1b4dc9e83532a52ede13082fa7d393d7895367
+  languageName: node
+  linkType: hard
+
+"otplib@npm:^12.0.1":
+  version: 12.0.1
+  resolution: "otplib@npm:12.0.1"
+  dependencies:
+    "@otplib/core": ^12.0.1
+    "@otplib/preset-default": ^12.0.1
+    "@otplib/preset-v11": ^12.0.1
+  checksum: 93b006b69d7c51fa1e8d6e7a661c1208aa9410be10274a8eb81dcd1d2b1b08c3b9f1e2ef4e10d2a4ad4ef3a8f3e43da4830d21d674161a4fa43ac9e23594c437
   languageName: node
   linkType: hard
 
@@ -8347,6 +8407,13 @@ fsevents@~2.1.2:
     chalk: ^1.1.1
     object-path: ^0.9.0
   checksum: 0869a48906b6a20390ce4a85e8923debf2c95056b9912d16365bb579a0e68c016b88ee51100299835ec4f8f7372b2fc3af905775e4b3c39276017ea95e4eb278
+  languageName: node
+  linkType: hard
+
+"thirty-two@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "thirty-two@npm:1.0.2"
+  checksum: 573755c8a09da50666b4354fe6b6f8624cf2bfcf2c71ffbed531b6d73b988e1907be792ef23664749144978620ddb7026a158fc1c72d3eee4545b422dfc4e814
   languageName: node
   linkType: hard
 

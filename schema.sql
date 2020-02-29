@@ -1,8 +1,8 @@
--- MySQL dump 10.17  Distrib 10.3.12-MariaDB, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.17  Distrib 10.3.22-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: coinos
 -- ------------------------------------------------------
--- Server version	10.3.12-MariaDB-1:10.3.12+maria~bionic
+-- Server version	10.3.22-MariaDB-1:10.3.22+maria~bionic
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -31,24 +31,6 @@ CREATE TABLE `SequelizeMeta` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `orders`
---
-
-DROP TABLE IF EXISTS `orders`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `orders` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `amount` int(11) DEFAULT NULL,
-  `price` int(11) DEFAULT NULL,
-  `type` varchar(255) DEFAULT NULL,
-  `pair` varchar(255) DEFAULT NULL,
-  `createdAt` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Table structure for table `payments`
 --
 
@@ -58,18 +40,20 @@ DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
-  `hash` varchar(255) DEFAULT NULL,
+  `hash` text DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `rate` double DEFAULT NULL,
-  `currency` varchar(255) DEFAULT NULL,
-  `address` int(11) DEFAULT NULL,
+  `currency` varchar(255) NOT NULL,
+  `address` varchar(255) DEFAULT NULL,
   `received` tinyint(1) DEFAULT NULL,
   `amount` double DEFAULT NULL,
   `tip` double DEFAULT NULL,
-  `confirmed` tinyint(1) DEFAULT NOT NULL,
+  `confirmed` tinyint(1) NOT NULL,
+  `fee` double DEFAULT NULL,
+  `asset` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1611 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=2782 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -87,7 +71,7 @@ CREATE TABLE `users` (
   `address` varchar(255) DEFAULT NULL,
   `unit` varchar(255) DEFAULT NULL,
   `symbol` varchar(255) DEFAULT NULL,
-  `currency` varchar(255) NOT NULL DEFAULT 'CAD',
+  `currency` varchar(255) DEFAULT NULL,
   `commission` varchar(255) DEFAULT NULL,
   `title` varchar(255) DEFAULT NULL,
   `pubkey` varchar(255) DEFAULT NULL,
@@ -106,42 +90,18 @@ CREATE TABLE `users` (
   `pic` varchar(255) DEFAULT NULL,
   `emailToken` varchar(255) DEFAULT NULL,
   `phone` varchar(255) DEFAULT NULL,
-  `phoneVerified` varchar(255) DEFAULT NULL,
+  `phoneVerified` tinyint(1) DEFAULT NULL,
   `twofa` tinyint(1) DEFAULT NULL,
   `authyId` varchar(255) DEFAULT NULL,
   `pin` varchar(255) DEFAULT NULL,
   `emailVerified` tinyint(1) DEFAULT NULL,
   `phoneToken` varchar(255) DEFAULT NULL,
+  `confidential` varchar(255) DEFAULT NULL,
+  `liquid` varchar(255) DEFAULT NULL,
+  `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `otp` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=305 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `users_balances`
---
-
-DROP TABLE IF EXISTS `users_balances`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `users_balances` (
-  `user_id` int(11) DEFAULT NULL,
-  `symbol` varchar(255) DEFAULT NULL,
-  `balance` int(11) DEFAULT NULL,
-  `pending` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `users_channels`
---
-
-DROP TABLE IF EXISTS `users_channels`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `users_channels` (
-  `user_id` int(11) DEFAULT NULL,
-  `channel_id` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=420 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -153,4 +113,4 @@ CREATE TABLE `users_channels` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2019-02-09 15:40:59
+-- Dump completed on 2020-02-09 15:22:43

@@ -6,6 +6,7 @@ const l = console.log;
 module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let hash = req.body.payreq;
   let payreq = bolt11.decode(hash);
+  let { route } = req.body;
   let { user } = req;
 
   l("sending lightning", user.username, payreq.satoshis);
@@ -36,60 +37,57 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
     return res.status(500).send("Not enough satoshis");
   }
 
-  const stream = lna.sendPayment(lna.meta, {});
-  stream.write({ payment_request: req.body.payreq });
+  let m;
+  try {
+    let paymentHash = payreq.tags.find(t => t.tagName === 'payment_hash').data;
+    m = await lna.sendToRouteSync({
+      "payment_hash": Buffer.from(paymentHash, 'hex'),
+      route
+    });
 
-  stream.on("data", async m => {
-    if (m.payment_error) {
-      res.status(500).send(m.payment_error);
-    } else {
-      if (seen.includes(m.payment_preimage)) return;
-      seen.push(m.payment_preimage);
+    if (seen.includes(m.payment_preimage)) return;
+    seen.push(m.payment_preimage);
 
-      let total = parseInt(m.payment_route.total_amt);
-      let fee = m.payment_route.total_fees;
+    let total = parseInt(m.payment_route.total_amt);
+    let fee = m.payment_route.total_fees;
 
-      user.balance -= total - payreq.satoshis;
+    user.balance -= total - payreq.satoshis;
 
-      await db.transaction(async transaction => {
-        await user.save({ transaction });
+    await db.transaction(async transaction => {
+      await user.save({ transaction });
 
-        const payment = await db.Payment.create(
-          {
-            amount: -total,
-            fee,
-            user_id: user.id,
-            hash,
-            rate: app.get("rates")[user.currency],
-            currency: user.currency,
-            confirmed: true,
-            asset: 'LNBTC',
-          },
-          { transaction }
-        );
+      const payment = await db.Payment.create(
+        {
+          amount: -total,
+          fee,
+          user_id: user.id,
+          hash,
+          rate: app.get("rates")[user.currency],
+          currency: user.currency,
+          confirmed: true,
+          asset: 'LNBTC',
+        },
+        { transaction }
+      );
 
-        emit(user.username, "payment", payment);
-        emit(user.username, "user", user);
+      emit(user.username, "payment", payment);
+      emit(user.username, "user", user);
 
-        if (payreq.payeeNodeKey === config.lnb.id) {
-          let invoice = await lna.addInvoice({ value: payreq.satoshis });
-          let payback = lnb.sendPayment(lnb.meta, {});
+      if (payreq.payeeNodeKey === config.lnb.id) {
+        let invoice = await lna.addInvoice({ value: payreq.satoshis });
+        let payback = lnb.sendPayment(lnb.meta, {});
 
-          /* eslint-disable-next-line */
-          let { payment_request } = invoice;
-          /* eslint-disable-next-line */
-          payback.write({ payment_request });
-        }
+        /* eslint-disable-next-line */
+        let { payment_request } = invoice;
+        /* eslint-disable-next-line */
+        payback.write({ payment_request });
+      }
 
-        seen.push(hash);
-        res.send(payment);
-      });
-    }
-  });
-
-  stream.on("error", e => {
-    let msg = e.message;
-
-    res.status(500).send(msg);
-  });
+      seen.push(hash);
+      res.send(payment);
+    });
+  } catch (e) {
+    l(e);
+    return res.status(500).send(e);
+  }
 };

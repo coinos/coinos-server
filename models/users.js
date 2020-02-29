@@ -85,6 +85,15 @@ module.exports = sequelize => {
       comment: null,
       field: "symbol"
     },
+    otpsecret: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: "CAD",
+      primaryKey: false,
+      autoIncrement: false,
+      comment: null,
+      field: "otpsecret"
+    },
     currency: {
       type: DataTypes.STRING(255),
       allowNull: true,
