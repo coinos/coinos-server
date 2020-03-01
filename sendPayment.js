@@ -3,21 +3,6 @@ const config = require("./config");
 
 const l = console.log;
 
-var fs = require('fs');
-var grpc = require('grpc');
-var lnrpc = grpc.load('/root/grpc/rpc.proto').lnrpc;
-process.env.GRPC_SSL_CIPHER_SUITES = 'HIGH+ECDSA'
-var lndCert = fs.readFileSync('/root/.lnda/tls.cert');
-var sslCreds = grpc.credentials.createSsl(lndCert);
-var macaroonCreds = grpc.credentials.createFromMetadataGenerator(function(args, callback) {
-    var macaroon = fs.readFileSync("/root/.lnda/data/chain/bitcoin/mainnet/admin.macaroon").toString('hex');
-    var metadata = new grpc.Metadata()
-    metadata.add('macaroon', macaroon);
-    callback(null, metadata);
-  });
-var creds = grpc.credentials.combineChannelCredentials(sslCreds, macaroonCreds);
-var lightning = new lnrpc.Lightning('localhost:10001', creds);
-
 module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let hash = req.body.payreq;
   let payreq = bolt11.decode(hash);
@@ -55,7 +40,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let m;
   try {
     let paymentHash = payreq.tags.find(t => t.tagName === 'payment_hash').data;
-    m = lightning.sendToRouteSync({
+    m = lna.sendToRouteSync({
       "payment_hash": Buffer.from(paymentHash, 'hex'),
       route
     }, async function(err, m) {
@@ -89,13 +74,14 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
         emit(user.username, "user", user);
 
         if (payreq.payeeNodeKey === config.lnb.id) {
-          let invoice = await lna.addInvoice({ value: payreq.satoshis });
-          let payback = lnb.sendPayment(lnb.meta, {});
+          lna.addInvoice({ value: payreq.satoshis }, (err, invoice) => {
+            let payback = lnb.sendPayment(lnb.meta, {});
 
-          /* eslint-disable-next-line */
-          let { payment_request } = invoice;
-          /* eslint-disable-next-line */
-          payback.write({ payment_request });
+            /* eslint-disable-next-line */
+            let { payment_request } = invoice;
+            /* eslint-disable-next-line */
+            payback.write({ payment_request });
+          });
         }
 
         seen.push(hash);

@@ -125,6 +125,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@grpc/proto-loader@npm:^0.5.3":
+  version: 0.5.3
+  resolution: "@grpc/proto-loader@npm:0.5.3"
+  dependencies:
+    lodash.camelcase: ^4.3.0
+    protobufjs: ^6.8.6
+  checksum: 32d1789cb76ca0cb666c427aa2e5cbd9062e0261e6d99b3cd40098c0875af25197ae41e01ca395f68a8d45fda09f02e33ff5f703d701a151fc042e0208613390
+  languageName: node
+  linkType: hard
+
 "@opencensus/core@npm:^0.0.8":
   version: 0.0.8
   resolution: "@opencensus/core@npm:0.0.8"
@@ -1900,6 +1910,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "coinos@workspace:."
   dependencies:
+    "@grpc/proto-loader": ^0.5.3
     "@sendgrid/client": ^6.4.0
     authy-client: ^1.1.4
     axios: ^0.19.0

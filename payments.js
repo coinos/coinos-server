@@ -1,9 +1,13 @@
 const createLnrpc = require("./lib/createLnrpc");
 const config = require("./config");
+const lnd = require("./lnd");
 
 module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   const lna = await createLnrpc(config.lna);
   const lnb = await createLnrpc(config.lnb);
+
+  const lnaraw = lnd(config.lna);
+  const lnbraw = lnd(config.lna);
 
   require("./bitcoinPayments")(app, bc, db, addresses, payments, emit);
   require("./liquidPayments")(app, db, addresses, payments, emit);
@@ -12,12 +16,12 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   app.post(
     "/queryRoutes",
     auth,
-    require("./queryRoutes")(app, db, emit, seen, lna, lnb)
+    require("./queryRoutes")(lnaraw)
   );
   app.post(
     "/sendPayment",
     auth,
-    require("./sendPayment")(app, db, emit, seen, lna, lnb)
+    require("./sendPayment")(app, db, emit, seen, lnaraw, lnb)
   );
   app.post("/payUser", auth, require("./payUser")(app, db, lna, lnb));
   app.post("/sendCoins", auth, require("./sendCoins")(app, bc, db, emit));

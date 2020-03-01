@@ -34,9 +34,6 @@ module.exports = {
     server: 'localhost:10001',
     tls: '/home/user/.lnd.testa/tls.cert',
     macaroon: '/home/user/.lnd.testa/data/chain/bitcoin/testnet/admin.macaroon',
-    channelpeers: [
-      '029654df009c909c3f513d944fc9456c6cac5f3a9c34dab85289e1425856c1b0fe'
-    ]
   },
   lnb: {
     server: 'localhost:10002',
