@@ -21,7 +21,7 @@ const twofa = (req, res, next) => {
     user,
     body: { token }
   } = req;
-  if (!user.twofa || authenticator.check(token, user.otpsecret)) next();
+  if (!user.twofa || authenticator.check(token, user.otpsecret)) next(req, res);
   else res.status(401).send("2fa required");
 };
 

@@ -7,7 +7,7 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
   const lnb = await createLnrpc(config.lnb);
 
   const lnaraw = lnd(config.lna);
-  const lnbraw = lnd(config.lna);
+  const lnbraw = lnd(config.lnb);
 
   require("./bitcoinPayments")(app, bc, db, addresses, payments, emit);
   require("./liquidPayments")(app, db, addresses, payments, emit);

@@ -30,11 +30,12 @@
     "email-validator": "^2.0.4",
     "express": "4.17.1",
     "express-session": "^1.16.2",
-    "grpc": "^1.23.3",
+    "grpc": "^1.24.2",
     "http-proxy-middleware": "^0.20.0",
     "jsonwebtoken": "^8.5.1",
     "lnrpc": "^0.6.2",
     "lodash": "^4.17.13",
+    "long": "^4.0.0",
     "mailgun-js": "^0.22.0",
     "moment": "^2.24.0",
     "morgan": "^1.9.1",
@@ -63,10 +64,5 @@
     "pm2": "^4.2.3",
     "prettier": "^1.18.2",
     "sequelize-automate": "^1.1.1"
-  },
-  "dependenciesMeta": {
-    "lnrpc": {
-      "unplugged": true
-    }
   }
 }
