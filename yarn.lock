@@ -1965,11 +1965,6 @@ __metadata:
     uuid: ^3.3.2
     ws: ^7.1.2
     zeromq: ^5.1.0
-  dependenciesMeta:
-    "@grpc/proto-loader":
-      unplugged: true
-    lnrpc:
-      unplugged: true
   languageName: unknown
   linkType: soft
 

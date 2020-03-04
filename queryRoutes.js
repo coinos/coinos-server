@@ -8,5 +8,6 @@ module.exports = lna => async (req, res) => {
   lna.queryRoutes(
     { pub_key: payreq.payeeNodeKey, amt: payreq.satoshis },
     (err, response) => res.send(response)
+
   );
 };

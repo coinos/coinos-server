@@ -23,7 +23,6 @@ module.exports = (app, db, lna, lnb, emit, payments) => {
     await user.save();
     payments.push(msg.payment_request);
 
-    emit(user.username, "invoice", msg);
     emit(user.username, "payment", payment);
     emit(user.username, "user", user);
   };
