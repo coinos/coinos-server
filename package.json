@@ -35,6 +35,7 @@
     "jsonwebtoken": "^8.5.1",
     "lnrpc": "^0.6.2",
     "lodash": "^4.17.13",
+    "long": "^4.0.0",
     "mailgun-js": "^0.22.0",
     "moment": "^2.24.0",
     "morgan": "^1.9.1",
@@ -65,7 +66,25 @@
     "sequelize-automate": "^1.1.1"
   },
   "dependenciesMeta": {
+    "@grpc/proto-loader": {
+      "unplugged": true
+    },
+    "bytebuffer@5.0.1": {
+      "unplugged": true
+    },
     "lnrpc": {
+      "unplugged": true
+    },
+    "protobufjs@5.0.3": {
+      "unplugged": true
+    },
+    "protobufjs-npm-5.0.3": {
+      "unplugged": true
+    },
+    "protobufjs-npm-5.0.3-7417c706d9-1": {
+      "unplugged": true
+    },
+    "protobufjs-npm-5.0.3-7417c706d9-1.zip": {
       "unplugged": true
     }
   }
