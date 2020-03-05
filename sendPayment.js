@@ -1,7 +1,7 @@
 const bolt11 = require("bolt11");
 const config = require("./config");
 
-const l = console.log;
+const l = require("pino")();
 
 module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let hash = req.body.payreq;
@@ -9,7 +9,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let { route } = req.body;
   let { user } = req;
 
-  l("sending lightning", user.username, payreq.satoshis);
+ l.info("sending lightning", user.username, payreq.satoshis);
 
   if (seen.includes(hash)) {
     return res.status(500).send("Invoice has been paid, can't pay again");
@@ -89,7 +89,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
       });
     });
   } catch (e) {
-    l(e);
+   l.info(e);
     return res.status(500).send(e);
   }
 };

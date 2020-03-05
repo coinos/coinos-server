@@ -2,7 +2,7 @@ const bitcoin = require("bitcoinjs-lib");
 const config = require("./config");
 const reverse = require("buffer-reverse");
 
-const l = console.log;
+const l = require("pino")();
 const SATS = 100000000;
 
 module.exports = (app, bc, db, emit) => async (req, res) => {
@@ -24,12 +24,12 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     fee = parseInt(fee * SATS);
     total = amount + fee;
   } catch (e) {
-    l(e);
+    l.error(e);
     return res.status(500).send(e.message);
   }
 
   try {
-    l("sending coins", req.user.username, amount, fee, address);
+    l.info("sending coins", req.user.username, amount, fee, address);
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({
         where: {
@@ -40,7 +40,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       });
 
       if (amount !== balance && total > balance) {
-        l("amount exceeds balance", amount, fee, balance);
+        l.error("amount exceeds balance", amount, fee, balance);
         throw new Error("insufficient funds");
       }
 
@@ -48,7 +48,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       await req.user.save({ transaction });
     });
   } catch (e) {
-    l(e);
+    l.error(e);
     return res.status(500).send("Not enough satoshis");
   }
 
@@ -85,7 +85,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
       res.send(payment);
     });
   } catch (e) {
-    l(e);
+    l.error(e);
     return res.status(500).send(e.message);
   }
 };

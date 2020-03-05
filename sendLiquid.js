@@ -3,7 +3,7 @@ const config = require("./config");
 const reverse = require("buffer-reverse");
 const BitcoinCore = require("bitcoin-core");
 
-const l = console.log;
+const l = require("pino")();
 const SATS = 100000000;
 
 const bc = new BitcoinCore(config.liquid);
@@ -30,7 +30,7 @@ module.exports = (app, db, emit) => async (req, res) => {
     fee = parseInt(fee * SATS);
     total = amount + fee;
   } catch (e) {
-    l("funding failed", e);
+    l.error("funding failed", e);
     return res.status(500).send(e.message);
   }
 
@@ -45,7 +45,7 @@ module.exports = (app, db, emit) => async (req, res) => {
       });
 
       if (amount !== balance && total > balance) {
-        l("amount exceeds balance", amount, fee, balance);
+        l.error("amount exceeds balance", amount, fee, balance);
         throw new Error("insufficient funds");
       }
 
@@ -53,7 +53,7 @@ module.exports = (app, db, emit) => async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l("balance check failed", e);
+    l.error("balance check failed", e);
     return res.status(500).send("Not enough satoshis");
   }
 
@@ -88,7 +88,7 @@ module.exports = (app, db, emit) => async (req, res) => {
       res.send(payment);
     });
   } catch (e) {
-    l("send failed", e);
+    l.error("liquid send failed", e);
     return res.status(500).send(e.message);
   }
 };

@@ -1,6 +1,6 @@
 const bolt11 = require("bolt11");
 const config = require("./config");
-const l = console.log;
+const l = require("pino")();
 
 module.exports = lna => async (req, res) => {
   let hash = req.body.payreq;

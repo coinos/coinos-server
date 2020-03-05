@@ -1,6 +1,6 @@
 const axios = require("axios");
 const config = require("./config");
-const l = console.log;
+const l = require("pino")();
 
 module.exports = (app, socket) => {
   let binance = require("./binance")(app, socket);
@@ -30,7 +30,7 @@ module.exports = (app, socket) => {
         rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
         rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
       } catch (e) {
-        l(e);
+        l.error(e);
       }
     }
 

@@ -4,12 +4,11 @@ const cookieParser = require("cookie-parser");
 const BitcoinCore = require("bitcoin-core");
 const cors = require("cors");
 const express = require("express");
-const morgan = require("morgan");
 
 const config = require("./config");
 const bolt11 = require("bolt11");
 
-const l = console.log;
+const l = require("pino")();
 
 (async () => {
   const bc = new BitcoinCore(config.bitcoin);
@@ -20,7 +19,6 @@ const l = console.log;
   app.use(cookieParser());
   app.use(cors({ credentials: true, origin: "http://*:*" }));
   app.use(compression());
-  app.use(morgan("combined"));
 
   const server = require("http").Server(app);
   const db = require("./db");
@@ -58,7 +56,7 @@ const l = console.log;
   app.use(function(err, req, res, next) {
     res.status(500);
     res.send("An error occurred");
-    l(err.stack);
+   l.info(err.stack);
     return res.end();
   });
 

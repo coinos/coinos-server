@@ -1,5 +1,5 @@
 const config = require("./config");
-const l = console.log;
+const l = require("pino")();
 
 module.exports = (auth, app, db, emit) => {
   app.post("/buy", auth, async (req, res) => {
@@ -35,7 +35,7 @@ module.exports = (auth, app, db, emit) => {
 
       res.send(`Bought ${amount}`);
     } catch (e) {
-      l(e);
+      l.error(e);
       res.status(500).send(e);
     }
   });

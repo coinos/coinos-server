@@ -5,7 +5,7 @@ const Sequelize = require("sequelize");
 
 /* eslint-disable-next-line */
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
-const l = console.log;
+const l = require("pino")();;
 
 module.exports = (app, db, server) => {
   const socket = io(server, { origins: "*:*" });
@@ -32,7 +32,7 @@ module.exports = (app, db, server) => {
       sids[user] ? sids[user].push(socket.id) : (sids[user] = [socket.id]);
       sids[socket.id] = user;
     } catch (e) {
-      l(e);
+      l.error(e);
     }
     next();
   });
@@ -41,7 +41,7 @@ module.exports = (app, db, server) => {
     socket.emit("connected");
     if (app.get("rates")) socket.emit("rate", app.get("rates").ask);
     socket.on("getuser", async (data, callback) => {
-      l("logging in", socket.request.user);
+      l.info(`logging in ${socket.request.user}`);
       const user = await db.User.findOne({
         include: [
           {
@@ -64,7 +64,7 @@ module.exports = (app, db, server) => {
 
     socket.on("disconnect", s => {
       let user = sids[socket.id];
-      l("logging out", user);
+      l.info("logging out", user);
       sids[user].splice(sids[user].indexOf(socket.id), 1);
       delete sids[socket.id];
     });

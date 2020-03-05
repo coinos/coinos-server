@@ -2,7 +2,7 @@ const passport = require("passport");
 const jwt = require("passport-jwt");
 const config = require("./config");
 
-const l = console.log;
+const l = require("pino")();
 
 function cookieExtractor(req) {
   if (req && req.cookies) return req.cookies["token"];
@@ -27,8 +27,8 @@ module.exports = db => {
             }
           });
           next(null, user);
-        } catch (err) {
-          l(err);
+        } catch (e) {
+          l.error(e);
           next(null, { username: "guest" });
         }
       }

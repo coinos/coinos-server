@@ -4,7 +4,7 @@ const config = require("./config");
 const Sequelize = require("sequelize");
 const BitcoinCore = require("bitcoin-core");
 const bitcoin = require("elementsjs-lib");
-const l = console.log;
+const l = require("pino")();
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.liquid.zmqrawblock);

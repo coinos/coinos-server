@@ -12,7 +12,7 @@ const Sequelize = require("sequelize");
 const authenticator = require("otplib").authenticator;
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
-const l = console.log;
+const l = require("pino")();
 let faucet = 1000;
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -124,7 +124,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     try {
       mg.messages().send(msg);
     } catch (e) {
-      l(e);
+      l.error(e);
     }
   };
 
@@ -182,7 +182,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         return res.status(500).send("Invalid token");
       }
     } catch (e) {
-      l(e);
+      l.error(e);
     }
     res.end();
   });
@@ -256,7 +256,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       emit(user.username, "user", req.user);
       res.send({ user, token });
     } catch (e) {
-      l(e);
+      l.error(e);
     }
   });
 
@@ -283,7 +283,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       try {
         mg.messages().send(msg);
       } catch (e) {
-        l(e);
+        l.error(e);
       }
     }
 
@@ -360,8 +360,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
 
       user = pick(user, ...whitelist);
       res.send({ user, token });
-    } catch (err) {
-      l(err);
+    } catch (e) {
+      l.error(e);
       res.status(401).end();
     }
   });
@@ -423,8 +423,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token , { expires: new Date(Date.now() + 432000000) });
       res.send({ user, token });
-    } catch (err) {
-      l(err);
+    } catch (e) {
+      l.error(e);
       res.status(401).end();
     }
   });

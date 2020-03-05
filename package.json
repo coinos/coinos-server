@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "nodemon index.js | pino-pretty -t 'mm-dd HH:MM:ss' -i hostname,pid",
     "generate": "sequelize-automate -c config/index.js"
   },
   "dependencies": {
@@ -45,6 +45,7 @@
     "passport": "0.4.0",
     "passport-jwt": "^4.0.0",
     "passport-local": "1.0.0",
+    "pino": "^5.17.0",
     "redis": "2.8.0",
     "request": "~2.88.0",
     "sequelize": "^5.21.3",
@@ -61,6 +62,7 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.2",
+    "pino-pretty": "^3.6.1",
     "pm2": "^4.2.3",
     "prettier": "^1.18.2",
     "sequelize-automate": "^1.1.1"
