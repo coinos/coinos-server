@@ -45,7 +45,7 @@ module.exports = (app, db, emit) => async (req, res) => {
       });
 
       if (amount !== balance && total > balance) {
-        l.error("amount exceeds balance", amount, fee, balance);
+        l.warn("amount exceeds balance", { amount, fee, balance });
         throw new Error("insufficient funds");
       }
 
@@ -84,6 +84,7 @@ module.exports = (app, db, emit) => async (req, res) => {
         { transaction }
       );
 
+      l.info("sent liquid", user.username, total);
       emit(user.username, "payment", payment);
       res.send(payment);
     });

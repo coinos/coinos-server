@@ -102,6 +102,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     user = await db.User.create(user);
     await gift(user);
 
+    l.info("new user", user.username);
     res.send(pick(user, ...whitelist));
   });
 
@@ -161,6 +162,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     await user.save();
     emit(user.username, "user", user);
     emit(user.username, "otpsecret", user.otpsecret);
+    l.info("disabled 2fa", user.username);
     res.end();
   });
 
@@ -184,6 +186,8 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
     } catch (e) {
       l.error(e);
     }
+
+    l.info("enabled 2fa", user.username);
     res.end();
   });
 
@@ -408,6 +412,7 @@ module.exports = (addresses, auth, app, bc, db, emit) => {
         addresses[user.address] = user.username;
         addresses[user.liquid] = user.username;
         await gift(user);
+        l.info("new facebook user", user.name);
       }
 
       if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret)))

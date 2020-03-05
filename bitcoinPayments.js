@@ -89,6 +89,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
             asset: 'BTC',
           });
 
+          l.info("bitcoin detected", user.username, o.value);
           emit(user.username, "payment", payment);
         }
       })
@@ -142,6 +143,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
         limit: 12
       });
 
+      l.info("bitcoin confirmed", user.username, p.amount);
       emit(user.username, "payments", payments);
       delete queue[hash];
     }

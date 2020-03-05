@@ -86,6 +86,7 @@ module.exports = (app, db, addresses, payments, emit) => {
           });
           payments.push(blinded.txid);
 
+          l.info("liquid detected", user.username, value);
           emit(user.username, "payment", payment);
         }
       })
@@ -126,6 +127,7 @@ module.exports = (app, db, addresses, payments, emit) => {
       let user = await p.getUser();
       user.balance += p.amount;
       user.pending -= p.amount;
+      l.info("liquid confirmed", user.username, p.amount);
       emit(user.username, "user", user);
 
       await user.save();

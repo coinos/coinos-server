@@ -9,9 +9,8 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
   let { route } = req.body;
   let { user } = req;
 
- l.info("sending lightning", user.username, payreq.satoshis);
-
   if (seen.includes(hash)) {
+    l.warn("attempted to pay a paid invoice", user.username);
     return res.status(500).send("Invoice has been paid, can't pay again");
   }
 
@@ -70,6 +69,7 @@ module.exports = (app, db, emit, seen, lna, lnb) => async (req, res) => {
           { transaction }
         );
 
+        l.info("sent lightning", user.username, -payment.amount);
         emit(user.username, "payment", payment);
         emit(user.username, "user", user);
 

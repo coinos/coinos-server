@@ -1,3 +1,5 @@
+const l = require("pino")();
+
 module.exports = (app, db, lna, lnb, emit, payments) => {
   const handlePayment = async msg => {
     if (!msg.settled) return;
@@ -22,6 +24,7 @@ module.exports = (app, db, lna, lnb, emit, payments) => {
     await payment.save();
     await user.save();
     payments.push(msg.payment_request);
+    l.info("lightning payment received", user.username, payment.amount);
 
     emit(user.username, "payment", payment);
     emit(user.username, "user", user);

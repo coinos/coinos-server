@@ -6,6 +6,7 @@ const l = require("pino")();
 const SATS = 100000000;
 
 module.exports = (app, bc, db, emit) => async (req, res) => {
+  let { user } = req;
   let { address, amount } = req.body;
   let rawtx, hex, fee, total;
 
@@ -17,7 +18,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     });
 
     rawtx = await bc.fundRawTransaction(rawtx, {
-      subtractFeeFromOutputs: amount === req.user.balance ? [0] : []
+      subtractFeeFromOutputs: amount === user.balance ? [0] : []
     });
 
     ({ hex, fee } = rawtx);
@@ -29,11 +30,10 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
   }
 
   try {
-    l.info("sending coins", req.user.username, amount, fee, address);
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({
         where: {
-          username: req.user.username
+          username: user.username
         },
         lock: transaction.LOCK.UPDATE,
         transaction
@@ -44,8 +44,8 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
         throw new Error("insufficient funds");
       }
 
-      req.user.balance -= total;
-      await req.user.save({ transaction });
+      user.balance -= total;
+      await user.save({ transaction });
     });
   } catch (e) {
     l.error(e);
@@ -62,17 +62,17 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     let tx = bitcoin.Transaction.fromHex(rawtx);
 
     await db.transaction(async transaction => {
-      await req.user.save({ transaction });
-      emit(req.user.username, "user", req.user);
+      await user.save({ transaction });
+      emit(user.username, "user", user);
 
       const payment = await db.Payment.create(
         {
           amount: -total,
           fee,
-          user_id: req.user.id,
+          user_id: user.id,
           hash: txid,
-          rate: app.get("rates")[req.user.currency],
-          currency: req.user.currency,
+          rate: app.get("rates")[user.currency],
+          currency: user.currency,
           address,
           confirmed: true,
           received: false,
@@ -81,7 +81,8 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
         { transaction }
       );
 
-      emit(req.user.username, "payment", payment);
+      l.info("sent bitcoin", user.username, total);
+      emit(user.username, "payment", payment);
       res.send(payment);
     });
   } catch (e) {
