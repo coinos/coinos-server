@@ -56,7 +56,7 @@ const l = require("pino")();
   app.use(function(err, req, res, next) {
     res.status(500);
     res.send("An error occurred");
-   l.info(err.stack);
+    l.error(err.stack);
     return res.end();
   });
 
