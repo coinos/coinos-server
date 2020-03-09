@@ -17,7 +17,7 @@ zmqRawTx.subscribe("rawtx");
 let NETWORK = bitcoin.networks[config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network];
 const bc = new BitcoinCore(config.liquid);
 
-const SATS = 100000000;
+const toSats = n => parseInt((n * 100000000).toFixed())
 
 module.exports = (app, db, addresses, payments, emit) => {
   zmqRawTx.on("message", async (topic, message, sequence) => {
@@ -30,8 +30,7 @@ module.exports = (app, db, addresses, payments, emit) => {
     Promise.all(
       tx.vout.map(async o => {
         if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
-        let { value } = o;
-        value *= SATS
+        const value = toSats(o.value);
         const address = o.scriptPubKey.addresses[0];
 
         if (Object.keys(addresses).includes(address)) {
@@ -58,19 +57,14 @@ module.exports = (app, db, addresses, payments, emit) => {
 
           let confirmed = 0;
 
-          if (user.friend) {
-            user.balance += value;
-            confirmed = 1;
-          } else {
-            user.pending += value;
-          }
-
+          user.pending += value;
           user.confidential = await bc.getNewAddress();
           user.liquid = (await bc.getAddressInfo(user.confidential)).unconfidential;
-          addresses[user.liquid] = user.username;
 
           await user.save();
           emit(user.username, "user", user);
+
+          addresses[user.liquid] = user.username;
 
           const payment = await db.Payment.create({
             user_id: user.id,
@@ -126,7 +120,7 @@ module.exports = (app, db, addresses, payments, emit) => {
 
       let user = await p.getUser();
       user.balance += p.amount;
-      user.pending -= p.amount;
+      user.pending -= Math.min(user.pending, p.amount);
       l.info("liquid confirmed", user.username, p.amount);
       emit(user.username, "user", user);
 

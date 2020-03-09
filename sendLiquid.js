@@ -4,35 +4,43 @@ const reverse = require("buffer-reverse");
 const BitcoinCore = require("bitcoin-core");
 
 const l = require("pino")();
-const SATS = 100000000;
+const toSats = n => parseInt((n * 100000000).toFixed())
 
 const bc = new BitcoinCore(config.liquid);
 
-module.exports = (app, db, emit) => async (req, res) => {
-  let { address, amount } = req.body;
-  let rawtx, hex, fee, total;
+module.exports = (addresses, app, db, emit) => async (req, res) => {
   let { user } = req;
+  let {
+    address,
+    tx: { hex }
+  } = req.body;
 
-  try {
-    amount = parseInt(amount);
+  const isChange = async address => 
+    !((await bc.getAddressInfo(address)).ismine) ||
+    !Object.keys(addresses).includes(address) || 
+    address === user.liquid;
 
-    rawtx = await bc.createRawTransaction([], {
-      [address]: (amount / SATS).toFixed(8)
-    });
+  const unblinded = await bc.unblindRawTransaction(hex);
+  tx = await bc.decodeRawTransaction(unblinded.hex);
+  
+  let total = 0;
+  let change = 0;
+  let fee = 0;
 
-    rawtx = await bc.fundRawTransaction(rawtx, {
-      subtractFeeFromOutputs: amount === user.balance ? [0] : []
-    });
+  for (let i = 0; i < tx.vout.length; i++) {
+    let o = tx.vout[i];
+    total += toSats(o.value);
+    if (o.scriptPubKey.type === 'fee') fee = toSats(o.value);
+   
+    if (o.scriptPubKey.addresses) {
+      if ((await isChange(o.scriptPubKey.addresses[0]))) {
+        change += toSats(o.value);
+      }
+    }
+  } 
 
-    hex = await bc.blindRawTransaction(rawtx.hex);
-
-    ({ fee } = rawtx);
-    fee = parseInt(fee * SATS);
-    total = amount + fee;
-  } catch (e) {
-    l.error("funding failed", e);
-    return res.status(500).send(e.message);
-  }
+  total = total - change;
+  let amount = total - fee;
 
   try {
     await db.transaction(async transaction => {
@@ -61,12 +69,14 @@ module.exports = (app, db, emit) => async (req, res) => {
     if (config.liquid.walletpass)
       await bc.walletPassphrase(config.liquid.walletpass, 300);
 
+    hex = await bc.blindRawTransaction(hex);
     rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
     let txid = await bc.sendRawTransaction(rawtx);
 
     await db.transaction(async transaction => {
       await user.save({ transaction });
       emit(user.username, "user", user);
+      l.info("total", total);
 
       const payment = await db.Payment.create(
         {

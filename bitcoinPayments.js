@@ -5,6 +5,7 @@ const Sequelize = require("sequelize");
 
 const bitcoin = require("bitcoinjs-lib");
 const l = require("pino")();
+const toSats = n => parseInt((n * 100000000).toFixed())
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);
@@ -17,26 +18,19 @@ zmqRawTx.subscribe("rawtx");
 let NETWORK = bitcoin.networks[config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network];
 
 module.exports = (app, bc, db, addresses, payments, emit) => {
-  zmqRawTx.on("message", (topic, message, sequence) => {
-    message = message.toString("hex");
-
-    let tx = bitcoin.Transaction.fromHex(message);
-    let hash = reverse(tx.getHash()).toString("hex");
+  zmqRawTx.on("message", async (topic, message, sequence) => {
+    const hex = message.toString("hex");
+    const tx = await bc.decodeRawTransaction(hex);
+    let hash = tx.txid;
 
     if (payments.includes(hash)) return;
 
     Promise.all(
-      tx.outs.map(async o => {
+      tx.vout.map(async o => {
+        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
-        let address;
-        try {
-          address = bitcoin.address.fromOutputScript(
-            o.script,
-            NETWORK
-          );
-        } catch (e) {
-          return;
-        }
+        const value = toSats(o.value);
+        const address = o.scriptPubKey.addresses[0];
 
         if (Object.keys(addresses).includes(address)) {
           payments.push(hash);
@@ -64,22 +58,18 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
 
           let confirmed = false;
 
-          if (user.friend) {
-            user.balance += o.value;
-            confirmed = true;
-          } else {
-            user.pending += o.value;
-          }
-
           user.address = await bc.getNewAddress("", "bech32");
-          addresses[user.address] = user.username;
+          user.pending += value;
+
           await user.save();
           emit(user.username, "user", user);
+          
+          addresses[user.address] = user.username;
 
           const payment = await db.Payment.create({
             user_id: user.id,
             hash,
-            amount: o.value,
+            amount: value,
             currency: user.currency,
             rate: app.get("rates")[user.currency],
             received: true,
@@ -126,7 +116,7 @@ module.exports = (app, bc, db, addresses, payments, emit) => {
 
       let user = await p.getUser();
       user.balance += p.amount;
-      user.pending -= p.amount;
+      user.pending -= Math.min(user.pending, p.amount);
       emit(user.username, "user", user);
 
       await user.save();

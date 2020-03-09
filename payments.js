@@ -24,8 +24,10 @@ module.exports = async (app, auth, addresses, bc, db, emit, seen, payments) => {
     require("./sendPayment")(app, db, emit, seen, lnaraw, lnb)
   );
   app.post("/payUser", auth, require("./payUser")(app, db, lna, lnb));
-  app.post("/sendCoins", auth, require("./sendCoins")(app, bc, db, emit));
-  app.post("/sendLiquid", auth, require("./sendLiquid")(app, db, emit));
+  app.post("/sendCoins", auth, require("./sendCoins")(addresses, app, bc, db, emit));
+  app.post("/estimateBitcoinFee", auth, require("./estimateBitcoinFee")(app, bc, db, emit));
+  app.post("/sendLiquid", auth, require("./sendLiquid")(addresses, app, db, emit));
+  app.post("/estimateLiquidFee", auth, require("./estimateLiquidFee")(app, db, emit));
   app.post("/addInvoice", auth, require("./addInvoice")(app, db, lnb));
   app.get("/payments", auth, async (req, res) => {
     const payments = await db.Payment.findAll({
