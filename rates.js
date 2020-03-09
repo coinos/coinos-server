@@ -21,14 +21,6 @@ module.exports = (app, socket) => {
           Object.keys(fx).map(symbol => {
             rates[symbol] = fx[symbol] / fx["USD"];
           });
-
-        res = await axios.get(
-          "https://api.bitcoinvenezuela.com/?html=no&currency=VEF"
-        );
-
-        rates.VEF = res.data["exchange_rates"].VEF_USD;
-        rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
-        rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
       } catch (e) {
         l.error("error fetching rates", e);
       }
