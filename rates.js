@@ -30,7 +30,7 @@ module.exports = (app, socket) => {
         rates.VES = res.data["exchange_rates"].VEF_USD / 100000;
         rates.KVES = res.data["exchange_rates"].VEF_USD / 100000000;
       } catch (e) {
-        l.error(e);
+        l.error("error fetching rates", e);
       }
     }
 
