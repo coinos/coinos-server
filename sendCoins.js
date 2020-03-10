@@ -33,10 +33,8 @@ module.exports = (addresses, app, bc, db, emit) => async (req, res) => {
     }
   } 
 
-  l.info(total);
   total = (total - change) + fee;
   let amount = total - fee;
-  l.info(fee, total, amount, change);
 
   try {
     await db.transaction(async transaction => {

@@ -20,17 +20,24 @@ let NETWORK = bitcoin.networks[config.bitcoin.network === "mainnet" ? "bitcoin" 
 module.exports = (app, bc, db, addresses, payments, emit) => {
   zmqRawTx.on("message", async (topic, message, sequence) => {
     const hex = message.toString("hex");
-    const tx = await bc.decodeRawTransaction(hex);
-    let hash = tx.txid;
+    let tx = bitcoin.Transaction.fromHex(message);
+    let hash = reverse(tx.getHash()).toString("hex");
 
     if (payments.includes(hash)) return;
 
     Promise.all(
-      tx.vout.map(async o => {
-        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
+      tx.outs.map(async o => {
+        const { value } = o;
 
-        const value = toSats(o.value);
-        const address = o.scriptPubKey.addresses[0];
+        let address;
+        try {
+          address = bitcoin.address.fromOutputScript(
+            o.script,
+            NETWORK
+          );
+        } catch (e) {
+          return;
+        }
 
         if (Object.keys(addresses).includes(address)) {
           payments.push(hash);
