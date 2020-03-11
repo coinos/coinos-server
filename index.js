@@ -1,63 +1,40 @@
 const bodyParser = require("body-parser");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
-const BitcoinCore = require("bitcoin-core");
 const cors = require("cors");
 const express = require("express");
 
-const config = require("./config");
-const bolt11 = require("bolt11");
+l = require("pino")();
+config = require("./config");
 
-const l = require("pino")();
+SATS = 100000000;
+toSats = n => parseInt((n * SATS).toFixed())
 
-(async () => {
-  const bc = new BitcoinCore(config.bitcoin);
-  const app = express();
-  app.enable("trust proxy");
-  app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(bodyParser.json());
-  app.use(cookieParser());
-  app.use(cors({ credentials: true, origin: "http://*:*" }));
-  app.use(compression());
+app = express();
+app.enable("trust proxy");
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(cookieParser());
+app.use(cors({ credentials: true, origin: "http://*:*" }));
+app.use(compression());
 
-  const server = require("http").Server(app);
-  const db = require("./db");
-  const [socket, emit] = require("./sockets")(app, db, server);
-  const passport = require("./passport")(db);
-  const auth = passport.authenticate("jwt", { session: false });
+server = require("http").Server(app);
+require("./db");
+require("./lib/sockets");
+require("./lib/passport");
+require("./lib/rates");
 
-  app.use(passport.initialize());
+require("./routes/payments");
+require("./routes/users");
 
-  require("./rates")(app, socket);
+app.use((err, req, res, next) => {
+  l.info("res", res);
+  res.status(500);
+  res.send("An error occurred");
+  l.error("uncaught error", err.stack);
+  return res.end();
+});
 
-  const seen = [];
-  const addresses = {};
-  await db.User.findAll({
-    attributes: ["username", "address", "liquid"]
-  }).map(u => {
-    addresses[u.address] = u.username;
-    if (u.liquid) addresses[u.liquid] = u.username;
-  });
-
-  const payments = (await db.Payment.findAll({
-    attributes: ["hash"]
-  })).map(p => p.hash);
-
-  app.get("/rates", (req, res) => {
-    res.send(app.get("rates"));
-  });
-
-  require("./payments")(app, auth, addresses, bc, db, emit, seen, payments);
-  require("./users")(addresses, auth, app, bc, db, emit);
-
-  app.use(function(err, req, res, next) {
-    res.status(500);
-    res.send("An error occurred");
-    l.error(err.stack);
-    return res.end();
-  });
-
-  server.listen(config.port, () =>
-    console.log(`CoinOS Server listening on port ${config.port}`)
-  );
-})();
+server.listen(config.port, () =>
+  console.log(`CoinOS Server listening on port ${config.port}`)
+);

@@ -1,9 +1,4 @@
-const config = require("./config");
-
-const l = require("pino")();
-const SATS = 100000000;
-
-module.exports = (app, bc, db, emit) => async (req, res) => {
+module.exports = async (req, res) => {
   let { user } = req;
   let { address, amount, feeRate } = req.body;
   let tx, fee;
@@ -24,7 +19,7 @@ module.exports = (app, bc, db, emit) => async (req, res) => {
     tx = await bc.fundRawTransaction(tx, params);
     res.send({ tx });
   } catch (e) {
-    l.error(e);
+    l.error("bitcoin fee estimation error", e);
     return res.status(500).send(e.message);
   }
 };

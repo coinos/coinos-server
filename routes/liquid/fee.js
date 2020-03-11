@@ -1,12 +1,4 @@
-const config = require("./config");
-const BitcoinCore = require("bitcoin-core");
-
-const l = require("pino")();
-const SATS = 100000000;
-
-const bc = new BitcoinCore(config.liquid);
-
-module.exports = (app, db, emit) => async (req, res) => {
+module.exports = async (req, res) => {
   let { user } = req;
   let { address, amount, feeRate } = req.body;
   let tx, fee;
@@ -14,7 +6,7 @@ module.exports = (app, db, emit) => async (req, res) => {
   try {
     amount = parseInt(amount);
 
-    tx = await bc.createRawTransaction([], {
+    tx = await lq.createRawTransaction([], {
       [address]: (amount / SATS).toFixed(8)
     });
 
@@ -24,10 +16,10 @@ module.exports = (app, db, emit) => async (req, res) => {
 
     if (feeRate) params["feeRate"] = (parseInt(feeRate) / SATS * 1000).toFixed(8);
 
-    tx = await bc.fundRawTransaction(tx, params);
+    tx = await lq.fundRawTransaction(tx, params);
     res.send({ tx });
   } catch (e) {
-    l.error(e);
+    l.error("error estimating liquid fee", e);
     return res.status(500).send(e.message);
   }
 };

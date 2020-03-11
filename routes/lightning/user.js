@@ -1,6 +1,6 @@
 const bolt11 = require("bolt11");
 
-module.exports = (app, db, lna, lnb) => async (req, res) => {
+module.exports = async (req, res) => {
   let { payuser, amount } = req.body;
 
   let user = await db.User.findOne({

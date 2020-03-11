@@ -1,14 +1,6 @@
-const bitcoin = require("bitcoinjs-lib");
-const config = require("./config");
 const reverse = require("buffer-reverse");
-const BitcoinCore = require("bitcoin-core");
 
-const l = require("pino")();
-const toSats = n => parseInt((n * 100000000).toFixed())
-
-const bc = new BitcoinCore(config.liquid);
-
-module.exports = (addresses, app, db, emit) => async (req, res) => {
+module.exports = async (req, res) => {
   let { user } = req;
   let {
     address,
@@ -61,7 +53,7 @@ module.exports = (addresses, app, db, emit) => async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l.error("balance check failed", e);
+    l.warn("insufficient funds for liquid payment", e);
     return res.status(500).send("Not enough satoshis");
   }
 

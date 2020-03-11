@@ -1,4 +1,4 @@
-module.exports = (app, db, lnb) => async (req, res) => {
+module.exports = async (req, res) => {
   let err = m => res.status(500).send(m);
   let { amount, address, tip } = req.body;
 

@@ -1,6 +1,4 @@
-const l = require("pino")();
-
-module.exports = (app, db, lna, lnb, emit, payments) => {
+module.exports = {
   const handlePayment = async msg => {
     if (!msg.settled) return;
 
