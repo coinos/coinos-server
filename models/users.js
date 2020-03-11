@@ -31,15 +31,6 @@ module.exports = sequelize => {
       comment: null,
       field: "password"
     },
-    email: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "email"
-    },
     liquid: {
       type: DataTypes.STRING(255),
       allowNull: true,
@@ -66,15 +57,6 @@ module.exports = sequelize => {
       autoIncrement: false,
       comment: null,
       field: "address"
-    },
-    unit: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "unit"
     },
     symbol: {
       type: DataTypes.STRING(255),
@@ -111,24 +93,6 @@ module.exports = sequelize => {
       autoIncrement: false,
       comment: null,
       field: "currencies"
-    },
-    commission: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "commission"
-    },
-    title: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "title"
     },
     pubkey: {
       type: DataTypes.STRING(255),
@@ -256,33 +220,6 @@ module.exports = sequelize => {
       comment: null,
       field: "pic"
     },
-    emailToken: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "emailToken"
-    },
-    phone: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "phone"
-    },
-    phoneVerified: {
-      type: DataTypes.INTEGER(1),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "phoneVerified"
-    },
     twofa: {
       type: DataTypes.INTEGER(1),
       allowNull: true,
@@ -291,15 +228,6 @@ module.exports = sequelize => {
       autoIncrement: false,
       comment: null,
       field: "twofa"
-    },
-    authyId: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "authyId"
     },
     pin: {
       type: DataTypes.STRING(255),
@@ -310,24 +238,6 @@ module.exports = sequelize => {
       comment: null,
       field: "pin"
     },
-    emailVerified: {
-      type: DataTypes.INTEGER(1),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "emailVerified"
-    },
-    phoneToken: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      defaultValue: null,
-      primaryKey: false,
-      autoIncrement: false,
-      comment: null,
-      field: "phoneToken"
-    }
   };
   const options = {
     tableName: "users",

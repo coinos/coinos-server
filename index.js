@@ -49,9 +49,6 @@ const l = require("pino")();
 
   require("./payments")(app, auth, addresses, bc, db, emit, seen, payments);
   require("./users")(addresses, auth, app, bc, db, emit);
-  require("./stripe")(auth, app, db, emit);
-
-  app.get("/balance/:address", require("./addressBalance"));
 
   app.use(function(err, req, res, next) {
     res.status(500);
