@@ -32,7 +32,7 @@ module.exports = (app, db, server) => {
       sids[user] ? sids[user].push(socket.id) : (sids[user] = [socket.id]);
       sids[socket.id] = user;
     } catch (e) {
-      l.error(e);
+      l.error("error creating socket", e);
     }
     next();
   });

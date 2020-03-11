@@ -28,7 +28,7 @@ module.exports = db => {
           });
           next(null, user);
         } catch (e) {
-          l.error(e);
+          l.error("error finding user for session", e);
           next(null, { username: "guest" });
         }
       }
