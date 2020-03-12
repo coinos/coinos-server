@@ -8,12 +8,12 @@ module.exports = async (req, res) => {
   } = req.body;
 
   const isChange = async address => 
-    !((await bc.getAddressInfo(address)).ismine) ||
+    !((await lq.getAddressInfo(address)).ismine) ||
     !Object.keys(addresses).includes(address) || 
     address === user.liquid;
 
-  const unblinded = await bc.unblindRawTransaction(hex);
-  tx = await bc.decodeRawTransaction(unblinded.hex);
+  const unblinded = await lq.unblindRawTransaction(hex);
+  tx = await lq.decodeRawTransaction(unblinded.hex);
   
   let total = 0;
   let change = 0;
@@ -59,11 +59,11 @@ module.exports = async (req, res) => {
 
   try {
     if (config.liquid.walletpass)
-      await bc.walletPassphrase(config.liquid.walletpass, 300);
+      await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-    hex = await bc.blindRawTransaction(hex);
-    rawtx = (await bc.signRawTransactionWithWallet(hex)).hex;
-    let txid = await bc.sendRawTransaction(rawtx);
+    hex = await lq.blindRawTransaction(hex);
+    rawtx = (await lq.signRawTransactionWithWallet(hex)).hex;
+    let txid = await lq.sendRawTransaction(rawtx);
 
     await db.transaction(async transaction => {
       await user.save({ transaction });
