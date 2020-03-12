@@ -51,7 +51,7 @@ module.exports = async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l.warn("insufficient funds for bitcoin payment", e);
+    l.warn("insufficient funds for bitcoin payment", user.username);
     return res.status(500).send("Not enough satoshis");
   }
 

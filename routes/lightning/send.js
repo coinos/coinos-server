@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l.warn("insufficient funds for lightning payment", e);
+    l.warn("insufficient funds for lightning payment", user.username);
     return res.status(500).send("Not enough satoshis");
   }
 

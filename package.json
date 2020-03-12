@@ -33,7 +33,6 @@
     "grpc": "^1.24.2",
     "http-proxy-middleware": "^0.20.0",
     "jsonwebtoken": "^8.5.1",
-    "lnrpc": "^0.6.2",
     "lodash": "^4.17.13",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",

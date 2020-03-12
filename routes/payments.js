@@ -1,12 +1,12 @@
 const BitcoinCore = require("bitcoin-core");
-const createLnrpc = require("../lib/createLnrpc");
+const lnd = require("../lib/lnd");
 
 (async () => {
   bc = new BitcoinCore(config.bitcoin);
   lq = new BitcoinCore(config.liquid);
 
-  lna = await createLnrpc(config.lna);
-  lnb = await createLnrpc(config.lnb);
+  lna = lnd(config.lna);
+  lnb = lnd(config.lnb);
 
   seen = [];
   addresses = {};
@@ -17,16 +17,23 @@ const createLnrpc = require("../lib/createLnrpc");
     if (u.liquid) addresses[u.liquid] = u.username;
   });
 
+  payments = (await db.Payment.findAll({
+    attributes: ["hash"]
+  })).map(p => p.hash);
+
   app.post("/lightning/invoice", auth, require("./lightning/invoice"));
   app.post("/lightning/query", auth, require("./lightning/query"));
   app.post("/lightning/send", auth, require("./lightning/send"));
   app.post("/lightning/user", auth, require("./lightning/user"));
+  require("./lightning/receive");
 
   app.post("/bitcoin/send", auth, require("./bitcoin/send"));
   app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
+  require("./bitcoin/receive");
 
   app.post("/liquid/send", auth, require("./liquid/send"));
   app.post("/liquid/fee", auth, require("./liquid/fee"));
+  require("./liquid/receive");
 
   app.get("/payments", auth, async (req, res) => {
     const payments = await db.Payment.findAll({
