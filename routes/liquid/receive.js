@@ -22,7 +22,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
   Promise.all(
     tx.vout.map(async o => {
+      if (!o.asset || o.asset !== config.liquid.btcasset) return;
       if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
+
       const value = toSats(o.value);
       const address = o.scriptPubKey.addresses[0];
 
