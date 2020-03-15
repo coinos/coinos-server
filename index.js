@@ -28,10 +28,18 @@ require("./routes/payments");
 require("./routes/users");
 
 app.use((err, req, res, next) => {
-  l.info("res", res);
+  const details = {
+    path: req.path,
+    body: req.body,
+    msg: err.message,
+    stack: err.stack,
+  } 
+
+  if (req.user) details.username = req.user.username;
+
+  l.error("uncaught error", details);
   res.status(500);
   res.send("An error occurred");
-  l.error("uncaught error", err.stack);
   return res.end();
 });
 

@@ -15,10 +15,15 @@ const twofa = (req, res, next) => {
     user,
     body: { token }
   } = req;
-  if (!user.twofa || authenticator.check(token, user.otpsecret)) next(req, res);
-  else res.status(401).send("2fa required");
-};
+  if (
+    user.twofa &&
+    (typeof twofa === "undefined" ||
+      !authenticator.check(twofa, user.otpsecret))
+  ) {
+    return res.status(401).send("2fa required");
+  } else next();
 
+};
 
 app.get("/liquidate", async (req, res) => {
   let users = await db.User.findAll();
@@ -26,9 +31,7 @@ app.get("/liquidate", async (req, res) => {
     let user = users[i];
     if (!user.confidential) {
       user.confidential = await lq.getNewAddress();
-      user.liquid = (await lq.getAddressInfo(
-        user.confidential
-      )).unconfidential;
+      user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
       await user.save();
     }
 
@@ -68,9 +71,7 @@ app.post("/register", async (req, res) => {
 
   user.address = await bc.getNewAddress("", "bech32");
   user.confidential = await lq.getNewAddress();
-  user.liquid = (await lq.getAddressInfo(
-    user.confidential
-  )).unconfidential;
+  user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
   user.name = user.username;
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
   let countries = {
@@ -82,9 +83,11 @@ app.post("/register", async (req, res) => {
     GB: "GBP"
   };
 
-  if (ip.startsWith('127') || ip.startsWith('192')) user.currency = "CAD";
-  else { 
-    let info = await axios.get(`http://api.ipstack.com/${ip}?access_key=${config.ipstack}`);
+  if (ip.startsWith("127") || ip.startsWith("192")) user.currency = "CAD";
+  else {
+    let info = await axios.get(
+      `http://api.ipstack.com/${ip}?access_key=${config.ipstack}`
+    );
     user.currency = countries[info.data.country_code] || "USD";
   }
 
@@ -207,9 +210,13 @@ app.post("/login", async (req, res) => {
       return res.status(401).end();
     }
 
-    if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret))) {
+    if (
+      user.twofa &&
+      (typeof twofa === "undefined" ||
+        !authenticator.check(twofa, user.otpsecret))
+    ) {
       return res.status(401).send("2fa required");
-    } 
+    }
 
     let payload = { username: user.username };
     let token = jwt.sign(payload, config.jwt);
@@ -248,9 +255,7 @@ app.post("/facebookLogin", async (req, res) => {
       )).data.name;
       user.address = await bc.getNewAddress("", "bech32");
       user.confidential = await lq.getNewAddress();
-      user.liquid = (await lq.getAddressInfo(
-        user.confidential
-      )).unconfidential;
+      user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
       user.password = await bcrypt.hash(accessToken, 1);
       user.balance = 0;
       user.pending = 0;
@@ -268,7 +273,11 @@ app.post("/facebookLogin", async (req, res) => {
       l.info("new facebook user", user.name);
     }
 
-    if (user.twofa && (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret)))
+    if (
+      user.twofa &&
+      (typeof twofa === "undefined" ||
+        !authenticator.check(twofa, user.otpsecret))
+    )
       return res.status(401).send("2fa required");
 
     user.pic = (await axios.get(
@@ -279,7 +288,7 @@ app.post("/facebookLogin", async (req, res) => {
 
     let payload = { username: user.username };
     let token = jwt.sign(payload, config.jwt);
-    res.cookie("token", token , { expires: new Date(Date.now() + 432000000) });
+    res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
     res.send({ user, token });
   } catch (e) {
     l.error("error during facebook login", e);
