@@ -159,6 +159,7 @@ app.post("/user", auth, async (req, res) => {
     if (user.username !== username && exists) {
       return res.status(500).send("Username taken");
     } else {
+      sids[username] = sids[user.username];
       user.username = username;
       addresses[user.address] = username;
       addresses[user.liquid] = user.username;
