@@ -16,6 +16,14 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Current Database: `coinos`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `coinos` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
+
+USE `coinos`;
+
+--
 -- Table structure for table `SequelizeMeta`
 --
 
@@ -53,7 +61,7 @@ CREATE TABLE `payments` (
   `fee` double DEFAULT NULL,
   `asset` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2782 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3140 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -99,9 +107,9 @@ CREATE TABLE `users` (
   `confidential` varchar(255) DEFAULT NULL,
   `liquid` varchar(255) DEFAULT NULL,
   `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
-  `otp` varchar(255) DEFAULT NULL,
+  `otpsecret` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=420 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=463 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -113,4 +121,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-02-09 15:22:43
+-- Dump completed on 2020-03-19 22:56:40

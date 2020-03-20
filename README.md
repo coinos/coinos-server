@@ -1,28 +1,30 @@
-This is the backend API server for https://coinos.io/
+# coinos-server
 
-It's built on NodeJS and Express and uses Sequelize to communicate with a MariaDB database server. There are a couple GraphQL endpoints I was experimenting with but most of the communication is done with REST endpoints and persistent per-user websocket connections using socket.io.
+Coinos is a bitcoin wallet app that supports payments over the <a href="https://bitcoin.org">bitcoin</a>, <a href="https://blockstream.com/liquid/">liquid</a> and <a href="http://lightning.network/">lightning</a> networks. Try it out at <a href="https://coinos.io/">coinos.io</a>.
 
-The server expects you to be running a full bitcoind node and two separate lnd instances, referred to in the code as lna and lnb. The reason for running two nodes is so that they can invoice and pay each other in the case that one CoinOS user wants to pay another CoinOS user since lnd nodes cannot pay themselves (or at least that was the case when I started, that may have changed). 
+This repository contains the code for the backend API server which is implemented as a NodeJS application. The code for the frontend UI is tracked separately <a href="https://github.com/asoltys/coinos.io">here</a>.
 
-lnb takes care of generating invoices and receiving payments and lna takes deposits and sends payments. As soon as lna sends a payment, it generates an invoice for lnb to pay it back right away so that they don't become unbalanced.
+## Requirements
 
-We use ZMQ to communicate with bitcoind in addition to the JSON RPC so make sure your bitcoind is compiled with ZMQ enabled. This should be done automatically if you have the prerequisite libzmq dependency installed at compile time.
+* <a href="https://github.com/bitcoin/bitcoin">bitcoind</a> with zmq support
+* <a href="https://github.com/ElementsProject/elements">elementsd</a> with zmq support
+* two instances of <a href="https://github.com/lightningnetwork/lnd">lnd</a> (<a href="https://github.com/elementsproject/lightning">c-lightning</a> coming soon)
+* a database that <a href="https://github.com/sequelize/sequelize">sequelize</a> can talk to
 
-There are also integrations with Facebook's API for single sign-in and contacts, Stripe for taking credit card payments, Mailgun for email notifications, Twilio for SMS notifications, and Authy for two-factor authentication. Pricing info is fetched from Kraken at the time of writing and only in CAD but that's soon to change.
+The bitcoind and elementsd nodes can be a pruned if you want to limit the amount of disk space used.
 
-## Configuration
+The reason for running two lightning nodes is so that one can create invoices while the other sends payments when two coinos users want to pay each other. 
 
-You can configure the connection info and API keys for all the external services in config/index.js 
-
-Check out the [sample config](https://github.com/asoltys/coinos-server/blob/master/config/index.sample.js)
-
-## Database
-
-For a while I was writing Sequelize migrations to keep the database schema in sync with the codebase but right now there are a handful of columns that aren't captured in any migration. There's a [sample schema](https://github.com/asoltys/coinos-server/blob/master/schema.sql) that you can use though.
-
-## Installation
+## Getting Started
 
     git clone https://github.com/asoltys/coinos-server
+    cd coinos-server
+    cp config/index.js.sample config/index.js <-- edit with connection info for servers and keys for 3rd party API's
     yarn
     yarn start
 
+## Database Setup
+
+I've only tested with <a href="https://mariadb.org/">Maria</a>. Here's a [schema](https://github.com/asoltys/coinos-server/blob/master/db/schema.sql) to get you started.
+
+    cat db/schema.sql | mysql -u root -p

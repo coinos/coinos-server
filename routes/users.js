@@ -83,7 +83,7 @@ app.post("/register", async (req, res) => {
     GB: "GBP"
   };
 
-  if (ip.startsWith("127") || ip.startsWith("192")) user.currency = "CAD";
+  if (!config.ipstack || ip.startsWith("127") || ip.startsWith("192")) user.currency = "CAD";
   else {
     let info = await axios.get(
       `http://api.ipstack.com/${ip}?access_key=${config.ipstack}`
@@ -262,10 +262,6 @@ app.post("/facebookLogin", async (req, res) => {
       let friends = (await axios.get(
         `${fb}/${userID}/friends?access_token=${accessToken}`
       )).data.data;
-      if (friends.find(f => f.id === config.facebook.specialFriend)) {
-        user.friend = true;
-        user.limit = 200;
-      }
       await user.save();
       addresses[user.address] = user.username;
       addresses[user.liquid] = user.username;
