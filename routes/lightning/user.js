@@ -9,6 +9,8 @@ module.exports = async (req, res) => {
     }
   });
 
+  l.info("paying user", req.user.username, payuser);
+
   if (!user) {
     return res.status(500).send("Couldn't find the user you're trying to pay");
   }
@@ -35,7 +37,7 @@ module.exports = async (req, res) => {
     asset: 'LNBTC',
   });
 
-  req.url = "/sendPayment";
+  req.url = "/lightning/send";
   let payreq = bolt11.decode(hash);
   const { routes } = await lna.queryRoutes({ "pub_key": payreq.payeeNodeKey, "amt": payreq.satoshis });
   if (routes.length) req.body.route = routes[0];
