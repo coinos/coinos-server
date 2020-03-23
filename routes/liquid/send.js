@@ -68,7 +68,6 @@ module.exports = async (req, res) => {
     await db.transaction(async transaction => {
       await user.save({ transaction });
       emit(user.username, "user", user);
-      l.info("total", total);
 
       const payment = await db.Payment.create(
         {
