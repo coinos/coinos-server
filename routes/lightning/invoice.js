@@ -1,16 +1,15 @@
 module.exports = async (req, res) => {
   let err = m => res.status(500).send(m);
-  let { amount, address, tip } = req.body;
+  let { amount, tip } = req.body;
 
   let invoice;
   try {
-    invoice = await lnb.addInvoice({ value: amount });
+    invoice = await lnb.addInvoice({ value: amount + tip });
   } catch (e) {
     return err(e.message);
   }
 
   let hash = invoice.payment_request;
-  if (address) hash = address;
 
   await db.Payment.create({
     user_id: req.user.id,
