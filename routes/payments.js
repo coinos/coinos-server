@@ -1,5 +1,6 @@
 const BitcoinCore = require("bitcoin-core");
 const lnd = require("../lib/lnd");
+const { Op } = require("sequelize");
 
 (async () => {
   bc = new BitcoinCore(config.bitcoin);
@@ -37,7 +38,15 @@ const lnd = require("../lib/lnd");
 
   app.get("/payments", auth, async (req, res) => {
     const payments = await db.Payment.findAll({
-      where: { user_id: req.user.id },
+      where: { 
+        user_id: req.user.id,
+        [Op.or]: {
+          received: true,
+          amount: {
+            [Op.lt]: 0,
+          },
+        }, 
+      },
       order: [["id", "DESC"]]
     });
 
