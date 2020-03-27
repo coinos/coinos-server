@@ -9,18 +9,5 @@ module.exports = async (req, res) => {
     return err(e.message);
   }
 
-  let hash = invoice.payment_request;
-
-  await db.Payment.create({
-    user_id: req.user.id,
-    hash,
-    amount,
-    currency: "CAD",
-    rate: app.get("rates")[req.user.currency],
-    tip,
-    confirmed: 1,
-    asset: 'LNBTC',
-  });
-
-  res.send(invoice);
+  res.send(invoice.payment_request);
 };

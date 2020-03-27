@@ -8,8 +8,9 @@ db = new Sequelize(conf.database, conf.username, conf.password, {
   dialectOptions: { multipleStatements: true }
 });
 
-require("./models/users.js");
+require("./models/invoices.js");
 require("./models/payments.js");
+require("./models/users.js");
 
 db["User"].hasMany(db["Payment"], {
   as: "payments",
