@@ -34,14 +34,22 @@ module.exports = async (req, res) => {
     tip: 0,
     confirmed: true,
     received: false,
-    asset: 'LNBTC',
+    asset: "LNBTC"
   });
 
   req.url = "/lightning/send";
   let payreq = bolt11.decode(hash);
-  const { routes } = await lna.queryRoutes({ "pub_key": payreq.payeeNodeKey, "amt": payreq.satoshis });
-  if (routes.length) req.body.route = routes[0];
-  else return res.status(500).send("No route available");
+  try {
+    const { routes } = await lna.queryRoutes({
+      pub_key: payreq.payeeNodeKey,
+      amt: payreq.satoshis
+    });
+    if (routes.length) req.body.route = routes[0];
+    else return res.status(500).send("No route available");
+  } catch (e) {
+    l.warn("no route available", e);
+    return res.status(500).send("No route available");
+  }
   req.body.payreq = hash;
 
   return app._router.handle(req, res);
