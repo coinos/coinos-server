@@ -17,7 +17,17 @@ db["User"].hasMany(db["Payment"], {
   foreignKey: "user_id"
 });
 
+db["User"].hasMany(db["Invoice"], {
+  as: "invoices",
+  foreignKey: "user_id"
+});
+
 db["Payment"].belongsTo(db["User"], {
+  as: "user",
+  foreignKey: "user_id"
+});
+
+db["Invoice"].belongsTo(db["User"], {
   as: "user",
   foreignKey: "user_id"
 });
