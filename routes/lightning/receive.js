@@ -1,8 +1,9 @@
+const asset = "LNBTC";
+
 const handlePayment = async msg => {
   if (!msg.settled) return;
-  l.info("lightning strikes!", msg.payment_request);
 
-  let invoice = await db.Invoice.findOne({
+  const invoice = await db.Invoice.findOne({
     include: { model: db.User, as: "user" },
     where: {
       text: msg.payment_request
@@ -11,28 +12,29 @@ const handlePayment = async msg => {
 
   if (!invoice) return;
 
-  const { user } = invoice;
-  const amount = parseInt(msg.value);
+  const { text: hash, currency, rate, tip, user } = invoice;
+  const amount = parseInt(msg.value) - tip;
 
   const payment = await db.Payment.create({
     user_id: user.id,
-    hash: invoice.text,
+    hash,
     amount,
-    currency: user.currency,
-    rate: app.get("rates")[user.currency],
+    currency,
+    rate,
     received: true,
     confirmed: true,
-    asset: 'LNBTC',
+    asset,
+    tip,
   });
 
-  invoice.received = msg.value;
-  user.balance += amount;
+  invoice.received += amount + tip;
+  user.balance += amount + tip;
 
   await invoice.save();
   await payment.save();
   await user.save();
   payments.push(msg.payment_request);
-  l.info("lightning payment received", user.username, payment.amount);
+  l.info("lightning payment received", user.username, payment.amount, payment.tip);
 
   emit(user.username, "payment", payment);
   emit(user.username, "user", user);

@@ -11,7 +11,7 @@ const zmqRawTx = zmq.socket("sub");
 zmqRawTx.connect("tcp://127.0.0.1:18603");
 zmqRawTx.subscribe("rawtx");
 
-let NETWORK = bitcoin.networks[config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network];
+const asset = 'LBTC';
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
@@ -35,20 +35,17 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           }
         });
 
-        let invoices = await db.Payment.findAll({
-          limit: 1,
+        const invoice = await db.Invoice.findOne({
           where: {
-            address,
-            received: null,
-            amount: {
-              [Op.gt]: 0
-            }
+            user_id: user.id,
+            asset,
           },
-          order: [["id", "DESC"]]
+          order: [ [ 'id', 'DESC' ]]
         });
 
-        let tip = null;
-        if (invoices.length) tip = invoices[0].tip;
+        const currency = invoice ? invoice.currency : user.currency;
+        const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
+        const tip = invoice ? invoice.tip : null;
 
         let confirmed = 0;
 
@@ -64,14 +61,14 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const payment = await db.Payment.create({
           user_id: user.id,
           hash: blinded.txid,
-          amount: value,
-          currency: user.currency,
-          rate: app.get("rates")[user.currency],
+          amount: value - tip,
+          currency,
+          rate,
           received: true,
           tip,
           confirmed,
           address,
-          asset: 'LBTC',
+          asset,
         });
         payments.push(blinded.txid);
 
@@ -114,9 +111,9 @@ setInterval(async () => {
     p.confirmed = 1;
 
     let user = await p.getUser();
-    user.balance += p.amount;
-    user.pending -= Math.min(user.pending, p.amount);
-    l.info("liquid confirmed", user.username, p.amount);
+    user.balance += p.amount + p.tip;
+    user.pending -= Math.min(user.pending, p.amount + p.tip);
+    l.info("liquid confirmed", user.username, p.amount, p.tip);
     emit(user.username, "user", user);
 
     await user.save();

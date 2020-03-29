@@ -1,13 +1,13 @@
 module.exports = async (req, res) => {
-  let err = m => res.status(500).send(m);
-  let { amount, tip } = req.body;
+  const { amount, tip } = req.body;
 
-  let invoice;
+  l.info("adding lightning invoice", req.user.username, amount, tip);
+
   try {
-    invoice = await lnb.addInvoice({ value: amount + tip });
+    const invoice = await lnb.addInvoice({ value: amount + tip });
+    res.send(invoice.payment_request);
   } catch (e) {
-    return err(e.message);
+    l.error("problem creating invoice", e.message);
+    res.status(500).send(e.message);
   }
-
-  res.send(invoice.payment_request);
 };

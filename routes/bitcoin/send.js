@@ -32,6 +32,8 @@ module.exports = async (req, res) => {
   total = (total - change) + fee;
   let amount = total - fee;
 
+  l.info("attempting bitcoin payment", user.username, amount, fee);
+
   try {
     await db.transaction(async transaction => {
       let { balance } = await db.User.findOne({

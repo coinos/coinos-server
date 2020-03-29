@@ -1,6 +1,20 @@
+const { Op } = require("sequelize");
+
 app.post("/invoice", auth, async (req, res) => {
-  let { invoice } = req.body;
+  const { invoice } = req.body;
   invoice.user_id = req.user.id;
-  invoice.currency = req.user.currency;
-  res.send(await db.Invoice.create(invoice));
+  l.info("creating invoice", req.user.username, invoice);
+
+  const exists = await db.Invoice.findOne({
+    where: {
+      [Op.or]: {
+        address: invoice.address || "undefined",
+        text: invoice.text
+      }
+    }
+  });
+
+  res.send(
+    exists ? await exists.update(invoice) : await db.Invoice.create(invoice)
+  );
 });

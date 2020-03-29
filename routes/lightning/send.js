@@ -6,6 +6,8 @@ module.exports = async (req, res) => {
   let { route } = req.body;
   let { user } = req;
 
+  l.info("attempting lightning payment", user.username, payreq.satoshis);
+
   if (seen.includes(hash)) {
     l.warn("attempted to pay a paid invoice", user.username);
     return res.status(500).send("Invoice has been paid, can't pay again");
@@ -30,7 +32,7 @@ module.exports = async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l.warn("insufficient funds for lightning payment", user.username);
+    l.warn("insufficient funds for lightning payment", user.username, user.balance);
     return res.status(500).send("Not enough satoshis");
   }
 

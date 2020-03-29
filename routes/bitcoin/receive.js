@@ -12,7 +12,11 @@ const zmqRawTx = zmq.socket("sub");
 zmqRawTx.connect(config.bitcoin.zmqrawtx);
 zmqRawTx.subscribe("rawtx");
 
-let NETWORK = bitcoin.networks[config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network];
+const asset = "BTC";
+const network =
+  bitcoin.networks[
+    config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network
+  ];
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
@@ -27,10 +31,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
       let address;
       try {
-        address = bitcoin.address.fromOutputScript(
-          o.script,
-          NETWORK
-        );
+        address = bitcoin.address.fromOutputScript(o.script, network);
       } catch (e) {
         return;
       }
@@ -44,20 +45,17 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           }
         });
 
-        let invoices = await db.Payment.findAll({
-          limit: 1,
+        const invoice = await db.Invoice.findOne({
           where: {
-            address,
-            received: null,
-            amount: {
-              [Op.gt]: 0
-            }
+            user_id: user.id,
+            asset
           },
-          order: [["createdAt", "DESC"]]
+          order: [["id", "DESC"]]
         });
 
-        let tip = null;
-        if (invoices.length) tip = invoices[0].tip;
+        const currency = invoice ? invoice.currency : user.currency;
+        const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
+        const tip = invoice ? invoice.tip : null;
 
         let confirmed = false;
 
@@ -66,20 +64,20 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         await user.save();
         emit(user.username, "user", user);
-        
+
         addresses[user.address] = user.username;
 
         const payment = await db.Payment.create({
           user_id: user.id,
           hash,
-          amount: value,
-          currency: user.currency,
-          rate: app.get("rates")[user.currency],
+          amount: value - tip,
+          currency,
+          rate,
           received: true,
           tip,
           confirmed,
           address,
-          asset: 'BTC',
+          asset,
         });
 
         l.info("bitcoin detected", user.username, o.value);
@@ -102,7 +100,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
   block.transactions.map(tx => {
     let hash = reverse(tx.getHash()).toString("hex");
     if (hashes.includes(hash)) queue[hash] = 1;
-  }); 
+  });
 });
 
 setInterval(async () => {
@@ -113,30 +111,30 @@ setInterval(async () => {
     let p = await db.Payment.findOne({
       include: [{ model: db.User, as: "user" }],
       where: { hash, confirmed: 0 }
-    })
+    });
 
     p.confirmed = 1;
 
     let user = await p.getUser();
-    user.balance += p.amount;
-    user.pending -= Math.min(user.pending, p.amount);
+    user.balance += p.amount + p.tip;
+    user.pending -= Math.min(user.pending, p.amount + p.tip);
     emit(user.username, "user", user);
 
     await user.save();
     await p.save();
 
     let payments = await db.Payment.findAll({
-      where: { 
+      where: {
         user_id: user.id,
-        received: { 
+        received: {
           [Op.ne]: null
-        },
+        }
       },
-      order: [['id', 'DESC']],
+      order: [["id", "DESC"]],
       limit: 12
     });
 
-    l.info("bitcoin confirmed", user.username, p.amount);
+    l.info("bitcoin confirmed", user.username, p.amount, p.tip);
     emit(user.username, "payments", payments);
     delete queue[hash];
   }
