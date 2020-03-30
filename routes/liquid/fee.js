@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
       subtractFeeFromOutputs: amount === user.balance ? [0] : []
     } 
 
-    if (feeRate) params["feeRate"] = (parseInt(feeRate) / SATS * 1000).toFixed(8);
+    if (feeRate) params.feeRate = (parseFloat(feeRate) / SATS * 1000).toFixed(8);
 
     tx = await lq.fundRawTransaction(tx, params);
     res.send({ tx });
