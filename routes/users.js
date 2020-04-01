@@ -143,6 +143,7 @@ app.post("/user", auth, async (req, res) => {
     let { user } = req;
     let {
       username,
+      unit,
       currency,
       currencies,
       twofa,
@@ -169,6 +170,7 @@ app.post("/user", auth, async (req, res) => {
       });
     }
 
+    user.unit = unit;
     user.currency = currency;
     user.currencies = currencies;
 

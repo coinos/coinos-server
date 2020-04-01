@@ -46,6 +46,15 @@ const attributes = {
     comment: null,
     field: "confidential"
   },
+  unit: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: 'SAT',
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "unit"
+  },
   address: {
     type: DataTypes.STRING(255),
     allowNull: true,
