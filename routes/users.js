@@ -169,13 +169,8 @@ app.post("/user", auth, async (req, res) => {
       });
     }
 
-    user.currencies = currencies;
     user.currency = currency;
-    if (currencies.length) {
-      if (!currencies.includes(currency)) user.currency = currencies[0];
-    } else {
-      user.currency = null;
-    }
+    user.currencies = currencies;
 
     user.twofa = twofa;
     user.pin = pin;
