@@ -170,7 +170,7 @@ app.post("/user", auth, async (req, res) => {
       });
     }
 
-    user.unit = unit;
+    if (unit) user.unit = unit;
     user.currency = currency;
     user.currencies = currencies;
 
