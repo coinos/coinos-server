@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
   try {
     amount = parseInt(amount);
 
-    tx = await bc.createRawTransaction([], {
+    let unsigned = await bc.createRawTransaction([], {
       [address]: (amount / SATS).toFixed(8)
     });
 
@@ -17,10 +17,10 @@ module.exports = async (req, res) => {
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
     l.info("requested rate", params.feeRate * SATS);
 
-    let decoded = await bc.decodeRawTransaction(tx);
+    let decoded = await bc.decodeRawTransaction(unsigned);
     let { weight, size, vsize } = decoded;
 
-    tx = await bc.fundRawTransaction(tx, params);
+    tx = await bc.fundRawTransaction(unsigned, params);
     feeRate = parseInt(tx.fee * SATS * 1000 / decoded.size);
     l.info("unsigned", { weight, size, vsize, feeRate });
 
@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
     l.info("signed", { weight, size, vsize, feeRate });
 
     
-    res.send({ feeRate, tx });
+    res.send({ feeRate, unsigned, tx });
   } catch (e) {
     l.error("bitcoin fee estimation error", e);
     return res.status(500).send(e.message);
