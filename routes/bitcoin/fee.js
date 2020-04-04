@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
   try {
     amount = parseInt(amount);
 
-    let unsigned = await bc.createRawTransaction([], {
+    let partial = await bc.createRawTransaction([], {
       [address]: (amount / SATS).toFixed(8)
     });
 
@@ -15,22 +15,17 @@ module.exports = async (req, res) => {
     } 
 
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
-    l.info("requested rate", params.feeRate * SATS);
 
-    let decoded = await bc.decodeRawTransaction(unsigned);
-    let { weight, size, vsize } = decoded;
+    tx = await bc.fundRawTransaction(partial, params);
 
-    tx = await bc.fundRawTransaction(unsigned, params);
-    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.size);
-    l.info("unsigned", { weight, size, vsize, feeRate });
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    decoded = await bc.decodeRawTransaction(tx.hex);
-    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.size);
-    ({ weight, size, vsize } = decoded)
-    l.info("signed", { weight, size, vsize, feeRate });
-
+    let signed = (await bc.signRawTransactionWithWallet(tx.hex));
+    decoded = await bc.decodeRawTransaction(signed.hex);
+    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.vsize);
     
-    res.send({ feeRate, unsigned, tx });
+    res.send({ feeRate, tx });
   } catch (e) {
     l.error("bitcoin fee estimation error", e);
     return res.status(500).send(e.message);
