@@ -17,10 +17,14 @@ module.exports = async (req, res) => {
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
 
     tx = await lq.fundRawTransaction(tx, params);
-    let decoded = await lq.decodeRawTransaction(tx.hex);
-    /* TODO: figure out why this multiplier seems necessary */
-    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.size);
-    l.info(decoded.weight, decoded.size, decoded.vsize, params.feeRate * SATS, feeRate);
+
+    if (config.liquid.walletpass)
+      await lq.walletPassphrase(config.liquid.walletpass, 300);
+
+    let signed = (await lq.signRawTransactionWithWallet(tx.hex));
+    decoded = await lq.decodeRawTransaction(signed.hex);
+    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.vsize);
+
     res.send({ feeRate, tx });
   } catch (e) {
     l.error("error estimating liquid fee", e);
