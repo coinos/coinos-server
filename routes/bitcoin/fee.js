@@ -15,12 +15,21 @@ module.exports = async (req, res) => {
     } 
 
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
+    l.info("requested rate", params.feeRate * SATS);
+
+    let decoded = await bc.decodeRawTransaction(tx);
+    let { weight, size, vsize } = decoded;
 
     tx = await bc.fundRawTransaction(tx, params);
-    let decoded = await bc.decodeRawTransaction(tx.hex);
-    /* TODO: figure out why this 0.8 multiplier seems necessary */
     feeRate = parseInt(tx.fee * SATS * 1000 / decoded.size);
-    l.info(decoded.weight, decoded.size, decoded.vsize, params.feeRate * SATS, feeRate);
+    l.info("unsigned", { weight, size, vsize, feeRate });
+
+    decoded = await bc.decodeRawTransaction(tx.hex);
+    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.size);
+    ({ weight, size, vsize } = decoded)
+    l.info("signed", { weight, size, vsize, feeRate });
+
+    
     res.send({ feeRate, tx });
   } catch (e) {
     l.error("bitcoin fee estimation error", e);
