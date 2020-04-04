@@ -91,7 +91,7 @@ app.post("/register", async (req, res) => {
     user.currency = countries[info.data.country_code] || "USD";
   }
 
-  user.currencies = [user.currency];
+  user.currencies = [...new Set([user.currency, 'CAD', 'USD', 'JPY'])];
   user.otpsecret = authenticator.generateSecret();
 
   addresses[user.address] = user.username;
