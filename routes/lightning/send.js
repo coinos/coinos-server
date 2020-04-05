@@ -39,27 +39,24 @@ module.exports = async (req, res) => {
   let m;
   try {
     let paymentHash = payreq.tags.find(t => t.tagName === 'payment_hash').data;
-    m = await lna.sendToRouteSync({
-      "payment_hash": Buffer.from(paymentHash, 'hex').toString('base64'),
-      route
+    m = await lna.sendPaymentSync({
+      "payment_request": hash,
     });
    
     if (m.payment_error) return res.status(500).send(m.payment_error);
+
     if (seen.includes(m.payment_preimage)) {
-      l.info("payment has already been seen", m.payment_preimage);
-      return;
+      l.warn("duplicate payment detected", m.payment_preimage);
+      return res.status(500).send("duplicate payment detected");
     } 
-    seen.push(m.payment_preimage);
 
     let total = parseInt(m.payment_route.total_amt);
     let fee = m.payment_route.total_fees;
 
     user.balance -= total - payreq.satoshis;
 
-    l.info("deducting", total, payreq.satoshis);
     await db.transaction(async transaction => {
       await user.save({ transaction });
-      l.info("user saved");
 
       const payment = await db.Payment.create(
         {
@@ -74,6 +71,8 @@ module.exports = async (req, res) => {
         },
         { transaction }
       );
+
+      seen.push(m.payment_preimage);
 
       l.info("sent lightning", user.username, -payment.amount);
       emit(user.username, "payment", payment);
