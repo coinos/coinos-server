@@ -45,7 +45,10 @@ module.exports = async (req, res) => {
     });
    
     if (m.payment_error) return res.status(500).send(m.payment_error);
-    if (seen.includes(m.payment_preimage)) return;
+    if (seen.includes(m.payment_preimage)) {
+      l.info("payment has already been seen", m.payment_preimage);
+      return;
+    } 
     seen.push(m.payment_preimage);
 
     let total = parseInt(m.payment_route.total_amt);
@@ -53,8 +56,10 @@ module.exports = async (req, res) => {
 
     user.balance -= total - payreq.satoshis;
 
+    l.info("deducting", total, payreq.satoshis);
     await db.transaction(async transaction => {
       await user.save({ transaction });
+      l.info("user saved");
 
       const payment = await db.Payment.create(
         {
