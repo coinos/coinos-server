@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
   try {
     let paymentHash = payreq.tags.find(t => t.tagName === 'payment_hash').data;
     m = await lna.sendToRouteSync({
-      "payment_hash": Buffer.from(paymentHash, 'hex'),
+      "payment_hash": Buffer.from(paymentHash, 'hex').toString('base64'),
       route
     });
    
