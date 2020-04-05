@@ -9,9 +9,9 @@ module.exports = async (req, res) => {
   let fee = toSats(tx.fee);
 
   const isChange = async address => 
-    !((await bc.getAddressInfo(address)).ismine) ||
+    (await bc.getAddressInfo(address)).ismine && (
     !Object.keys(addresses).includes(address) || 
-    address === user.address;
+    address === user.address);
 
   tx = await bc.decodeRawTransaction(hex);
 

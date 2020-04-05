@@ -8,9 +8,9 @@ module.exports = async (req, res) => {
   } = req.body;
 
   const isChange = async address => 
-    !((await lq.getAddressInfo(address)).ismine) ||
-    !Object.keys(addresses).includes(address) || 
-    address === user.liquid;
+    ((await lq.getAddressInfo(address)).ismine) &&
+    (!Object.keys(addresses).includes(address) || 
+    address === user.liquid);
 
   const unblinded = await lq.unblindRawTransaction(hex);
   tx = await lq.decodeRawTransaction(unblinded.hex);
