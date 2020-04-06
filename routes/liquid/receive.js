@@ -11,8 +11,6 @@ const zmqRawTx = zmq.socket("sub");
 zmqRawTx.connect("tcp://127.0.0.1:18603");
 zmqRawTx.subscribe("rawtx");
 
-const asset = 'LBTC';
-
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
   const unblinded = await lq.unblindRawTransaction(hex);
@@ -22,9 +20,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
   Promise.all(
     tx.vout.map(async o => {
-      if (!o.asset || o.asset !== config.liquid.btcasset) return;
       if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
+      const { asset } = o.asset;
       const value = toSats(o.value);
       const address = o.scriptPubKey.addresses[0];
 
@@ -38,9 +36,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            asset,
+            asset
           },
-          order: [ [ 'id', 'DESC' ]]
+          order: [["id", "DESC"]]
         });
 
         const currency = invoice ? invoice.currency : user.currency;
@@ -51,7 +49,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         user.pending += value;
         user.confidential = await lq.getNewAddress();
-        user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
+        user.liquid = (await lq.getAddressInfo(
+          user.confidential
+        )).unconfidential;
 
         await user.save();
         emit(user.username, "user", user);
@@ -68,7 +68,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          asset,
+          asset
         });
         payments.push(blinded.txid);
 
@@ -106,27 +106,41 @@ setInterval(async () => {
     let p = await db.Payment.findOne({
       include: [{ model: db.User, as: "user" }],
       where: { hash, confirmed: 0, received: 1 }
-    })
+    });
 
     p.confirmed = 1;
 
     let user = await p.getUser();
-    user.balance += p.amount + p.tip;
-    user.pending -= Math.min(user.pending, p.amount + p.tip);
-    l.info("liquid confirmed", user.username, p.amount, p.tip);
+
+    const asset = await db.Asset.findOne({
+      where: {
+        user_id: user.id,
+        asset: p.asset
+      }
+    });
+
+    if (p.asset === config.liquid.btcasset) {
+      user.balance += p.amount + p.tip;
+      user.pending -= Math.min(user.pending, p.amount + p.tip);
+    } else {
+      asset.balance += p.amount + p.tip;
+      asset.pending -= Math.min(user.pending, p.amount + p.tip);
+    }
+
+    l.info("liquid confirmed", user.username, p.asset, p.amount, p.tip);
     emit(user.username, "user", user);
 
     await user.save();
     await p.save();
 
     let payments = await db.Payment.findAll({
-      where: { 
+      where: {
         user_id: user.id,
-        received: { 
+        received: {
           [Op.ne]: null
-        },
+        }
       },
-      order: [['id', 'DESC']],
+      order: [["id", "DESC"]],
       limit: 12
     });
 
