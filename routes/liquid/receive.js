@@ -22,7 +22,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
     tx.vout.map(async o => {
       if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
-      const { asset } = o.asset;
+      const { asset } = o;
       const value = toSats(o.value);
       const address = o.scriptPubKey.addresses[0];
 
@@ -47,7 +47,30 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let confirmed = 0;
 
-        user.pending += value;
+        if (asset === config.liquid.btcasset) {
+          user.pending += value;
+        } else {
+          const params = {
+            user_id: user.id,
+            asset,
+          };
+
+          const account = await db.Account.findOne({
+            where: params
+          });
+
+          console.log("params", params);
+          if (account) {
+            account.pending += value;
+            await account.save();
+          } else {
+            params.balance = 0;
+            params.pending = value;
+            l.info("creating", params);
+            await db.Account.create(params);
+          }
+        }
+
         user.confidential = await lq.getNewAddress();
         user.liquid = (await lq.getAddressInfo(
           user.confidential
@@ -72,7 +95,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         });
         payments.push(blinded.txid);
 
-        l.info("liquid detected", user.username, value);
+        l.info("liquid detected", user.username, asset, value);
         emit(user.username, "payment", payment);
       }
     })
@@ -112,7 +135,7 @@ setInterval(async () => {
 
     let user = await p.getUser();
 
-    const asset = await db.Asset.findOne({
+    const asset = await db.Account.findOne({
       where: {
         user_id: user.id,
         asset: p.asset

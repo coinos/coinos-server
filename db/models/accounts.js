@@ -55,6 +55,15 @@ const attributes = {
     comment: null,
     field: "balance"
   },
+  pending: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "pending"
+  },
 };
 
 const options = {
