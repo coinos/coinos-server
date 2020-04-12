@@ -21,9 +21,10 @@ module.exports = async (req, res) => {
     if (config.liquid.walletpass)
       await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-    let signed = (await lq.signRawTransactionWithWallet(tx.hex));
+    let blinded = await lq.blindRawTransaction(tx.hex);
+    let signed = (await lq.signRawTransactionWithWallet(blinded));
     decoded = await lq.decodeRawTransaction(signed.hex);
-    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.vsize);
+    feeRate = Math.round(tx.fee * SATS * 1000 / decoded.vsize);
 
     res.send({ feeRate, tx });
   } catch (e) {

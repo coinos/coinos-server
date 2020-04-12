@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
 
     let signed = (await bc.signRawTransactionWithWallet(tx.hex));
     decoded = await bc.decodeRawTransaction(signed.hex);
-    feeRate = parseInt(tx.fee * SATS * 1000 / decoded.vsize);
+    feeRate = Math.round(tx.fee * SATS * 1000 / decoded.vsize);
     
     res.send({ feeRate, tx });
   } catch (e) {
