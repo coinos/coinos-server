@@ -328,4 +328,14 @@ app.get("/friends", auth, async (req, res) => {
   }
 });
 
+app.post("/address", auth, async (req, res) => {
+  let { user } = req;
+  delete addresses[user.address];
+  user.address = await bc.getNewAddress("", req.body.type || "bech32");
+  await user.save();
+  addresses[user.address] = user.username;
+  emit(user.username, "user", user);
+  res.send(user.address);
+});
+
 setInterval(() => (faucet = 2000), DAY);
