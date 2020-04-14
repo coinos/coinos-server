@@ -59,7 +59,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             where: params
           });
 
-          console.log("params", params);
           if (account) {
             account.pending += value;
             await account.save();
@@ -127,13 +126,36 @@ setInterval(async () => {
     let hash = arr[i];
 
     let p = await db.Payment.findOne({
-      include: [{ model: db.User, as: "user" }],
       where: { hash, confirmed: 0, received: 1 }
     });
 
-    p.confirmed = 1;
+    const user = await db.User.findOne({
+      include: [
+        {
+          model: db.Payment,
+          as: "payments",
+          order: [["id", "DESC"]],
+          where: {
+            [Op.or]: {
+              received: true,
+              amount: {
+                [Op.lt]: 0,
+              },
+            },
+          },
+          limit: 12
+        },
+        {
+          model: db.Account,
+          as: "accounts",
+        },
+      ],
+      where: {
+        id: p.user_id
+      }
+    });
 
-    let user = await p.getUser();
+    p.confirmed = 1;
 
     const asset = await db.Account.findOne({
       where: {
@@ -148,6 +170,7 @@ setInterval(async () => {
     } else {
       asset.balance += p.amount + p.tip;
       asset.pending -= Math.min(user.pending, p.amount + p.tip);
+      await asset.save();
     }
 
     l.info("liquid confirmed", user.username, p.asset, p.amount, p.tip);

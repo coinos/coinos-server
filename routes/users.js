@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const uuidv4 = require("uuid/v4");
 const fb = "https://graph.facebook.com/";
 const authenticator = require("otplib").authenticator;
+const { getUser } = require("../lib/utils");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 let faucet = 1000;
@@ -182,7 +183,7 @@ app.post("/user", auth, async (req, res) => {
     }
 
     await user.save();
-    emit(user.username, "user", req.user);
+    emit(user.username, "user", user);
     res.send({ user, token });
   } catch (e) {
     l.error("error updating user", e);
@@ -193,11 +194,7 @@ app.post("/login", async (req, res) => {
   let twofa = req.body.token;
 
   try {
-    let user = await db.User.findOne({
-      where: {
-        username: req.body.username
-      }
-    });
+    let user = await getUser(req.body.username);
 
     if (
       !user ||
@@ -239,11 +236,7 @@ app.post("/facebookLogin", async (req, res) => {
   if (!check.data.data.is_valid) return res.status(401).end();
 
   try {
-    let user = await db.User.findOne({
-      where: {
-        username: req.body.userID
-      }
-    });
+    let user = await getUser(req.body.userID);
 
     if (!user) {
       user = await db.User.create(user);
