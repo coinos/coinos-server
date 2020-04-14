@@ -4,6 +4,7 @@ module.exports = async (req, res) => {
   let { user } = req;
   let {
     address,
+    asset,
     tx: { hex }
   } = req.body;
 
