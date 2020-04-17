@@ -23,11 +23,12 @@ const twofa = (req, res, next) => {
   ) {
     return res.status(401).send("2fa required");
   } else next();
-
 };
 
 app.get("/liquidate", async (req, res) => {
-  let users = await db.User.findAll();
+  let users = await db.User.findAll({
+    include: { model: db.Account, as: "accounts" }
+  });
   for (let i = 0; i < users.length; i++) {
     let user = users[i];
     if (!user.confidential) {
@@ -39,6 +40,15 @@ app.get("/liquidate", async (req, res) => {
     if (!user.otpsecret) {
       user.otpsecret = authenticator.generateSecret();
       await user.save();
+    }
+
+    if (!user.accounts.length) {
+      await db.Account.create({
+        user_id: user.id,
+        asset: config.liquid.btcasset,
+        balance: user.balance,
+        pending: 0
+      });
     }
   }
   res.end();
@@ -84,7 +94,8 @@ app.post("/register", async (req, res) => {
     GB: "GBP"
   };
 
-  if (!config.ipstack || ip.startsWith("127") || ip.startsWith("192")) user.currency = "CAD";
+  if (!config.ipstack || ip.startsWith("127") || ip.startsWith("192"))
+    user.currency = "CAD";
   else {
     let info = await axios.get(
       `http://api.ipstack.com/${ip}?access_key=${config.ipstack}`
@@ -92,7 +103,7 @@ app.post("/register", async (req, res) => {
     user.currency = countries[info.data.country_code] || "USD";
   }
 
-  user.currencies = [...new Set([user.currency, 'CAD', 'USD', 'JPY'])];
+  user.currencies = [...new Set([user.currency, "CAD", "USD", "JPY"])];
   user.otpsecret = authenticator.generateSecret();
 
   addresses[user.address] = user.username;

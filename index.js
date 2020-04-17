@@ -24,6 +24,7 @@ require("./lib/sockets");
 require("./lib/passport");
 require("./lib/rates");
 
+require("./routes/assets");
 require("./routes/balances");
 require("./routes/invoices");
 require("./routes/payments");

@@ -129,31 +129,7 @@ setInterval(async () => {
       where: { hash, confirmed: 0, received: 1 }
     });
 
-    const user = await db.User.findOne({
-      include: [
-        {
-          model: db.Payment,
-          as: "payments",
-          order: [["id", "DESC"]],
-          where: {
-            [Op.or]: {
-              received: true,
-              amount: {
-                [Op.lt]: 0,
-              },
-            },
-          },
-          limit: 12
-        },
-        {
-          model: db.Account,
-          as: "accounts",
-        },
-      ],
-      where: {
-        id: p.user_id
-      }
-    });
+    const user = await getUser(p.user_id); 
 
     p.confirmed = 1;
 
@@ -164,6 +140,7 @@ setInterval(async () => {
       }
     });
 
+    l.info("asset", p.asset);
     if (p.asset === config.liquid.btcasset) {
       user.balance += p.amount + p.tip;
       user.pending -= Math.min(user.pending, p.amount + p.tip);
