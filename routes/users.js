@@ -212,7 +212,7 @@ app.post("/login", async (req, res) => {
       (user.password &&
         !(await bcrypt.compare(req.body.password, user.password)))
     ) {
-      l.warn("invalid username or password attempt");
+      l.warn("invalid username or password attempt", req.body.username, req.body.password);
       return res.status(401).end();
     }
 
