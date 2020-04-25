@@ -20,6 +20,7 @@ app.use(compression());
 
 server = require("http").Server(app);
 require("./db");
+require("./lib/utils");
 require("./lib/sockets");
 require("./lib/passport");
 require("./lib/rates");

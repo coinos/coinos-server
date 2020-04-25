@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 const uuidv4 = require("uuid/v4");
 const fb = "https://graph.facebook.com/";
 const authenticator = require("otplib").authenticator;
-const { getUser } = require("../lib/utils");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 let faucet = 1000;
@@ -55,10 +54,16 @@ app.get("/liquidate", async (req, res) => {
 });
 
 const gift = async user => {
+  const account = user.accounts[0];
+
   if (faucet > 0) {
-    user.balance = 100;
     faucet -= 100;
+
+    account.balance = 100;
+    await account.save();
+
     const payment = await db.Payment.create({
+      account_id: account.id,
       user_id: user.id,
       hash: "Welcome Gift",
       amount: 100,
@@ -68,6 +73,7 @@ const gift = async user => {
       confirmed: 1,
       asset: "GIFT"
     });
+
     await user.save();
   }
 };
@@ -109,7 +115,19 @@ app.post("/register", async (req, res) => {
   addresses[user.address] = user.username;
   addresses[user.liquid] = user.username;
   user = await db.User.create(user);
+
+  let account = await db.Account.create({
+    user_id: user.id,
+    asset: config.liquid.btcasset,
+    balance: 0,
+    pending: 0,
+  });
+
+  user.accounts = [account];
   await gift(user);
+
+  user.account_id = account.id;
+  await user.save();
 
   l.info("new user", user.username);
   res.send(pick(user, ...whitelist));

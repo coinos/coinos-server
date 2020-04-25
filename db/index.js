@@ -28,6 +28,11 @@ db["User"].hasMany(db["Payment"], {
   foreignKey: "user_id"
 });
 
+db["User"].belongsTo(db["Account"], {
+  as: "account",
+  foreignKey: "account_id"
+});
+
 db["Account"].belongsTo(db["User"], {
   as: "user",
   foreignKey: "user_id"
@@ -36,6 +41,11 @@ db["Account"].belongsTo(db["User"], {
 db["Invoice"].belongsTo(db["User"], {
   as: "user",
   foreignKey: "user_id"
+});
+
+db["Payment"].belongsTo(db["Account"], {
+  as: "account",
+  foreignKey: "account_id"
 });
 
 db["Payment"].belongsTo(db["User"], {

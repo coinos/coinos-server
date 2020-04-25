@@ -109,13 +109,12 @@ setInterval(async () => {
     let hash = arr[i];
 
     let p = await db.Payment.findOne({
-      include: [{ model: db.User, as: "user" }],
       where: { hash, confirmed: 0 }
     });
 
     p.confirmed = 1;
 
-    let user = await p.getUser();
+    const user = await getUserById(p.user_id); 
     user.balance += p.amount + p.tip;
     user.pending -= Math.min(user.pending, p.amount + p.tip);
     emit(user.username, "user", user);

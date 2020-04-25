@@ -15,6 +15,7 @@ module.exports = async (req, res) => {
 
   const unblinded = await lq.unblindRawTransaction(hex);
   tx = await lq.decodeRawTransaction(unblinded.hex);
+  l.info("decoded", tx);
   
   let total = 0;
   let change = 0;

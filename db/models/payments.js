@@ -10,6 +10,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  account_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "account_id"
+  },
   user_id: {
     type: DataTypes.INTEGER(11),
     allowNull: true,

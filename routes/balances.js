@@ -9,11 +9,6 @@ app.get("/balances", async (req, res) => {
       [sequelize.fn("sum", sequelize.col("balance")), "total"]
     ],
     group: ["asset"],
-    where: {
-      asset: {
-        [Op.ne]: config.liquid.btcasset
-      }
-    }
   });
 
   const balances = {
@@ -23,13 +18,6 @@ app.get("/balances", async (req, res) => {
     liquid: parseInt(assets.bitcoin * SATS),
     lnchannel: parseInt((await lna.channelBalance({})).balance),
     lnwallet: parseInt((await lna.walletBalance({})).total_balance),
-    user: parseInt(
-      (await db["User"].findAll({
-        attributes: [[sequelize.fn("sum", sequelize.col("balance")), "total"]],
-        raw: true,
-        order: sequelize.literal("total DESC")
-      }))[0].total
-    )
   };
 
   const { bitcoin, liquid, lnchannel, user, lnwallet } = balances;
@@ -41,7 +29,6 @@ app.get("/balances", async (req, res) => {
     parseInt(lnwallet);
 
   balances.ratio = (balances.total / parseInt(user)).toFixed(2);
-
 
   res.send(balances);
 });
