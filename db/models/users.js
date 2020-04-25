@@ -64,14 +64,14 @@ const attributes = {
     comment: null,
     field: "address"
   },
-  symbol: {
-    type: DataTypes.STRING(255),
+  account_id: {
+    type: DataTypes.INTEGER(11),
     allowNull: true,
     defaultValue: null,
     primaryKey: false,
     autoIncrement: false,
     comment: null,
-    field: "symbol"
+    field: "account_id"
   },
   otpsecret: {
     type: DataTypes.STRING(255),
@@ -100,24 +100,6 @@ const attributes = {
     comment: null,
     field: "currencies"
   },
-  pubkey: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "pubkey"
-  },
-  privkey: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "privkey"
-  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -145,42 +127,6 @@ const attributes = {
     comment: null,
     field: "index"
   },
-  balance: {
-    type: DataTypes.INTEGER(11),
-    allowNull: false,
-    defaultValue: "0",
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "balance"
-  },
-  channel: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "channel"
-  },
-  readonlypw: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "readonlypw"
-  },
-  limit: {
-    type: DataTypes.INTEGER(11),
-    allowNull: true,
-    defaultValue: "0",
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "limit"
-  },
   fbtoken: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -189,24 +135,6 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "fbtoken"
-  },
-  friend: {
-    type: DataTypes.INTEGER(1),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "friend"
-  },
-  pending: {
-    type: DataTypes.INTEGER(11),
-    allowNull: true,
-    defaultValue: "0",
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "pending"
   },
   name: {
     type: DataTypes.STRING(255),

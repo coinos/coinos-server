@@ -1,3 +1,4 @@
+const axios = require("axios");
 const reverse = require("buffer-reverse");
 const zmq = require("zeromq");
 const { Op } = require("sequelize");
@@ -47,27 +48,29 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let confirmed = 0;
 
-        if (asset === config.liquid.btcasset) {
-          user.pending += value;
+        let params = {
+          user_id: user.id,
+          asset
+        };
+
+        const account = await db.Account.findOne({
+          where: params
+        });
+
+        if (account) {
+          account.pending += value;
+          await account.save();
         } else {
-          const params = {
-            user_id: user.id,
-            asset,
-          };
+          let assets = await axios.get("https://assets.blockstream.info/");
 
-          const account = await db.Account.findOne({
-            where: params
-          });
-
-          if (account) {
-            account.pending += value;
-            await account.save();
-          } else {
-            params.balance = 0;
-            params.pending = value;
-            l.info("creating", params);
-            await db.Account.create(params);
+          if (assets[asset]) {
+            let { ticker, precision, name } = assets[asset];
+            params = { ...params, ...{ ticker, precision, name } };
           }
+
+          params.balance = 0;
+          params.pending = value;
+          account = await db.Account.create(params);
         }
 
         user.confidential = await lq.getNewAddress();
@@ -76,11 +79,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         )).unconfidential;
 
         await user.save();
+        user = await getUser(user.username);
         emit(user.username, "user", user);
 
         addresses[user.liquid] = user.username;
 
         const payment = await db.Payment.create({
+          account_id: account.id,
           user_id: user.id,
           hash: blinded.txid,
           amount: value - tip,
@@ -90,7 +95,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          asset
+          network: "LBTC"
         });
         payments.push(blinded.txid);
 
@@ -126,48 +131,24 @@ setInterval(async () => {
     let hash = arr[i];
 
     let p = await db.Payment.findOne({
-      where: { hash, confirmed: 0, received: 1 }
-    });
-
-    const user = await getUser(p.user_id); 
-
-    p.confirmed = 1;
-
-    const asset = await db.Account.findOne({
-      where: {
-        user_id: user.id,
-        asset: p.asset
+      where: { hash, confirmed: 0, received: 1 },
+      include: {
+        model: db.Account,
+        as: "account"
       }
     });
 
-    l.info("asset", p.asset);
-    if (p.asset === config.liquid.btcasset) {
-      user.balance += p.amount + p.tip;
-      user.pending -= Math.min(user.pending, p.amount + p.tip);
-    } else {
-      asset.balance += p.amount + p.tip;
-      asset.pending -= Math.min(user.pending, p.amount + p.tip);
-      await asset.save();
-    }
+    p.confirmed = 1;
+    p.account.balance += p.amount + p.tip;
+    p.account.pending -= Math.min(p.account.pending, p.amount + p.tip);
 
-    l.info("liquid confirmed", user.username, p.asset, p.amount, p.tip);
-    emit(user.username, "user", user);
-
-    await user.save();
+    await p.account.save();
     await p.save();
 
-    let payments = await db.Payment.findAll({
-      where: {
-        user_id: user.id,
-        received: {
-          [Op.ne]: null
-        }
-      },
-      order: [["id", "DESC"]],
-      limit: 12
-    });
+    let user = await getUserById(p.user_id);
+    emit(user.username, "user", user);
+    l.info("liquid confirmed", user.username, p.asset, p.amount, p.tip);
 
-    emit(user.username, "payments", payments);
     delete queue[hash];
   }
 }, 1000);

@@ -37,6 +37,24 @@ const attributes = {
     comment: null,
     field: "updatedAt"
   },
+  name: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "name"
+  },
+  ticker: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "ticker"
+  },
   asset: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -63,6 +81,15 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "pending"
+  },
+  precision: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "precision"
   },
 };
 

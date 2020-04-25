@@ -32,66 +32,76 @@ module.exports = async (req, res) => {
       await user.save({ transaction });
     });
   } catch (e) {
-    l.warn("insufficient funds for lightning payment", user.username, user.balance);
+    l.warn(
+      "insufficient funds for lightning payment",
+      user.username,
+      user.balance
+    );
     return res.status(500).send("Not enough satoshis");
   }
 
   let m;
   try {
-    let paymentHash = payreq.tags.find(t => t.tagName === 'payment_hash').data;
+    let paymentHash = payreq.tags.find(t => t.tagName === "payment_hash").data;
     m = await lna.sendPaymentSync({
-      "payment_request": hash,
+      payment_request: hash
     });
-   
+
     if (m.payment_error) return res.status(500).send(m.payment_error);
 
     if (seen.includes(m.payment_preimage)) {
       l.warn("duplicate payment detected", m.payment_preimage);
       return res.status(500).send("duplicate payment detected");
-    } 
+    }
 
     let total = parseInt(m.payment_route.total_amt);
     let fee = m.payment_route.total_fees;
 
     user.balance -= total - payreq.satoshis;
 
-    await db.transaction(async transaction => {
-      await user.save({ transaction });
+    await user.save();
 
-      const payment = await db.Payment.create(
-        {
-          amount: -total,
-          fee,
-          user_id: user.id,
-          hash,
-          rate: app.get("rates")[user.currency],
-          currency: user.currency,
-          confirmed: true,
-          asset: 'LNBTC',
-        },
-        { transaction }
-      );
-
-      seen.push(m.payment_preimage);
-
-      l.info("sent lightning", user.username, -payment.amount);
-      emit(user.username, "payment", payment);
-      emit(user.username, "user", user);
-
-      if (payreq.payeeNodeKey === config.lnb.id) {
-        lna.addInvoice({ value: payreq.satoshis }, (err, invoice) => {
-          let payback = lnb.sendPayment(lnb.meta, {});
-
-          /* eslint-disable-next-line */
-          let { payment_request } = invoice;
-          /* eslint-disable-next-line */
-          payback.write({ payment_request });
-        });
+    const account = await db.Account.findOne({
+      where: {
+        user_id: user.id,
+        asset: config.liquid.btcasset
       }
-
-      seen.push(hash);
-      res.send(payment);
     });
+
+    const payment = await db.Payment.create({
+      amount: -total,
+      account_id: account.id,
+      user_id: user.id,
+      hash,
+      rate: app.get("rates")[user.currency],
+      currency: user.currency,
+      confirmed: true,
+      network: "LNBTC"
+    });
+
+    user = await getUser(user.username);
+
+    seen.push(m.payment_preimage);
+
+    l.info("sent lightning", user.username, -payment.amount);
+    emit(user.username, "payment", payment);
+
+    l.info("user payments", user.payments);
+    emit(user.username, "user", user);
+
+    if (payreq.payeeNodeKey === config.lnb.id) {
+      lna.addInvoice({ value: payreq.satoshis }, (err, invoice) => {
+        let payback = lnb.sendPayment(lnb.meta, {});
+
+        /* eslint-disable-next-line */
+        let { payment_request } = invoice;
+        /* eslint-disable-next-line */
+        payback.write({ payment_request });
+      });
+    }
+
+    seen.push(hash);
+    res.send(payment);
   } catch (e) {
     l.info("error sending lightning", e);
     return res.status(500).send(e);

@@ -72,6 +72,7 @@ module.exports = async (req, res) => {
         {
           amount: -total,
           fee,
+          account_id: user.account.id,
           user_id: user.id,
           hash: txid,
           rate: app.get("rates")[user.currency],
@@ -79,7 +80,7 @@ module.exports = async (req, res) => {
           address,
           confirmed: true,
           received: false,
-          asset: "BTC"
+          network: "BTC"
         },
         { transaction }
       );

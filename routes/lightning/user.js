@@ -34,7 +34,7 @@ module.exports = async (req, res) => {
     tip: 0,
     confirmed: true,
     received: false,
-    asset: "LNBTC"
+    network : "LNBTC"
   });
 
   req.url = "/lightning/send";
