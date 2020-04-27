@@ -46,7 +46,10 @@ app.get("/liquidate", async (req, res) => {
         user_id: user.id,
         asset: config.liquid.btcasset,
         balance: user.balance,
-        pending: 0
+        pending: 0,
+        ticker: 'BTC',
+        name: 'Bitcoin',
+        precision: 8,
       });
     }
   }
@@ -212,6 +215,7 @@ app.post("/user", auth, async (req, res) => {
     }
 
     await user.save();
+    user = await getUser(user.username);
     emit(user.username, "user", user);
     res.send({ user, token });
   } catch (e) {
@@ -358,6 +362,22 @@ app.post("/address", auth, async (req, res) => {
   addresses[user.address] = user.username;
   emit(user.username, "user", user);
   res.send(user.address);
+});
+
+app.post("/shiftAccount", auth, async (req, res) => {
+  let { user } = req;
+  let { asset } = req.body;
+
+  const account = await db.Account.findOne({
+    where: { user_id: user.id, asset } 
+  });
+
+  user.account_id = account.id;
+  await user.save();
+  
+  user = await getUser(user.username);
+  emit(user.username, "user", user);
+  res.send(account);
 });
 
 setInterval(() => (faucet = 2000), DAY);

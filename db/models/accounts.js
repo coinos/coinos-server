@@ -83,7 +83,7 @@ const attributes = {
     field: "pending"
   },
   precision: {
-    type: DataTypes.DOUBLE,
+    type: DataTypes.INTEGER(11),
     allowNull: true,
     defaultValue: null,
     primaryKey: false,

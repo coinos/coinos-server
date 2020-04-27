@@ -34,17 +34,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           }
         });
 
-        const invoice = await db.Invoice.findOne({
-          where: {
-            user_id: user.id,
-            asset
-          },
-          order: [["id", "DESC"]]
-        });
-
-        const currency = invoice ? invoice.currency : user.currency;
-        const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
-        const tip = invoice ? invoice.tip : null;
 
         let confirmed = 0;
 
@@ -61,13 +50,17 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           account.pending += value;
           await account.save();
         } else {
-          let assets = await axios.get("https://assets.blockstream.info/");
+          let name = asset.substr(0, 6);
+          let ticker = asset.substr(0, 3);
+          let precision = 8;
+
+          const assets = await axios.get("https://assets.blockstream.info/");
 
           if (assets[asset]) {
-            let { ticker, precision, name } = assets[asset];
-            params = { ...params, ...{ ticker, precision, name } };
+            ({ticker, precision, name } = assets[asset]);
           }
 
+          params = { ...params, ...{ ticker, precision, name } };
           params.balance = 0;
           params.pending = value;
           account = await db.Account.create(params);
@@ -84,6 +77,23 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         addresses[user.liquid] = user.username;
 
+        l.info("account", account.id);
+
+        let invoice;
+        if (asset === config.liquid.btcasset) {
+          invoice = await db.Invoice.findOne({
+            where: {
+              user_id: user.id,
+              network: 'LBTC',
+            },
+            order: [["id", "DESC"]]
+          });
+        }
+
+        const currency = invoice ? invoice.currency : user.currency;
+        const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
+        const tip = invoice ? invoice.tip : null;
+
         const payment = await db.Payment.create({
           account_id: account.id,
           user_id: user.id,
@@ -97,6 +107,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           address,
           network: "LBTC"
         });
+
         payments.push(blinded.txid);
 
         l.info("liquid detected", user.username, asset, value);

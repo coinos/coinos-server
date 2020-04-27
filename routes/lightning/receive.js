@@ -9,7 +9,6 @@ const handlePayment = async msg => {
     }
   });
 
-
   if (!invoice) return;
 
   const { text: hash, currency, rate, tip, user_id } = invoice;
