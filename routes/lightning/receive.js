@@ -14,8 +14,6 @@ const handlePayment = async msg => {
   const { text: hash, currency, rate, tip, user_id } = invoice;
   const amount = parseInt(msg.value) - tip;
 
-  let user = await getUserById(user_id);
-
   const account = await db.Account.findOne({
     where: {
       user_id,
@@ -32,7 +30,7 @@ const handlePayment = async msg => {
     rate,
     received: true,
     confirmed: true,
-    asset,
+    network: 'LNBTC',
     tip
   });
 
@@ -42,21 +40,20 @@ const handlePayment = async msg => {
   await account.save();
   await invoice.save();
   await payment.save();
-  await user.save();
-
   payments.push(msg.payment_request);
+
+  let user = await getUserById(user_id)
+
+  emit(user.username, "payment", payment);
+  emit(user.username, "user", user);
+
   l.info(
     "lightning payment received",
     user.username,
     payment.amount,
-    payment.tip
+    payment.tip,
+    msg
   );
-
-  user = await getUser(user.username)
-  l.info(user.account.balance);
-
-  emit(user.username, "payment", payment);
-  emit(user.username, "user", user);
 };
 
 const invoices = lna.subscribeInvoices({});

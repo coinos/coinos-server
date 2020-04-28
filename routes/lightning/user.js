@@ -9,6 +9,13 @@ module.exports = async (req, res) => {
     }
   });
 
+  const account = await db.Account.findOne({
+    where: {
+      user_id: user.id,
+      asset: config.liquid.btcasset
+    }
+  });
+
   l.info("paying user", req.user.username, payuser);
 
   if (!user) {
@@ -27,6 +34,7 @@ module.exports = async (req, res) => {
 
   await db.Payment.create({
     user_id: user.id,
+    account_id: account.id,
     hash,
     amount,
     rate: app.get("rates")[req.user.currency],
@@ -34,23 +42,11 @@ module.exports = async (req, res) => {
     tip: 0,
     confirmed: true,
     received: false,
-    network : "LNBTC"
+    network: "LNBTC"
   });
 
   req.url = "/lightning/send";
   let payreq = bolt11.decode(hash);
-  try {
-    const { routes } = await lna.queryRoutes({
-      pub_key: payreq.payeeNodeKey,
-      amt: payreq.satoshis
-    });
-    if (routes.length) req.body.route = routes[0];
-    else return res.status(500).send("No route available");
-  } catch (e) {
-    l.warn("no route available", e);
-    return res.status(500).send("No route available");
-  }
   req.body.payreq = hash;
-
   return app._router.handle(req, res);
 };

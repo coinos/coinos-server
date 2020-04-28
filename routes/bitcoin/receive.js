@@ -47,7 +47,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            network: 'BTC',
+            network: "BTC"
           },
           order: [["id", "DESC"]]
         });
@@ -86,7 +86,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: 'BTC'
+          network: "BTC"
         });
 
         l.info("bitcoin detected", user.username, o.value);
@@ -125,16 +125,20 @@ setInterval(async () => {
       }
     });
 
-    p.confirmed = 1;
-    p.account.balance += p.amount + p.tip;
-    p.account.pending -= Math.min(p.account.pending, p.amount + p.tip);
+    if (p) {
+      p.confirmed = 1;
+      p.account.balance += p.amount + p.tip;
+      p.account.pending -= Math.min(p.account.pending, p.amount + p.tip);
 
-    await p.account.save();
-    await p.save();
+      await p.account.save();
+      await p.save();
 
-    let user = await getUserById(p.user_id);
-    emit(user.username, "user", user);
-    l.info("bitcoin confirmed", user.username, p.amount, p.tip);
-    delete queue[hash];
+      let user = await getUserById(p.user_id);
+      emit(user.username, "user", user);
+      l.info("bitcoin confirmed", user.username, p.amount, p.tip);
+      delete queue[hash];
+    } else {
+      l.warn("Couldn't find payment", hash);
+    } 
   }
 }, 1000);

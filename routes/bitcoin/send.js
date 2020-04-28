@@ -66,7 +66,7 @@ module.exports = async (req, res) => {
 
     await db.transaction(async transaction => {
       await user.save({ transaction });
-      emit(user.username, "user", user);
+      user = await getUser(user.username);
 
       const payment = await db.Payment.create(
         {
@@ -85,12 +85,16 @@ module.exports = async (req, res) => {
         { transaction }
       );
 
-      l.info("sent bitcoin", user.username, total);
+      user = await getUser(user.username);
       emit(user.username, "payment", payment);
+      emit(user.username, "user", user);
+
       res.send(payment);
+
+      l.info("sent bitcoin", user.username, total);
     });
   } catch (e) {
-    l.error("error sending bitcoin", e);
+    l.error("error sending bitcoin", e.message);
     return res.status(500).send(e.message);
   }
 };

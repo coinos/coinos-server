@@ -55,14 +55,14 @@ const attributes = {
     comment: null,
     field: "rate"
   },
-  asset: {
+  network: {
     type: DataTypes.STRING(255),
     allowNull: true,
     defaultValue: null,
     primaryKey: false,
     autoIncrement: false,
     comment: null,
-    field: "asset"
+    field: "network"
   },
   currency: {
     type: DataTypes.STRING(255),

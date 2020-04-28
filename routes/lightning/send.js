@@ -57,16 +57,15 @@ module.exports = async (req, res) => {
     let total = parseInt(m.payment_route.total_amt);
     let fee = m.payment_route.total_fees;
 
-    user.balance -= total - payreq.satoshis;
-
-    await user.save();
-
     const account = await db.Account.findOne({
       where: {
         user_id: user.id,
         asset: config.liquid.btcasset
       }
     });
+
+    account.balance -= total - payreq.satoshis;
+    await account.save()
 
     const payment = await db.Payment.create({
       amount: -total,
@@ -79,14 +78,11 @@ module.exports = async (req, res) => {
       network: "LNBTC"
     });
 
-    user = await getUser(user.username);
-
     seen.push(m.payment_preimage);
+    l.info("sent lightning", user.username, -payment.amount, m);
 
-    l.info("sent lightning", user.username, -payment.amount);
+    user = await getUser(user.username);
     emit(user.username, "payment", payment);
-
-    l.info("user payments", user.payments);
     emit(user.username, "user", user);
 
     if (payreq.payeeNodeKey === config.lnb.id) {
