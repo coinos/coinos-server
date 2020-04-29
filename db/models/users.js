@@ -118,15 +118,6 @@ const attributes = {
     comment: null,
     field: "updatedAt"
   },
-  index: {
-    type: DataTypes.INTEGER(11),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "index"
-  },
   fbtoken: {
     type: DataTypes.STRING(255),
     allowNull: true,
