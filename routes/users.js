@@ -375,16 +375,21 @@ app.post("/shiftAccount", auth, async (req, res) => {
   let { user } = req;
   let { asset } = req.body;
 
-  const account = await db.Account.findOne({
-    where: { user_id: user.id, asset } 
-  });
+  try {
+    const account = await db.Account.findOne({
+      where: { user_id: user.id, asset } 
+    });
 
-  user.account_id = account.id;
-  await user.save();
-  
-  user = await getUser(user.username);
-  emit(user.username, "user", user);
-  res.send(account);
+    user.account_id = account.id;
+    await user.save();
+    
+    user = await getUser(user.username);
+    emit(user.username, "user", user);
+    res.send(account);
+  } catch(e) {
+    l.error(e.message);
+    return res.status(500).send("There was a problem switching accounts");
+  } 
 });
 
 setInterval(() => (faucet = 2000), DAY);
