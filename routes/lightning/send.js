@@ -67,7 +67,7 @@ module.exports = async (req, res) => {
     account.balance -= total - payreq.satoshis;
     await account.save()
 
-    const payment = await db.Payment.create({
+    let payment = await db.Payment.create({
       amount: -total,
       account_id: account.id,
       user_id: user.id,
@@ -78,11 +78,13 @@ module.exports = async (req, res) => {
       network: "LNBTC"
     });
 
+    payment = payment.get({ plain: true });
+    payment.account = account.get({ plain: true });
+
     seen.push(m.payment_preimage);
     l.info("sent lightning", user.username, -payment.amount, m);
 
     user = await getUser(user.username);
-    emit(user.username, "payment", payment);
     emit(user.username, "user", user);
 
     if (payreq.payeeNodeKey === config.lnb.id) {
@@ -99,7 +101,7 @@ module.exports = async (req, res) => {
     seen.push(hash);
     res.send(payment);
   } catch (e) {
-    l.info("error sending lightning", e);
+    l.info("error sending lightning", e.message);
     return res.status(500).send(e);
   }
 };

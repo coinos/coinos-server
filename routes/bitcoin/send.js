@@ -8,10 +8,9 @@ module.exports = async (req, res) => {
 
   let fee = toSats(tx.fee);
 
-  const isChange = async address => 
-    (await bc.getAddressInfo(address)).ismine && (
-    !Object.keys(addresses).includes(address) || 
-    address === user.address);
+  const isChange = async address =>
+    (await bc.getAddressInfo(address)).ismine &&
+    (!Object.keys(addresses).includes(address) || address === user.address);
 
   tx = await bc.decodeRawTransaction(hex);
 
@@ -21,40 +20,55 @@ module.exports = async (req, res) => {
   for (let i = 0; i < tx.vout.length; i++) {
     let o = tx.vout[i];
     total += toSats(o.value);
-   
+
     if (o.scriptPubKey.addresses) {
-      if ((await isChange(o.scriptPubKey.addresses[0]))) {
+      if (await isChange(o.scriptPubKey.addresses[0])) {
         change += toSats(o.value);
       }
     }
-  } 
+  }
 
-  total = (total - change) + fee;
+  total = total - change + fee;
   let amount = total - fee;
 
-  l.info("attempting bitcoin payment", user.username, amount, fee);
+  l.info("attempting bitcoin payment", user.username, total, change, amount, fee);
 
+  let account, params;
   try {
     await db.transaction(async transaction => {
-      let { balance } = await db.User.findOne({
+      account = await db.Account.findOne({
         where: {
-          username: user.username
+          user_id: user.id,
+          asset: config.liquid.btcasset
         },
         lock: transaction.LOCK.UPDATE,
         transaction
       });
 
-      if (amount !== balance && total > balance) {
+      if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, balance);
         throw new Error("insufficient funds");
       }
 
-      user.balance -= total;
-      await user.save({ transaction });
+      account.balance -= total;
+      await account.save({ transaction });
+
+      params = {
+        amount: -total,
+        fee,
+        account_id: account.id,
+        user_id: user.id,
+        rate: app.get("rates")[user.currency],
+        currency: user.currency,
+        address,
+        confirmed: true,
+        received: false,
+        network: "BTC"
+      };
     });
   } catch (e) {
-    l.warn("insufficient funds for bitcoin payment", user.username);
-    return res.status(500).send("Not enough satoshis");
+    l.error("problem creating bitcoin payment", user.username, e.message);
+    return res.status(500).send(e.message);
   }
 
   try {
@@ -62,37 +76,17 @@ module.exports = async (req, res) => {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
     hex = (await bc.signRawTransactionWithWallet(hex)).hex;
-    let txid = await bc.sendRawTransaction(hex);
+    params.hash = await bc.sendRawTransaction(hex);
 
-    await db.transaction(async transaction => {
-      await user.save({ transaction });
-      user = await getUser(user.username);
+    let payment = await db.Payment.create(params);
 
-      const payment = await db.Payment.create(
-        {
-          amount: -total,
-          fee,
-          account_id: user.account.id,
-          user_id: user.id,
-          hash: txid,
-          rate: app.get("rates")[user.currency],
-          currency: user.currency,
-          address,
-          confirmed: true,
-          received: false,
-          network: "BTC"
-        },
-        { transaction }
-      );
+    user = await getUser(user.username);
+    emit(user.username, "user", user);
 
-      user = await getUser(user.username);
-      emit(user.username, "payment", payment);
-      emit(user.username, "user", user);
-
-      res.send(payment);
-
-      l.info("sent bitcoin", user.username, total);
-    });
+    payment = payment.get({ plain: true });
+    payment.account = account.get({ plain: true });
+    res.send(payment);
+    l.info("sent bitcoin", user.username, total);
   } catch (e) {
     l.error("error sending bitcoin", e.message);
     return res.status(500).send(e.message);

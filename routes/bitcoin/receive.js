@@ -70,12 +70,10 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         user.address = await bc.getNewAddress("", "bech32");
         await user.save();
-        user = await getUser(user.username);
-        emit(user.username, "user", user);
 
         addresses[user.address] = user.username;
 
-        const payment = await db.Payment.create({
+        let payment = await db.Payment.create({
           account_id: account.id,
           user_id: user.id,
           hash,
@@ -88,9 +86,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           address,
           network: "BTC"
         });
+        payment = payment.get({ plain: true });
+        payment.account = account.get({ plain: true });
 
-        l.info("bitcoin detected", user.username, o.value);
+        user = await getUser(user.username);
         emit(user.username, "payment", payment);
+        emit(user.username, "user", user);
+        l.info("bitcoin detected", user.username, o.value);
       }
     })
   );
@@ -135,6 +137,7 @@ setInterval(async () => {
 
       let user = await getUserById(p.user_id);
       emit(user.username, "user", user);
+      emit(user.username, "payment", p);
       l.info("bitcoin confirmed", user.username, p.amount, p.tip);
       delete queue[hash];
     } else {

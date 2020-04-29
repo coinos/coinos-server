@@ -25,27 +25,32 @@ module.exports = async (req, res) => {
       scriptPubKey: { type, addresses }
     } = tx.vout[i];
 
-    if (!totals[asset]) totals[asset] = change[asset] = 0;
-    totals[asset] += toSats(value);
     if (type === "fee") fee = toSats(value);
+    else {
+      if (!totals[asset]) totals[asset] = change[asset] = 0;
+      totals[asset] += toSats(value);
 
-    if (addresses) {
-      if (await isChange(addresses[0])) {
-        change[asset] += toSats(value);
+      if (addresses) {
+        if (await isChange(addresses[0])) {
+          change[asset] += toSats(value);
+        }
       }
     }
   }
 
-  let assets = Object.keys(totals);
-  for (let i = 0; i < assets.length; i++) {
-    let asset = assets[i];
-    let total = totals[asset];
-    if (change[asset]) total -= change[asset];
+  const assets = Object.keys(totals);
+  const payments = [];
 
-    l.info("attempting liquid payment", user.username, asset, total, fee);
+  try {
+    await db.transaction(async transaction => {
+      for (let i = 0; i < assets.length; i++) {
+        let asset = assets[i];
+        let total = totals[asset];
+        if (change[asset]) total -= change[asset];
+        if (asset === config.liquid.btcasset) total += fee;
 
-    try {
-      await db.transaction(async transaction => {
+        l.info("creating liquid payment", user.username, asset, total, fee);
+
         let account = await db.Account.findOne({
           where: {
             user_id: user.id,
@@ -67,41 +72,53 @@ module.exports = async (req, res) => {
         account.balance -= total;
         await account.save({ transaction });
 
-        try {
-          if (config.liquid.walletpass)
-            await lq.walletPassphrase(config.liquid.walletpass, 300);
+        let payment = {
+          amount: -total,
+          account_id: account.id,
+          fee,
+          user_id: user.id,
+          rate: app.get("rates")[user.currency],
+          currency: user.currency,
+          address,
+          confirmed: true,
+          received: false,
+          network: "LBTC"
+        };
 
-          hex = await lq.blindRawTransaction(hex);
-          rawtx = (await lq.signRawTransactionWithWallet(hex)).hex;
-          let txid = await lq.sendRawTransaction(rawtx);
+        payment.account = account;
+        payments.push(payment);
+      }
+    });
+  } catch (e) {
+    l.error("problem creating liquid payment", user.username, e.message);
+    return res.status(500).send(e.message);
+  }
 
-          const payment = await db.Payment.create({
-            amount: -total,
-            account_id: account.id,
-            fee,
-            user_id: user.id,
-            hash: txid,
-            rate: app.get("rates")[user.currency],
-            currency: user.currency,
-            address,
-            confirmed: true,
-            received: false,
-            network: "LBTC"
-          }, { transaction });
+  try {
+    if (config.liquid.walletpass)
+      await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-          payment.account = account;
+    hex = await lq.blindRawTransaction(hex);
+    rawtx = (await lq.signRawTransactionWithWallet(hex)).hex;
+    let txid = await lq.sendRawTransaction(rawtx);
 
-          user = await getUser(user.username);
-          emit(user.username, "user", user);
-          res.send(payment);
-        } catch (e) {
-          l.error("liquid send failed", e);
-          return res.status(500).send(e.message);
-        }
-      });
-    } catch (e) {
-      l.warn("insufficient funds for liquid payment", user.username, e.message);
-      return res.status(500).send("Not enough satoshis");
+    let main;
+    for (let i = 0; i < assets.length; i++) {
+      p = payments[i];
+      let { account } = p;
+      p.hash = txid;
+      p = await db.Payment.create(p);
+      if (account.ticker !== "BTC" || !main) {
+        main = p.get({ plain: true });
+        main.account = account.get({ plain: true });
+      }
     }
+
+    user = await getUser(user.username);
+    emit(user.username, "user", user);
+    res.send(main);
+  } catch (e) {
+    l.error("problem sending liquid", user.username, e.message);
+    return res.status(500).send(e.message);
   }
 };

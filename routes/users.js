@@ -124,6 +124,9 @@ app.post("/register", async (req, res) => {
     asset: config.liquid.btcasset,
     balance: 0,
     pending: 0,
+    name: 'Bitcoin',
+    ticker: 'BTC',
+    precision: 8,
   });
 
   user.accounts = [account];
@@ -131,9 +134,10 @@ app.post("/register", async (req, res) => {
 
   user.account_id = account.id;
   await user.save();
-
-  l.info("new user", user.username);
+  user = await getUser(user.username);
   res.send(pick(user, ...whitelist));
+  emit(user.username, "user", user);
+  l.info("new user", user.username);
 });
 
 app.post("/disable2fa", auth, twofa, async (req, res) => {

@@ -21,7 +21,7 @@ const handlePayment = async msg => {
     }
   });
 
-  const payment = await db.Payment.create({
+  let payment = await db.Payment.create({
     account_id: account.id,
     user_id,
     hash,
@@ -44,6 +44,8 @@ const handlePayment = async msg => {
 
   let user = await getUserById(user_id)
 
+  payment = payment.get({ plain: true });
+  payment.account = account.get({ plain: true });
   emit(user.username, "payment", payment);
   emit(user.username, "user", user);
 

@@ -34,6 +34,8 @@ module.exports = async (req, res) => {
     decoded = await lq.decodeRawTransaction(signed.hex);
     feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
 
+    l.info("estimated", asset);
+
     res.send({ feeRate, tx });
   } catch (e) {
     l.error("error estimating liquid fee", e);
