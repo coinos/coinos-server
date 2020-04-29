@@ -30,7 +30,7 @@ const handlePayment = async msg => {
     rate,
     received: true,
     confirmed: true,
-    network: 'LNBTC',
+    network: "LNBTC",
     tip
   });
 
@@ -42,7 +42,7 @@ const handlePayment = async msg => {
   await payment.save();
   payments.push(msg.payment_request);
 
-  let user = await getUserById(user_id)
+  let user = await getUserById(user_id);
 
   payment = payment.get({ plain: true });
   payment.account = account.get({ plain: true });
@@ -53,8 +53,7 @@ const handlePayment = async msg => {
     "lightning payment received",
     user.username,
     payment.amount,
-    payment.tip,
-    msg
+    payment.tip
   );
 };
 

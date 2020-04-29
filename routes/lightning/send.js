@@ -82,7 +82,7 @@ module.exports = async (req, res) => {
     payment.account = account.get({ plain: true });
 
     seen.push(m.payment_preimage);
-    l.info("sent lightning", user.username, -payment.amount, m);
+    l.info("sent lightning", user.username, -payment.amount);
 
     user = await getUser(user.username);
     emit(user.username, "user", user);
