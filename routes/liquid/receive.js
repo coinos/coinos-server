@@ -54,7 +54,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           let ticker = asset.substr(0, 3).toUpperCase();
           let precision = 8;
 
-          const assets = await axios.get("https://assets.blockstream.info/");
+          const assets = (await axios.get("https://assets.blockstream.info/")).data;
 
           if (assets[asset]) {
             ({ticker, precision, name } = assets[asset]);
