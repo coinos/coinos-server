@@ -73,10 +73,22 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         addresses[user.address] = user.username;
 
+        let totalOutputs = tx.outs.reduce((a, b) => a + b.value, 0);
+        let totalInputs = 0;
+        for (let i = 0; i < tx.ins.length; i++) {
+          let { hash, index } = tx.ins[i];
+          hash = reverse(hash).toString("hex");
+          let hex = await bc.getRawTransaction(hash.toString('hex'));
+          let inputTx = bitcoin.Transaction.fromHex(hex);
+          totalInputs += inputTx.outs[index].value;
+        } 
+        let fee = totalInputs - totalOutputs;
+
         let payment = await db.Payment.create({
           account_id: account.id,
           user_id: user.id,
           hash,
+          fee,
           amount: value - tip,
           currency,
           rate,

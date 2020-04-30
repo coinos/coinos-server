@@ -144,6 +144,7 @@ app.post("/disable2fa", auth, twofa, async (req, res) => {
   let { user } = req;
   user.twofa = false;
   await user.save();
+  user = await getUser(user.username);
   emit(user.username, "user", user);
   emit(user.username, "otpsecret", user.otpsecret);
   l.info("disabled 2fa", user.username);
@@ -163,6 +164,7 @@ app.post("/2fa", auth, async (req, res) => {
     if (isValid) {
       user.twofa = true;
       user.save();
+      user = await getUser(user.username);
       emit(user.username, "user", req.user);
     } else {
       return res.status(500).send("Invalid token");
@@ -364,6 +366,7 @@ app.post("/address", auth, async (req, res) => {
   user.address = await bc.getNewAddress("", req.body.type || "bech32");
   await user.save();
   addresses[user.address] = user.username;
+  user = await getUser(user.username);
   emit(user.username, "user", user);
   res.send(user.address);
 });
@@ -372,16 +375,21 @@ app.post("/shiftAccount", auth, async (req, res) => {
   let { user } = req;
   let { asset } = req.body;
 
-  const account = await db.Account.findOne({
-    where: { user_id: user.id, asset } 
-  });
+  try {
+    const account = await db.Account.findOne({
+      where: { user_id: user.id, asset } 
+    });
 
-  user.account_id = account.id;
-  await user.save();
-  
-  user = await getUser(user.username);
-  emit(user.username, "user", user);
-  res.send(account);
+    user.account_id = account.id;
+    await user.save();
+    
+    user = await getUser(user.username);
+    emit(user.username, "user", user);
+    res.send(account);
+  } catch(e) {
+    l.error(e.message);
+    return res.status(500).send("There was a problem switching accounts");
+  } 
 });
 
 setInterval(() => (faucet = 2000), DAY);

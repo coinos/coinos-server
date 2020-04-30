@@ -159,7 +159,7 @@ setInterval(async () => {
     let user = await getUserById(p.user_id);
     emit(user.username, "user", user);
     emit(user.username, "payment", p);
-    l.info("liquid confirmed", user.username, p.asset, p.amount, p.tip);
+    l.info("liquid confirmed", user.username, p.account.asset, p.amount, p.tip);
 
     delete queue[hash];
   }
