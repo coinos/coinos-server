@@ -27,6 +27,7 @@ const handlePayment = async msg => {
     hash,
     amount,
     currency,
+    preimage: msg.r_preimage.toString('hex'),
     rate,
     received: true,
     confirmed: true,
@@ -53,7 +54,7 @@ const handlePayment = async msg => {
     "lightning payment received",
     user.username,
     payment.amount,
-    payment.tip
+    payment.tip,
   );
 };
 

@@ -31,7 +31,7 @@ module.exports = async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  l.info("attempting bitcoin payment", user.username, total, change, amount, fee);
+  l.info("attempting bitcoin payment", user.username, { total, change, amount, fee });
 
   let account, params;
   try {
@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
       });
 
       if (total > account.balance) {
-        l.error("amount exceeds balance", amount, fee, balance);
+        l.error("amount exceeds balance", amount, fee, account.balance);
         throw new Error("insufficient funds");
       }
 
