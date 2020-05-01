@@ -259,7 +259,7 @@ app.post("/login", async (req, res) => {
     user = pick(user, ...whitelist);
     res.send({ user, token });
   } catch (e) {
-    l.error("login error", e);
+    l.error("login error", e.message);
     res.status(401).end();
   }
 });
@@ -369,6 +369,30 @@ app.post("/address", auth, async (req, res) => {
   user = await getUser(user.username);
   emit(user.username, "user", user);
   res.send(user.address);
+});
+
+app.post("/account", auth, async (req, res) => {
+  let { user } = req;
+  let { asset, precision, name, ticker, user_id } = req.body;
+
+  try {
+    const account = await db.Account.findOne({
+      where: { user_id, asset } 
+    });
+
+    account.name = name;
+    account.ticker = ticker;
+    account.precision = precision;
+
+    await account.save();
+    
+    user = await getUser(user.username);
+    emit(user.username, "user", user);
+    res.send(account);
+  } catch(e) {
+    l.error(e.message);
+    return res.status(500).send("There was a problem updating the account");
+  } 
 });
 
 app.post("/shiftAccount", auth, async (req, res) => {
