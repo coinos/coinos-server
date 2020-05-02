@@ -275,7 +275,7 @@ app.post("/facebookLogin", async (req, res) => {
   if (!check.data.data.is_valid) return res.status(401).end();
 
   try {
-    let user = await getUser(req.body.userID);
+    let user = await db.User.findOne({ where: { username: req.body.userID} });
 
     if (!user) {
       user = await db.User.create(user);
@@ -310,14 +310,16 @@ app.post("/facebookLogin", async (req, res) => {
       `${fb}/me/picture?access_token=${accessToken}&redirect=false`
     )).data.data.url;
     user.fbtoken = accessToken;
+
     await user.save();
+    user = await getUser(user.username);
 
     let payload = { username: user.username };
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
     res.send({ user, token });
   } catch (e) {
-    l.error("error during facebook login", e);
+    l.error("error during facebook login", e.message);
     res.status(401).end();
   }
 });
