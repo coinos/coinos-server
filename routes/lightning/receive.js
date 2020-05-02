@@ -12,7 +12,7 @@ const handlePayment = async msg => {
   if (!invoice) return;
 
   const { text: hash, currency, rate, tip, user_id } = invoice;
-  const amount = parseInt(msg.value) - tip;
+  const amount = parseInt(msg.amt_paid_sat) - tip;
 
   const account = await db.Account.findOne({
     where: {
