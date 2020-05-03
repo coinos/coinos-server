@@ -3,10 +3,12 @@ const bolt11 = require("bolt11");
 module.exports = async (req, res) => {
   let hash = req.body.payreq;
   let payreq = bolt11.decode(hash);
-  let { route } = req.body;
+  let { amount, route } = req.body;
   let { user } = req;
 
-  l.info("attempting lightning payment", user.username, payreq.satoshis);
+  if (!amount) amount = payreq.satoshis;
+
+  l.info("attempting lightning payment", user.username, amount);
 
   if (seen.includes(hash)) {
     l.warn("attempted to pay a paid invoice", user.username);
@@ -24,11 +26,12 @@ module.exports = async (req, res) => {
         transaction
       });
 
-      if (account.balance < payreq.satoshis) {
+      if (account.balance < amount) {
         throw new Error("Insufficient funds");
       }
 
       let m = await lna.sendPaymentSync({
+        amt: amount,
         payment_request: hash
       });
 
@@ -67,7 +70,7 @@ module.exports = async (req, res) => {
       emit(user.username, "user", user);
 
       if (payreq.payeeNodeKey === config.lnb.id) {
-        lna.addInvoice({ value: payreq.satoshis }, (err, invoice) => {
+        lna.addInvoice({ value: amount }, (err, invoice) => {
           let payback = lnb.sendPayment(lnb.meta, {});
 
           /* eslint-disable-next-line */
