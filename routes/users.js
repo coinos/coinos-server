@@ -46,9 +46,9 @@ app.get("/liquidate", async (req, res) => {
         asset: config.liquid.btcasset,
         balance: user.balance,
         pending: 0,
-        ticker: 'BTC',
-        name: 'Bitcoin',
-        precision: 8,
+        ticker: "BTC",
+        name: "Bitcoin",
+        precision: 8
       });
     }
   }
@@ -92,8 +92,8 @@ app.post("/register", async (req, res) => {
   user.confidential = await lq.getNewAddress();
   user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
   user.name = user.username;
-  user.ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-  let { ip } = user;
+  let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+
   let countries = {
     CA: "CAD",
     US: "USD",
@@ -124,19 +124,17 @@ app.post("/register", async (req, res) => {
     asset: config.liquid.btcasset,
     balance: 0,
     pending: 0,
-    name: 'Bitcoin',
-    ticker: 'BTC',
-    precision: 8,
+    name: "Bitcoin",
+    ticker: "BTC",
+    precision: 8
   });
 
   user.accounts = [account];
 
-  const ipExists = db.User.findOne({
-    where: {
-      ip
-    } 
-  });
-
+  let d = ip.split(".");
+  ip = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
+  user.ip = ip;
+  const ipExists = await db.User.findOne({ where: { ip } });
   if (!ipExists) await gift(user);
 
   user.account_id = account.id;
@@ -247,7 +245,11 @@ app.post("/login", async (req, res) => {
       (user.password &&
         !(await bcrypt.compare(req.body.password, user.password)))
     ) {
-      l.warn("invalid username or password attempt", req.body.username, req.body.password);
+      l.warn(
+        "invalid username or password attempt",
+        req.body.username,
+        req.body.password
+      );
       return res.status(401).end();
     }
 
@@ -288,7 +290,7 @@ app.post("/account", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id, asset } 
+      where: { user_id, asset }
     });
 
     account.name = name;
@@ -296,14 +298,14 @@ app.post("/account", auth, async (req, res) => {
     account.precision = precision;
 
     await account.save();
-    
+
     user = await getUser(user.username);
     emit(user.username, "user", user);
     res.send(account);
-  } catch(e) {
+  } catch (e) {
     l.error(e.message);
     return res.status(500).send("There was a problem updating the account");
-  } 
+  }
 });
 
 app.post("/shiftAccount", auth, async (req, res) => {
@@ -312,19 +314,19 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id: user.id, asset } 
+      where: { user_id: user.id, asset }
     });
 
     user.account_id = account.id;
     await user.save();
-    
+
     user = await getUser(user.username);
     emit(user.username, "user", user);
     res.send(account);
-  } catch(e) {
+  } catch (e) {
     l.error(e.message);
     return res.status(500).send("There was a problem switching accounts");
-  } 
+  }
 });
 
 setInterval(() => (faucet = 2000), DAY);

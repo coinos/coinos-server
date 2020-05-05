@@ -11,7 +11,7 @@ const attributes = {
     field: "id"
   },
   ip: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,
     defaultValue: null,
     primaryKey: false,
