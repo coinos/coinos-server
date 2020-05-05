@@ -2,7 +2,6 @@ const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const uuidv4 = require("uuid/v4");
-const fb = "https://graph.facebook.com/";
 const authenticator = require("otplib").authenticator;
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
@@ -93,7 +92,8 @@ app.post("/register", async (req, res) => {
   user.confidential = await lq.getNewAddress();
   user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
   user.name = user.username;
-  let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  user.ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  let { ip } = user;
   let countries = {
     CA: "CAD",
     US: "USD",
@@ -130,7 +130,14 @@ app.post("/register", async (req, res) => {
   });
 
   user.accounts = [account];
-  await gift(user);
+
+  const ipExists = db.User.findOne({
+    where: {
+      ip
+    } 
+  });
+
+  if (!ipExists) await gift(user);
 
   user.account_id = account.id;
   await user.save();
@@ -261,104 +268,6 @@ app.post("/login", async (req, res) => {
   } catch (e) {
     l.error("login error", e.message);
     res.status(401).end();
-  }
-});
-
-app.post("/facebookLogin", async (req, res) => {
-  let { accessToken, userID } = req.body;
-  let twofa = req.body.token;
-
-  let url = `https://graph.facebook.com/debug_token?input_token=${accessToken}&access_token=${
-    config.facebook.appToken
-  }`;
-  let check = await axios.get(url);
-  if (!check.data.data.is_valid) return res.status(401).end();
-
-  try {
-    let user = await db.User.findOne({ where: { username: req.body.userID} });
-
-    if (!user) {
-      user = await db.User.create(user);
-      user.username = userID;
-      user.name = (await axios.get(
-        `${fb}/me?access_token=${accessToken}`
-      )).data.name;
-      user.address = await bc.getNewAddress("", "bech32");
-      user.confidential = await lq.getNewAddress();
-      user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
-      user.password = await bcrypt.hash(accessToken, 1);
-      user.balance = 0;
-      user.pending = 0;
-      let friends = (await axios.get(
-        `${fb}/${userID}/friends?access_token=${accessToken}`
-      )).data.data;
-      await user.save();
-      addresses[user.address] = user.username;
-      addresses[user.liquid] = user.username;
-      await gift(user);
-      l.info("new facebook user", user.name);
-    }
-
-    if (
-      user.twofa &&
-      (typeof twofa === "undefined" ||
-        !authenticator.check(twofa, user.otpsecret))
-    )
-      return res.status(401).send("2fa required");
-
-    user.pic = (await axios.get(
-      `${fb}/me/picture?access_token=${accessToken}&redirect=false`
-    )).data.data.url;
-    user.fbtoken = accessToken;
-
-    await user.save();
-    user = await getUser(user.username);
-
-    let payload = { username: user.username };
-    let token = jwt.sign(payload, config.jwt);
-    res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-    res.send({ user, token });
-  } catch (e) {
-    l.error("error during facebook login", e.message);
-    res.status(401).end();
-  }
-});
-
-app.get("/me", async (req, res) => {
-  let {
-    data: {
-      data: { url }
-    }
-  } = await axios.get(
-    `${fb}/me/picture?access_token=EAAEIFqWk3ZAwBAEUfxQdH3T5CBKXmU8d7jQ5OTJBJZBiU1ZAp76lO26nh57WolM4R4JoKks9BCc49s8VrlEm2Ub1GlZCEzVD9fGxzUiranXDErDmR5gDUPKX3BhCsGA649a4hmbldRwKFTsmZCGZCergm9ACspKdTZB0WgFgA9wEdemIRIXuwCygNrymmKDh0Wd8nmoT4Hj3wZDZD&redirect=false`
-  );
-  res.send(url);
-});
-
-app.get("/friends", auth, async (req, res) => {
-  try {
-    const {
-      data: { data }
-    } = await axios.get(
-      `${fb}/${req.user.username}/friends?access_token=${req.user.fbtoken}`
-    );
-
-    const friends = await Promise.all(
-      data.map(async f => {
-        f.pic = (await axios.get(
-          `${fb}/${f.id}/picture?redirect=false&type=small&access_token=${
-            req.user.fbtoken
-          }`
-        )).data.data.url;
-        return f;
-      })
-    );
-
-    res.send(friends);
-  } catch (e) {
-    res
-      .status(500)
-      .send("There was a problem getting your facebook friends: " + e);
   }
 });
 

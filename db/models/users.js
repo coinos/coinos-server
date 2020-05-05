@@ -10,6 +10,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  ip: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "ip"
+  },
   username: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -117,33 +126,6 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "updatedAt"
-  },
-  fbtoken: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "fbtoken"
-  },
-  name: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "name"
-  },
-  pic: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "pic"
   },
   twofa: {
     type: DataTypes.INTEGER(1),
