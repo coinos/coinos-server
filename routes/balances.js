@@ -1,7 +1,7 @@
 const sequelize = require("sequelize");
 const { Op } = sequelize;
 
-app.get("/balances", async (req, res) => {
+app.get("/info", async (req, res) => {
   const assets = await lq.getBalance();
   const accounts = await db.Account.findAll({
     attributes: [
@@ -11,7 +11,9 @@ app.get("/balances", async (req, res) => {
     group: ["asset"],
   });
 
-  const balances = {
+  const info = {
+    lninfo: await lna.getInfo({}),
+    bcinfo: await bc.getNetworkInfo(),
     accounts,
     assets,
     bitcoin: parseInt((await bc.getBalance()) * SATS),
@@ -20,15 +22,15 @@ app.get("/balances", async (req, res) => {
     lnwallet: parseInt((await lna.walletBalance({})).total_balance),
   };
 
-  const { bitcoin, liquid, lnchannel, user, lnwallet } = balances;
+  const { bitcoin, liquid, lnchannel, user, lnwallet } = info;
 
-  balances.total =
+  info.total =
     parseInt(bitcoin) +
     parseInt(liquid) +
     parseInt(lnchannel) +
     parseInt(lnwallet);
 
-  balances.ratio = (balances.total / parseInt(user)).toFixed(2);
+  info.ratio = (info.total / parseInt(user)).toFixed(2);
 
-  res.send(balances);
+  res.send(info);
 });
