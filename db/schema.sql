@@ -57,7 +57,7 @@ CREATE TABLE `accounts` (
   `ticker` varchar(255) DEFAULT NULL,
   `precision` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3547 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3616 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -81,7 +81,7 @@ CREATE TABLE `invoices` (
   `tip` double DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4145 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4261 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,7 +109,7 @@ CREATE TABLE `payments` (
   `account_id` int(11) DEFAULT NULL,
   `preimage` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3710 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3802 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,33 +123,23 @@ CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(255) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `email` varchar(255) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
   `unit` varchar(255) DEFAULT 'SAT',
   `account_id` int(11) DEFAULT NULL,
   `currency` varchar(255) DEFAULT NULL,
-  `commission` varchar(255) DEFAULT NULL,
-  `title` varchar(255) DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
-  `index` int(11) DEFAULT NULL,
-  `fbtoken` varchar(255) DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `pic` varchar(255) DEFAULT NULL,
-  `emailToken` varchar(255) DEFAULT NULL,
-  `phone` varchar(255) DEFAULT NULL,
-  `phoneVerified` tinyint(1) DEFAULT NULL,
   `twofa` tinyint(1) DEFAULT NULL,
   `authyId` varchar(255) DEFAULT NULL,
   `pin` varchar(255) DEFAULT NULL,
-  `emailVerified` tinyint(1) DEFAULT NULL,
-  `phoneToken` varchar(255) DEFAULT NULL,
   `confidential` varchar(255) DEFAULT NULL,
   `liquid` varchar(255) DEFAULT NULL,
   `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `otpsecret` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=500 DEFAULT CHARSET=latin1;
+  `ip` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ip` (`ip`)
+) ENGINE=InnoDB AUTO_INCREMENT=568 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -161,4 +151,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-04-30 23:14:12
+-- Dump completed on 2020-05-06 10:37:13
