@@ -12,8 +12,9 @@ app.get("/info", async (req, res) => {
   });
 
   const info = {
-    lninfo: await lna.getInfo({}),
-    bcinfo: await bc.getNetworkInfo(),
+    lnd: await lna.getInfo({}),
+    bitcoind: await bc.getNetworkInfo(),
+    elementsd: await lq.getNetworkInfo(),
     accounts,
     assets,
     bitcoin: parseInt((await bc.getBalance()) * SATS),
