@@ -22,6 +22,8 @@ const { Op } = require("sequelize");
     attributes: ["hash"]
   })).map(p => p.hash);
 
+  app.post("/send", auth, require("./send"));
+
   app.post("/lightning/invoice", auth, require("./lightning/invoice"));
   app.post("/lightning/query", auth, require("./lightning/query"));
   app.post("/lightning/send", auth, require("./lightning/send"));

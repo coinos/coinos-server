@@ -32,10 +32,14 @@ module.exports = async (req, res) => {
 
       let m = await lna.sendPaymentSync({
         amt: amount,
-        payment_request: hash
+        payment_request: hash,
+        max_parts: 10,
       });
 
-      if (m.payment_error) return res.status(500).send(m.payment_error);
+      if (m.payment_error) {
+        l.error("error sending lightning", m.payment_hash.toString('hex'), m.payment_error);
+        return res.status(500).send(m.payment_error);
+      } 
 
       if (seen.includes(m.payment_preimage)) {
         l.warn("duplicate payment detected", m.payment_preimage);
@@ -69,15 +73,12 @@ module.exports = async (req, res) => {
       user = await getUser(user.username, transaction);
       emit(user.username, "user", user);
 
+      l.info(config.lnb.id, payreq.payeeNodeKey);
       if (payreq.payeeNodeKey === config.lnb.id) {
-        lna.addInvoice({ value: amount }, (err, invoice) => {
-          let payback = lnb.sendPayment(lnb.meta, {});
-
-          /* eslint-disable-next-line */
-          let { payment_request } = invoice;
-          /* eslint-disable-next-line */
-          payback.write({ payment_request });
-        });
+        let invoice = await lna.addInvoice({ value: amount })
+        let { payment_request } = invoice;
+        await lnb.sendPaymentSync({ payment_request, max_parts: 10 });
+        l.info("lnb sending back", amount);
       }
 
       seen.push(hash);

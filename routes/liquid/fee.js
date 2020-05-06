@@ -3,6 +3,12 @@ module.exports = async (req, res) => {
   let { address, asset, amount, feeRate } = req.body;
   let tx, fee;
 
+  let recipient = await db.User.findOne({
+    where: { confidential: address }
+  });
+  if (recipient)
+    emit(user.username, "to", recipient);
+
   try {
     amount = parseInt(amount);
 
