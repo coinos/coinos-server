@@ -132,9 +132,9 @@ app.post("/register", async (req, res) => {
   user.accounts = [account];
 
   let d = ip.split(".");
-  ip = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
-  user.ip = ip;
-  const ipExists = await db.User.findOne({ where: { ip } });
+  let numericIp = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
+  user.ip = numericIp;
+  const ipExists = await db.User.findOne({ where: { ip: numericIp } });
   if (!ipExists) await gift(user);
 
   user.account_id = account.id;
@@ -142,7 +142,7 @@ app.post("/register", async (req, res) => {
   user = await getUser(user.username);
   res.send(pick(user, ...whitelist));
   emit(user.username, "user", user);
-  l.info("new user", user.username);
+  l.info("new user", user.username, ip);
 });
 
 app.post("/disable2fa", auth, twofa, async (req, res) => {
