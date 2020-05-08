@@ -15,6 +15,7 @@
     "body-parser": "^1.19.0",
     "bolt11": "^1.2.5",
     "buffer-reverse": "^1.0.1",
+    "clightning-client": "^0.1.2",
     "compression": "^1.7.4",
     "connect-redis": "3.4.1",
     "cookie-parser": "^1.4.4",

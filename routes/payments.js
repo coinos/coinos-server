@@ -1,13 +1,21 @@
 const BitcoinCore = require("bitcoin-core");
 const lnd = require("../lib/lnd");
 const { Op } = require("sequelize");
+const { join } = require("path");
 
 (async () => {
   bc = new BitcoinCore(config.bitcoin);
   lq = new BitcoinCore(config.liquid);
 
-  lna = lnd(config.lna);
-  lnb = lnd(config.lnb);
+  if (config.lna.clightning) {
+    const lnapath = join(require('os').homedir(), '.lightningreg/regtest')
+    const lnbpath = join(require('os').homedir(), '.lightningregb/regtest')
+    lna = require('clightning-client')(lnapath);
+    lnb = require('clightning-client')(lnbpath);
+  } else {
+    lna = lnd(config.lna);
+    lnb = lnd(config.lnb);
+  }
 
   seen = [];
   addresses = {};
@@ -25,9 +33,7 @@ const { Op } = require("sequelize");
   app.post("/send", auth, require("./send"));
 
   app.post("/lightning/invoice", auth, require("./lightning/invoice"));
-  app.post("/lightning/query", auth, require("./lightning/query"));
   app.post("/lightning/send", auth, require("./lightning/send"));
-  app.post("/lightning/user", auth, require("./lightning/user"));
   require("./lightning/receive");
 
   app.post("/bitcoin/send", auth, require("./bitcoin/send"));

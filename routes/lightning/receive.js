@@ -21,13 +21,15 @@ const handlePayment = async msg => {
     }
   });
 
+  let preimage = msg.r_preimage.toString("hex");
+
   let payment = await db.Payment.create({
     account_id: account.id,
     user_id,
     hash,
     amount,
     currency,
-    preimage: msg.r_preimage.toString('hex'),
+    preimage,
     rate,
     received: true,
     confirmed: true,
@@ -54,12 +56,43 @@ const handlePayment = async msg => {
     "lightning payment received",
     user.username,
     payment.amount,
-    payment.tip,
+    payment.tip
   );
 };
 
-const invoices = lna.subscribeInvoices({});
-invoices.on("data", handlePayment);
+if (config.lna.clightning) {
+  const poll = async ln => {
+    const wait = async i => {
+      const {
+        bolt11: payment_request,
+        pay_index,
+        status,
+        msatoshi_received,
+        payment_preimage: r_preimage
+      } = await ln.waitanyinvoice(i);
 
-const invoicesb = lnb.subscribeInvoices({});
-invoicesb.on("data", handlePayment);
+      let settled = status === "paid";
+      let amt_paid_sat = parseInt(msatoshi_received / 1000);
+
+      await handlePayment({
+        payment_request,
+        settled,
+        amt_paid_sat,
+        r_preimage
+      });
+      wait(pay_index);
+    };
+
+    const { invoices } = await ln.listinvoices();
+    wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
+  };
+
+  poll(lna);
+  poll(lnb);
+} else {
+  const invoices = lna.subscribeInvoices({});
+  invoices.on("data", handlePayment);
+
+  const invoicesb = lnb.subscribeInvoices({});
+  invoicesb.on("data", handlePayment);
+}

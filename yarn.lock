@@ -1187,6 +1187,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"clightning-client@npm:^0.1.2":
+  version: 0.1.2
+  resolution: "clightning-client@npm:0.1.2"
+  dependencies:
+    debug: ^4.1.1
+    error: ^7.2.0
+  checksum: 2/23a25632222a59a14fa44445c59c6bbe0cbf71fefe6ce0dcbb7a4beab7b008284d0cc07dd47e501a0e1e830332afdbdd9cbf58fd8b36a3c8a1294594a174c722
+  languageName: node
+  linkType: hard
+
 "cliui@npm:^3.0.3":
   version: 3.2.0
   resolution: "cliui@npm:3.2.0"
@@ -1243,6 +1253,7 @@ __metadata:
     body-parser: ^1.19.0
     bolt11: ^1.2.5
     buffer-reverse: ^1.0.1
+    clightning-client: ^0.1.2
     compression: ^1.7.4
     connect-redis: 3.4.1
     cookie-parser: ^1.4.4
@@ -1918,6 +1929,15 @@ __metadata:
   version: 2.2.0
   resolution: "env-paths@npm:2.2.0"
   checksum: 2/09de4fd1c068d5965aa8aede852a764b7fb6fa8f1299ba7789bc29c22840ab1985e0c9c55bc6bf40b4276834b8adfa1baf82ec9bc58445d9e75800dc32d78a4f
+  languageName: node
+  linkType: hard
+
+"error@npm:^7.2.0":
+  version: 7.2.1
+  resolution: "error@npm:7.2.1"
+  dependencies:
+    string-template: ~0.2.1
+  checksum: 2/21ba37fe6750a1a7357509941983af66fa5e3fbe74eca96d48573878916e38fbe77db4d11374c26cd49b3b091ed9e74dc21983fbb86b564989664b1b87ab3003
   languageName: node
   linkType: hard
 
@@ -5156,6 +5176,13 @@ fsevents@~2.1.2:
   version: 1.5.0
   resolution: "statuses@npm:1.5.0"
   checksum: 2/57735269bf231176a60deb80f6d60214cb4a87663b0937e79497afe9aebe2597f8377fd28893f4d1776205f18dd0b927774a26b72051411ac5108e9e2dfc77d2
+  languageName: node
+  linkType: hard
+
+"string-template@npm:~0.2.1":
+  version: 0.2.1
+  resolution: "string-template@npm:0.2.1"
+  checksum: 2/c64ac6e7f744d8e37961c987c70038ae4e3ab3c6c9b3822709c1350397f7f0be1e84685924afb44468484823b4e1a8b5d8d4ff925cb0a01b13d8b73e50670513
   languageName: node
   linkType: hard
 

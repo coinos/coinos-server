@@ -30,56 +30,89 @@ module.exports = async (req, res) => {
         throw new Error("Insufficient funds");
       }
 
-      let m = await lna.sendPaymentSync({
-        amt: amount,
-        payment_request: hash,
-        max_parts: 10,
-      });
+      let error, fee, total, preimage;
 
-      if (m.payment_error) {
-        l.error("error sending lightning", m.payment_hash.toString('hex'), m.payment_error);
-        return res.status(500).send(m.payment_error);
-      } 
+      if (config.lna.clightning) {
+        let m = await lna.pay(hash);
+        let sent;
+        ({
+          msatoshi: total,
+          msatoshi_sent: sent,
+          payment_preimage: preimage
+        } = m);
 
-      if (seen.includes(m.payment_preimage)) {
-        l.warn("duplicate payment detected", m.payment_preimage);
+        fee = parseInt((sent - total)/1000);
+        total = parseInt(total / 1000);
+      } else {
+        let m = await lna.sendPaymentSync({
+          amt: amount,
+          payment_request: hash,
+          max_parts: 10
+        });
+
+        ({
+          payment_error: error,
+          payment_route: { total_fees: fee, total_amt: total },
+          payment_preimage: preimage
+        } = m);
+      }
+
+      preimage = preimage.toString("hex");
+
+
+      if (payreq.payeeNodeKey === config.lnb.id) {
+        if (config.lna.clightning) {
+          let invoice = await lna.invoice(`${amount}sat` || "any", new Date(), "", 360);
+          let { bolt11: payment_request } = invoice;
+          await lnb.pay(payment_request);
+        } else {
+          let invoice = await lna.addInvoice({ value: amount })
+          let { payment_request } = invoice;
+          await lnb.sendPaymentSync({ payment_request, max_parts: 10 });
+        }
+        l.info("lnb sent back", amount);
+      }
+
+      if (error) {
+        l.error("error sending lightning", error);
+        return res.status(500).send(error);
+      }
+
+      if (seen.includes(preimage)) {
+        l.warn("duplicate payment detected", preimage);
         throw new Error("Duplicate payment detected");
       }
 
-      let total = parseInt(m.payment_route.total_amt);
-      let fee = m.payment_route.total_fees;
+      total = parseInt(total);
+      fee = parseInt(fee);
 
       account.balance -= total;
       await account.save({ transaction });
 
-      let payment = await db.Payment.create({
-        amount: -total,
-        account_id: account.id,
-        user_id: user.id,
-        hash,
-        preimage: m.payment_preimage.toString("hex"),
-        rate: app.get("rates")[user.currency],
-        currency: user.currency,
-        confirmed: true,
-        network: "LNBTC"
-      }, { transaction });
+      let payment = await db.Payment.create(
+        {
+          amount: -total,
+          account_id: account.id,
+          user_id: user.id,
+          hash,
+          preimage,
+          rate: app.get("rates")[user.currency],
+          currency: user.currency,
+          confirmed: true,
+          network: "LNBTC",
+          fee
+        },
+        { transaction }
+      );
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
 
-      seen.push(m.payment_preimage);
-      l.info("sent lightning", user.username, -payment.amount);
+      seen.push(preimage);
+      l.info("sent lightning", user.username, total);
 
       user = await getUser(user.username, transaction);
       emit(user.username, "user", user);
-
-      l.info(config.lnb.id, payreq.payeeNodeKey);
-      if (payreq.payeeNodeKey === config.lnb.id) {
-        let invoice = await lna.addInvoice({ value: amount })
-        let { payment_request } = invoice;
-        await lnb.sendPaymentSync({ payment_request, max_parts: 10 });
-        l.info("lnb sending back", amount);
-      }
 
       seen.push(hash);
       res.send(payment);
@@ -88,7 +121,6 @@ module.exports = async (req, res) => {
     l.error(
       "problem sending lightning payment",
       user.username,
-      user.balance,
       e.message
     );
     return res.status(500).send(e.message);
