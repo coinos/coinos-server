@@ -94,6 +94,19 @@ app.post("/register", async (req, res) => {
   user.name = user.username;
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
+  try {
+    let captcha = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify/`, {
+        secret: config.captcha,
+        response: user.token,
+        ip
+      } 
+    );
+    l.info(captcha);
+  } catch(e) {
+    l.error(e.message);
+  } 
+
   let countries = {
     CA: "CAD",
     US: "USD",
