@@ -3,17 +3,6 @@ module.exports = async (req, res) => {
 
   l.info("adding lightning invoice", req.user.username, amount, tip);
 
-  /*
-  const exists = await db.Invoice.findOne({
-    where: {
-      [Op.or]: {
-        address: invoice.address || "undefined",
-        text: invoice.text
-      }
-    }
-  });
-  */
-
   try {
     if (config.lna.clightning) {
       const invoice = await lnb.invoice(`${amount + tip}sat` || "any", new Date(), "", 360);

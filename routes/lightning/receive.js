@@ -1,6 +1,8 @@
 const asset = "LNBTC";
 
 const handlePayment = async msg => {
+  try {
+  await db.transaction(async transaction => {
   if (!msg.settled) return;
 
   const invoice = await db.Invoice.findOne({
@@ -9,7 +11,7 @@ const handlePayment = async msg => {
     }
   });
 
-  if (!invoice) return;
+  if (!invoice) return l.warn("received lightning with no invoice", msg.payment_request);
 
   const { text: hash, currency, rate, tip, user_id } = invoice;
   const amount = parseInt(msg.amt_paid_sat) - tip;
@@ -18,7 +20,9 @@ const handlePayment = async msg => {
     where: {
       user_id,
       asset: config.liquid.btcasset
-    }
+    }, 
+    lock: transaction.LOCK.UPDATE,
+    transaction
   });
 
   let preimage = msg.r_preimage.toString("hex");
@@ -35,17 +39,18 @@ const handlePayment = async msg => {
     confirmed: true,
     network: "LNBTC",
     tip
-  });
+  },
+    { transaction });
 
   invoice.received += amount + tip;
   account.balance += amount + tip;
 
-  await account.save();
-  await invoice.save();
-  await payment.save();
+  await account.save({ transaction });
+  await invoice.save({ transaction });
+  await payment.save({ transaction });
   payments.push(msg.payment_request);
 
-  let user = await getUserById(user_id);
+  let user = await getUserById(user_id, transaction);
 
   payment = payment.get({ plain: true });
   payment.account = account.get({ plain: true });
@@ -58,6 +63,10 @@ const handlePayment = async msg => {
     payment.amount,
     payment.tip
   );
+  });
+  } catch(e) {
+    l.error("problem receiving lightning payment", e.message);
+  } 
 };
 
 if (config.lna.clightning) {
