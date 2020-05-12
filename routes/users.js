@@ -12,7 +12,7 @@ require("../lib/whitelist");
 const twofa = (req, res, next) => {
   let {
     user,
-    body: { token }
+    body: { token },
   } = req;
   if (
     user.twofa &&
@@ -25,7 +25,7 @@ const twofa = (req, res, next) => {
 
 app.get("/liquidate", async (req, res) => {
   let users = await db.User.findAll({
-    include: { model: db.Account, as: "accounts" }
+    include: { model: db.Account, as: "accounts" },
   });
   for (let i = 0; i < users.length; i++) {
     let user = users[i];
@@ -48,14 +48,14 @@ app.get("/liquidate", async (req, res) => {
         pending: 0,
         ticker: "BTC",
         name: "Bitcoin",
-        precision: 8
+        precision: 8,
       });
     }
   }
   res.end();
 });
 
-const gift = async user => {
+const gift = async (user) => {
   const account = user.accounts[0];
 
   if (faucet > 0) {
@@ -73,7 +73,7 @@ const gift = async user => {
       rate: app.get("rates")[user.currency],
       received: true,
       confirmed: 1,
-      network: "GIFT"
+      network: "GIFT",
     });
 
     await user.save();
@@ -81,7 +81,7 @@ const gift = async user => {
 };
 
 app.post("/register", async (req, res) => {
-  let err = m => res.status(500).send(m);
+  let err = (m) => res.status(500).send(m);
   let user = req.body;
   if (!user.username) return err("Username required");
 
@@ -95,10 +95,12 @@ app.post("/register", async (req, res) => {
 
   try {
     const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${user.token}&remoteip=${ip}`;
-    let captcha = await axios.post(url, {
+    let captcha = await axios.post(
+      url,
+      {
         secret: config.captcha,
         response: user.token,
-        remoteip: ip
+        remoteip: ip,
       },
       { timeout: 1000 }
     );
@@ -110,21 +112,14 @@ app.post("/register", async (req, res) => {
 
       if (ip !== "192.168.1.5") {
         const spawn = require("child_process").spawn;
-        proc = spawn("iptables", [
-          "-I",
-          "INPUT",
-          "-s",
-          ip,
-          "-j",
-          "DROP"
-        ]);
+        proc = spawn("iptables", ["-I", "INPUT", "-s", ip, "-j", "DROP"]);
       }
 
       return res.status(500).send("Failed captcha");
     }
-  } catch(e) {
+  } catch (e) {
     l.error(e.message);
-  } 
+  }
 
   let countries = {
     CA: "CAD",
@@ -132,7 +127,7 @@ app.post("/register", async (req, res) => {
     JP: "JPY",
     CN: "CNY",
     AU: "AUD",
-    GB: "GBP"
+    GB: "GBP",
   };
 
   if (!config.ipstack || ip.startsWith("127") || ip.startsWith("192"))
@@ -158,7 +153,7 @@ app.post("/register", async (req, res) => {
     pending: 0,
     name: "Bitcoin",
     ticker: "BTC",
-    precision: 8
+    precision: 8,
   });
 
   user.accounts = [account];
@@ -225,11 +220,11 @@ app.post("/user", auth, async (req, res) => {
       twofa,
       pin,
       password,
-      passconfirm
+      passconfirm,
     } = req.body;
 
     let exists = await db.User.findOne({
-      where: { username }
+      where: { username },
     });
 
     let token;
@@ -242,7 +237,7 @@ app.post("/user", auth, async (req, res) => {
       addresses[user.liquid] = user.username;
       token = jwt.sign({ username }, config.jwt);
       res.cookie("token", token, {
-        expires: new Date(Date.now() + 432000000)
+        expires: new Date(Date.now() + 432000000),
       });
     }
 
@@ -322,7 +317,7 @@ app.post("/account", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id, asset }
+      where: { user_id, asset },
     });
 
     account.name = name;
@@ -346,7 +341,7 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id: user.id, asset }
+      where: { user_id: user.id, asset },
     });
 
     user.account_id = account.id;

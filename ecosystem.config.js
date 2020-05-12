@@ -6,12 +6,12 @@ module.exports = {
       watch: ["./"],
       env: {
         COMMON_VARIABLE: "true",
-        NODE_OPTIONS: "--require ./.pnp.js"
+        NODE_OPTIONS: "--require ./.pnp.js",
       },
       env_production: {
         NODE_ENV: "production",
-        NODE_OPTIONS: "--require ./.pnp.js"
-      }
-    }
-  ]
+        NODE_OPTIONS: "--require ./.pnp.js",
+      },
+    },
+  ],
 };

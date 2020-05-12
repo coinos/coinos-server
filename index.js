@@ -8,7 +8,7 @@ l = require("pino")();
 config = require("./config");
 
 SATS = 100000000;
-toSats = n => parseInt((n * SATS).toFixed())
+toSats = (n) => parseInt((n * SATS).toFixed());
 
 app = express();
 app.enable("trust proxy");
@@ -37,7 +37,7 @@ app.use((err, req, res, next) => {
     body: req.body,
     msg: err.message,
     stack: err.stack,
-  } 
+  };
 
   if (req.user) details.username = req.user.username;
 
