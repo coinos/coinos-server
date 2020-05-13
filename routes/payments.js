@@ -33,15 +33,16 @@ const { join } = require("path");
   app.post("/send", auth, require("./send"));
 
   app.post("/lightning/invoice", auth, require("./lightning/invoice"));
+  app.post("/lightning/query", auth, require("./lightning/query"));
   app.post("/lightning/send", auth, require("./lightning/send"));
   require("./lightning/receive");
 
-  app.post("/bitcoin/send", auth, require("./bitcoin/send"));
   app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
+  app.post("/bitcoin/send", auth, require("./bitcoin/send"));
   require("./bitcoin/receive");
 
-  app.post("/liquid/send", auth, require("./liquid/send"));
   app.post("/liquid/fee", auth, require("./liquid/fee"));
+  app.post("/liquid/send", auth, require("./liquid/send"));
   require("./liquid/receive");
 
   app.get("/payments", auth, async (req, res) => {
