@@ -1,7 +1,6 @@
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const uuidv4 = require("uuid/v4");
 const authenticator = require("otplib").authenticator;
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
@@ -231,7 +230,7 @@ app.post("/user", auth, async (req, res) => {
     if (user.username !== username && exists) {
       return res.status(500).send("Username taken");
     } else {
-      sids[username] = sids[user.username];
+      sockets[username] = sockets[user.username];
       user.username = username;
       addresses[user.address] = username;
       addresses[user.liquid] = user.username;
