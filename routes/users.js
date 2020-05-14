@@ -26,6 +26,10 @@ app.get("/liquidate", async (req, res) => {
   let users = await db.User.findAll({
     include: { model: db.Account, as: "accounts" },
   });
+
+  if (config.liquid.walletpass)
+    await lq.walletPassphrase(config.liquid.walletpass, 300);
+
   for (let i = 0; i < users.length; i++) {
     let user = users[i];
     if (!user.confidential) {
@@ -87,9 +91,17 @@ app.post("/register", async (req, res) => {
   let exists = await db.User.count({ where: { username: user.username } });
   if (exists) return err("Username taken");
 
+  if (config.bitcoin.walletpass)
+    await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
   user.address = await bc.getNewAddress("", "bech32");
+
+  if (config.liquid.walletpass)
+    await lq.walletPassphrase(config.liquid.walletpass, 300);
+
   user.confidential = await lq.getNewAddress();
   user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
+
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
   try {
@@ -302,6 +314,10 @@ app.post("/login", async (req, res) => {
 app.post("/address", auth, async (req, res) => {
   let { user } = req;
   delete addresses[user.address];
+
+  if (config.bitcoin.walletpass)
+    await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
   user.address = await bc.getNewAddress("", req.body.type || "bech32");
   await user.save();
   addresses[user.address] = user.username;

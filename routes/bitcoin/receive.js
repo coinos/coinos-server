@@ -68,6 +68,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         account.pending += value;
         await account.save();
 
+        if (config.bitcoin.walletpass)
+          await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
         user.address = await bc.getNewAddress("", "bech32");
         await user.save();
 

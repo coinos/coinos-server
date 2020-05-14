@@ -66,6 +66,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           account = await db.Account.create(params);
         }
 
+        if (config.liquid.walletpass)
+          await lq.walletPassphrase(config.liquid.walletpass, 300);
+
         user.confidential = await lq.getNewAddress();
         user.liquid = (await lq.getAddressInfo(
           user.confidential
