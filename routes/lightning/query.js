@@ -12,4 +12,5 @@ module.exports = async (req, res) => {
   });
 
   if (invoice) emit(req.user.username, "to", invoice.user);
+  res.end();
 };
