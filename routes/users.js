@@ -47,6 +47,15 @@ const gift = async (user) => {
   }
 };
 
+app.get("/users/:username", async (req, res) => {
+  const { username } = req.params;
+  const user = await db.User.findOne({ 
+    attributes: ['username'],
+    where: { username } });
+  if (user) res.send(user);
+  else res.status(500).send("User not found");
+});
+
 app.post("/register", async (req, res) => {
   let err = (m) => res.status(500).send(m);
   let user = req.body;
