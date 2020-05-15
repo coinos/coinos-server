@@ -6,8 +6,11 @@ module.exports = async (req, res) => {
   let recipient = await db.User.findOne({
     where: { address }
   });
-  if (recipient)
+
+  if (recipient) {
+    l.info("emitting");
     emit(user.username, "to", recipient);
+  }
 
   try {
     amount = parseInt(amount);

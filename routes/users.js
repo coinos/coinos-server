@@ -104,34 +104,6 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
-  try {
-    const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${user.token}&remoteip=${ip}`;
-    let captcha = await axios.post(
-      url,
-      {
-        secret: config.captcha,
-        response: user.token,
-        remoteip: ip,
-      },
-      { timeout: 1000 }
-    );
-
-    let { success, score } = captcha.data;
-
-    if (!success || score < 0.3) {
-      l.warn("failed registration attempt", ip);
-
-      if (ip !== "192.168.1.5") {
-        const spawn = require("child_process").spawn;
-        proc = spawn("iptables", ["-I", "INPUT", "-s", ip, "-j", "DROP"]);
-      }
-
-      return res.status(500).send("Failed captcha");
-    }
-  } catch (e) {
-    l.error(e.message);
-  }
-
   let countries = {
     CA: "CAD",
     US: "USD",

@@ -3,9 +3,13 @@ module.exports = async (req, res) => {
   let { address, asset, amount, feeRate } = req.body;
   let tx, fee;
 
+
   let recipient = await db.User.findOne({
     where: { confidential: address }
   });
+
+  l.info(address, recipient.username);
+
   if (recipient)
     emit(user.username, "to", recipient);
 
@@ -15,7 +19,7 @@ module.exports = async (req, res) => {
     tx = await lq.createRawTransaction(
       [],
       {
-        [address]: (amount / SATS).toFixed(8)
+        [address]: fixed(amount, 8)
       },
       0,
       false,
@@ -28,7 +32,7 @@ module.exports = async (req, res) => {
       subtractFeeFromOutputs: amount === user.balance ? [0] : []
     };
 
-    if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
+    if (feeRate) params.feeRate = fixed(feeRate, 8);
 
     tx = await lq.fundRawTransaction(tx, params);
 
@@ -39,8 +43,6 @@ module.exports = async (req, res) => {
     let signed = await lq.signRawTransactionWithWallet(blinded);
     decoded = await lq.decodeRawTransaction(signed.hex);
     feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
-
-    l.info("estimated", asset);
 
     res.send({ feeRate, tx });
   } catch (e) {
