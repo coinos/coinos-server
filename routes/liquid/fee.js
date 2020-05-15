@@ -5,6 +5,7 @@ module.exports = async (req, res) => {
 
 
   let recipient = await db.User.findOne({
+    attributes: ['username'],
     where: { confidential: address }
   });
 

@@ -3,6 +3,7 @@ module.exports = async (req, res) => {
 
   const invoice = await db.Invoice.findOne({
     include: {
+      attributes: ['username'],
       model: db.User,
       as: "user"
     },
