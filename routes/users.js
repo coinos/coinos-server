@@ -22,42 +22,6 @@ const twofa = (req, res, next) => {
   } else next();
 };
 
-app.get("/liquidate", async (req, res) => {
-  let users = await db.User.findAll({
-    include: { model: db.Account, as: "accounts" },
-  });
-
-  if (config.liquid.walletpass)
-    await lq.walletPassphrase(config.liquid.walletpass, 300);
-
-  for (let i = 0; i < users.length; i++) {
-    let user = users[i];
-    if (!user.confidential) {
-      user.confidential = await lq.getNewAddress();
-      user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
-      await user.save();
-    }
-
-    if (!user.otpsecret) {
-      user.otpsecret = authenticator.generateSecret();
-      await user.save();
-    }
-
-    if (!user.accounts.length) {
-      await db.Account.create({
-        user_id: user.id,
-        asset: config.liquid.btcasset,
-        balance: user.balance,
-        pending: 0,
-        ticker: "BTC",
-        name: "Bitcoin",
-        precision: 8,
-      });
-    }
-  }
-  res.end();
-});
-
 const gift = async (user) => {
   const account = user.accounts[0];
 
