@@ -55,16 +55,22 @@ app.post("/register", async (req, res) => {
   let exists = await db.User.count({ where: { username: user.username } });
   if (exists) return err("Username taken");
 
-  if (config.bitcoin.walletpass)
-    await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+  if (config.bitcoin) {
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-  user.address = await bc.getNewAddress("", "bech32");
+    user.address = await bc.getNewAddress("", "bech32");
+    addresses[user.address] = user.username;
+  }
 
-  if (config.liquid.walletpass)
-    await lq.walletPassphrase(config.liquid.walletpass, 300);
+  if (config.liquid) {
+    if (config.liquid.walletpass)
+      await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-  user.confidential = await lq.getNewAddress();
-  user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
+    user.confidential = await lq.getNewAddress();
+    user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
+    addresses[user.liquid] = user.username;
+  }
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
@@ -89,8 +95,6 @@ app.post("/register", async (req, res) => {
   user.currencies = [...new Set([user.currency, "CAD", "USD", "JPY"])];
   user.otpsecret = authenticator.generateSecret();
 
-  addresses[user.address] = user.username;
-  addresses[user.liquid] = user.username;
   user = await db.User.create(user);
 
   let account = await db.Account.create({
@@ -105,8 +109,8 @@ app.post("/register", async (req, res) => {
 
   user.accounts = [account];
 
-  let d = ip.split(".");
-  let numericIp = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
+  const d = ip.split(".");
+  const numericIp = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
   user.ip = numericIp;
   const ipExists = await db.User.findOne({ where: { ip: numericIp } });
   if (!ipExists) await gift(user);
@@ -180,8 +184,13 @@ app.post("/user", auth, async (req, res) => {
     } else {
       sockets[username] = sockets[user.username];
       user.username = username;
-      addresses[user.address] = username;
-      addresses[user.liquid] = user.username;
+
+      if (user.address)
+        addresses[user.address] = username;
+
+      if (user.liquid)
+        addresses[user.liquid] = user.username;
+
       token = jwt.sign({ username }, config.jwt);
       res.cookie("token", token, {
         expires: new Date(Date.now() + 432000000),
@@ -248,6 +257,8 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/address", auth, async (req, res) => {
+  if (!config.bitcoin) return res.status(500).send("Bitcoin not configured");
+
   let { user } = req;
   delete addresses[user.address];
 

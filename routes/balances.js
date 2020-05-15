@@ -2,7 +2,6 @@ const sequelize = require("sequelize");
 const { Op } = sequelize;
 
 app.get("/info", async (req, res) => {
-  const assets = await lq.getBalance();
   const accounts = await db.Account.findAll({
     attributes: [
       "asset",
@@ -15,37 +14,48 @@ app.get("/info", async (req, res) => {
   let lnwallet;
   let lninfo;
 
-  if (config.lna.clightning) {
-    lninfo = await lna.getinfo();
-    const funds = await lna.listfunds();
-    lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
-    lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
-  } else {
-    lninfo = await lna.getInfo({});
-    lnchannel = parseInt((await lna.channelBalance({})).balance);
-    lnwallet = parseInt((await lna.walletBalance({})).total_balance);
+  if (config.lna) {
+    if (config.lna.clightning) {
+      const funds = await lna.listfunds();
+      lninfo = await lna.getinfo();
+      lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
+      lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
+    } else {
+      lninfo = await lna.getInfo({});
+      lnchannel = parseInt((await lna.channelBalance({})).balance);
+      lnwallet = parseInt((await lna.walletBalance({})).total_balance);
+    } 
+  }
+
+  let bitcoin, bitcoind;
+  if (config.bitcoin) {
+    bitcoin = parseInt((await bc.getBalance()) * SATS);
+    bitcoind = await bc.getNetworkInfo();
+  } 
+
+  let assets, liquid, elementsd;
+  if (config.liquid) {
+    assets = await lq.getBalance();
+    liquid = parseInt(assets.bitcoin * SATS);
+    elementsd = await lq.getNetworkInfo();
   } 
 
   const info = {
-    bitcoind: await bc.getNetworkInfo(),
-    elementsd: await lq.getNetworkInfo(),
+    bitcoind,
+    elementsd,
     accounts,
     assets,
-    bitcoin: parseInt((await bc.getBalance()) * SATS),
-    liquid: parseInt(assets.bitcoin * SATS),
+    bitcoin,
+    liquid,
     lnchannel,
     lnwallet,
   };
-
-  const { bitcoin, liquid, user } = info;
 
   info.total =
     parseInt(bitcoin) +
     parseInt(liquid) +
     parseInt(lnchannel) +
     parseInt(lnwallet);
-
-  info.ratio = (info.total / parseInt(user)).toFixed(2);
 
   res.send(info);
 });

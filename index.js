@@ -6,6 +6,10 @@ const express = require("express");
 
 l = require("pino")();
 config = require("./config");
+networks = [];
+if (config.bitcoin) networks.push('bitcoin');
+if (config.liquid) networks.push('liquid');
+if (config.lna) networks.push('lightning');
 
 SATS = 100000000;
 toSats = (n) => parseInt((n * SATS).toFixed());
