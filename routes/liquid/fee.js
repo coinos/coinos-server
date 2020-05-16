@@ -3,16 +3,12 @@ module.exports = async (req, res) => {
   let { address, asset, amount, feeRate } = req.body;
   let tx, fee;
 
-
   let recipient = await db.User.findOne({
-    attributes: ['username'],
-    where: { confidential: address }
+    attributes: ["username"],
+    where: { confidential: address },
   });
 
-  l.info(address, recipient.username);
-
-  if (recipient)
-    emit(user.username, "to", recipient);
+  if (recipient) emit(user.username, "to", recipient);
 
   try {
     amount = parseInt(amount);
@@ -20,17 +16,17 @@ module.exports = async (req, res) => {
     tx = await lq.createRawTransaction(
       [],
       {
-        [address]: fixed(amount, 8)
+        [address]: fixed(amount, 8),
       },
       0,
       false,
       {
-        [address]: asset
+        [address]: asset,
       }
     );
 
     let params = {
-      subtractFeeFromOutputs: amount === user.balance ? [0] : []
+      subtractFeeFromOutputs: amount === user.balance ? [0] : [],
     };
 
     if (feeRate) params.feeRate = fixed(feeRate, 8);
