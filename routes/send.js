@@ -5,16 +5,18 @@ module.exports = async (req, res) => {
   let { user } = req;
 
   l.info("attempting internal payment", user.username, amount);
+  if (!amount || amount < 0)
+    return res.status(500).send("Amount must be greater than zero");
 
   try {
-    await db.transaction(async transaction => {
+    await db.transaction(async (transaction) => {
       let account = await db.Account.findOne({
         where: {
           user_id: user.id,
-          asset
+          asset,
         },
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       if (account.balance < amount) {
@@ -35,7 +37,7 @@ module.exports = async (req, res) => {
           currency: user.currency,
           confirmed: true,
           hash: "Internal Transfer",
-          network: "COINOS"
+          network: "COINOS",
         },
         { transaction }
       );
@@ -50,18 +52,18 @@ module.exports = async (req, res) => {
       res.send(payment);
 
       user = await db.User.findOne({
-        where: { username }
+        where: { username },
       });
 
-        let params = {
-          user_id: user.id,
-          asset
-        };
+      let params = {
+        user_id: user.id,
+        asset,
+      };
 
       account = await db.Account.findOne({
         where: params,
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       if (account) {
@@ -72,17 +74,18 @@ module.exports = async (req, res) => {
         let ticker = asset.substr(0, 3).toUpperCase();
         let precision = 8;
 
-        const assets = (await axios.get("https://assets.blockstream.info/")).data;
+        const assets = (await axios.get("https://assets.blockstream.info/"))
+          .data;
 
         if (assets[asset]) {
-          ({ticker, precision, name } = assets[asset]);
+          ({ ticker, precision, name } = assets[asset]);
         }
 
         params = { ...params, ...{ ticker, precision, name } };
         params.balance = amount;
         params.pending = 0;
         account = await db.Account.create(params, { transaction });
-      } 
+      }
 
       payment = await db.Payment.create(
         {
