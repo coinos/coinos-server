@@ -7,11 +7,8 @@ module.exports = async (req, res) => {
     attributes: ['username'],
     where: { address }
   });
-
-  if (recipient) {
-    l.info("emitting");
+  if (recipient)
     emit(user.username, "to", recipient);
-  }
 
   try {
     amount = parseInt(amount);
