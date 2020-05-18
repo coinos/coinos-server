@@ -83,6 +83,8 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
+  if (!user.token) return res.status(500).send("Missing captcha token");
+
   let success, score;
   try {
     const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${user.token}&remoteip=${ip}`;
