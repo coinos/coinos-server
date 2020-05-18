@@ -20,7 +20,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(blinded.txid)) return;
 
   Promise.all(
-    tx.vout.map(async (o) => {
+    tx.vout.map(async o => {
       if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
       const { asset } = o;
@@ -30,19 +30,19 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
       if (Object.keys(addresses).includes(address)) {
         let user = await db.User.findOne({
           where: {
-            username: addresses[address],
-          },
+            username: addresses[address]
+          }
         });
 
         let confirmed = 0;
 
         let params = {
           user_id: user.id,
-          asset,
+          asset
         };
 
         let account = await db.Account.findOne({
-          where: params,
+          where: params
         });
 
         if (account) {
@@ -83,9 +83,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           invoice = await db.Invoice.findOne({
             where: {
               user_id: user.id,
-              network: "LBTC",
+              network: "LBTC"
             },
-            order: [["id", "DESC"]],
+            order: [["id", "DESC"]]
           });
         }
 
@@ -104,7 +104,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "LBTC",
+          network: "LBTC"
         });
 
         payments.push(blinded.txid);
@@ -124,17 +124,42 @@ let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: 0 },
+    where: { confirmed: 0 }
   });
 
-  const hashes = payments.map((p) => p.hash);
+  const hashes = payments.map(p => p.hash);
 
   const block = elements.Block.fromHex(message.toString("hex"), true);
   const hash = await lq.getBlockHash(block.height);
   const json = await lq.getBlock(hash, 2);
 
-  json.tx.map((tx) => {
-    if (hashes.includes(tx.txid)) queue[tx.txid] = 1;
+  json.tx.map(async tx => {
+    if (issuances[tx.txid]) {
+      await db.transaction(async transaction => {
+        const { user_id, asset, asset_amount, payment_id } = issuances[tx.txid];
+        const account = await db.Account.findOne({
+          where: { user_id, asset },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
+        account.balance = asset_amount * SATS;
+        account.pending = 0;
+        await account.save({ transaction });
+
+        const payment = await db.Payment.findOne({
+          where: { id: payment_id },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
+
+        payment.confirmed = true;
+        await payment.save({ transaction });
+
+        const user = await getUserById(user_id, transaction);
+        emit(user.username, "user", user);
+      });
+    }
+    else if (hashes.includes(tx.txid)) queue[tx.txid] = 1;
   });
 });
 
@@ -149,8 +174,8 @@ setInterval(async () => {
         where: { hash, confirmed: 0, received: 1 },
         include: {
           model: db.Account,
-          as: "account",
-        },
+          as: "account"
+        }
       });
 
       p.confirmed = 1;
