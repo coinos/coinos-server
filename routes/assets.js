@@ -113,6 +113,6 @@ app.post("/assets", auth, async (req, res) => {
     }
   } catch (e) {
     l.error("asset issuance failed", e.message);
-    res.status(500).send("Failed to issue asset");
+    res.status(500).send(e.message);
   }
 });
