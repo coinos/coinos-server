@@ -6,6 +6,7 @@ const { join } = require("path");
 (async () => {
   seen = [];
   addresses = {};
+  issuances = {};
 
   await db.User.findAll({
     attributes: ["username", "address", "liquid"]
