@@ -72,7 +72,7 @@ app.post("/assets", auth, async (req, res) => {
         });
 
         if (Math.round(funded.fee * SATS) > account.balance) {
-          l.error("amount exceeds balance", amount, fee, account.balance);
+          l.error("amount exceeds balance", asset_amount, fee, account.balance);
           throw new Error("insufficient funds");
         }
 
