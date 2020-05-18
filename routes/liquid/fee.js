@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     tx = await lq.createRawTransaction(
       [],
       {
-        [address]: fixed(amount, 8),
+        [address]: (amount / SATS).toFixed(8)
       },
       0,
       false,
@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
 
     res.send({ feeRate, tx });
   } catch (e) {
-    l.error("error estimating liquid fee", e);
+    l.error("error estimating liquid fee", e.message);
     return res.status(500).send(e.message);
   }
 };

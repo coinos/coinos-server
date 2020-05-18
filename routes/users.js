@@ -83,6 +83,7 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
+  let success, score;
   try {
     const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${user.token}&remoteip=${ip}`;
     let captcha = await axios.post(
@@ -95,7 +96,7 @@ app.post("/register", async (req, res) => {
       { timeout: 1000 }
     );
 
-    let { success, score } = captcha.data;
+    ({ success, score } = captcha.data);
 
     if (!success || score < 0.3) {
       l.warn("failed registration attempt", ip);
@@ -157,7 +158,7 @@ app.post("/register", async (req, res) => {
   user = await getUser(user.username);
   res.send(pick(user, ...whitelist));
   emit(user.username, "user", user);
-  l.info("new user", user.username, ip);
+  l.info("new user", user.username, ip, token, score);
 });
 
 app.post("/disable2fa", auth, twofa, async (req, res) => {
