@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
 
       if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, account.balance);
-        throw new Error("insufficient funds");
+        throw new Error("Insufficient funds");
       }
 
       account.balance -= total;
