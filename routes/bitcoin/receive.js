@@ -130,6 +130,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 });
 
 setInterval(async () => {
+  l.info("checking for received bitcoin transactions");
   try {
     let arr = Object.keys(queue);
     for (let i = 0; i < arr.length; i++) {

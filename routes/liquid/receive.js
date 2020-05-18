@@ -139,6 +139,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 });
 
 setInterval(async () => {
+  l.info("checking for received liquid transactions");
   try {
     let arr = Object.keys(queue);
 
