@@ -66,7 +66,7 @@ module.exports = async (req, res) => {
             fee,
             balance: account.balance
           });
-          throw new Error("insufficient funds");
+          throw new Error("Insufficient funds");
         }
 
         account.balance -= total;
