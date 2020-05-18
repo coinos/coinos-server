@@ -27,6 +27,8 @@ app.post("/assets", auth, async (req, res) => {
     const domain = "adamsoltys.com";
     const version = 0;
 
+    l.info("token address", token_address);
+
     const contract = {
       entity: { domain },
       issuer_pubkey,
