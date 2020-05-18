@@ -11,7 +11,7 @@ require("../lib/whitelist");
 const twofa = (req, res, next) => {
   let {
     user,
-    body: { token },
+    body: { token }
   } = req;
   if (
     user.twofa &&
@@ -22,7 +22,7 @@ const twofa = (req, res, next) => {
   } else next();
 };
 
-const gift = async (user) => {
+const gift = async user => {
   const account = user.accounts[0];
 
   if (faucet > 0) {
@@ -40,7 +40,7 @@ const gift = async (user) => {
       rate: app.get("rates")[user.currency],
       received: true,
       confirmed: 1,
-      network: "GIFT",
+      network: "GIFT"
     });
 
     await user.save();
@@ -49,15 +49,16 @@ const gift = async (user) => {
 
 app.get("/users/:username", async (req, res) => {
   const { username } = req.params;
-  const user = await db.User.findOne({ 
-    attributes: ['username'],
-    where: { username } });
+  const user = await db.User.findOne({
+    attributes: ["username"],
+    where: { username }
+  });
   if (user) res.send(user);
   else res.status(500).send("User not found");
 });
 
 app.post("/register", async (req, res) => {
-  let err = (m) => res.status(500).send(m);
+  let err = m => res.status(500).send(m);
   let user = req.body;
   let { token } = user;
   if (!user.username) return err("Username required");
@@ -84,27 +85,29 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
-  if (!token) return res.status(500).send("Missing captcha token");
+  if (process.env.NODE_ENV === "production") {
+    if (!token) return res.status(500).send("Missing captcha token");
 
-  let success, score;
-  try {
-    const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${token}&remoteip=${ip}`;
-    let captcha = await axios.post(url, { timeout: 1000 });
+    let success, score;
+    try {
+      const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${token}&remoteip=${ip}`;
+      let captcha = await axios.post(url, { timeout: 1000 });
 
-    ({ success, score } = captcha.data);
+      ({ success, score } = captcha.data);
 
-    if (!success || score < 0.3) {
-      l.warn("failed registration attempt", ip);
+      if (!success || score < 0.3) {
+        l.warn("failed registration attempt", ip);
 
-      if (ip !== "192.168.1.5") {
-        const spawn = require("child_process").spawn;
-        proc = spawn("iptables", ["-I", "INPUT", "-s", ip, "-j", "DROP"]);
+        if (ip !== "192.168.1.5") {
+          const spawn = require("child_process").spawn;
+          proc = spawn("iptables", ["-I", "INPUT", "-s", ip, "-j", "DROP"]);
+        }
+
+        return res.status(500).send("Failed captcha");
       }
-
-      return res.status(500).send("Failed captcha");
+    } catch (e) {
+      l.error(e.message);
     }
-  } catch (e) {
-    l.error(e.message);
   }
 
   let countries = {
@@ -113,7 +116,7 @@ app.post("/register", async (req, res) => {
     JP: "JPY",
     CN: "CNY",
     AU: "AUD",
-    GB: "GBP",
+    GB: "GBP"
   };
 
   if (!config.ipstack || ip.startsWith("127") || ip.startsWith("192"))
@@ -137,7 +140,7 @@ app.post("/register", async (req, res) => {
     pending: 0,
     name: "Bitcoin",
     ticker: "BTC",
-    precision: 8,
+    precision: 8
   });
 
   user.accounts = [account];
@@ -204,11 +207,11 @@ app.post("/user", auth, async (req, res) => {
       twofa,
       pin,
       password,
-      passconfirm,
+      passconfirm
     } = req.body;
 
     let exists = await db.User.findOne({
-      where: { username },
+      where: { username }
     });
 
     let token;
@@ -218,15 +221,13 @@ app.post("/user", auth, async (req, res) => {
       sockets[username] = sockets[user.username];
       user.username = username;
 
-      if (user.address)
-        addresses[user.address] = username;
+      if (user.address) addresses[user.address] = username;
 
-      if (user.liquid)
-        addresses[user.liquid] = user.username;
+      if (user.liquid) addresses[user.liquid] = user.username;
 
       token = jwt.sign({ username }, config.jwt);
       res.cookie("token", token, {
-        expires: new Date(Date.now() + 432000000),
+        expires: new Date(Date.now() + 432000000)
       });
     }
 
@@ -312,7 +313,7 @@ app.post("/account", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id, asset },
+      where: { user_id, asset }
     });
 
     account.name = name;
@@ -336,7 +337,7 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id: user.id, asset },
+      where: { user_id: user.id, asset }
     });
 
     user.account_id = account.id;
