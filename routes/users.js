@@ -85,10 +85,10 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
+  let success, score;
   if (process.env.NODE_ENV === "production") {
     if (!token) return res.status(500).send("Missing captcha token");
 
-    let success, score;
     try {
       const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${token}&remoteip=${ip}`;
       let captcha = await axios.post(url, { timeout: 1000 });
