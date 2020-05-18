@@ -59,6 +59,7 @@ app.get("/users/:username", async (req, res) => {
 app.post("/register", async (req, res) => {
   let err = (m) => res.status(500).send(m);
   let user = req.body;
+  let { token } = user;
   if (!user.username) return err("Username required");
 
   let exists = await db.User.count({ where: { username: user.username } });
@@ -83,20 +84,12 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
-  if (!user.token) return res.status(500).send("Missing captcha token");
+  if (!token) return res.status(500).send("Missing captcha token");
 
   let success, score;
   try {
-    const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${user.token}&remoteip=${ip}`;
-    let captcha = await axios.post(
-      url,
-      {
-        secret: config.captcha,
-        response: user.token,
-        remoteip: ip,
-      },
-      { timeout: 1000 }
-    );
+    const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${token}&remoteip=${ip}`;
+    let captcha = await axios.post(url, { timeout: 1000 });
 
     ({ success, score } = captcha.data);
 
@@ -160,7 +153,7 @@ app.post("/register", async (req, res) => {
   user = await getUser(user.username);
   res.send(pick(user, ...whitelist));
   emit(user.username, "user", user);
-  l.info("new user", user.username, ip, token, score);
+  l.info("new user", user.username, ip, score);
 });
 
 app.post("/disable2fa", auth, twofa, async (req, res) => {
