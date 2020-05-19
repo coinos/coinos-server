@@ -45,7 +45,7 @@ app.post("/assets", auth, async (req, res) => {
       .reverse()
       .join("");
     const rawtx = await lq.createRawTransaction([], { data: "00" });
-    const funded = await lq.fundRawTransaction(rawtx, { feeRate: 0.000002 });
+    const funded = await lq.fundRawTransaction(rawtx, { feeRate: 0.000003 });
     const ria = await lq.rawIssueAsset(funded.hex, [
       {
         asset_amount,
