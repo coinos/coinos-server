@@ -57,7 +57,7 @@ CREATE TABLE `accounts` (
   `ticker` varchar(255) DEFAULT NULL,
   `precision` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3616 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3649 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -81,7 +81,7 @@ CREATE TABLE `invoices` (
   `tip` double DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4261 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4371 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -98,7 +98,7 @@ CREATE TABLE `payments` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `rate` double DEFAULT NULL,
-  `currency` varchar(255) NOT NULL,
+  `currency` varchar(255) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
   `received` tinyint(1) DEFAULT NULL,
   `amount` double DEFAULT NULL,
@@ -109,7 +109,7 @@ CREATE TABLE `payments` (
   `account_id` int(11) DEFAULT NULL,
   `preimage` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3802 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4069 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -139,7 +139,7 @@ CREATE TABLE `users` (
   `ip` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=568 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=575 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -151,4 +151,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-05-06 10:37:13
+-- Dump completed on 2020-05-18 17:24:51
