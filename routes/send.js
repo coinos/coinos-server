@@ -9,14 +9,14 @@ module.exports = async (req, res) => {
     return res.status(500).send("Amount must be greater than zero");
 
   try {
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       let account = await db.Account.findOne({
         where: {
           user_id: user.id,
-          asset,
+          asset
         },
         lock: transaction.LOCK.UPDATE,
-        transaction,
+        transaction
       });
 
       if (account.balance < amount) {
@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
           currency: user.currency,
           confirmed: true,
           hash: "Internal Transfer",
-          network: "COINOS",
+          network: "COINOS"
         },
         { transaction }
       );
@@ -52,18 +52,18 @@ module.exports = async (req, res) => {
       res.send(payment);
 
       user = await db.User.findOne({
-        where: { username },
+        where: { username }
       });
 
       let params = {
         user_id: user.id,
-        asset,
+        asset
       };
 
       account = await db.Account.findOne({
         where: params,
         lock: transaction.LOCK.UPDATE,
-        transaction,
+        transaction
       });
 
       if (account) {
@@ -79,6 +79,21 @@ module.exports = async (req, res) => {
 
         if (assets[asset]) {
           ({ ticker, precision, name } = assets[asset]);
+        } else {
+          const existing = await db.Account.findOne({
+            where: {
+              asset
+            },
+            order: [["id", "ASC"]],
+            limit: 1
+          });
+
+          l.info("existing", existing);
+
+          if (existing) {
+            l.info(existing.name);
+            ({ ticker, precision, name } = existing);
+          }
         }
 
         params = { ...params, ...{ ticker, precision, name } };
@@ -97,7 +112,7 @@ module.exports = async (req, res) => {
           confirmed: true,
           hash: "Internal Transfer",
           network: "COINOS",
-          received: true,
+          received: true
         },
         { transaction }
       );

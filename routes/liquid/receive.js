@@ -58,6 +58,18 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
           if (assets[asset]) {
             ({ ticker, precision, name } = assets[asset]);
+          } else {
+            const existing = await db.Account.findOne({
+              where: {
+                asset
+              },
+              order: [["id", "ASC"]],
+              limit: 1
+            });
+
+            if (existing) {
+              ({ ticker, precision, name } = existing);
+            } 
           }
 
           params = { ...params, ...{ ticker, precision, name } };
@@ -136,8 +148,16 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
   json.tx.map(async tx => {
     if (issuances[tx.txid]) {
       await db.transaction(async transaction => {
-        const { user_id, asset, asset_amount, payment_id } = issuances[tx.txid];
-        const account = await db.Account.findOne({
+        const {
+          user_id,
+          asset,
+          asset_amount,
+          asset_payment_id,
+          token,
+          token_amount,
+          token_payment_id
+        } = issuances[tx.txid];
+        let account = await db.Account.findOne({
           where: { user_id, asset },
           lock: transaction.LOCK.UPDATE,
           transaction
@@ -146,8 +166,26 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
         account.pending = 0;
         await account.save({ transaction });
 
-        const payment = await db.Payment.findOne({
-          where: { id: payment_id },
+        let payment = await db.Payment.findOne({
+          where: { id: asset_payment_id },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
+
+        payment.confirmed = true;
+        await payment.save({ transaction });
+
+        account = await db.Account.findOne({
+          where: { user_id, asset: token },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
+        account.balance = token_amount * SATS;
+        account.pending = 0;
+        await account.save({ transaction });
+
+        payment = await db.Payment.findOne({
+          where: { id: token_payment_id },
           lock: transaction.LOCK.UPDATE,
           transaction
         });
@@ -158,8 +196,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
         const user = await getUserById(user_id, transaction);
         emit(user.username, "user", user);
       });
-    }
-    else if (hashes.includes(tx.txid)) queue[tx.txid] = 1;
+    } else if (hashes.includes(tx.txid)) queue[tx.txid] = 1;
   });
 });
 
