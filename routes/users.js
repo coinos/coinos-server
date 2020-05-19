@@ -67,23 +67,31 @@ app.post("/register", async (req, res) => {
   let exists = await db.User.count({ where: { username: user.username } });
   if (exists) return err("Username taken");
 
-  l.info("setting bitcoin addresses");
-  if (config.bitcoin) {
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+  try {
+    l.info("setting bitcoin addresses");
+    if (config.bitcoin) {
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    user.address = await bc.getNewAddress("", "bech32");
-    addresses[user.address] = user.username;
+      user.address = await bc.getNewAddress("", "bech32");
+      addresses[user.address] = user.username;
+    }
+  } catch (e) {
+    l.error("problem setting bitcoin addresses", e.message);
   }
 
-  l.info("setting liquid addresses");
-  if (config.liquid) {
-    if (config.liquid.walletpass)
-      await lq.walletPassphrase(config.liquid.walletpass, 300);
+  try {
+    l.info("setting liquid addresses");
+    if (config.liquid) {
+      if (config.liquid.walletpass)
+        await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-    user.confidential = await lq.getNewAddress();
-    user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
-    addresses[user.liquid] = user.username;
+      user.confidential = await lq.getNewAddress();
+      user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
+      addresses[user.liquid] = user.username;
+    }
+  } catch (e) {
+    l.error("problem setting liquid addresses", e.message);
   }
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
