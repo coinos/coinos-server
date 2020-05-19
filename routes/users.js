@@ -63,9 +63,11 @@ app.post("/register", async (req, res) => {
   let { token } = user;
   if (!user.username) return err("Username required");
 
+  l.info("registering user");
   let exists = await db.User.count({ where: { username: user.username } });
   if (exists) return err("Username taken");
 
+  l.info("setting bitcoin addresses");
   if (config.bitcoin) {
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
@@ -74,6 +76,7 @@ app.post("/register", async (req, res) => {
     addresses[user.address] = user.username;
   }
 
+  l.info("setting liquid addresses");
   if (config.liquid) {
     if (config.liquid.walletpass)
       await lq.walletPassphrase(config.liquid.walletpass, 300);
