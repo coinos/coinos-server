@@ -175,23 +175,25 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
         payment.confirmed = true;
         await payment.save({ transaction });
 
-        account = await db.Account.findOne({
-          where: { user_id, asset: token },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
-        account.balance = token_amount * SATS;
-        account.pending = 0;
-        await account.save({ transaction });
+        if (token) {
+          account = await db.Account.findOne({
+            where: { user_id, asset: token },
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
+          account.balance = token_amount * SATS;
+          account.pending = 0;
+          await account.save({ transaction });
 
-        payment = await db.Payment.findOne({
-          where: { id: token_payment_id },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
+          payment = await db.Payment.findOne({
+            where: { id: token_payment_id },
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
 
-        payment.confirmed = true;
-        await payment.save({ transaction });
+          payment.confirmed = true;
+          await payment.save({ transaction });
+        }
 
         const user = await getUserById(user_id, transaction);
         emit(user.username, "user", user);
