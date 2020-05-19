@@ -2,11 +2,14 @@ const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authenticator = require("otplib").authenticator;
+const textToImage = require("text-to-image");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 let faucet = 1000;
 const DAY = 24 * 60 * 60 * 1000;
 require("../lib/whitelist");
+
+const challenge = {};
 
 const twofa = (req, res, next) => {
   let {
@@ -57,14 +60,27 @@ app.get("/users/:username", async (req, res) => {
   else res.status(500).send("User not found");
 });
 
+app.get("/challenge", async (req, res) => {
+  const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  challenge[ip] = require("random-words")();
+  l.info("setting up challenge", ip, challenge[ip]);
+  const data = await textToImage.generate(challenge[ip]);
+  res.send(data);
+});
+
 app.post("/register", async (req, res) => {
   let err = m => res.status(500).send(m);
-  let user = req.body;
-  let { token } = user;
+  let { user } = req.body;
+  l.info("user", user);
+  
   if (!user.username) return err("Username required");
 
   let exists = await db.User.count({ where: { username: user.username } });
   if (exists) return err("Username taken");
+
+  if (user.password && user.password === user.confirm) {
+    user.password = await bcrypt.hash(user.password, 1);
+  }
 
   if (config.bitcoin) {
     if (config.bitcoin.walletpass)
@@ -85,9 +101,17 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
+  if (!challenge[ip] || user.response !== challenge[ip]) {
+    l.info("failed challenge", ip, response, challenge[ip]);
+    return res.status(500).send("Failed challenge");
+  } 
+
+  delete challenge[ip];
+
   let success, score;
   if (process.env.NODE_ENV === "production") {
     if (!token) return res.status(500).send("Missing captcha token");
+
 
     try {
       const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${token}&remoteip=${ip}`;
