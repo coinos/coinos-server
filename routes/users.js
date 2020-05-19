@@ -71,7 +71,7 @@ app.get("/challenge", async (req, res) => {
 app.post("/register", async (req, res) => {
   let err = m => res.status(500).send(m);
   let { user } = req.body;
-  l.info("user", user);
+  let { token } = user;
   
   if (!user.username) return err("Username required");
 
