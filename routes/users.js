@@ -102,7 +102,7 @@ app.post("/register", async (req, res) => {
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
   if (!challenge[ip] || user.response !== challenge[ip]) {
-    l.info("failed challenge", ip, response, challenge[ip]);
+    l.info("failed challenge", ip, user.response, challenge[ip]);
     return res.status(500).send("Failed challenge");
   } 
 
