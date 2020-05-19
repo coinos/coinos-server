@@ -46,14 +46,26 @@ app.post("/assets", auth, async (req, res) => {
     const params = {
       asset_amount,
       asset_address,
-      token_address,
       blind,
       contract_hash
     };
 
-    if (token_amount) params.token_amount = token_amount;
+    params.asset_amount = parseInt(params.asset_amount);
 
-    const ria = await lq.rawIssueAsset(funded.hex, [params]);
+    if (token_amount) {
+      params.token_amount = token_amount;
+      params.token_address = token_address;
+      params.token_amount = parseInt(params.token_amount);
+    } 
+
+    let ria;
+    try {
+      ria = await lq.rawIssueAsset(funded.hex, [params]);
+    } catch(e) {
+      l.info(asset_amount, token_amount, params);
+      throw new Error(e.message);
+    } 
+
     const { asset, hex, token } = ria[0];
     const brt = await lq.blindRawTransaction(hex, true, [], false);
     const srt = await lq.signRawTransactionWithWallet(brt);
