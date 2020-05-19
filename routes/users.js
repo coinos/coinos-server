@@ -90,6 +90,7 @@ app.post("/register", async (req, res) => {
 
   let success, score;
   if (process.env.NODE_ENV === "production") {
+    l.info("checking captcha");
     if (!token) return res.status(500).send("Missing captcha token");
 
     try {
