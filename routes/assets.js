@@ -45,16 +45,17 @@ app.post("/assets", auth, async (req, res) => {
       .join("");
     const rawtx = await lq.createRawTransaction([], { data: "00" });
     const funded = await lq.fundRawTransaction(rawtx, { feeRate: 0.000003 });
-    const ria = await lq.rawIssueAsset(funded.hex, [
-      {
-        asset_amount,
-        token_amount,
-        asset_address,
-        token_address,
-        blind,
-        contract_hash
-      }
-    ]);
+    const params = {
+      asset_amount,
+      asset_address,
+      token_address,
+      blind,
+      contract_hash
+    };
+
+    if (token_amount) params.token_amount = token_amount;
+
+    const ria = await lq.rawIssueAsset(funded.hex, [params]);
     const { asset, hex, token } = ria[0];
     const brt = await lq.blindRawTransaction(hex, true, [], false);
     const srt = await lq.signRawTransactionWithWallet(brt);
@@ -112,42 +113,46 @@ app.post("/assets", auth, async (req, res) => {
           { transaction }
         );
 
-        account = await db.Account.create(
-          {
-            asset: token,
-            user_id,
-            ticker: `${ticker}REISSUANCETOKEN`,
-            precision: 8,
-            name: `${name} Reissuance Token`,
-            balance: 0,
-            pending: token_amount * SATS
-          },
-          { transaction }
-        );
-
-        const token_payment = await db.Payment.create(
-          {
-            account_id: account.id,
-            user_id,
-            hash: txid,
-            amount: token_amount * SATS,
-            received: true,
-            confirmed: false,
-            address: token_address,
-            network: "LBTC"
-          },
-          { transaction }
-        );
-
         issuances[txid] = {
           user_id,
           asset,
           asset_amount,
-          token,
-          token_amount,
           asset_payment_id: asset_payment.id,
-          token_payment_id: token_payment.id,
         };
+
+        if (token_amount) {
+          account = await db.Account.create(
+            {
+              asset: token,
+              user_id,
+              ticker: `${ticker}REISSUANCETOKEN`,
+              precision: 8,
+              name: `${name} Reissuance Token`,
+              balance: 0,
+              pending: token_amount * SATS
+            },
+            { transaction }
+          );
+
+          const token_payment = await db.Payment.create(
+            {
+              account_id: account.id,
+              user_id,
+              hash: txid,
+              amount: token_amount * SATS,
+              received: true,
+              confirmed: false,
+              address: token_address,
+              network: "LBTC"
+            },
+            { transaction }
+          );
+
+          issuances[txid].token = token;
+          issuances[txid].token_amount = token_amount;
+          issuances[txid].token_payment_id = token_payment.id;
+        }
+
 
         let user = await getUserById(user_id, transaction);
         emit(user.username, "user", user);
