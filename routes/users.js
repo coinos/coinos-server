@@ -95,7 +95,7 @@ app.post("/register", async (req, res) => {
 
       ({ success, score } = captcha.data);
 
-      if (!success || score < 0.3) {
+      if (!success || score < 0.8) {
         l.warn("failed registration attempt", ip);
 
         if (ip !== "192.168.1.5") {
