@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authenticator = require("otplib").authenticator;
 const textToImage = require("text-to-image");
+const randomWord = require("random-words");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 let faucet = 1000;
@@ -62,7 +63,7 @@ app.get("/users/:username", async (req, res) => {
 
 app.get("/challenge", async (req, res) => {
   const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-  challenge[ip] = require("random-words")();
+  challenge[ip] = randomWord();
   l.info("setting up challenge", ip, challenge[ip]);
   const data = await textToImage.generate(challenge[ip]);
   res.send(data);
