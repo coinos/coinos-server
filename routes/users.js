@@ -171,9 +171,11 @@ app.post("/register", async (req, res) => {
 
   const d = ip.split(".");
   const numericIp = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
-  user.ip = numericIp;
-  const ipExists = await db.User.findOne({ where: { ip: numericIp } });
-  if (!ipExists) await gift(user);
+  if (Number.isInteger(numericIp)) {
+    user.ip = numericIp;
+    const ipExists = await db.User.findOne({ where: { ip: numericIp } });
+    if (!ipExists) await gift(user);
+  }
 
   user.account_id = account.id;
   await user.save();
