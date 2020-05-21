@@ -11,18 +11,20 @@ module.exports = async (req, res) => {
     (await lq.getAddressInfo(address)).ismine &&
     (!Object.keys(addresses).includes(address) || address === user.liquid);
 
-  tx = await lq.decodePsbt(psbt);
+  let decoded = await lq.decodePsbt(psbt);
 
   let totals = {};
   let change = {};
   let fee = 0;
+  
+  let { tx: { vout } } = decoded;
 
-  for (let i = 0; i < tx.vout.length; i++) {
+  for (let i = 0; i < vout.length; i++) {
     let {
       asset,
       value,
       scriptPubKey: { type, addresses }
-    } = tx.vout[i];
+    } = vout[i];
 
     if (type === "fee") fee = toSats(value);
     else {
@@ -97,9 +99,10 @@ module.exports = async (req, res) => {
     if (config.liquid.walletpass)
       await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-    hex = await lq.blindRawTransaction(hex);
-    rawtx = (await lq.signRawTransactionWithWallet(hex)).hex;
-    let txid = await lq.sendRawTransaction(rawtx);
+    let blinded = await lq.blindPsbt(psbt);
+    let signed = await lq.walletSignPsbt(blinded);
+    let finalized = await lq.finalizePsbt(signed.psbt);
+    let txid = await lq.sendRawTransaction(finalized.hex);
 
     let main;
     for (let i = 0; i < assets.length; i++) {

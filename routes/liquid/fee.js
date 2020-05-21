@@ -69,8 +69,8 @@ module.exports = async (req, res) => {
     let signed = await lq.walletSignPsbt(blinded);
 
     decoded = await lq.decodePsbt(signed.psbt);
-    feeRate = Math.round((decoded.fees * SATS * 1000) / decoded.vsize);
-    l.info("estimated", asset, feeRate );
+    feeRate = Math.round((decoded.fees.bitcoin * SATS * 1000) / decoded.tx.vsize);
+    l.info("estimated", asset, feeRate);
 
     res.send({ feeRate, tx, psbt });
   } catch (e) {
