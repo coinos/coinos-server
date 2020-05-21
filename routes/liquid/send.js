@@ -4,15 +4,14 @@ module.exports = async (req, res) => {
   let { user } = req;
   let {
     address,
-    tx: { hex }
+    tx: { psbt }
   } = req.body;
 
   const isChange = async address =>
     (await lq.getAddressInfo(address)).ismine &&
     (!Object.keys(addresses).includes(address) || address === user.liquid);
 
-  const unblinded = await lq.unblindRawTransaction(hex);
-  tx = await lq.decodeRawTransaction(unblinded.hex);
+  tx = await lq.decodePsbt(psbt);
 
   let totals = {};
   let change = {};
