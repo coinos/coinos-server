@@ -24,6 +24,7 @@ module.exports = async (req, res) => {
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
 
     let info = await lq.getAddressInfo(address);
+    l.info(info);
 
     tx = await lq.walletCreateFundedPsbt(
       [],
@@ -40,14 +41,24 @@ module.exports = async (req, res) => {
       tx: { vin, vout },
     } = decoded;
 
+    l.info(decoded);
     let change, fee;
     for (let i = 0; i < vout.length; i++) {
+      l.info("vout", vout[i]);
       if (vout[i].scriptPubKey) {
         if (vout[i].scriptPubKey.type === "fee") fee = vout.splice(i, 1)[0];
-        else if (!vout[i].scriptPubKey.addresses.includes(info.unconfidential))
+        else if (!(vout[i].scriptPubKey.addresses.includes(info.unconfidential)))
           change = vout[i];
       }
     }
+
+    if (!change) {
+      change = {
+        value: 0,
+        scriptPubKey: 
+        { addresses: [(await lq.getAddressInfo(await lq.getNewAddress())).unconfidential] },
+      } 
+    } 
 
     let psbt = await lq.createPsbt(
       vin.map((input) => ({
