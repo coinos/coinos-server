@@ -47,5 +47,10 @@
     "pino-pretty": "^3.6.1",
     "pm2": "^4.4.0",
     "prettier": "^1.18.2"
+  },
+  "dependenciesMeta": {
+    "bitcoin-core": {
+      "unplugged": true
+    }
   }
 }

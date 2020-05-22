@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
 
   const isChange = async address =>
     (await lq.getAddressInfo(address)).ismine &&
-    (!Object.keys(addresses).includes(address) || address === user.liquid);
+    (!Object.keys(addresses).includes(address) || address === user.liquid || address === user.confidential);
 
   let decoded = await lq.decodePsbt(psbt);
 

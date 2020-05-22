@@ -24,66 +24,87 @@ module.exports = async (req, res) => {
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
 
     let info = await lq.getAddressInfo(address);
-    l.info(info);
 
-    tx = await lq.walletCreateFundedPsbt(
+    tx = await lq.createRawTransaction(
       [],
       {
-        [address]: value,
+        [address]: (amount / SATS).toFixed(8),
       },
       0,
-      params
-    );
-
-    let decoded = await lq.decodePsbt(tx.psbt);
-
-    let {
-      tx: { vin, vout },
-    } = decoded;
-
-    l.info(decoded);
-    let change, fee;
-    for (let i = 0; i < vout.length; i++) {
-      l.info("vout", vout[i]);
-      if (vout[i].scriptPubKey) {
-        if (vout[i].scriptPubKey.type === "fee") fee = vout.splice(i, 1)[0];
-        else if (!(vout[i].scriptPubKey.addresses.includes(info.unconfidential)))
-          change = vout[i];
+      false,
+      {
+        [address]: asset,
       }
-    }
-
-    if (!change) {
-      change = {
-        value: 0,
-        scriptPubKey: 
-        { addresses: [(await lq.getAddressInfo(await lq.getNewAddress())).unconfidential] },
-      } 
-    } 
-
-    let psbt = await lq.createPsbt(
-      vin.map((input) => ({
-        txid: input.txid,
-        vout: input.vout,
-        sequence: input.sequence,
-      })),
-      [
-        {
-          [change.scriptPubKey.addresses[0]]: (
-            change.value + fee.value
-          ).toFixed(8),
-        },
-        { [address]: value },
-      ]
     );
 
-    let blinded = await lq.blindPsbt(tx.psbt);
-    let signed = await lq.walletSignPsbt(blinded);
+    tx = await lq.fundRawTransaction(tx, params);
 
-    decoded = await lq.decodePsbt(signed.psbt);
-    feeRate = Math.round((decoded.fees.bitcoin * SATS * 1000) / decoded.tx.vsize);
+    /*
+    let psbt;
+    if (asset === config.liquid.btcasset) {
+      psbt = await lq.convertToPsbt(tx.hex);
+      let decoded = await lq.decodePsbt(psbt);
+
+      let {
+        tx: { vin, vout },
+      } = decoded;
+
+      let change, fee;
+      for (let i = 0; i < vout.length; i++) {
+        if (vout[i].scriptPubKey) {
+          if (vout[i].scriptPubKey.type === "fee") fee = vout.splice(i, 1)[0];
+          else if (
+            !vout[i].scriptPubKey.addresses.includes(info.unconfidential)
+          )
+            change = vout[i];
+        }
+      }
+
+      if (!change) {
+        change = {
+          value: 0,
+          scriptPubKey: {
+            addresses: [
+              (await lq.getAddressInfo(await lq.getNewAddress()))
+                .unconfidential,
+            ],
+          },
+        };
+      }
+
+      psbt = await lq.createPsbt(
+        vin.map((input) => ({
+          txid: input.txid,
+          vout: input.vout,
+          sequence: input.sequence,
+        })),
+        [
+          {
+            [change.scriptPubKey.addresses[0]]: (
+              change.value + fee.value
+            ).toFixed(8),
+          },
+          { [address]: value },
+        ],
+        0,
+        false,
+        {
+          [address]: asset,
+          [change.scriptPubKey.addresses[0]]: asset,
+          fee: config.liquid.btcasset,
+        }
+      );
+    }
+    */
+
+    let blinded = await lq.blindRawTransaction(tx.hex);
+    let signed = await lq.signRawTransaction(blinded);
+
+    decoded = await lq.decodeRawTransaction(signed.hex);
+    feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
     l.info("estimated", asset, feeRate);
 
-    res.send({ feeRate, tx, psbt });
+    res.send({ feeRate, tx, /* psbt */ });
   } catch (e) {
     l.error("error estimating liquid fee", e.message);
     return res.status(500).send(e.message);
