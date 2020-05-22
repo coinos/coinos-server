@@ -39,72 +39,14 @@ module.exports = async (req, res) => {
 
     tx = await lq.fundRawTransaction(tx, params);
 
-    /*
-    let psbt;
-    if (asset === config.liquid.btcasset) {
-      psbt = await lq.convertToPsbt(tx.hex);
-      let decoded = await lq.decodePsbt(psbt);
-
-      let {
-        tx: { vin, vout },
-      } = decoded;
-
-      let change, fee;
-      for (let i = 0; i < vout.length; i++) {
-        if (vout[i].scriptPubKey) {
-          if (vout[i].scriptPubKey.type === "fee") fee = vout.splice(i, 1)[0];
-          else if (
-            !vout[i].scriptPubKey.addresses.includes(info.unconfidential)
-          )
-            change = vout[i];
-        }
-      }
-
-      if (!change) {
-        change = {
-          value: 0,
-          scriptPubKey: {
-            addresses: [
-              (await lq.getAddressInfo(await lq.getNewAddress()))
-                .unconfidential,
-            ],
-          },
-        };
-      }
-
-      psbt = await lq.createPsbt(
-        vin.map((input) => ({
-          txid: input.txid,
-          vout: input.vout,
-          sequence: input.sequence,
-        })),
-        [
-          {
-            [change.scriptPubKey.addresses[0]]: (
-              change.value + fee.value
-            ).toFixed(8),
-          },
-          { [address]: value },
-        ],
-        0,
-        false,
-        {
-          [address]: asset,
-          [change.scriptPubKey.addresses[0]]: asset,
-          fee: config.liquid.btcasset,
-        }
-      );
-    }
-    */
-
     let blinded = await lq.blindRawTransaction(tx.hex);
-    let signed = await lq.signRawTransaction(blinded);
+    let signed = await lq.signRawTransactionWithWallet(blinded);
 
     decoded = await lq.decodeRawTransaction(signed.hex);
     feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
     l.info("estimated", asset, feeRate);
 
-    res.send({ feeRate, tx, /* psbt */ });
+    res.send({ feeRate, tx });
   } catch (e) {
     l.error("error estimating liquid fee", e.message);
     return res.status(500).send(e.message);

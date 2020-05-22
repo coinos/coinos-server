@@ -2,29 +2,33 @@ const reverse = require("buffer-reverse");
 
 module.exports = async (req, res) => {
   let { user } = req;
-  let {
-    address,
-    tx: { psbt }
-  } = req.body;
+  let { address, tx } = req.body;
 
-  const isChange = async address =>
+  const isChange = async (address) =>
     (await lq.getAddressInfo(address)).ismine &&
-    (!Object.keys(addresses).includes(address) || address === user.liquid || address === user.confidential);
-
-  let decoded = await lq.decodePsbt(psbt);
+    !(
+      Object.keys(addresses).includes(address) ||
+      address === user.liquid ||
+      address === user.confidential
+    );
 
   let totals = {};
   let change = {};
   let fee = 0;
-  
-  let { tx: { vout } } = decoded;
+
+  let { vout } = await lq.decodeRawTransaction(tx.hex);
+
+  l.info("user addrs", user.liquid, user.confidential);
+  l.info(Object.keys(addresses));
 
   for (let i = 0; i < vout.length; i++) {
     let {
       asset,
       value,
-      scriptPubKey: { type, addresses }
+      scriptPubKey: { type, addresses },
     } = vout[i];
+
+    l.info("vout", vout[i]);
 
     if (type === "fee") fee = toSats(value);
     else {
@@ -32,6 +36,7 @@ module.exports = async (req, res) => {
       totals[asset] += toSats(value);
 
       if (addresses) {
+        l.info("isChange", addresses[0], await isChange(addresses[0]));
         if (await isChange(addresses[0])) {
           change[asset] += toSats(value);
         }
@@ -43,7 +48,7 @@ module.exports = async (req, res) => {
   const payments = [];
 
   try {
-    await db.transaction(async transaction => {
+    await db.transaction(async (transaction) => {
       for (let i = 0; i < assets.length; i++) {
         let asset = assets[i];
         let total = totals[asset];
@@ -55,17 +60,17 @@ module.exports = async (req, res) => {
         let account = await db.Account.findOne({
           where: {
             user_id: user.id,
-            asset
+            asset,
           },
           lock: transaction.LOCK.UPDATE,
-          transaction
+          transaction,
         });
 
         if (total > account.balance) {
           l.warn("amount exceeds balance", {
             total,
             fee,
-            balance: account.balance
+            balance: account.balance,
           });
           throw new Error("Insufficient funds");
         }
@@ -83,7 +88,7 @@ module.exports = async (req, res) => {
           address,
           confirmed: true,
           received: false,
-          network: "LBTC"
+          network: "LBTC",
         };
 
         payment.account = account;
@@ -96,29 +101,30 @@ module.exports = async (req, res) => {
   }
 
   try {
-    if (config.liquid.walletpass)
-      await lq.walletPassphrase(config.liquid.walletpass, 300);
+    await db.transaction(async (transaction) => {
+      if (config.liquid.walletpass)
+        await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-    let blinded = await lq.blindPsbt(psbt);
-    let signed = await lq.walletSignPsbt(blinded);
-    let finalized = await lq.finalizePsbt(signed.psbt);
-    let txid = await lq.sendRawTransaction(finalized.hex);
+      let blinded = await lq.blindRawTransaction(tx.hex);
+      let signed = await lq.signRawTransactionWithWallet(blinded);
+      let txid = await lq.sendRawTransaction(signed.hex);
 
-    let main;
-    for (let i = 0; i < assets.length; i++) {
-      p = payments[i];
-      let { account } = p;
-      p.hash = txid;
-      p = await db.Payment.create(p);
-      if (account.ticker !== "BTC" || !main) {
-        main = p.get({ plain: true });
-        main.account = account.get({ plain: true });
+      let main;
+      for (let i = 0; i < assets.length; i++) {
+        p = payments[i];
+        let { account } = p;
+        p.hash = txid;
+        p = await db.Payment.create(p, { transaction });
+        if (account.ticker !== "BTC" || !main) {
+          main = p.get({ plain: true });
+          main.account = account.get({ plain: true });
+        }
       }
-    }
 
-    user = await getUser(user.username);
-    emit(user.username, "user", user);
-    res.send(main);
+      user = await getUser(user.username, transaction);
+      emit(user.username, "user", user);
+      res.send(main);
+    });
   } catch (e) {
     l.error("problem sending liquid", user.username, e.message);
     return res.status(500).send(e.message);
