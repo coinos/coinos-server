@@ -18,9 +18,6 @@ module.exports = async (req, res) => {
 
   let { vout } = await lq.decodeRawTransaction(tx.hex);
 
-  l.info("user addrs", user.liquid, user.confidential);
-  l.info(Object.keys(addresses));
-
   for (let i = 0; i < vout.length; i++) {
     let {
       asset,
@@ -28,15 +25,12 @@ module.exports = async (req, res) => {
       scriptPubKey: { type, addresses },
     } = vout[i];
 
-    l.info("vout", vout[i]);
-
     if (type === "fee") fee = toSats(value);
     else {
       if (!totals[asset]) totals[asset] = change[asset] = 0;
       totals[asset] += toSats(value);
 
       if (addresses) {
-        l.info("isChange", addresses[0], await isChange(addresses[0]));
         if (await isChange(addresses[0])) {
           change[asset] += toSats(value);
         }
