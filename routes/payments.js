@@ -40,7 +40,6 @@ const { join } = require("path");
 
   if (config.bitcoin) {
     bc = new BitcoinCore(config.bitcoin);
-    app.get("/bitcoin/address", auth, require("./bitcoin/address"));
     app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
     app.post("/bitcoin/send", auth, require("./bitcoin/send"));
     require("./bitcoin/receive");
