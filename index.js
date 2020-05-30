@@ -7,6 +7,8 @@ const express = require("express");
 l = require("pino")();
 config = require("./config");
 networks = [];
+prod = process.env.NODE_ENV === "production";
+
 if (config.bitcoin) networks.push('bitcoin');
 if (config.liquid) networks.push('liquid');
 if (config.lna) networks.push('lightning');

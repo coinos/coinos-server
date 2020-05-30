@@ -616,7 +616,7 @@ bitcoinjs-lib@^3.3.1:
     varuint-bitcoin "^1.0.4"
     wif "^2.0.1"
 
-bitcoinjs-lib@^5.1.7:
+bitcoinjs-lib@^5.1.8:
   version "5.1.8"
   resolved "https://registry.yarnpkg.com/bitcoinjs-lib/-/bitcoinjs-lib-5.1.8.tgz#b61be4fab7cf82142cea76f82e70a324c9a57984"
   integrity sha512-LQQ9uw33sqW3K1aSzYCy0Az8zbcsR1ttaNkjThFwApT/vbB7bibEesPIxf0zvzjf8V8It68v7D/fCkjd4bStMw==
@@ -1004,6 +1004,11 @@ coininfo@^4.5.0:
   integrity sha512-9YnPekCDaFSJl/yG27dEkCbHF09CO3Cz38A2TMcFZRMcaCy2l38B2nQK/rdz8zLqOLVzzE/e0MpcWMxvyEncGA==
   dependencies:
     safe-buffer "^5.1.1"
+
+coinselect@^3.1.12:
+  version "3.1.12"
+  resolved "https://registry.yarnpkg.com/coinselect/-/coinselect-3.1.12.tgz#2255794c4002f7ecac9cf6d1cefe9f0adfd2fe7f"
+  integrity sha512-XKnm9wwZzJRGuvR1BGNbFZEfa4SEr38do8Z5riq0797QwMT836EqhdPuhtbn8uAX8vCMqJ7+gS4CHa1G9M5xhw==
 
 color-convert@^1.9.0:
   version "1.9.3"

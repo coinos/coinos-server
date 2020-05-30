@@ -110,7 +110,7 @@ app.post("/register", async (req, res) => {
   delete challenge[ip];
 
   let success, score;
-  if (process.env.NODE_ENV === "production") {
+  if (prod) {
     if (!token) return res.status(500).send("Missing captcha token");
 
 
