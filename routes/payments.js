@@ -40,6 +40,7 @@ const { join } = require("path");
 
   if (config.bitcoin) {
     bc = new BitcoinCore(config.bitcoin);
+    app.get("/bitcoin/generate", auth, require("./bitcoin/generate"));
     app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
     app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
     app.post("/bitcoin/send", auth, require("./bitcoin/send"));
@@ -48,6 +49,7 @@ const { join } = require("path");
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
+    app.get("/liquid/generate", auth, require("./liquid/generate"));
     app.post("/liquid/fee", auth, require("./liquid/fee"));
     app.post("/liquid/send", auth, require("./liquid/send"));
     require("./liquid/receive");
