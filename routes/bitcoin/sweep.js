@@ -78,6 +78,6 @@ module.exports = async (req, res) => {
   feeRate = Math.round(feeRate * 1000);
   psbt = psbt.toBase64();
 
-  console.log(total);
+  if (balance !== amount) total = 0;
   res.send({ feeRate, psbt, total });
 };

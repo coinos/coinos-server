@@ -72,7 +72,6 @@ app.get("/challenge", async (req, res) => {
 app.post("/register", async (req, res) => {
   let err = m => res.status(500).send(m);
   let { user } = req.body;
-  let { token } = user;
   
   if (!user.username) return err("Username required");
 
@@ -108,32 +107,6 @@ app.post("/register", async (req, res) => {
   } 
 
   delete challenge[ip];
-
-  let success, score;
-  if (prod) {
-    if (!token) return res.status(500).send("Missing captcha token");
-
-
-    try {
-      const url = `https://www.google.com/recaptcha/api/siteverify?secret=${config.captcha}&response=${token}&remoteip=${ip}`;
-      let captcha = await axios.post(url, { timeout: 1000 });
-
-      ({ success, score } = captcha.data);
-
-      if (!success || score < 0.8) {
-        l.warn("failed registration attempt", ip);
-
-        if (ip !== "192.168.1.5") {
-          const spawn = require("child_process").spawn;
-          proc = spawn("iptables", ["-I", "INPUT", "-s", ip, "-j", "DROP"]);
-        }
-
-        return res.status(500).send("Failed captcha");
-      }
-    } catch (e) {
-      l.error(e.message);
-    }
-  }
 
   let countries = {
     CA: "CAD",
@@ -183,7 +156,7 @@ app.post("/register", async (req, res) => {
   user = await getUser(user.username);
   res.send(pick(user, ...whitelist));
   emit(user.username, "user", user);
-  l.info("new user", user.username, ip, score);
+  l.info("new user", user.username, ip);
 });
 
 app.post("/disable2fa", auth, twofa, async (req, res) => {
