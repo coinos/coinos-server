@@ -253,6 +253,7 @@ app.post("/user", auth, async (req, res) => {
 
 app.post("/login", async (req, res) => {
   let twofa = req.body.token;
+  l.info("login attempt", req.body.username, req.headers["x-forwarded-for"] || req.connection.remoteAddress);
 
   try {
     let user = await getUser(req.body.username);
@@ -265,7 +266,7 @@ app.post("/login", async (req, res) => {
       l.warn(
         "invalid username or password attempt",
         req.body.username,
-        req.body.password
+        req.body.password,
       );
       return res.status(401).end();
     }
