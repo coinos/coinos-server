@@ -120,8 +120,8 @@ const attributes = {
   },
   fee: {
     type: DataTypes.DOUBLE,
-    allowNull: true,
-    defaultValue: null,
+    allowNull: false,
+    defaultValue: 0,
     primaryKey: false,
     autoIncrement: false,
     comment: null,
@@ -129,8 +129,8 @@ const attributes = {
   },
   tip: {
     type: DataTypes.DOUBLE,
-    allowNull: true,
-    defaultValue: null,
+    allowNull: false,
+    defaultValue: 0,
     primaryKey: false,
     autoIncrement: false,
     comment: null,

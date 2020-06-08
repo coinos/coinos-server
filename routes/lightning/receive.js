@@ -21,9 +21,15 @@ const handlePayment = async msg => {
       user_id,
       asset: config.liquid.btcasset
     }, 
+    include: {
+      model: db.User,
+      as: 'user',
+    },
     lock: transaction.LOCK.UPDATE,
     transaction
   });
+
+    const { user } = account;
 
   let preimage = msg.r_preimage.toString("hex");
 
@@ -50,12 +56,10 @@ const handlePayment = async msg => {
   await payment.save({ transaction });
   payments.push(msg.payment_request);
 
-  let user = await getUserById(user_id, transaction);
-
   payment = payment.get({ plain: true });
   payment.account = account.get({ plain: true });
   emit(user.username, "payment", payment);
-  emit(user.username, "user", user);
+  emit(user.username, "account", payment.account);
 
   l.info(
     "lightning payment received",

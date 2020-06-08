@@ -115,8 +115,8 @@ module.exports = async (req, res) => {
         }
       }
 
-      user = await getUser(user.username, transaction);
-      emit(user.username, "user", user);
+      emit(user.username, "account", main.account);
+      emit(user.username, "payment", main);
       res.send(main);
     });
   } catch (e) {

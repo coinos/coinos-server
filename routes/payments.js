@@ -15,18 +15,20 @@ const { join } = require("path");
     if (u.liquid) addresses[u.liquid] = u.username;
   });
 
-  payments = (await db.Payment.findAll({
-    attributes: ["hash"]
-  })).map(p => p.hash);
+  payments = (
+    await db.Payment.findAll({
+      attributes: ["hash"]
+    })
+  ).map(p => p.hash);
 
   app.post("/send", auth, require("./send"));
 
   if (config.lna) {
     if (config.lna.clightning) {
-      const lnapath = join(require('os').homedir(), '.lightningreg/regtest')
-      const lnbpath = join(require('os').homedir(), '.lightningregb/regtest')
-      lna = require('clightning-client')(lnapath);
-      lnb = require('clightning-client')(lnbpath);
+      const lnapath = join(require("os").homedir(), ".lightningreg/regtest");
+      const lnbpath = join(require("os").homedir(), ".lightningregb/regtest");
+      lna = require("clightning-client")(lnapath);
+      lnb = require("clightning-client")(lnbpath);
     } else {
       lna = lnd(config.lna);
       lnb = lnd(config.lnb);
@@ -56,20 +58,17 @@ const { join } = require("path");
   }
 
   app.get("/payments", auth, async (req, res) => {
-    const payments = await db.Payment.findAll({
-      where: { 
-        user_id: req.user.id,
-        [Op.or]: {
-          received: true,
-          amount: {
-            [Op.lt]: 0,
-          },
-        }, 
+    let payments = await req.user.getPayments({
+      where: {
+        account_id: req.user.account_id
       },
-      order: [["id", "DESC"]]
+      order: [["id", "DESC"]],
+      include: {
+        model: db.Account,
+        as: "account"
+      }
     });
 
-    emit(req.user.username, "payments", payments);
     res.send(payments);
   });
 })();

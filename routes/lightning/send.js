@@ -50,8 +50,9 @@ module.exports = async (req, res) => {
           max_parts: 10
         });
 
+        if (m.payment_error) throw new Error(m.payment_error);
+
         ({
-          payment_error: error,
           payment_route: { total_fees: fee, total_amt: total },
           payment_preimage: preimage
         } = m);
@@ -71,11 +72,6 @@ module.exports = async (req, res) => {
           await lnb.sendPaymentSync({ payment_request, max_parts: 10 });
         }
         l.info("lnb sent back", amount);
-      }
-
-      if (error) {
-        l.error("error sending lightning", error);
-        return res.status(500).send(error);
       }
 
       if (seen.includes(preimage)) {
@@ -108,11 +104,11 @@ module.exports = async (req, res) => {
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
 
+      emit(user.username, "account", payment.account);
+      emit(user.username, "payment", payment);
+
       seen.push(preimage);
       l.info("sent lightning", user.username, total);
-
-      user = await getUser(user.username, transaction);
-      emit(user.username, "user", user);
 
       seen.push(hash);
       res.send(payment);

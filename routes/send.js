@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
 
       l.info("sent internal", user.username, -payment.amount);
 
-      user = await getUser(user.username, transaction);
+      emit(user.username, "payment", payment);
       emit(user.username, "user", user);
       res.send(payment);
 
@@ -117,11 +117,9 @@ module.exports = async (req, res) => {
         { transaction }
       );
 
-      user = await getUser(user.username, transaction);
-      emit(user.username, "user", user);
-
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
+      emit(user.username, "account", account);
       emit(user.username, "payment", payment);
 
       l.info("received internal", user.username, payment.amount);

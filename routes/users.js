@@ -72,7 +72,7 @@ app.get("/challenge", async (req, res) => {
 app.post("/register", async (req, res) => {
   let err = m => res.status(500).send(m);
   let { user } = req.body;
-  
+
   if (!user.username) return err("Username required");
 
   let exists = await db.User.count({ where: { username: user.username } });
@@ -104,7 +104,7 @@ app.post("/register", async (req, res) => {
   if (!challenge[ip] || user.response !== challenge[ip]) {
     l.info("failed challenge", ip, user.response, challenge[ip]);
     return res.status(500).send("Failed challenge");
-  } 
+  }
 
   delete challenge[ip];
 
@@ -153,9 +153,7 @@ app.post("/register", async (req, res) => {
 
   user.account_id = account.id;
   await user.save();
-  user = await getUser(user.username);
   res.send(pick(user, ...whitelist));
-  emit(user.username, "user", user);
   l.info("new user", user.username, ip);
 });
 
@@ -163,7 +161,6 @@ app.post("/disable2fa", auth, twofa, async (req, res) => {
   let { user } = req;
   user.twofa = false;
   await user.save();
-  user = await getUser(user.username);
   emit(user.username, "user", user);
   emit(user.username, "otpsecret", user.otpsecret);
   l.info("disabled 2fa", user.username);
@@ -183,7 +180,6 @@ app.post("/2fa", auth, async (req, res) => {
     if (isValid) {
       user.twofa = true;
       user.save();
-      user = await getUser(user.username);
       emit(user.username, "user", req.user);
     } else {
       return res.status(500).send("Invalid token");
@@ -243,7 +239,6 @@ app.post("/user", auth, async (req, res) => {
     }
 
     await user.save();
-    user = await getUser(user.username);
     emit(user.username, "user", user);
     res.send({ user, token });
   } catch (e) {
@@ -253,7 +248,11 @@ app.post("/user", auth, async (req, res) => {
 
 app.post("/login", async (req, res) => {
   let twofa = req.body.token;
-  l.info("login attempt", req.body.username, req.headers["x-forwarded-for"] || req.connection.remoteAddress);
+  l.info(
+    "login attempt",
+    req.body.username,
+    req.headers["x-forwarded-for"] || req.connection.remoteAddress
+  );
 
   try {
     let user = await getUser(req.body.username);
@@ -266,7 +265,7 @@ app.post("/login", async (req, res) => {
       l.warn(
         "invalid username or password attempt",
         req.body.username,
-        req.body.password,
+        req.body.password
       );
       return res.status(401).end();
     }
@@ -303,7 +302,6 @@ app.post("/address", auth, async (req, res) => {
   user.address = await bc.getNewAddress("", req.body.type || "bech32");
   await user.save();
   addresses[user.address] = user.username;
-  user = await getUser(user.username);
   emit(user.username, "user", user);
   res.send(user.address);
 });
@@ -323,9 +321,8 @@ app.post("/account", auth, async (req, res) => {
 
     await account.save();
 
-    user = await getUser(user.username);
-    emit(user.username, "user", user);
-    res.send(account);
+    emit(user.username, "account", account);
+    res.end();
   } catch (e) {
     l.error(e.message);
     return res.status(500).send("There was a problem updating the account");
@@ -343,10 +340,22 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
     user.account_id = account.id;
     await user.save();
+    let payments = await user.getPayments({
+      where: {
+        account_id: user.account_id
+      },
+      order: [["id", "DESC"]],
+      limit: 12,
+      include: {
+        model: db.Account,
+        as: "account"
+      }
+    });
+    user.payments = payments;
+    user.account = account;
 
-    user = await getUser(user.username);
     emit(user.username, "user", user);
-    res.send(account);
+    res.end();
   } catch (e) {
     l.error(e.message);
     return res.status(500).send("There was a problem switching accounts");

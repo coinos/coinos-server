@@ -25,7 +25,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(hash)) return;
 
   Promise.all(
-    tx.outs.map(async (o) => {
+    tx.outs.map(async o => {
       const { value } = o;
 
       let address;
@@ -40,29 +40,29 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let user = await db.User.findOne({
           where: {
-            username: addresses[address],
-          },
+            username: addresses[address]
+          }
         });
 
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            network: "BTC",
+            network: "BTC"
           },
-          order: [["id", "DESC"]],
+          order: [["id", "DESC"]]
         });
 
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
-        const tip = invoice ? invoice.tip : null;
+        const tip = invoice ? invoice.tip : 0;
 
         let confirmed = false;
 
         const account = await db.Account.findOne({
           where: {
             user_id: user.id,
-            asset: config.liquid.btcasset,
-          },
+            asset: config.liquid.btcasset
+          }
         });
 
         account.pending += value;
@@ -99,14 +99,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "BTC",
+          network: "BTC"
         });
         payment = payment.get({ plain: true });
         payment.account = account.get({ plain: true });
 
-        user = await getUser(user.username);
+        emit(user.username, "account", account);
         emit(user.username, "payment", payment);
-        emit(user.username, "user", user);
         l.info("bitcoin detected", user.username, o.value);
       }
     })
@@ -117,31 +116,37 @@ let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: false },
+    where: { confirmed: false }
   });
 
-  const hashes = payments.map((p) => p.hash);
-
   let block = bitcoin.Block.fromHex(message.toString("hex"));
-  block.transactions.map((tx) => {
+  block.transactions.map(tx => {
     let hash = reverse(tx.getHash()).toString("hex");
-    if (hashes.includes(hash)) queue[hash] = 1;
+    if (payments.find(p => p.hash === hash)) queue[hash] = 1;
   });
 });
 
 setInterval(async () => {
   try {
-    let arr = Object.keys(queue);
+    const arr = Object.keys(queue);
     for (let i = 0; i < arr.length; i++) {
-      let hash = arr[i];
+      const hash = arr[i];
 
-      let p = await db.Payment.findOne({
+      const p = await db.Payment.findOne({
         where: { hash, confirmed: 0, received: 1 },
-        include: {
-          model: db.Account,
-          as: "account",
-        },
+        include: [
+          {
+            model: db.Account,
+            as: "account"
+          },
+          {
+            model: db.User,
+            as: "user"
+          }
+        ]
       });
+
+      const { user } = p;
 
       if (p) {
         p.confirmed = 1;
@@ -151,14 +156,14 @@ setInterval(async () => {
         await p.account.save();
         await p.save();
 
-        let user = await getUserById(p.user_id);
-        emit(user.username, "user", user);
+        emit(user.username, "account", p.account);
         emit(user.username, "payment", p);
         l.info("bitcoin confirmed", user.username, p.amount, p.tip);
-        delete queue[hash];
       } else {
-        l.warn("Couldn't find payment", hash);
+        l.warn("couldn't find payment", hash);
       }
+
+      delete queue[hash];
     }
   } catch (e) {
     l.error("problem processing queued bitcoin transaction", e.message);

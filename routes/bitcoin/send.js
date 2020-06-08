@@ -80,12 +80,12 @@ module.exports = async (req, res) => {
 
     let payment = await db.Payment.create(params);
 
-    user = await getUser(user.username);
-    emit(user.username, "user", user);
-
     payment = payment.get({ plain: true });
     payment.account = account.get({ plain: true });
+
+    emit(user.username, "payment", payment);
     res.send(payment);
+
     l.info("sent bitcoin", user.username, total);
   } catch (e) {
     l.error("error sending bitcoin", e.message);

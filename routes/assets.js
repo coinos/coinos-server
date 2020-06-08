@@ -56,15 +56,15 @@ app.post("/assets", auth, async (req, res) => {
       params.token_amount = token_amount;
       params.token_address = token_address;
       params.token_amount = parseInt(params.token_amount);
-    } 
+    }
 
     let ria;
     try {
       ria = await lq.rawIssueAsset(funded.hex, [params]);
-    } catch(e) {
+    } catch (e) {
       l.info(asset_amount, token_amount, params);
       throw new Error(e.message);
-    } 
+    }
 
     const { asset, hex, token } = ria[0];
     const brt = await lq.blindRawTransaction(hex, true, [], false);
@@ -79,9 +79,15 @@ app.post("/assets", auth, async (req, res) => {
             user_id,
             asset: config.liquid.btcasset
           },
+          include: {
+            model: db.User,
+            as: "user"
+          },
           lock: transaction.LOCK.UPDATE,
           transaction
         });
+
+        let { user } = account;
 
         if (Math.round(funded.fee * SATS) > account.balance) {
           l.error(
@@ -95,6 +101,7 @@ app.post("/assets", auth, async (req, res) => {
 
         account.balance -= Math.round(funded.fee * SATS);
         await account.save({ transaction });
+        emit(user.username, "account", account);
 
         account = await db.Account.create(
           {
@@ -109,6 +116,8 @@ app.post("/assets", auth, async (req, res) => {
           { transaction }
         );
 
+        emit(user.username, "account", account);
+
         const asset_payment = await db.Payment.create(
           {
             account_id: account.id,
@@ -122,12 +131,13 @@ app.post("/assets", auth, async (req, res) => {
           },
           { transaction }
         );
+        emit(user.username, "payment", asset_payment);
 
         issuances[txid] = {
           user_id,
           asset,
           asset_amount,
-          asset_payment_id: asset_payment.id,
+          asset_payment_id: asset_payment.id
         };
 
         if (token_amount) {
@@ -143,6 +153,7 @@ app.post("/assets", auth, async (req, res) => {
             },
             { transaction }
           );
+          emit(user.username, "account", account);
 
           const token_payment = await db.Payment.create(
             {
@@ -157,15 +168,12 @@ app.post("/assets", auth, async (req, res) => {
             },
             { transaction }
           );
+          emit(user.username, "payment", token_payment);
 
           issuances[txid].token = token;
           issuances[txid].token_amount = token_amount;
           issuances[txid].token_payment_id = token_payment.id;
         }
-
-
-        let user = await getUserById(user_id, transaction);
-        emit(user.username, "user", user);
       });
 
       res.send(issuances[txid]);
