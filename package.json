@@ -35,10 +35,8 @@
     "passport-jwt": "^4.0.0",
     "passport-local": "1.0.0",
     "pino": "^5.17.0",
-    "random-words": "^1.1.1",
     "request": "~2.88.0",
     "sequelize": "^5.21.3",
-    "text-to-image": "^2.3.0",
     "uuid": "^3.3.2",
     "ws": "^7.1.2",
     "zeromq": "^5.1.0"
