@@ -122,7 +122,8 @@ module.exports = async (req, res) => {
       emit(user.username, "account", account);
       emit(user.username, "payment", payment);
 
-      l.info("received internal", user.username, payment.amount);
+      l.info("received internal", user.username, amount);
+      notify(user, `Received ${amount} SAT`);
     });
   } catch (e) {
     l.error(

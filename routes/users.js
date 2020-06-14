@@ -101,7 +101,10 @@ app.post("/register", async (req, res) => {
 
   let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
-  if (!challenge[ip] || user.response.toLowerCase() !== challenge[ip].toLowerCase()) {
+  if (
+    !challenge[ip] ||
+    user.response.toLowerCase() !== challenge[ip].toLowerCase()
+  ) {
     l.info("failed challenge", ip, user.response, challenge[ip]);
     return res.status(500).send("Failed challenge");
   }
@@ -203,7 +206,8 @@ app.post("/user", auth, async (req, res) => {
       twofa,
       pin,
       password,
-      passconfirm
+      passconfirm,
+      tokens
     } = req.body;
 
     let exists = await db.User.findOne({
@@ -231,6 +235,7 @@ app.post("/user", auth, async (req, res) => {
     user.currency = currency;
     user.currencies = currencies;
 
+    user.tokens = tokens;
     user.twofa = twofa;
     user.pin = pin;
 
@@ -288,6 +293,19 @@ app.post("/login", async (req, res) => {
     l.error("login error", e.message);
     res.status(401).end();
   }
+});
+
+
+app.post("/logout", auth, async (req, res) => {
+  let { subscription } = req.body;
+  l.info("logging out", req.user.username);
+  if (!subscription) return res.end();
+  let i = req.user.subscriptions.findIndex(s => JSON.stringify(s) === subscription);
+  if (i > -1) {
+    req.user.subscriptions.splice(i, 1);
+  } 
+  await req.user.save();
+  res.end();
 });
 
 app.post("/address", auth, async (req, res) => {
@@ -363,3 +381,22 @@ app.post("/shiftAccount", auth, async (req, res) => {
 });
 
 setInterval(() => (faucet = 2000), DAY);
+
+app.get("/vapidPublicKey", function(req, res) {
+  res.send(config.vapid.publicKey);
+});
+
+app.post("/subscribe", auth, async function(req, res) {
+  let { subscriptions } = req.user;
+  let { subscription } = req.body;
+  if (!subscriptions) subscriptions = [];
+  if (
+    !subscriptions.find(s => JSON.stringify(s) === JSON.stringify(subscription))
+  )
+    subscriptions.push(subscription);
+  req.user.subscriptions = subscriptions;
+  l.info("subscribing", req.user.username);
+  await req.user.save();
+  res.sendStatus(201);
+});
+

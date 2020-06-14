@@ -127,6 +127,21 @@ const attributes = {
     comment: null,
     field: "updatedAt"
   },
+  subscriptions: {
+    type: DataTypes.TEXT,
+    get: function() {
+      return JSON.parse(this.getDataValue("subscriptions"));
+    },
+    set: function(value) {
+      return this.setDataValue("subscriptions", JSON.stringify(value));
+    },
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "subscriptions"
+  },
   twofa: {
     type: DataTypes.INTEGER(1),
     allowNull: true,

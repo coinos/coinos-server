@@ -106,7 +106,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         emit(user.username, "account", account);
         emit(user.username, "payment", payment);
-        l.info("bitcoin detected", user.username, o.value);
+        l.info("bitcoin detected", user.username, value);
+        notify(user, `${value} SAT payment detected`);
       }
     })
   );
@@ -149,9 +150,11 @@ setInterval(async () => {
       const { user } = p;
 
       if (p) {
+        let total = p.amount + p.tip;
+
         p.confirmed = 1;
-        p.account.balance += p.amount + p.tip;
-        p.account.pending -= Math.min(p.account.pending, p.amount + p.tip);
+        p.account.balance += total;
+        p.account.pending -= Math.min(p.account.pending, total);
 
         await p.account.save();
         await p.save();
@@ -159,6 +162,7 @@ setInterval(async () => {
         emit(user.username, "account", p.account);
         emit(user.username, "payment", p);
         l.info("bitcoin confirmed", user.username, p.amount, p.tip);
+        notify(user, `${total} SAT payment confirmed`);
       } else {
         l.warn("couldn't find payment", hash);
       }

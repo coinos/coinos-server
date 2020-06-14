@@ -30,9 +30,10 @@ require("./lib/utils");
 require("./lib/sockets");
 require("./lib/passport");
 require("./lib/rates");
+require("./lib/notifications");
 
 require("./routes/assets");
-require("./routes/balances");
+require("./routes/info");
 require("./routes/invoices");
 require("./routes/payments");
 require("./routes/users");

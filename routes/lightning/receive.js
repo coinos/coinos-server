@@ -48,8 +48,9 @@ const handlePayment = async msg => {
   },
     { transaction });
 
-  invoice.received += amount + tip;
-  account.balance += amount + tip;
+    let total = amount + tip;
+  invoice.received += total;
+  account.balance += total;
 
   await account.save({ transaction });
   await invoice.save({ transaction });
@@ -60,6 +61,7 @@ const handlePayment = async msg => {
   payment.account = account.get({ plain: true });
   emit(user.username, "payment", payment);
   emit(user.username, "account", payment.account);
+  notify(user, `Received ${total} SAT`);
 
   l.info(
     "lightning payment received",
