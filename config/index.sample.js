@@ -1,6 +1,13 @@
 const dbOptions = require("./config.json")[process.env.NODE_ENV || "development"];
 
 module.exports = {
+  clientVersion: "x11111xx11xx11x11x11111111xx1111111xx111",
+  vapid: {
+    url: "https://coinos.io/",
+    publicKey:
+      "xxxxxx111xxxx1xxx111xxxxxxxxxxxxxxxxx_x-xxx1xxx1xxxxxxxx1xxxxxxxxx1x1xxxxxxxx1xxx1xxxxx",
+    privateKey: "1xxx1x1xxxxx1xxx1x-xx_xxxx1xxxxx1x1xxx1x1x1"
+  },
   dbOptions,
   ipstack: "2e1805258268b4992ebac06e20fc1865", // optional, set default currency based on IP
   jwt: '2ad260b2202ad557b205ba17c7d8d62c69ffc95021b6147597c32eb30e3cf899',

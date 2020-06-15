@@ -1,15 +1,8 @@
 const sequelize = require("sequelize");
 const { Op } = sequelize;
 
-const fs = require("fs");
-try {
-  clientVersion = fs.readFileSync('config/clientversion').toString();
-  l.info("client version", clientVersion);
-} catch(e) {
-  l.warn("no client version found");
-} 
-
 app.get("/info", async (req, res) => {
+  const { clientVersion } = config;
   const accounts = await db.Account.findAll({
     attributes: [
       "asset",
