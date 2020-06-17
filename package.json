@@ -27,7 +27,7 @@
     "grpc": "^1.24.2",
     "http-proxy-middleware": "^0.20.0",
     "jsonwebtoken": "^8.5.1",
-    "lnurl": "^0.7.0",
+    "lnurl": "https://github.com/asoltys/lnurl-node",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",
     "mysql2": "^2.1.0",

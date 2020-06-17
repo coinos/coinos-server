@@ -2591,6 +2591,21 @@ lnurl@^0.7.0:
     secp256k1 "3.8.0"
     underscore "1.10.2"
 
+"lnurl@https://github.com/asoltys/lnurl-node":
+  version "0.7.0"
+  resolved "https://github.com/asoltys/lnurl-node#bfb07c99d5a336e06a53a7a13689d7302bd564a5"
+  dependencies:
+    async "3.2.0"
+    bech32 "1.1.3"
+    bignumber.js "9.0.0"
+    bolt11 "1.2.7"
+    commander "5.1.0"
+    debug "4.1.1"
+    express "4.17.1"
+    pem "1.14.4"
+    secp256k1 "3.8.0"
+    underscore "1.10.2"
+
 locate-path@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/locate-path/-/locate-path-3.0.0.tgz#dbec3b3ab759758071b58fe59fc41871af21400e"
