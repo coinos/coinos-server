@@ -3,6 +3,7 @@ const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const express = require("express");
+const lnurl = require('lnurl');
 
 l = require("pino")();
 config = require("./config");
@@ -33,9 +34,9 @@ require("./lib/rates");
 require("./lib/notifications");
 
 require("./routes/assets");
-require("./routes/info");
 require("./routes/invoices");
 require("./routes/payments");
+require("./routes/info");
 require("./routes/users");
 
 app.use((err, req, res, next) => {
@@ -57,3 +58,6 @@ app.use((err, req, res, next) => {
 server.listen(config.port, () =>
   console.log(`CoinOS Server listening on port ${config.port}`)
 );
+
+lnurlServer = lnurl.createServer(config.lnurl);
+
