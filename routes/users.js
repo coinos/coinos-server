@@ -270,8 +270,7 @@ app.post("/login", async (req, res) => {
   } = req.body;
 
   if (sig) {
-    const { callback, k1 } = params;
-    sessions[key] = sessions[k1];
+    const { callback } = params;
 
     try {
       const url = `${callback}&sig=${sig}&key=${key}`;
