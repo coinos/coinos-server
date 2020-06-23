@@ -57,7 +57,7 @@ CREATE TABLE `accounts` (
   `ticker` varchar(255) DEFAULT NULL,
   `precision` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3720 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3722 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -81,7 +81,24 @@ CREATE TABLE `invoices` (
   `tip` double DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4447 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4448 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `linkingkeys`
+--
+
+DROP TABLE IF EXISTS `linkingkeys`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `linkingkeys` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `hex` varchar(255) DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4451 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -138,9 +155,11 @@ CREATE TABLE `users` (
   `otpsecret` varchar(255) DEFAULT NULL,
   `ip` int(10) unsigned DEFAULT NULL,
   `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `seed` varchar(255) DEFAULT NULL,
+  `linkingKeys` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=624 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=626 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -152,4 +171,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-06-15 13:37:25
+-- Dump completed on 2020-06-23 10:58:27

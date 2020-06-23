@@ -1,14 +1,8 @@
-.DS_Store
 node_modules/
-dist/
-npm-debug.log
-test/unit/coverage
-test/e2e/reports
-selenium-debug.log
-config.js
 .env
 config/config.json
 config/index.js
+config/lnurl.js
 config/clientversion
 yarn-error.log
 .pnp*

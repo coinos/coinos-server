@@ -207,7 +207,8 @@ app.post("/user", auth, async (req, res) => {
       pin,
       password,
       passconfirm,
-      tokens
+      tokens,
+      seed
     } = req.body;
 
     let exists = await db.User.findOne({
@@ -238,6 +239,7 @@ app.post("/user", auth, async (req, res) => {
     user.tokens = tokens;
     user.twofa = twofa;
     user.pin = pin;
+    user.seed = seed;
 
     if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1);
@@ -247,11 +249,42 @@ app.post("/user", auth, async (req, res) => {
     emit(user.username, "user", user);
     res.send({ user, token });
   } catch (e) {
-    l.error("error updating user", e);
+    l.error("error updating user", e.message);
   }
 });
 
+app.post("/keys", auth, async (req, res) => {
+  const { key: hex } = req.body;
+  const key = await db.Key.create({
+    user_id: req.user.id,
+    hex
+  });
+  emit(req.user.username, "key", key);
+});
+
 app.post("/login", async (req, res) => {
+  const {
+    params,
+    sig,
+    key
+  } = req.body;
+
+  if (sig) {
+    const { callback, k1 } = params;
+    sessions[key] = sessions[k1];
+
+    try {
+      const url = `${callback}&sig=${sig}&key=${key}`;
+      const response = await axios.get(url);
+      res.send(response.data);
+    } catch (e) {
+      l.error(e.message);
+      res.status(500).send(e.message);
+    }
+
+    return;
+  }
+
   let twofa = req.body.token;
   l.info(
     "login attempt",
@@ -286,7 +319,7 @@ app.post("/login", async (req, res) => {
     let payload = { username: user.username };
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-
+    user.keys = await user.getKeys();
     user = pick(user, ...whitelist);
     res.send({ user, token });
   } catch (e) {
@@ -295,15 +328,16 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
 app.post("/logout", auth, async (req, res) => {
   let { subscription } = req.body;
   l.info("logging out", req.user.username);
   if (!subscription) return res.end();
-  let i = req.user.subscriptions.findIndex(s => JSON.stringify(s) === subscription);
+  let i = req.user.subscriptions.findIndex(
+    s => JSON.stringify(s) === subscription
+  );
   if (i > -1) {
     req.user.subscriptions.splice(i, 1);
-  } 
+  }
   await req.user.save();
   res.end();
 });
@@ -399,4 +433,3 @@ app.post("/subscribe", auth, async function(req, res) {
   await req.user.save();
   res.sendStatus(201);
 });
-

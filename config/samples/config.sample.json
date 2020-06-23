@@ -4,20 +4,23 @@
     "password": "password",
     "database": "coinos",
     "host": "localhost",
-    "dialect": "mysql"
+    "dialect": "mariadb",
+    "dialectOptions": { "multipleStatements": true, "timezone": "Etc/GMT+7" }
   },
   "test": {
     "username": "root",
     "password": null,
     "database": "database_test",
     "host": "127.0.0.1",
-    "dialect": "mysql"
+    "dialect": "mariadb",
+    "dialectOptions": { "multipleStatements": true, "timezone": "Etc/GMT+7" }
   },
   "production": {
     "username": "root",
     "password": null,
     "database": "database_production",
     "host": "127.0.0.1",
-    "dialect": "mysql"
+    "dialect": "mariadb",
+    "dialectOptions": { "multipleStatements": true, "timezone": "Etc/GMT+7" }
   }
 }

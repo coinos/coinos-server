@@ -1,6 +1,8 @@
 const dbOptions = require("./config.json")[process.env.NODE_ENV || "development"];
+const lnurl = require("./lnurl");
 
 module.exports = {
+  lnurl,
   clientVersion: "x11111xx11xx11x11x11111111xx1111111xx111",
   vapid: {
     url: "https://coinos.io/",

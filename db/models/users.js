@@ -19,6 +19,15 @@ const attributes = {
     comment: null,
     field: "ip"
   },
+  seed: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "seed"
+  },
   username: {
     type: DataTypes.STRING(255),
     allowNull: true,
