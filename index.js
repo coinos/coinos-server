@@ -44,7 +44,10 @@ require("./routes/invoices");
 require("./routes/payments");
 require("./routes/info");
 require("./routes/users");
-require("./routes/lnurl");
+
+if (config.lnurl) {
+  require("./routes/lnurl");
+}
 
 app.use((err, req, res, next) => {
   const details = {

@@ -262,6 +262,14 @@ app.post("/keys", auth, async (req, res) => {
   emit(req.user.username, "key", key);
 });
 
+app.post("/keys/delete", auth, async (req, res) => {
+  const { hex } = req.body;
+  (await db.Key.findOne({ where: {
+    user_id: req.user.id,
+    hex
+  }})).destroy();
+});
+
 app.post("/login", async (req, res) => {
   const {
     params,

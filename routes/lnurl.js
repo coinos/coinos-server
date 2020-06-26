@@ -6,13 +6,19 @@ logins = {};
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
-app.get("/loginUrl", async (req, res) => {
+var optionalAuth = function(req, res, next) {
+  passport.authenticate('jwt', { session: false }, function(err, user, info) {
+    req.user = user;
+    next();
+  })(req, res, next);
+};
+
+app.get("/loginUrl", optionalAuth, async (req, res) => {
   try {
     const result = await lnurlServer.generateNewUrl("login");
-    const { username } = req.query;
 
-    if (username !== "undefined") {
-      logins[result.secret] = username;
+    if (req.user) {
+      logins[result.secret] = req.user.username;
     }
 
     res.send(result);

@@ -1,5 +1,11 @@
 const dbOptions = require("./config.json")[process.env.NODE_ENV || "development"];
-const lnurl = require("./lnurl");
+let lnurl;
+
+try {
+  lnurl = require("./lnurl");
+} catch(e) {
+  l.warn("lnurl config not found");
+} 
 
 module.exports = {
   lnurl,
