@@ -73,7 +73,7 @@ app.post("/register", async (req, res) => {
   let err = m => res.status(500).send(m);
   let { user } = req.body;
 
-  if (!user.username) return err("Username required");
+  if (!(user && user.username)) return err("Username required");
 
   let exists = await db.User.count({ where: { username: user.username } });
   if (exists) return err("Username taken");
