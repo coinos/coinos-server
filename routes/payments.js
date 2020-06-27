@@ -15,6 +15,14 @@ const { join } = require("path");
     if (u.liquid) addresses[u.liquid] = u.username;
   });
 
+  await db.Invoice.findAll({
+    include: [{
+      model: db.User,
+      as: 'user'}]
+  }).map(i => {
+    if (i.address && i.user) addresses[i.address] = i.user.username;
+  });
+
   payments = (
     await db.Payment.findAll({
       attributes: ["hash"]
