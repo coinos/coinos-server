@@ -6,6 +6,10 @@ app.post("/invoice", auth, async (req, res) => {
 
   l.info("creating invoice", invoice.text, req.user.username, invoice.network, invoice.amount, invoice.tip, invoice.currency, invoice.rate.toFixed(2));
 
+  if (invoice.network === 'LBTC') {
+    invoice.unconfidential = (await lq.getAddressInfo(invoice.address)).unconfidential;
+  } 
+
   const exists = await db.Invoice.findOne({
     where: {
       [Op.or]: {
@@ -14,6 +18,7 @@ app.post("/invoice", auth, async (req, res) => {
       }
     }
   });
+
 
   res.send(
     exists ? await exists.update(invoice) : await db.Invoice.create(invoice)

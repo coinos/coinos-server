@@ -21,6 +21,7 @@ const { join } = require("path");
       as: 'user'}]
   }).map(i => {
     if (i.address && i.user) addresses[i.address] = i.user.username;
+    if (i.unconfidential && i.user) addresses[i.unconfidential] = i.user.username;
   });
 
   payments = (
