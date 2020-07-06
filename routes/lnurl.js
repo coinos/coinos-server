@@ -18,8 +18,8 @@ app.get("/withdraw", auth, async (req, res) => {
   const { min, max } = req.query;
   try {
     const result = await lnurlServer.generateNewUrl("withdrawRequest", {
-      minWithdrawable: min,
-      maxWithdrawable: max,
+      minWithdrawable: min * 1000,
+      maxWithdrawable: max * 1000,
       defaultDescription: "coinos withdrawal",
     });
 
@@ -112,8 +112,13 @@ lnurlServer.bindToHook(
       return next();
     }
 
-    user = withdrawals[k1];
-    if (user && pr) {
+    if (pr) {
+      user = withdrawals[k1];
+      if (!user) {
+        if (next) next(new Error("withdrawal not found"));
+        return;
+      }
+
       try {
         let decoded = await lna.decodePayReq({ pay_req: pr });
         let amount = decoded.num_satoshis;
