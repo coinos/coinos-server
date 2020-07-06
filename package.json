@@ -30,7 +30,7 @@
     "http-proxy-middleware": "^0.20.0",
     "jsonwebtoken": "^8.5.1",
     "knex": "^0.21.1",
-    "lnurl": "https://github.com/asoltys/lnurl-node",
+    "lnurl": "^0.7.0",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",
     "mariadb": "^2.4.0",

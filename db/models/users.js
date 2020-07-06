@@ -10,6 +10,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  fiat: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "fiat"
+  },
   ip: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,

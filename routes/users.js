@@ -200,6 +200,7 @@ app.post("/user", auth, async (req, res) => {
     let { user } = req;
     let {
       username,
+      fiat,
       unit,
       currency,
       currencies,
@@ -240,6 +241,7 @@ app.post("/user", auth, async (req, res) => {
     user.twofa = twofa;
     user.pin = pin;
     user.seed = seed;
+    user.fiat = fiat;
 
     if (password && password === passconfirm) {
       user.password = await bcrypt.hash(password, 1);

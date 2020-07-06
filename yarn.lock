@@ -1554,7 +1554,7 @@ __metadata:
     http-proxy-middleware: ^0.20.0
     jsonwebtoken: ^8.5.1
     knex: ^0.21.1
-    lnurl: "https://github.com/asoltys/lnurl-node"
+    lnurl: ^0.7.0
     long: ^4.0.0
     mailgun-js: ^0.22.0
     mariadb: ^2.4.0
@@ -4167,9 +4167,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lnurl@https://github.com/asoltys/lnurl-node":
+"lnurl@npm:^0.7.0":
   version: 0.7.0
-  resolution: "lnurl@https://github.com/asoltys/lnurl-node.git#commit:73260c8909f90a3ad168397e00e20450ac0d0064"
+  resolution: "lnurl@npm:0.7.0"
   dependencies:
     async: 3.2.0
     bech32: 1.1.3
@@ -4183,7 +4183,7 @@ __metadata:
     underscore: 1.10.2
   bin:
     lnurl: cli.js
-  checksum: 3723cf397dae49ee9717edc5aa879c79050b8a7033a053ebbe1cfdc19576fd59070380dd0991bcb13b0e67e99c209b60862f2a76cc9e59888590dd970d3849fb
+  checksum: 0bc9ea2b10b8546788b466ca4608728355886e1ff32d3373e153432cf49f9f1ffe6a8f22420c520653c6eee38ce67ed7f6758cc70a58aaed12327bbf0d17806f
   languageName: node
   linkType: hard
 
