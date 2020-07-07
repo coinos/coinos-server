@@ -7,3 +7,4 @@ config/clientversion
 yarn-error.log
 .pnp*
 .yarn*
+tls.*

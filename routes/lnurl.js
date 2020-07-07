@@ -27,7 +27,7 @@ app.get("/withdraw", auth, async (req, res) => {
 
     res.send(result);
   } catch (e) {
-    l.error(e.message);
+    l.error("problem generating withdrawl url", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -71,7 +71,7 @@ app.get("/login", optionalAuth, async (req, res) => {
 
     res.send(result);
   } catch (e) {
-    l.error(e.message);
+    l.error("problem generating login url", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -84,7 +84,7 @@ app.get("/decode", async (req, res) => {
     let result = await axios.get(decoded);
     res.send(result.data);
   } catch (e) {
-    l.error(e.message);
+    l.error("problem decoding lnurl", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -96,20 +96,29 @@ lnurlServer.bindToHook(
     const { key, tag, pr, k1 } = req.query;
 
     if (tag === "login") {
-      const username = logins[k1];
+      let username = logins[k1];
+
       if (!username) {
-        user = await db.Key.findOne({
+        user = (await db.Key.findOne({
           where: { hex: key },
-        });
+          include: [{
+            model: db.User,
+            as: 'user'
+          }],
+        })).user;
 
         if (!user) {
-          next(new Error("User not found"));
+          let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+          user = await register({
+            username: key.substr(0, 8),
+            password: key,
+          }, ip);
         }
+
+        ({ username } = user);
       }
 
       logins[key] = { k1, username };
-
-      return next();
     }
 
     if (pr) {
@@ -197,6 +206,7 @@ lnurlServer.bindToHook(
 );
 
 lnurlServer.bindToHook("login", async (key) => {
+  l.info("logging in");
   try {
     const exists = await db.Key.findOne({
       where: { hex: key },
@@ -204,21 +214,28 @@ lnurlServer.bindToHook("login", async (key) => {
     });
 
     let user;
-    if (logins[key]) {
+    if (logins[key] && logins[key] !== "undefined") {
       const { username } = logins[key];
       user = await db.User.findOne({
         where: { username },
       });
 
-      const k = await db.Key.create({
-        user_id: user.id,
-        hex: key,
-      });
+      if (user) {
+        const k = await db.Key.findOrCreate({
+          user_id: user.id,
+          hex: key,
+        });
 
-      l.info("added key", username, k);
-      emit(username, "key", k);
+        l.info("added key", username, k);
+        emit(username, "key", k);
+      } else {
+        l.info("user not found");
+        user = await register({
+          username: key,
+          password: key,
+        });
+      }
     } else if (exists) ({ user } = exists);
-    else return;
 
     if (user && user.username) {
       const payload = { username: user.username };
@@ -228,6 +245,6 @@ lnurlServer.bindToHook("login", async (key) => {
         ws.send(JSON.stringify({ type: "token", data: token }));
     }
   } catch (e) {
-    l.error(e.message);
+    l.error("problem with login hook", e.message);
   }
 });

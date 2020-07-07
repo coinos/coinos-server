@@ -6,16 +6,12 @@ const textToImage = require("text-to-image");
 const randomWord = require("random-words");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
-let faucet = 1000;
-const DAY = 24 * 60 * 60 * 1000;
 require("../lib/whitelist");
-
-const challenge = {};
 
 const twofa = (req, res, next) => {
   let {
     user,
-    body: { token }
+    body: { token },
   } = req;
   if (
     user.twofa &&
@@ -26,36 +22,11 @@ const twofa = (req, res, next) => {
   } else next();
 };
 
-const gift = async user => {
-  const account = user.accounts[0];
-
-  if (faucet > 0) {
-    faucet -= 100;
-
-    account.balance = 100;
-    await account.save();
-
-    const payment = await db.Payment.create({
-      account_id: account.id,
-      user_id: user.id,
-      hash: "Welcome Gift",
-      amount: 100,
-      currency: user.currency,
-      rate: app.get("rates")[user.currency],
-      received: true,
-      confirmed: 1,
-      network: "GIFT"
-    });
-
-    await user.save();
-  }
-};
-
 app.get("/users/:username", async (req, res) => {
   const { username } = req.params;
   const user = await db.User.findOne({
     attributes: ["username"],
-    where: { username }
+    where: { username },
   });
   if (user) res.send(user);
   else res.status(500).send("User not found");
@@ -70,94 +41,13 @@ app.get("/challenge", async (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-  let err = m => res.status(500).send(m);
-  let { user } = req.body;
-
-  if (!(user && user.username)) return err("Username required");
-
-  let exists = await db.User.count({ where: { username: user.username } });
-  if (exists) return err("Username taken");
-
-  if (user.password && user.password === user.confirm) {
-    user.password = await bcrypt.hash(user.password, 1);
+  try {
+    const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    const user = await register(req.body.user, ip, true);
+    res.send(pick(user, ...whitelist));
+  } catch (e) {
+    res.status(500).send(e.message);
   }
-
-  if (config.bitcoin) {
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-
-    user.address = await bc.getNewAddress("", "bech32");
-    addresses[user.address] = user.username;
-  }
-
-  if (config.liquid) {
-    if (config.liquid.walletpass)
-      await lq.walletPassphrase(config.liquid.walletpass, 300);
-
-    user.confidential = await lq.getNewAddress();
-    user.liquid = (await lq.getAddressInfo(user.confidential)).unconfidential;
-    addresses[user.liquid] = user.username;
-  }
-
-  let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-
-  if (
-    !challenge[ip] ||
-    user.response.toLowerCase() !== challenge[ip].toLowerCase()
-  ) {
-    l.info("failed challenge", ip, user.response, challenge[ip]);
-    return res.status(500).send("Failed challenge");
-  }
-
-  delete challenge[ip];
-
-  let countries = {
-    CA: "CAD",
-    US: "USD",
-    JP: "JPY",
-    CN: "CNY",
-    AU: "AUD",
-    GB: "GBP"
-  };
-
-  if (!config.ipstack || ip.startsWith("127") || ip.startsWith("192"))
-    user.currency = "CAD";
-  else {
-    let info = await axios.get(
-      `http://api.ipstack.com/${ip}?access_key=${config.ipstack}`
-    );
-    user.currency = countries[info.data.country_code] || "USD";
-  }
-
-  user.currencies = [...new Set([user.currency, "CAD", "USD", "JPY"])];
-  user.otpsecret = authenticator.generateSecret();
-
-  user = await db.User.create(user);
-
-  let account = await db.Account.create({
-    user_id: user.id,
-    asset: config.liquid.btcasset,
-    balance: 0,
-    pending: 0,
-    name: "Bitcoin",
-    ticker: "BTC",
-    precision: 8
-  });
-
-  user.accounts = [account];
-
-  const d = ip.split(".");
-  const numericIp = ((+d[0] * 256 + +d[1]) * 256 + +d[2]) * 256 + +d[3];
-  if (Number.isInteger(numericIp)) {
-    user.ip = numericIp;
-    const ipExists = await db.User.findOne({ where: { ip: numericIp } });
-    if (!ipExists) await gift(user);
-  }
-
-  user.account_id = account.id;
-  await user.save();
-  res.send(pick(user, ...whitelist));
-  l.info("new user", user.username, ip);
 });
 
 app.post("/disable2fa", auth, twofa, async (req, res) => {
@@ -209,11 +99,11 @@ app.post("/user", auth, async (req, res) => {
       password,
       passconfirm,
       tokens,
-      seed
+      seed,
     } = req.body;
 
     let exists = await db.User.findOne({
-      where: { username }
+      where: { username },
     });
 
     let token;
@@ -229,7 +119,7 @@ app.post("/user", auth, async (req, res) => {
 
       token = jwt.sign({ username }, config.jwt);
       res.cookie("token", token, {
-        expires: new Date(Date.now() + 432000000)
+        expires: new Date(Date.now() + 432000000),
       });
     }
 
@@ -259,25 +149,25 @@ app.post("/keys", auth, async (req, res) => {
   const { key: hex } = req.body;
   const key = await db.Key.create({
     user_id: req.user.id,
-    hex
+    hex,
   });
   emit(req.user.username, "key", key);
 });
 
 app.post("/keys/delete", auth, async (req, res) => {
   const { hex } = req.body;
-  (await db.Key.findOne({ where: {
-    user_id: req.user.id,
-    hex
-  }})).destroy();
+  (
+    await db.Key.findOne({
+      where: {
+        user_id: req.user.id,
+        hex,
+      },
+    })
+  ).destroy();
 });
 
 app.post("/login", async (req, res) => {
-  const {
-    params,
-    sig,
-    key
-  } = req.body;
+  const { params, sig, key } = req.body;
 
   if (sig) {
     const { callback } = params;
@@ -287,7 +177,7 @@ app.post("/login", async (req, res) => {
       const response = await axios.get(url);
       res.send(response.data);
     } catch (e) {
-      l.error(e.message);
+      l.error("problem calling lnurl login", e.message);
       res.status(500).send(e.message);
     }
 
@@ -339,15 +229,20 @@ app.post("/login", async (req, res) => {
 
 app.post("/logout", auth, async (req, res) => {
   let { subscription } = req.body;
-  l.info("logging out", req.user.username);
+  const { username } = req.user;
+  l.info("logging out", username);
   if (!subscription) return res.end();
   let i = req.user.subscriptions.findIndex(
-    s => JSON.stringify(s) === subscription
+    (s) => JSON.stringify(s) === subscription
   );
   if (i > -1) {
     req.user.subscriptions.splice(i, 1);
   }
   await req.user.save();
+  Object.keys(logins).map(
+    (k) => logins[k]["username"] === username && delete logins[k]
+  );
+
   res.end();
 });
 
@@ -373,7 +268,7 @@ app.post("/account", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id, asset }
+      where: { user_id, asset },
     });
 
     account.name = name;
@@ -396,21 +291,21 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { user_id: user.id, asset }
+      where: { user_id: user.id, asset },
     });
 
     user.account_id = account.id;
     await user.save();
     let payments = await user.getPayments({
       where: {
-        account_id: user.account_id
+        account_id: user.account_id,
       },
       order: [["id", "DESC"]],
       limit: 12,
       include: {
         model: db.Account,
-        as: "account"
-      }
+        as: "account",
+      },
     });
     user.payments = payments;
     user.account = account;
@@ -423,18 +318,18 @@ app.post("/shiftAccount", auth, async (req, res) => {
   }
 });
 
-setInterval(() => (faucet = 2000), DAY);
-
-app.get("/vapidPublicKey", function(req, res) {
+app.get("/vapidPublicKey", function (req, res) {
   res.send(config.vapid.publicKey);
 });
 
-app.post("/subscribe", auth, async function(req, res) {
+app.post("/subscribe", auth, async function (req, res) {
   let { subscriptions } = req.user;
   let { subscription } = req.body;
   if (!subscriptions) subscriptions = [];
   if (
-    !subscriptions.find(s => JSON.stringify(s) === JSON.stringify(subscription))
+    !subscriptions.find(
+      (s) => JSON.stringify(s) === JSON.stringify(subscription)
+    )
   )
     subscriptions.push(subscription);
   req.user.subscriptions = subscriptions;

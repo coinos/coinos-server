@@ -11,6 +11,7 @@ config = require("./config");
 networks = [];
 prod = process.env.NODE_ENV === "production";
 
+challenge = {};
 logins = {};
 sessions = {};
 sockets = {};
@@ -38,6 +39,7 @@ require("./lib/sockets");
 require("./lib/passport");
 require("./lib/rates");
 require("./lib/notifications");
+require("./lib/register");
 
 require("./routes/assets");
 require("./routes/invoices");
