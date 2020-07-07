@@ -99,13 +99,15 @@ lnurlServer.bindToHook(
       let username = logins[k1];
 
       if (!username) {
-        user = (await db.Key.findOne({
+        const keyObj = await db.Key.findOne({
           where: { hex: key },
           include: [{
             model: db.User,
             as: 'user'
           }],
-        })).user;
+        });
+
+        if (keyObj) ({ user } = keyObj);
 
         if (!user) {
           let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
