@@ -222,8 +222,10 @@ lnurlServer.bindToHook("login", async (key) => {
 
       if (user) {
         const k = await db.Key.findOrCreate({
-          user_id: user.id,
-          hex: key,
+          where: {
+            user_id: user.id,
+            hex: key,
+          }
         });
 
         l.info("added key", username, k);
