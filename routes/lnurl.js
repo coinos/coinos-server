@@ -1,6 +1,7 @@
 const axios = require("axios");
 const lnurl = require("lnurl");
 const jwt = require("jsonwebtoken");
+const qs = require("query-string");
 
 logins = {};
 withdrawals = {};
@@ -80,9 +81,19 @@ app.get("/decode", async (req, res) => {
   const { text } = req.query;
 
   try {
-    const decoded = lnurl.decode(text);
-    let result = await axios.get(decoded);
-    res.send(result.data);
+    const url = lnurl.decode(text);
+    let spl = url.split("?");
+    if (spl.length > 1 && qs.parse(spl[1]).tag === "login") {
+      return res.send({
+        tag: "login",
+        k1: qs.parse(spl[1]).k1,
+        callback: url,
+        domain: url.split("://")[1].split("/")[0].split("@").slice(-1)[0].split(":")[0],
+      });
+    }
+
+    const { data: params } = await axios.get(url);
+    res.send(params);
   } catch (e) {
     l.error("problem decoding lnurl", e.message);
     res.status(500).send(e.message);
@@ -110,11 +121,15 @@ lnurlServer.bindToHook(
         if (keyObj) ({ user } = keyObj);
 
         if (!user) {
-          let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-          user = await register({
-            username: key.substr(0, 8),
-            password: key,
-          }, ip);
+          let ip =
+            req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+          user = await register(
+            {
+              username: key.substr(0, 8),
+              password: key,
+            },
+            ip
+          );
         }
 
         ({ username } = user);

@@ -41,6 +41,7 @@
     "passport-jwt": "^4.0.0",
     "passport-local": "1.0.0",
     "pino": "^5.17.0",
+    "query-string": "^6.13.1",
     "random-words": "^1.1.1",
     "request": "~2.88.0",
     "sequelize": "^5.21.3",
