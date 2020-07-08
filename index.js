@@ -40,6 +40,7 @@ require("./lib/passport");
 require("./lib/rates");
 require("./lib/notifications");
 require("./lib/register");
+require("./lib/send");
 
 require("./routes/assets");
 require("./routes/invoices");

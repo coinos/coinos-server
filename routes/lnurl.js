@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const qs = require("query-string");
 
 logins = {};
+recipients = {};
+payments = {};
 withdrawals = {};
 
 lnurlServer = lnurl.createServer(config.lnurl);
@@ -39,7 +41,7 @@ app.post("/withdraw", auth, async (req, res) => {
     amount: value,
     params: { callback, k1 },
   } = req.body;
-  const invoice = await lnb.addInvoice({ value });
+  const invoice = await lna.addInvoice({ value });
   const { payment_request: pr } = invoice;
   const url = `${callback}?k1=${k1}&pr=${pr}`;
 
@@ -58,6 +60,61 @@ app.post("/withdraw", auth, async (req, res) => {
     res.send(result);
   } catch (e) {
     l.error("failed to withdraw", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
+app.get("/pay", auth, async (req, res) => {
+  const { user } = req;
+  const { amount } = req.query;
+
+  try {
+    const result = await lnurlServer.generateNewUrl("payRequest", {
+      minSendable: amount * 1000,
+      maxSendable: amount * 1000,
+      metadata: JSON.stringify([["text/plain", "coinos"]]),
+    });
+
+    recipients[result.secret] = req.user;
+    res.send(result);
+  } catch (e) {
+    l.error("problem generating payment url", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
+app.post("/pay", auth, async (req, res) => {
+  const { user } = req;
+  const {
+    amount,
+    params: { callback, k1 },
+  } = req.body;
+
+  const url = `${callback}?amount=${amount * 1000}`;
+
+  try {
+    const parts = callback.split("/");
+    const secret = parts[parts.length - 1];
+    payments[secret] = user;
+
+    const result = (await axios.get(url)).data;
+    const recipient = recipients[secret];
+
+    if (recipient) {
+      await db.Invoice.create({
+        user_id: recipient.id,
+        text: result.pr,
+        rate: app.get("rates")[user.currency],
+        currency: recipient.currency,
+        amount: Math.round(amount / 1000),
+        tip: 0,
+        network: "BTC",
+      });
+    }
+
+    res.send(await send(amount, result.pr, user));
+  } catch (e) {
+    l.error("failed to send payment", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -88,7 +145,12 @@ app.get("/decode", async (req, res) => {
         tag: "login",
         k1: qs.parse(spl[1]).k1,
         callback: url,
-        domain: url.split("://")[1].split("/")[0].split("@").slice(-1)[0].split(":")[0],
+        domain: url
+          .split("://")[1]
+          .split("/")[0]
+          .split("@")
+          .slice(-1)[0]
+          .split(":")[0],
       });
     }
 
@@ -104,7 +166,26 @@ lnurlServer.bindToHook(
   "middleware:signedLnurl:afterCheckSignature",
   async (req, res, next) => {
     let user;
-    const { key, tag, pr, k1 } = req.query;
+    const { amount: msats, key, tag, pr, k1 } = req.query;
+
+    if (msats) {
+      amount = Math.round(msats / 1000);
+      const parts = req.originalUrl.split("/");
+      const secret = parts[parts.length - 1].split("?")[0];
+      user = payments[secret];
+      let account = await db.Account.findOne({
+        where: {
+          user_id: user.id,
+          asset: config.liquid.btcasset,
+        }
+      });
+
+      if (account.balance < amount) {
+        throw new Error("Insufficient funds");
+      }
+
+      l.info("lnurl payment", user.username, amount);
+    }
 
     if (tag === "login") {
       let username = logins[k1];
@@ -112,10 +193,12 @@ lnurlServer.bindToHook(
       if (!username) {
         const keyObj = await db.Key.findOne({
           where: { hex: key },
-          include: [{
-            model: db.User,
-            as: 'user'
-          }],
+          include: [
+            {
+              model: db.User,
+              as: "user",
+            },
+          ],
         });
 
         if (keyObj) ({ user } = keyObj);
@@ -185,7 +268,7 @@ lnurlServer.bindToHook(
                 reversed: true,
               });
 
-              p = payments.find((p) => p.payment_request === pr);
+              let p = payments.find((p) => p.payment_request === pr);
               if (p) {
                 payment.fee = p.fee;
                 account.balance -= p.fee;
@@ -218,7 +301,7 @@ lnurlServer.bindToHook(
       }
     }
 
-    if (next) next();
+    if (next) next(req, res);
   }
 );
 
@@ -242,7 +325,7 @@ lnurlServer.bindToHook("login", async (key) => {
           where: {
             user_id: user.id,
             hex: key,
-          }
+          },
         });
 
         l.info("added key", username, k);
