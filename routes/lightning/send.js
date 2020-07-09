@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
     res.send(await send(amount, payreq, user));
   } catch (e) {
     l.error("problem sending lightning payment", user.username, e.message);
+    res.status(500).send(e.message);
     throw new Error(e.message);
-    return res.status(500).send(e.message);
   }
 };
