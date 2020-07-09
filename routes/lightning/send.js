@@ -4,7 +4,7 @@ module.exports = async (req, res) => {
   let { user } = req;
 
   try {
-    res.send(await send(amount, pr, user));
+    res.send(await send(amount, payreq, user));
   } catch (e) {
     l.error("problem sending lightning payment", user.username, e.message);
     throw new Error(e.message);
