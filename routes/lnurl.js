@@ -64,6 +64,34 @@ app.post("/withdraw", auth, async (req, res) => {
   }
 });
 
+app.get("/pay/:username", auth, async (req, res) => {
+  const { username } = req.params;
+      let user = await db.user.findOne({
+        where: {
+          username,
+        },
+      });
+  let { amount, minSendable, maxSendable } = req.query;
+
+  minSendable = minSendable || 1000;
+  maxSendable = maxSendable || 1000000000;
+  if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
+
+  try {
+    const result = await lnurlServer.generateNewUrl("payRequest", {
+      minSendable,
+      maxSendable,
+      metadata: JSON.stringify([["text/plain", `fund coinos account ${user.username}`]]),
+    });
+
+    recipients[result.secret] = req.user;
+    res.send(result);
+  } catch (e) {
+    l.error("problem generating payment url", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
 app.get("/pay", auth, async (req, res) => {
   const { user } = req;
   const { amount } = req.query;
