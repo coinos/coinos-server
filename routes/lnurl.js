@@ -68,11 +68,15 @@ app.get("/pay", auth, async (req, res) => {
   const { user } = req;
   const { amount } = req.query;
 
+  let minSendable = 1000;
+  let maxSendable = 1000000000;
+  if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
+
   try {
     const result = await lnurlServer.generateNewUrl("payRequest", {
-      minSendable: amount * 1000,
-      maxSendable: amount * 1000,
-      metadata: JSON.stringify([["text/plain", "coinos"]]),
+      minSendable,
+      maxSendable,
+      metadata: JSON.stringify([["text/plain", `fund coinos account ${user.username}`]]),
     });
 
     recipients[result.secret] = req.user;
@@ -177,7 +181,7 @@ lnurlServer.bindToHook(
         where: {
           user_id: user.id,
           asset: config.liquid.btcasset,
-        }
+        },
       });
 
       if (account.balance < amount) {
