@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
 
   const isChange = async address =>
     (await bc.getAddressInfo(address)).ismine &&
-    (!Object.keys(addresses).includes(address) || address === user.address);
+    (!Object.keys(addresses).includes(address));
 
   tx = await bc.decodeRawTransaction(hex);
 

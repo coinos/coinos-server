@@ -6,11 +6,7 @@ module.exports = async (req, res) => {
 
   const isChange = async (address) =>
     (await lq.getAddressInfo(address)).ismine &&
-    !(
-      Object.keys(addresses).includes(address) ||
-      address === user.liquid ||
-      address === user.confidential
-    );
+    !Object.keys(addresses).includes(address);
 
   let totals = {};
   let change = {};
