@@ -215,6 +215,7 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
+      await db.transaction(async (transaction) => {
       const p = await db.Payment.findOne({
         where: { hash, confirmed: 0, received: 1 },
         include: [
@@ -226,7 +227,9 @@ setInterval(async () => {
             model: db.User,
             as: "user"
           }
-        ]
+        ],
+          lock: transaction.LOCK.UPDATE,
+          transaction,
       });
 
       const { user } = p;
@@ -237,8 +240,8 @@ setInterval(async () => {
         p.account.balance += total;
         p.account.pending -= Math.min(p.account.pending, total);
 
-        await p.account.save();
-        await p.save();
+        await p.account.save({ transaction });
+        await p.save({ transaction });
 
         emit(user.username, "account", p.account);
         emit(user.username, "payment", p);
@@ -256,6 +259,7 @@ setInterval(async () => {
       }
 
       delete queue[hash];
+      });
     }
   } catch (e) {
     l.error("problem processing queued liquid transaction", e.message);
