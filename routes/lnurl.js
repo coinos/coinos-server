@@ -64,15 +64,7 @@ app.post("/withdraw", auth, async (req, res) => {
   }
 });
 
-app.get("/pay/:username", async (req, res) => {
-  const { username } = req.params;
-      let user = await db.User.findOne({
-        where: {
-          username,
-        },
-      });
-  let { amount, minSendable, maxSendable } = req.query;
-
+const pay = async ({ amount, minSendable, maxSendable }, res, user) => {
   minSendable = minSendable || 1000;
   maxSendable = maxSendable || 1000000000;
   if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
@@ -84,35 +76,27 @@ app.get("/pay/:username", async (req, res) => {
       metadata: JSON.stringify([["text/plain", `paying ${user.username}`]]),
     });
 
-    recipients[result.secret] = req.user;
+    recipients[result.secret] = user;
     res.send(result);
   } catch (e) {
     l.error("problem generating payment url", e.message);
     res.status(500).send(e.message);
   }
+};
+
+app.get("/pay/:username", async (req, res) => {
+  const { username } = req.params;
+      let user = await db.User.findOne({
+        where: {
+          username,
+        },
+      });
+  pay(req.query, res, user);
 });
 
 app.get("/pay", auth, async (req, res) => {
   const { user } = req;
-  const { amount } = req.query;
-
-  let minSendable = 1000;
-  let maxSendable = 1000000000;
-  if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
-
-  try {
-    const result = await lnurlServer.generateNewUrl("payRequest", {
-      minSendable,
-      maxSendable,
-      metadata: JSON.stringify([["text/plain", `paying ${user.username}`]]),
-    });
-
-    recipients[result.secret] = req.user;
-    res.send(result);
-  } catch (e) {
-    l.error("problem generating payment url", e.message);
-    res.status(500).send(e.message);
-  }
+  pay(req.query, res, user);
 });
 
 app.post("/pay", auth, async (req, res) => {
