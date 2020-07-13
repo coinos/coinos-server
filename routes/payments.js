@@ -43,8 +43,8 @@ const { join } = require("path");
       lnb = lnd(config.lnb);
     }
 
-    app.post("/lightning/channel", auth, require("./lightning/channel"));
-    app.post("/lightning/channelRequest", auth, require("./lightning/channelRequest"));
+    app.post("/lightning/channel", require("./lightning/channel"));
+    app.post("/lightning/channelRequest", require("./lightning/channelRequest"));
     app.post("/lightning/invoice", auth, require("./lightning/invoice"));
     app.post("/lightning/query", auth, require("./lightning/query"));
     app.post("/lightning/send", auth, require("./lightning/send"));

@@ -64,9 +64,9 @@ app.post("/withdraw", auth, async (req, res) => {
   }
 });
 
-app.get("/pay/:username", auth, async (req, res) => {
+app.get("/pay/:username", async (req, res) => {
   const { username } = req.params;
-      let user = await db.user.findOne({
+      let user = await db.User.findOne({
         where: {
           username,
         },
@@ -81,7 +81,7 @@ app.get("/pay/:username", auth, async (req, res) => {
     const result = await lnurlServer.generateNewUrl("payRequest", {
       minSendable,
       maxSendable,
-      metadata: JSON.stringify([["text/plain", `fund coinos account ${user.username}`]]),
+      metadata: JSON.stringify([["text/plain", `paying ${user.username}`]]),
     });
 
     recipients[result.secret] = req.user;
@@ -104,7 +104,7 @@ app.get("/pay", auth, async (req, res) => {
     const result = await lnurlServer.generateNewUrl("payRequest", {
       minSendable,
       maxSendable,
-      metadata: JSON.stringify([["text/plain", `fund coinos account ${user.username}`]]),
+      metadata: JSON.stringify([["text/plain", `paying ${user.username}`]]),
     });
 
     recipients[result.secret] = req.user;
