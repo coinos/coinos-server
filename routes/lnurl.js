@@ -324,6 +324,8 @@ lnurlServer.bindToHook(
 lnurlServer.bindToHook("login", async (key) => {
   l.info("logging in");
   try {
+    if (!key) throw new Error("login key not defined");
+
     const exists = await db.Key.findOne({
       where: { hex: key },
       include: [{ model: db.User, as: "user" }],
@@ -337,15 +339,17 @@ lnurlServer.bindToHook("login", async (key) => {
       });
 
       if (user) {
-        const k = await db.Key.findOrCreate({
+        const [k, created] = await db.Key.findOrCreate({
           where: {
             user_id: user.id,
             hex: key,
           },
         });
 
-        l.info("added key", username, k);
-        emit(username, "key", k);
+        if (created) {
+          l.info("added key", username, k);
+          emit(username, "key", k);
+        }
       } else {
         l.info("user not found");
         user = await register({
