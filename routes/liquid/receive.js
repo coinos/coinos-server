@@ -20,7 +20,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(blinded.txid)) return;
 
   Promise.all(
-    tx.vout.map(async o => {
+    tx.vout.map(async (o) => {
       if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
       const { asset } = o;
@@ -34,11 +34,11 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let params = {
           user_id: user.id,
-          asset
+          asset,
         };
 
         let account = await db.Account.findOne({
-          where: params
+          where: params,
         });
 
         if (account) {
@@ -57,10 +57,10 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           } else {
             const existing = await db.Account.findOne({
               where: {
-                asset
+                asset,
               },
               order: [["id", "ASC"]],
-              limit: 1
+              limit: 1,
             });
 
             if (existing) {
@@ -91,9 +91,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           invoice = await db.Invoice.findOne({
             where: {
               user_id: user.id,
-              network: "LBTC"
+              network: "LBTC",
             },
-            order: [["id", "DESC"]]
+            order: [["id", "DESC"]],
           });
         }
 
@@ -112,7 +112,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "LBTC"
+          network: "LBTC",
         });
 
         payments.push(blinded.txid);
@@ -131,16 +131,16 @@ let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: 0 }
+    where: { confirmed: 0 },
   });
 
   const block = elements.Block.fromHex(message.toString("hex"), true);
   const hash = await lq.getBlockHash(block.height);
   const json = await lq.getBlock(hash, 2);
 
-  json.tx.map(async tx => {
+  json.tx.map(async (tx) => {
     if (issuances[tx.txid]) {
-      await db.transaction(async transaction => {
+      await db.transaction(async (transaction) => {
         const {
           user_id,
           asset,
@@ -148,7 +148,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           asset_payment_id,
           token,
           token_amount,
-          token_payment_id
+          token_payment_id,
         } = issuances[tx.txid];
 
         const user = await getUserById(user_id);
@@ -156,7 +156,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
         let account = await db.Account.findOne({
           where: { user_id, asset },
           lock: transaction.LOCK.UPDATE,
-          transaction
+          transaction,
         });
         account.balance = asset_amount * SATS;
         account.pending = 0;
@@ -166,10 +166,10 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           where: { id: asset_payment_id },
           include: {
             model: db.Account,
-            as: "account"
+            as: "account",
           },
           lock: transaction.LOCK.UPDATE,
-          transaction
+          transaction,
         });
 
         payment.confirmed = true;
@@ -181,7 +181,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           account = await db.Account.findOne({
             where: { user_id, asset: token },
             lock: transaction.LOCK.UPDATE,
-            transaction
+            transaction,
           });
           account.balance = token_amount * SATS;
           account.pending = 0;
@@ -191,10 +191,10 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             where: { id: token_payment_id },
             include: {
               model: db.Account,
-              as: "account"
+              as: "account",
             },
             lock: transaction.LOCK.UPDATE,
-            transaction
+            transaction,
           });
 
           payment.confirmed = true;
@@ -204,7 +204,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           emit(user.username, "payment", payment);
         }
       });
-    } else if (payments.find(p => p.hash === tx.txid)) queue[tx.txid] = 1;
+    } else if (payments.find((p) => p.hash === tx.txid)) queue[tx.txid] = 1;
   });
 });
 
@@ -216,49 +216,49 @@ setInterval(async () => {
       const hash = arr[i];
 
       await db.transaction(async (transaction) => {
-      const p = await db.Payment.findOne({
-        where: { hash, confirmed: 0, received: 1 },
-        include: [
-          {
-            model: db.Account,
-            as: "account"
-          },
-          {
-            model: db.User,
-            as: "user"
-          }
-        ],
+        const p = await db.Payment.findOne({
+          where: { hash, confirmed: 0, received: 1 },
+          include: [
+            {
+              model: db.Account,
+              as: "account",
+            },
+            {
+              model: db.User,
+              as: "user",
+            },
+          ],
           lock: transaction.LOCK.UPDATE,
           transaction,
-      });
+        });
 
-      const { user } = p;
+        const { user } = p;
 
-      if (p) {
-        let total = p.amount + p.tip;
-        p.confirmed = 1;
-        p.account.balance += total;
-        p.account.pending -= Math.min(p.account.pending, total);
+        if (p) {
+          let total = p.amount + p.tip;
+          p.confirmed = 1;
+          p.account.balance += total;
+          p.account.pending -= Math.min(p.account.pending, total);
 
-        await p.account.save({ transaction });
-        await p.save({ transaction });
+          await p.account.save({ transaction });
+          await p.save({ transaction });
 
-        emit(user.username, "account", p.account);
-        emit(user.username, "payment", p);
-        l.info(
-          "liquid confirmed",
-          user.username,
-          p.account.asset,
-          p.amount,
-          p.tip
-        );
+          emit(user.username, "account", p.account);
+          emit(user.username, "payment", p);
+          l.info(
+            "liquid confirmed",
+            user.username,
+            p.account.asset,
+            p.amount,
+            p.tip
+          );
 
-        notify(user, `${total} SAT payment confirmed`);
-      } else {
-        l.warn("couldn't find payment", hash);
-      }
+          notify(user, `${total} SAT payment confirmed`);
+        } else {
+          l.warn("couldn't find payment", hash);
+        }
 
-      delete queue[hash];
+        delete queue[hash];
       });
     }
   } catch (e) {
