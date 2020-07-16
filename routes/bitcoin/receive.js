@@ -25,7 +25,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(hash)) return;
 
   Promise.all(
-    tx.outs.map(async o => {
+    tx.outs.map(async (o) => {
       const { value } = o;
 
       let address;
@@ -40,16 +40,16 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let user = await db.User.findOne({
           where: {
-            username: addresses[address]
-          }
+            username: addresses[address],
+          },
         });
 
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            network: "BTC"
+            network: "BTC",
           },
-          order: [["id", "DESC"]]
+          order: [["id", "DESC"]],
         });
 
         const currency = invoice ? invoice.currency : user.currency;
@@ -61,8 +61,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const account = await db.Account.findOne({
           where: {
             user_id: user.id,
-            asset: config.liquid.btcasset
-          }
+            asset: config.liquid.btcasset,
+          },
         });
 
         account.pending += value;
@@ -99,7 +99,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "BTC"
+          network: "BTC",
         });
         payment = payment.get({ plain: true });
         payment.account = account.get({ plain: true });
@@ -117,13 +117,13 @@ let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: false }
+    where: { confirmed: false },
   });
 
   let block = bitcoin.Block.fromHex(message.toString("hex"));
-  block.transactions.map(tx => {
+  block.transactions.map((tx) => {
     let hash = reverse(tx.getHash()).toString("hex");
-    if (payments.find(p => p.hash === hash)) queue[hash] = 1;
+    if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
   });
 });
 
@@ -133,45 +133,45 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-    await db.transaction(async (transaction) => {
-      const p = await db.Payment.findOne({
-        where: { hash, confirmed: 0, received: 1 },
-        include: [
-          {
-            model: db.Account,
-            as: "account"
-          },
-          {
-            model: db.User,
-            as: "user"
-          }
-        ],
+      await db.transaction(async (transaction) => {
+        const p = await db.Payment.findOne({
+          where: { hash, confirmed: 0, received: 1 },
+          include: [
+            {
+              model: db.Account,
+              as: "account",
+            },
+            {
+              model: db.User,
+              as: "user",
+            },
+          ],
           lock: transaction.LOCK.UPDATE,
           transaction,
+        });
+
+        const { user } = p;
+
+        if (p) {
+          let total = p.amount + p.tip;
+
+          p.confirmed = 1;
+          p.account.balance += total;
+          p.account.pending -= Math.min(p.account.pending, total);
+
+          await p.account.save({ transaction });
+          await p.save({ transaction });
+
+          emit(user.username, "account", p.account);
+          emit(user.username, "payment", p);
+          l.info("bitcoin confirmed", user.username, p.amount, p.tip);
+          notify(user, `${total} SAT payment confirmed`);
+        } else {
+          l.warn("couldn't find payment", hash);
+        }
+
+        delete queue[hash];
       });
-
-      const { user } = p;
-
-      if (p) {
-        let total = p.amount + p.tip;
-
-        p.confirmed = 1;
-        p.account.balance += total;
-        p.account.pending -= Math.min(p.account.pending, total);
-
-        await p.account.save({ transaction });
-        await p.save({ transaction });
-
-        emit(user.username, "account", p.account);
-        emit(user.username, "payment", p);
-        l.info("bitcoin confirmed", user.username, p.amount, p.tip);
-        notify(user, `${total} SAT payment confirmed`);
-      } else {
-        l.warn("couldn't find payment", hash);
-      }
-
-      delete queue[hash];
-    });
     }
   } catch (e) {
     l.error("problem processing queued bitcoin transaction", e.message);
