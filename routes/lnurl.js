@@ -17,16 +17,39 @@ var optionalAuth = function (req, res, next) {
   })(req, res, next);
 };
 
+app.get("/url", async (req, res) => {
+  try {
+    const { text } = await db.Code.findOne({
+      where: {
+        code: req.query.code,
+      },
+    });
+
+    if (text) {
+      res.send(text);
+    } else {
+      throw new Error('code not found');
+    } 
+  } catch (e) {
+    l.error("couldn't find url", e.message);
+  }
+});
+
 app.get("/withdraw", auth, async (req, res) => {
   const { min, max } = req.query;
   try {
     const result = await lnurlServer.generateNewUrl("withdrawRequest", {
       minWithdrawable: min * 1000,
       maxWithdrawable: max * 1000,
-      defaultDescription: "coinos withdrawal",
+      defaultDescription: "coinos voucher",
     });
 
     withdrawals[result.secret] = req.user;
+
+    await db.Code.create({
+      code: result.encoded.substr(64),
+      text: result.encoded,
+    });
 
     res.send(result);
   } catch (e) {

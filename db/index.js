@@ -9,6 +9,7 @@ db = new Sequelize(conf.database, conf.username, conf.password, {
 });
 
 require("./models/accounts.js");
+require("./models/codes.js");
 require("./models/invoices.js");
 require("./models/keys.js");
 require("./models/payments.js");
