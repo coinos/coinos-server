@@ -1,14 +1,15 @@
 module.exports = async (req, res) => {
-  const { amount, tip } = req.body;
+  const { amount, memo, tip } = req.body;
 
   l.info("adding lightning invoice", req.user.username, amount, tip);
 
   try {
     if (config.lna.clightning) {
-      const invoice = await lnb.invoice(`${amount + tip}sat` || "any", new Date(), "", 360);
+      const invoice = await lnb.invoice(`${amount + tip}sat` || "any", new Date(), memo, 360);
       res.send(invoice.bolt11);
     } else {
-      const invoice = await lnb.addInvoice({ value: amount + tip });
+      const invoice = await lnb.addInvoice({ value: amount + tip, memo });
+      l.info("invoice", invoice);
       res.send(invoice.payment_request);
     }
   } catch (e) {

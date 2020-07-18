@@ -1,7 +1,7 @@
 const axios = require("axios");
 
 module.exports = async (req, res) => {
-  let { amount, asset, username } = req.body;
+  let { amount, asset, memo, username } = req.body;
   let { user } = req;
 
   l.info("attempting internal payment", user.username, amount);
@@ -32,6 +32,7 @@ module.exports = async (req, res) => {
         {
           amount: -amount,
           account_id: account.id,
+          memo,
           user_id: user.id,
           rate: app.get("rates")[user.currency],
           currency: user.currency,
@@ -111,6 +112,7 @@ module.exports = async (req, res) => {
           currency: user.currency,
           confirmed: true,
           hash: "Internal Transfer",
+          memo,
           network: "COINOS",
           received: true
         },

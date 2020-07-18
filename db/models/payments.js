@@ -28,6 +28,15 @@ const attributes = {
     comment: null,
     field: "user_id"
   },
+  memo: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "memo"
+  },
   hash: {
     type: DataTypes.TEXT,
     allowNull: true,

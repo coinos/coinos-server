@@ -55,6 +55,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
         const tip = invoice ? invoice.tip : 0;
+        const memo = invoice ? invoice.memo : '';
 
         let confirmed = false;
 
@@ -92,6 +93,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           user_id: user.id,
           hash,
           fee,
+          memo,
           amount: value - tip,
           currency,
           rate,

@@ -100,6 +100,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
         const tip = invoice ? invoice.tip : 0;
+        const memo = invoice ? invoice.memo : '';
 
         let payment = await db.Payment.create({
           account_id: account.id,
@@ -107,6 +108,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           hash: blinded.txid,
           amount: value - tip,
           currency,
+          memo,
           rate,
           received: true,
           tip,

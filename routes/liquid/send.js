@@ -2,7 +2,7 @@ const reverse = require("buffer-reverse");
 
 module.exports = async (req, res) => {
   let { user } = req;
-  let { address, tx } = req.body;
+  let { address, memo, tx } = req.body;
 
   const isChange = async (address) =>
     (await lq.getAddressInfo(address)).ismine &&
@@ -72,6 +72,7 @@ module.exports = async (req, res) => {
           amount: -total,
           account_id: account.id,
           fee,
+          memo,
           user_id: user.id,
           rate: app.get("rates")[user.currency],
           currency: user.currency,

@@ -64,6 +64,15 @@ const attributes = {
     comment: null,
     field: "uuid"
   },
+  memo: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "memo"
+  },
   network: {
     type: DataTypes.STRING(255),
     allowNull: true,

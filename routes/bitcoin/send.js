@@ -3,7 +3,7 @@ const reverse = require("buffer-reverse");
 
 module.exports = async (req, res) => {
   let { user } = req;
-  let { address, tx } = req.body;
+  let { address, memo, tx } = req.body;
   let { hex } = tx;
 
   let fee = toSats(tx.fee);
@@ -56,6 +56,7 @@ module.exports = async (req, res) => {
       params = {
         amount: -total,
         fee,
+        memo,
         account_id: account.id,
         user_id: user.id,
         rate: app.get("rates")[user.currency],

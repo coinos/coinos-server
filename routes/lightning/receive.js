@@ -13,7 +13,7 @@ const handlePayment = async msg => {
 
   if (!invoice) return l.warn("received lightning with no invoice", msg.payment_request);
 
-  const { text: hash, currency, rate, tip, user_id } = invoice;
+  const { text: hash, currency, memo, rate, tip, user_id } = invoice;
   const amount = parseInt(msg.amt_paid_sat) - tip;
 
   const account = await db.Account.findOne({
@@ -37,6 +37,7 @@ const handlePayment = async msg => {
     account_id: account.id,
     user_id,
     hash,
+    memo,
     amount,
     currency,
     preimage,
