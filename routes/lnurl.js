@@ -19,17 +19,17 @@ var optionalAuth = function (req, res, next) {
 
 app.get("/url", async (req, res) => {
   try {
-    const { text } = await db.Code.findOne({
+    const code = await db.Code.findOne({
       where: {
         code: req.query.code,
       },
     });
 
-    if (text) {
-      res.send(text);
+    if (code) {
+      res.send(code.text);
     } else {
-      throw new Error('code not found');
-    } 
+      throw new Error("code not found");
+    }
   } catch (e) {
     l.error("couldn't find url", e.message);
   }
@@ -46,14 +46,23 @@ app.get("/withdraw", auth, async (req, res) => {
 
     withdrawals[result.secret] = req.user;
 
-    await db.Code.create({
-      code: result.encoded.substr(64),
-      text: result.encoded,
-    });
-
     res.send(result);
   } catch (e) {
     l.error("problem generating withdrawl url", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
+app.post("/code", async (req, res) => {
+  try {
+    const { encoded } = req.body.lnurl;
+    const code = await db.Code.create({
+      code: "lnurl:" + encoded.substr(-32),
+      text: encoded,
+    });
+
+    res.send(code);
+  } catch (e) {
     res.status(500).send(e.message);
   }
 });
@@ -109,11 +118,11 @@ const pay = async ({ amount, minSendable, maxSendable }, res, user) => {
 
 app.get("/pay/:username", async (req, res) => {
   const { username } = req.params;
-      let user = await db.User.findOne({
-        where: {
-          username,
-        },
-      });
+  let user = await db.User.findOne({
+    where: {
+      username,
+    },
+  });
   pay(req.query, res, user);
 });
 
@@ -345,7 +354,6 @@ lnurlServer.bindToHook(
 );
 
 lnurlServer.bindToHook("login", async (key) => {
-  l.info("logging in");
   try {
     if (!key) throw new Error("login key not defined");
 
