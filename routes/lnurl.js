@@ -109,6 +109,7 @@ const pay = async ({ amount, minSendable, maxSendable }, res, user) => {
     });
 
     recipients[result.secret] = user;
+    l.info("recipient", user.username, result.secret);
     res.send(result);
   } catch (e) {
     l.error("problem generating payment url", e.message);
@@ -139,6 +140,7 @@ app.post("/pay", auth, async (req, res) => {
   } = req.body;
 
   const url = `${callback}?amount=${amount * 1000}`;
+  l.info("url", url);
 
   try {
     const parts = callback.split("/");
@@ -146,21 +148,7 @@ app.post("/pay", auth, async (req, res) => {
     payments[secret] = user;
 
     const result = (await axios.get(url)).data;
-    const recipient = recipients[secret];
-
-    if (recipient) {
-      await db.Invoice.create({
-        user_id: recipient.id,
-        text: result.pr,
-        rate: app.get("rates")[user.currency],
-        currency: recipient.currency,
-        amount: Math.round(amount / 1000),
-        tip: 0,
-        network: "BTC",
-      });
-    }
-
-    res.send(await send(amount, result.pr, user));
+    res.send(await send(amount, '', result.pr, user));
   } catch (e) {
     l.error("failed to send payment", e.message);
     res.status(500).send(e.message);
@@ -221,18 +209,49 @@ lnurlServer.bindToHook(
       const parts = req.originalUrl.split("/");
       const secret = parts[parts.length - 1].split("?")[0];
       user = payments[secret];
-      let account = await db.Account.findOne({
-        where: {
-          user_id: user.id,
-          asset: config.liquid.btcasset,
-        },
-      });
 
-      if (account.balance < amount) {
-        throw new Error("Insufficient funds");
+      if (user) {
+        let account = await db.Account.findOne({
+          where: {
+            user_id: user.id,
+            asset: config.liquid.btcasset,
+          },
+        });
+
+        if (account.balance < amount) {
+          throw new Error("Insufficient funds");
+        }
+
+        l.info("lnurl payment", user.username, amount);
       }
 
-      l.info("lnurl payment", user.username, amount);
+      const recipient = recipients[secret];
+
+      if (recipient) {
+          setTimeout(async () => {
+            try {
+              let { invoices } = await lnb.listInvoices({
+                pending_only: true,
+                num_max_invoices: 1,
+                reversed: true,
+              });
+              let i = invoices.find((i) => parseInt(i.value) === amount);
+              if (i) {
+                await db.Invoice.create({
+                  user_id: recipient.id,
+                  text: i.payment_request,
+                  rate: app.get("rates")[recipient.currency],
+                  currency: recipient.currency,
+                  amount: Math.round(amount / 1000),
+                  tip: 0,
+                  network: "BTC",
+                });
+              }
+            } catch (e) {
+              l.error("problem trying to get create payment invoice", e);
+            }
+          }, 1000);
+      }
     }
 
     if (tag === "login") {
