@@ -9,7 +9,6 @@ module.exports = async (req, res) => {
       res.send(invoice.bolt11);
     } else {
       const invoice = await lnb.addInvoice({ value: amount + tip, memo });
-      l.info("invoice", invoice);
       res.send(invoice.payment_request);
     }
   } catch (e) {
