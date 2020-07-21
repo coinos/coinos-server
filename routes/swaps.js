@@ -8,19 +8,23 @@ const assets = {
   "4eebe36eb0819e6daa5dd3c97733251ff4eb728c810d949365d6dacaad5ef6e8": "tether",
 };
 
+const cli = (...args) => {
+  const params = ["--regtest", "-c", config.liquid.conf, ...args];
+  if (config.liquid.network !== "regtest") params.shift();
+  return spawn("liquidswap-cli", params);
+};
+
 const createProposal = (a1, v1, a2, v2) =>
   new Promise((resolve, reject) => {
-    l.info("running liquid-cli tool %s %s %s %s %s", config.liquid.conf, a1, v1, a2, v2);
-    const proc = spawn("liquidswap-cli", [
-      "--regtest",
-      "-c",
+    l.info(
+      "running liquid-cli tool %s %s %s %s %s",
       config.liquid.conf,
-      "propose",
       a1,
       v1,
       a2,
-      v2,
-    ]);
+      v2
+    );
+    const proc = cli("propose", a1, v1, a2, v2);
 
     proc.stdout.on("data", (data) => {
       fs.writeFile("proposal.txt", data.toString(), function (err) {
@@ -40,14 +44,7 @@ const createProposal = (a1, v1, a2, v2) =>
 
 const getInfo = () =>
   new Promise((resolve, reject) => {
-    const spawn = require("child_process").spawn;
-    const proc = spawn("liquidswap-cli", [
-      "--regtest",
-      "-c",
-      config.liquid.conf,
-      "info",
-      "proposal.txt",
-    ]);
+    const proc = cli("info", "proposal.txt");
 
     proc.stdout.on("data", (data) => {
       resolve(data.toString());
@@ -97,7 +94,7 @@ app.get("/proposal", auth, async (req, res) => {
       v2: Math.round(v2 * SATS),
       user_id: user.id,
       text: proposal,
-    }); 
+    });
 
     res.send({ proposal, info, rate, asset });
   } catch (e) {
@@ -118,14 +115,7 @@ app.post("/acceptance", async (req, res) => {
     try {
       let info = JSON.parse(
         await new Promise((resolve, reject) => {
-          const spawn = require("child_process").spawn;
-          const proc = spawn("liquidswap-cli", [
-            "--regtest",
-            "-c",
-            config.liquid.conf,
-            "info",
-            "accepted.txt",
-          ]);
+          const proc = cli("info", "accepted.txt");
 
           proc.stdout.on("data", (data) => {
             resolve(data.toString());
@@ -159,7 +149,8 @@ checkQueue = async () => {
   const ws = app.get("ws");
   const txs = [];
 
-  leveldb.createReadStream()
+  leveldb
+    .createReadStream()
     .on("data", async function (data) {
       console.log("pushing", data.key);
       txs.push({ ...JSON.parse(data.value), key: data.key });
@@ -236,15 +227,7 @@ const finalize = (text) => {
   fs.writeFileSync("accepted.txt", text);
 
   return new Promise((resolve, reject) => {
-    const spawn = require("child_process").spawn;
-    const proc = spawn("liquidswap-cli", [
-      "--regtest",
-      "-c",
-      config.liquid.conf,
-      "finalize",
-      "accepted.txt",
-      "--send",
-    ]);
+    const proc = cli("finalize", "accepted.txt", "-s");
 
     proc.stdout.on("data", (data) => {
       resolve(data.toString());
