@@ -46,6 +46,7 @@ require("./routes/assets");
 require("./routes/invoices");
 require("./routes/payments");
 require("./routes/info");
+require("./routes/swaps");
 require("./routes/users");
 
 if (config.lnurl) {

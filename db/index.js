@@ -13,6 +13,7 @@ require("./models/codes.js");
 require("./models/invoices.js");
 require("./models/keys.js");
 require("./models/payments.js");
+require("./models/proposals.js");
 require("./models/users.js");
 
 db["User"].hasMany(db["Account"], {
@@ -61,6 +62,11 @@ db["Payment"].belongsTo(db["Account"], {
 });
 
 db["Payment"].belongsTo(db["User"], {
+  as: "user",
+  foreignKey: "user_id"
+});
+
+db["Proposal"].belongsTo(db["User"], {
   as: "user",
   foreignKey: "user_id"
 });
