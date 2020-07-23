@@ -1,3 +1,4 @@
+const axios = require("axios");
 const level = require("level");
 const fs = require("fs");
 const { spawn } = require("child_process");
@@ -42,9 +43,9 @@ const createProposal = (a1, v1, a2, v2) =>
     });
   });
 
-const getInfo = () =>
+const getInfo = (filename = "proposal.txt") =>
   new Promise((resolve, reject) => {
-    const proc = cli("info", "proposal.txt");
+    const proc = cli("info", filename);
 
     proc.stdout.on("data", (data) => {
       resolve(data.toString());
@@ -57,6 +58,17 @@ const getInfo = () =>
 
     setTimeout(() => reject("timeout"), 2000);
   });
+
+app.delete("/proposal/:id", auth, async (req, res) => {
+  const { id } = req.params;
+  await db.Proposal.destroy({
+    where: {
+      id,
+      user_id: req.user.id,
+    },
+  });
+  res.end();
+});
 
 app.get("/proposal", auth, async (req, res) => {
   try {
@@ -71,14 +83,21 @@ app.get("/proposal", auth, async (req, res) => {
       "bitcoin";
 
     if (!(assets[a1] && assets[a2])) throw new Error("unsupported assets");
-    if (v1 > b[assets[a1]]) throw new Error("not enough funds");
+    if (v1 > b[assets[a1]]) throw new Error("insufficient server funds");
+    const account = await db.Account.findOne({
+      where: {
+        user_id: user.id,
+        asset: a1,
+      },
+    });
+    if (v1 > account.balance) throw new Error("insufficient funds");
 
     l.info(
       `proposal requested to swap ${v1} ${assets[a1]} for ${v2} ${assets[a2]}`
     );
 
-    let proposal = await createProposal(a1, v1, a2, v2);
-    proposal = proposal.replace(/\s+/g, "").trim();
+    let text = await createProposal(a1, v1, a2, v2);
+    text = text.replace(/\s+/g, "").trim();
 
     const info = JSON.parse(await getInfo());
     const [fee, rate, asset] = parse(info);
@@ -87,19 +106,164 @@ app.get("/proposal", auth, async (req, res) => {
     if (rate < 0)
       throw new Error(`${assets[a1]} amount must be greater than ${fee}`);
 
-    await db.Proposal.create({
+    const proposal = await db.Proposal.create({
       a1,
       a2,
       v1: Math.round(v1 * SATS),
       v2: Math.round(v2 * SATS),
       user_id: user.id,
-      text: proposal,
+      text,
     });
 
     res.send({ proposal, info, rate, asset });
   } catch (e) {
     l.error(e);
     res.status(500).send({ error: e.message });
+  }
+});
+
+app.post("/accept", optionalAuth, async (req, res) => {
+  try {
+    const { id, text } = req.body;
+    l.info("id", id);
+
+    const proposal = await db.Proposal.findOne({
+      where: {
+        id,
+        accepted: false,
+      },
+      include: {
+        model: db.User,
+        as: "user",
+      },
+    });
+
+    if (!proposal) throw new Error("Proposal not found");
+
+    const filename = `proposal-${id}.txt`;
+
+    fs.writeFileSync(filename, proposal.text);
+    const info = JSON.parse(await getInfo(filename));
+
+    const { user } = req;
+    if (user) {
+      const leg1 = info.legs.find((leg) => !leg.incoming && leg.funded);
+      const leg2 = info.legs.find((leg) => leg.incoming && !leg.funded);
+      await db.transaction(async (transaction) => {
+        const l1a1 = await db.Account.findOne({
+          where: {
+            user_id: user.id,
+            asset: leg1.asset,
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction,
+        });
+
+        if (!l1a1) throw new Error("Outgoing asset not found");
+
+        const l1a2 = await db.Account.findOne({
+          where: {
+            user_id: proposal.user_id,
+            asset: leg1.asset,
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction,
+        });
+
+        let amount = Math.round(leg1.amount * SATS);
+        if (amount > l1a2.balance)
+          throw new Error("Proposer has insufficient funds");
+
+        l1a1.balance += amount;
+        l1a2.balance -= amount;
+
+        let l2a1 = await db.Account.findOne({
+          where: {
+            user_id: user.id,
+            asset: leg2.asset,
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction,
+        });
+
+        if (!l2a1) {
+          let { asset } = leg2;
+          let params = {
+            user_id: user.id,
+            asset,
+          };
+          let name = asset.substr(0, 6);
+          let ticker = asset.substr(0, 3).toUpperCase();
+          let precision = 8;
+
+          const assets = (await axios.get("https://assets.blockstream.info/"))
+            .data;
+
+          if (assets[asset]) {
+            ({ ticker, precision, name } = assets[asset]);
+          } else {
+            const existing = await db.Account.findOne({
+              where: {
+                asset,
+              },
+              order: [["id", "ASC"]],
+              limit: 1,
+            });
+
+            if (existing) {
+              ({ ticker, precision, name } = existing);
+            }
+          }
+
+          params = { ...params, ...{ ticker, precision, name } };
+          params.balance = 0;
+          params.pending = 0;
+          l2a1 = await db.Account.create(params, { transaction });
+        }
+
+        const l2a2 = await db.Account.findOne({
+          where: {
+            user_id: proposal.user_id,
+            asset: leg2.asset,
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction,
+        });
+
+        amount = Math.round(leg2.amount * SATS);
+        if (amount > l2a1.balance) throw new Error("Insufficient funds");
+
+        l2a1.balance -= amount;
+        l2a2.balance += amount;
+
+        await l1a1.save({ transaction });
+        await l1a2.save({ transaction });
+        await l2a1.save({ transaction });
+        await l2a2.save({ transaction });
+
+        proposal.accepted = true;
+        await proposal.save({ transaction });
+
+        emit(user.username, "account", l1a1);
+        emit(user.username, "account", l2a1);
+        emit(proposal.user.username, "account", l1a2);
+        emit(proposal.user.username, "account", l2a2);
+        emit(user.username, "proposal", proposal);
+        emit(proposal.user.username, "proposal", proposal);
+      });
+    } else if (text) {
+      const filename = `acceptance-${id}.txt`;
+      fs.writeFileSync(filename, text);
+      const info = JSON.parse(await getInfo());
+      l.info("info", info);
+    } else {
+      throw new Error("no acceptance provided");
+    } 
+
+    res.send(info);
+  } catch (e) {
+    l.error(e.message);
+    res.status(500).send(e.message);
   }
 });
 
@@ -240,3 +404,35 @@ const finalize = (text) => {
     setTimeout(() => reject("timeout"), 2000);
   });
 };
+
+app.get("/proposals", optionalAuth, async (req, res) => {
+  try {
+    if (req.user) {
+      res.send(await db.Proposal.findAll());
+    } else {
+      res.send(
+        await db.Proposal.findAll({
+          attributes: { exclude: ["user_id"] },
+          where: {
+            accepted: false,
+          },
+        })
+      );
+    }
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
+});
+
+app.post("/publish", auth, async (req, res) => {
+  try {
+    const { id } = req.body;
+    await db.Proposal.update(
+      { public: true },
+      { where: { id, user_id: req.user.id } }
+    );
+    res.end();
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
+});
