@@ -85,8 +85,8 @@ app.get("/proposal", auth, async (req, res) => {
     Object.keys(b).map((asset) => {
       assets[asset] = asset;
     });
-    assets["b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23"] =
-      "bitcoin";
+    assets["ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"] = "tether";
+    assets["6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d"] = "bitcoin";
 
     if (!assets[a1]) throw new Error("unsupported asset");
     if (v1 > b[assets[a1]]) throw new Error("insufficient server funds");
@@ -123,7 +123,7 @@ app.get("/proposal", auth, async (req, res) => {
 
     res.send({ proposal, info, rate, asset });
   } catch (e) {
-    l.error(e);
+    l.error(e.message);
     res.status(500).send({ error: e.message });
   }
 });
