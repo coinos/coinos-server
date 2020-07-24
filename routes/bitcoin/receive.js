@@ -136,7 +136,7 @@ setInterval(async () => {
       const hash = arr[i];
 
       await db.transaction(async (transaction) => {
-        const p = await db.Payment.findOne({
+        let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
@@ -163,6 +163,9 @@ setInterval(async () => {
 
           await p.account.save({ transaction });
           await p.save({ transaction });
+
+          let p = p.get({ plain: true });
+          p.account = p.account.get({ plain: true });
 
           emit(user.username, "account", p.account);
           emit(user.username, "payment", p);

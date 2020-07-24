@@ -249,9 +249,13 @@ app.post("/accept", optionalAuth, async (req, res) => {
         proposal.accepted = true;
         await proposal.save({ transaction });
 
+        l1a1p = l1a1p.get({ plain: true });
         l1a1p.account = l1a1.get({ plain: true });
+        l1a2p = l1a2p.get({ plain: true });
         l1a2p.account = l1a2.get({ plain: true });
+        l2a1p = l2a1p.get({ plain: true });
         l2a1p.account = l2a1.get({ plain: true });
+        l2a2p = l2a2p.get({ plain: true });
         l2a2p.account = l2a2.get({ plain: true });
 
         emit(user.username, "account", l1a1);
@@ -298,7 +302,7 @@ app.post("/accept", optionalAuth, async (req, res) => {
         l1a2.balance -= amount;
         btc.balance -= fee;
 
-        const payment = await db.Payment.create({
+        let payment = await db.Payment.create({
           hash,
           amount: -amount,
           account_id: l1a2.id,
@@ -313,7 +317,6 @@ app.post("/accept", optionalAuth, async (req, res) => {
           network: "LBTC",
         });
 
-        payment.account = l1a2.get({ plain: true });
         amount = Math.round(leg2.amount * SATS);
 
         await db.Invoice.create({
@@ -335,6 +338,9 @@ app.post("/accept", optionalAuth, async (req, res) => {
 
         proposal.accepted = true;
         await proposal.save({ transaction });
+
+        payment = payment.get({ plain: true });
+        payment.account = l1a2.get({ plain: true });
 
         emit(proposal.user.username, "payment", payment);
         emit(proposal.user.username, "account", l1a2);
