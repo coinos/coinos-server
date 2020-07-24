@@ -87,6 +87,7 @@ app.get("/proposal", auth, async (req, res) => {
     });
     assets["ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"] = "tether";
     assets["6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d"] = "bitcoin";
+    assets["a0c358a0f6947864af3a06f3f6a2aeb304df7fd95c922f2f22d7412399ce7691"] = "adamcoin";
 
     if (!assets[a1]) throw new Error("unsupported asset");
     if (v1 > b[assets[a1]]) throw new Error("insufficient server funds");
