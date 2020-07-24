@@ -8,6 +8,5 @@ yarn-error.log
 .pnp*
 .yarn*
 tls.*
-proposal.txt
 leveldb
 swaps
