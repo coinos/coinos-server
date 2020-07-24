@@ -37,6 +37,10 @@ const createProposal = (a1, v1, a2, v2) =>
       resolve(data.toString());
     });
 
+    proc.on("exit", (err) => {
+      reject(new Error("Liquid swap tool process exited unexpectedly. Try a larger amount if swapping BTC."));
+    });
+
     proc.stderr.on("error", (err) => {
       l.error("proposal error", err.toString());
       reject(err.toString());
@@ -112,7 +116,7 @@ app.get("/proposal", auth, async (req, res) => {
     res.send({ proposal });
   } catch (e) {
     l.error(e.message);
-    res.status(500).send({ error: e.message });
+    res.status(500).send(e.message);
   }
 });
 
