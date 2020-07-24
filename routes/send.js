@@ -49,6 +49,7 @@ module.exports = async (req, res) => {
       l.info("sent internal", user.username, -payment.amount);
 
       emit(user.username, "payment", payment);
+      emit(user.username, "account", account);
       emit(user.username, "user", user);
       res.send(payment);
 

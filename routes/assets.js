@@ -2,10 +2,17 @@ const axios = require("axios");
 const crypto = require("crypto");
 
 app.get("/assets", async (req, res) => {
-  let assets;
   try {
-    assets = await axios.get("https://assets.blockstream.info/");
-    res.send(assets.data);
+    const { data: assets } = await axios.get("https://assets.blockstream.info/");
+    const accounts = await db.Account.findAll({
+      group: ['asset'],
+    });
+
+    accounts.map(a => {
+      if (!assets[a.asset]) assets[a.asset] = a;
+    });
+
+    res.send(assets);
   } catch (e) {
     l.error("error fetching assets", e);
     res.status(500).send("error fetching assets");

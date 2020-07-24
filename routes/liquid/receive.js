@@ -100,7 +100,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
         const tip = invoice ? invoice.tip : 0;
-        const memo = invoice ? invoice.memo : '';
+        const memo = invoice ? invoice.memo : "";
 
         let payment = await db.Payment.create({
           account_id: account.id,
@@ -122,6 +122,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         payment.account = account.get({ plain: true });
 
         emit(user.username, "payment", payment);
+        emit(user.username, "account", account);
         l.info("liquid detected", user.username, asset, value);
         notify(user, `${value} SAT payment detected`);
       }
@@ -176,6 +177,9 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 
         payment.confirmed = true;
         await payment.save({ transaction });
+        payment = payment.get({ plain: true });
+        payment.account = account.get({ plain: true });
+
         emit(user.username, "account", account);
         emit(user.username, "payment", payment);
 
@@ -201,6 +205,9 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 
           payment.confirmed = true;
           await payment.save({ transaction });
+
+          payment = payment.get({ plain: true });
+          payment.account = account.get({ plain: true });
 
           emit(user.username, "account", account);
           emit(user.username, "payment", payment);

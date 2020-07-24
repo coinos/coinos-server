@@ -1,4 +1,5 @@
 const axios = require("axios");
+const crypto = require("crypto");
 const level = require("level");
 const fs = require("fs");
 const { spawn } = require("child_process");
@@ -8,6 +9,11 @@ const assets = {
   b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23: "bitcoin",
   "4eebe36eb0819e6daa5dd3c97733251ff4eb728c810d949365d6dacaad5ef6e8": "tether",
 };
+
+const swapsdir = 'swaps/';
+if (!fs.existsSync(swapsdir)){
+    fs.mkdirSync(swapsdir);
+}
 
 const cli = (...args) => {
   const params = ["--regtest", "-c", config.liquid.conf, ...args];
@@ -28,7 +34,7 @@ const createProposal = (a1, v1, a2, v2) =>
     const proc = cli("propose", a1, v1, a2, v2);
 
     proc.stdout.on("data", (data) => {
-      fs.writeFile("proposal.txt", data.toString(), function (err) {
+      fs.writeFile(swapsdir + "proposal.txt", data.toString(), function (err) {
         if (err) {
           return l.error(err);
         }
@@ -45,7 +51,7 @@ const createProposal = (a1, v1, a2, v2) =>
 
 const getInfo = (filename = "proposal.txt") =>
   new Promise((resolve, reject) => {
-    const proc = cli("info", filename);
+    const proc = cli("info", swapsdir + filename);
 
     proc.stdout.on("data", (data) => {
       resolve(data.toString());
@@ -82,7 +88,7 @@ app.get("/proposal", auth, async (req, res) => {
     assets["b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23"] =
       "bitcoin";
 
-    if (!(assets[a1] && assets[a2])) throw new Error("unsupported assets");
+    if (!assets[a1]) throw new Error("unsupported asset");
     if (v1 > b[assets[a1]]) throw new Error("insufficient server funds");
     const account = await db.Account.findOne({
       where: {
@@ -125,7 +131,6 @@ app.get("/proposal", auth, async (req, res) => {
 app.post("/accept", optionalAuth, async (req, res) => {
   try {
     const { id, text } = req.body;
-    l.info("id", id);
 
     const proposal = await db.Proposal.findOne({
       where: {
@@ -142,99 +147,82 @@ app.post("/accept", optionalAuth, async (req, res) => {
 
     const filename = `proposal-${id}.txt`;
 
-    fs.writeFileSync(filename, proposal.text);
-    const info = JSON.parse(await getInfo(filename));
+    fs.writeFileSync(swapsdir + filename, proposal.text);
+    let info = JSON.parse(await getInfo(filename));
 
     const { user } = req;
+
     if (user) {
+      let [fee, rate, asset] = parse(info);
       const leg1 = info.legs.find((leg) => !leg.incoming && leg.funded);
       const leg2 = info.legs.find((leg) => leg.incoming && !leg.funded);
       await db.transaction(async (transaction) => {
-        const l1a1 = await db.Account.findOne({
-          where: {
-            user_id: user.id,
-            asset: leg1.asset,
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction,
-        });
-
-        if (!l1a1) throw new Error("Outgoing asset not found");
-
-        const l1a2 = await db.Account.findOne({
-          where: {
-            user_id: proposal.user_id,
-            asset: leg1.asset,
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction,
-        });
+        const l1a1 = await getAccount(leg1.asset, user);
+        const l1a2 = await getAccount(leg1.asset, proposal.user);
 
         let amount = Math.round(leg1.amount * SATS);
         if (amount > l1a2.balance)
-          throw new Error("Proposer has insufficient funds");
+          throw new Error(`Proposer has insufficient funds: ${amount}, ${l1a2.balance}`);
 
         l1a1.balance += amount;
         l1a2.balance -= amount;
 
-        let l2a1 = await db.Account.findOne({
-          where: {
-            user_id: user.id,
-            asset: leg2.asset,
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction,
+        let l1a1p = await db.Payment.create({
+          hash: "Internal Transfer",
+          amount,
+          account_id: l1a1.id,
+          memo: "Atomic Swap",
+          user_id: user.id,
+          rate,
+          confirmed: true,
+          received: true,
+          network: "COINOS",
         });
 
-        if (!l2a1) {
-          let { asset } = leg2;
-          let params = {
-            user_id: user.id,
-            asset,
-          };
-          let name = asset.substr(0, 6);
-          let ticker = asset.substr(0, 3).toUpperCase();
-          let precision = 8;
-
-          const assets = (await axios.get("https://assets.blockstream.info/"))
-            .data;
-
-          if (assets[asset]) {
-            ({ ticker, precision, name } = assets[asset]);
-          } else {
-            const existing = await db.Account.findOne({
-              where: {
-                asset,
-              },
-              order: [["id", "ASC"]],
-              limit: 1,
-            });
-
-            if (existing) {
-              ({ ticker, precision, name } = existing);
-            }
-          }
-
-          params = { ...params, ...{ ticker, precision, name } };
-          params.balance = 0;
-          params.pending = 0;
-          l2a1 = await db.Account.create(params, { transaction });
-        }
-
-        const l2a2 = await db.Account.findOne({
-          where: {
-            user_id: proposal.user_id,
-            asset: leg2.asset,
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction,
+        let l1a2p = await db.Payment.create({
+          hash: "Internal Transfer",
+          amount: -amount,
+          account_id: l1a2.id,
+          memo: "Atomic Swap",
+          user_id: proposal.user_id,
+          rate,
+          confirmed: true,
+          received: false,
+          network: "COINOS",
         });
+
+        const l2a1 = await getAccount(leg2.asset, user);
+        const l2a2 = await getAccount(leg2.asset, proposal.user);
 
         amount = Math.round(leg2.amount * SATS);
         if (amount > l2a1.balance) throw new Error("Insufficient funds");
 
         l2a1.balance -= amount;
         l2a2.balance += amount;
+
+        let l2a1p = await db.Payment.create({
+          hash: "Internal Transfer",
+          amount: -amount,
+          account_id: l2a1.id,
+          memo: "Atomic Swap",
+          user_id: user.id,
+          rate,
+          confirmed: true,
+          received: false,
+          network: "COINOS",
+        });
+
+        let l2a2p = await db.Payment.create({
+          hash: "Internal Transfer",
+          amount,
+          account_id: l2a2.id,
+          memo: "Atomic Swap",
+          user_id: proposal.user_id,
+          rate,
+          confirmed: true,
+          received: true,
+          network: "COINOS",
+        });
 
         await l1a1.save({ transaction });
         await l1a2.save({ transaction });
@@ -244,21 +232,100 @@ app.post("/accept", optionalAuth, async (req, res) => {
         proposal.accepted = true;
         await proposal.save({ transaction });
 
+        l1a1p.account = l1a1.get({ plain: true });
+        l1a2p.account = l1a2.get({ plain: true });
+        l2a1p.account = l2a1.get({ plain: true });
+        l2a2p.account = l2a2.get({ plain: true });
+
         emit(user.username, "account", l1a1);
         emit(user.username, "account", l2a1);
         emit(proposal.user.username, "account", l1a2);
         emit(proposal.user.username, "account", l2a2);
+        emit(user.username, "payment", l1a1p);
+        emit(user.username, "payment", l2a1p);
+        emit(proposal.user.username, "payment", l1a2p);
+        emit(proposal.user.username, "payment", l2a2p);
         emit(user.username, "proposal", proposal);
         emit(proposal.user.username, "proposal", proposal);
       });
     } else if (text) {
       const filename = `acceptance-${id}.txt`;
-      fs.writeFileSync(filename, text);
-      const info = JSON.parse(await getInfo());
-      l.info("info", info);
+      fs.writeFileSync(swapsdir + filename, text);
+
+      info = JSON.parse(await getInfo(filename));
+      let [fee, rate, asset] = parse(info);
+      let { tx, u_address_p, u_address_r } = JSON.parse(
+        Buffer.from(text, "base64").toString()
+      );
+      const sha256 = crypto.createHash("sha256");
+      sha256.update(tx);
+      const hash = sha256.digest("hex");
+
+      const leg1 = info.legs.find((leg) => !leg.incoming);
+      const leg2 = info.legs.find((leg) => leg.incoming);
+
+      const l1a2 = await getAccount(leg1.asset, proposal.user);
+      const btc = await getAccount(config.liquid.btcasset, proposal.user);
+
+      await db.transaction(async (transaction) => {
+
+        let amount = Math.round(leg1.amount * SATS);
+        fee = Math.round(fee * SATS);
+
+        if (amount > l1a2.balance)
+          throw new Error(`Proposer has insufficient funds: ${amount}, ${l1a2.balance}`);
+
+        if (fee > btc.balance)
+          throw new Error(`Proposer has insufficient funds for fee: ${fee}, ${btc.balance}`);
+
+        l1a2.balance -= amount;
+        btc.balance -= fee;
+
+        const payment = await db.Payment.create({
+          hash,
+          amount: -amount,
+          account_id: l1a2.id,
+          fee,
+          memo: "Atomic Swap",
+          user_id: proposal.user_id,
+          rate,
+          address: u_address_r,
+          confirmed: true,
+          received: false,
+          network: "LBTC",
+        });
+
+        payment.account = l1a2.get({ plain: true });
+        amount = Math.round(leg2.amount * SATS);
+
+        await db.Invoice.create({
+          user_id: proposal.user_id,
+          text: u_address_p,
+          currency: proposal.user.currency,
+          memo: "Atomic Swap",
+          rate,
+          amount,
+          tip: 0,
+          network: "LBTC",
+        });
+
+        addresses[u_address_p] = proposal.user.username;
+
+        await finalize(filename);
+        await l1a2.save({ transaction });
+        await btc.save({ transaction });
+
+        proposal.accepted = true;
+        await proposal.save({ transaction });
+
+        emit(proposal.user.username, "payment", payment);
+        emit(proposal.user.username, "account", l1a2);
+        emit(proposal.user.username, "account", btc);
+        emit(proposal.user.username, "proposal", proposal);
+      });
     } else {
       throw new Error("no acceptance provided");
-    } 
+    }
 
     res.send(info);
   } catch (e) {
@@ -271,7 +338,7 @@ app.post("/acceptance", async (req, res) => {
   const { acceptance: text } = req.body;
   l.info("acceptance received");
 
-  fs.writeFile("accepted.txt", text, async (err) => {
+  fs.writeFile(swapsdir + "accepted.txt", text, async (err) => {
     if (err) {
       return res.status(500).send(err);
     }
@@ -279,7 +346,7 @@ app.post("/acceptance", async (req, res) => {
     try {
       let info = JSON.parse(
         await new Promise((resolve, reject) => {
-          const proc = cli("info", "accepted.txt");
+          const proc = cli("info", swapsdir + "accepted.txt");
 
           proc.stdout.on("data", (data) => {
             resolve(data.toString());
@@ -387,11 +454,11 @@ const parse = (info) => {
   ];
 };
 
-const finalize = (text) => {
-  fs.writeFileSync("accepted.txt", text);
+const finalize = (filename = "finalized.txt", text) => {
+  if (text) fs.writeFileSync(swapsdir + filename, text);
 
   return new Promise((resolve, reject) => {
-    const proc = cli("finalize", "accepted.txt", "-s");
+    const proc = cli("finalize", swapsdir + filename, "-s");
 
     proc.stdout.on("data", (data) => {
       resolve(data.toString());
@@ -436,3 +503,45 @@ app.post("/publish", auth, async (req, res) => {
     res.status(500).send(e.message);
   }
 });
+
+const getAccount = async (asset, user) => {
+  const account = await db.Account.findOne({
+    where: {
+      user_id: user.id,
+      asset,
+    },
+  });
+
+  if (account) return account;
+
+  let params = {
+    user_id: user.id,
+    asset,
+  };
+  let name = asset.substr(0, 6);
+  let ticker = asset.substr(0, 3).toUpperCase();
+  let precision = 8;
+
+  const assets = (await axios.get("https://assets.blockstream.info/")).data;
+
+  if (assets[asset]) {
+    ({ ticker, precision, name } = assets[asset]);
+  } else {
+    const existing = await db.Account.findOne({
+      where: {
+        asset,
+      },
+      order: [["id", "ASC"]],
+      limit: 1,
+    });
+
+    if (existing) {
+      ({ ticker, precision, name } = existing);
+    }
+  }
+
+  params = { ...params, ...{ ticker, precision, name } };
+  params.balance = 0;
+  params.pending = 0;
+  return db.Account.create(params);
+};
