@@ -34,12 +34,6 @@ const createProposal = (a1, v1, a2, v2) =>
     const proc = cli("propose", a1, v1, a2, v2);
 
     proc.stdout.on("data", (data) => {
-      fs.writeFile(swapsdir + "proposal.txt", data.toString(), function (err) {
-        if (err) {
-          return l.error(err);
-        }
-        l.info("proposal.txt file saved");
-      });
       resolve(data.toString());
     });
 
@@ -49,7 +43,7 @@ const createProposal = (a1, v1, a2, v2) =>
     });
   });
 
-const getInfo = (filename = "proposal.txt") =>
+const getInfo = (filename) =>
   new Promise((resolve, reject) => {
     const proc = cli("info", swapsdir + filename);
 
@@ -106,13 +100,6 @@ app.get("/proposal", auth, async (req, res) => {
     let text = await createProposal(a1, v1, a2, v2);
     text = text.replace(/\s+/g, "").trim();
 
-    const info = JSON.parse(await getInfo());
-    const [fee, rate, asset] = parse(info);
-
-    if (!rate) throw new Error("invalid asset pair");
-    if (rate < 0)
-      throw new Error(`${assets[a1]} amount must be greater than ${fee}`);
-
     const proposal = await db.Proposal.create({
       a1,
       a2,
@@ -122,7 +109,7 @@ app.get("/proposal", auth, async (req, res) => {
       text,
     });
 
-    res.send({ proposal, info, rate, asset });
+    res.send({ proposal });
   } catch (e) {
     l.error(e.message);
     res.status(500).send({ error: e.message });
