@@ -15,9 +15,12 @@ if (!fs.existsSync(swapsdir)){
     fs.mkdirSync(swapsdir);
 }
 
+const timeout = 20000;
+
 const cli = (...args) => {
   const params = ["--regtest", "-c", config.liquid.conf, ...args];
   if (config.liquid.network !== "regtest") params.shift();
+  l.info("spawning liquidswap-cli with params:", params);
   return spawn("liquidswap-cli", params);
 };
 
@@ -37,14 +40,22 @@ const createProposal = (a1, v1, a2, v2) =>
       resolve(data.toString());
     });
 
-    proc.on("exit", (err) => {
-      reject(new Error("Liquid swap tool process exited unexpectedly. Try a larger amount if swapping BTC."));
-    });
-
     proc.stderr.on("error", (err) => {
       l.error("proposal error", err.toString());
       reject(err.toString());
     });
+    
+    proc.on("close", (code, signal) => {
+      let msg = code ? code.toString() : signal.toString();
+      reject(new Error("Liquid swap tool process closed unexpectedly while creating proposal: ${msg}"));
+    });
+
+    proc.on("exit", (code, signal) => {
+      let msg = code ? code.toString() : signal.toString();
+      reject(new Error("Liquid swap tool process exited unexpectedly while creating proposal: ${msg}"));
+    });
+
+    setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
   });
 
 const getInfo = (filename) =>
@@ -60,7 +71,17 @@ const getInfo = (filename) =>
       reject(err.toString());
     });
 
-    setTimeout(() => reject("timeout"), 2000);
+    proc.on("close", (code, signal) => {
+      let msg = (code && code.toString()) || (signal && signal.toString());
+      reject(new Error("Liquid swap tool process closed unexpectedly: ${msg}"));
+    });
+
+    proc.on("exit", (code, signal) => {
+      let msg = (code && code.toString()) || (signal && signal.toString());
+      reject(new Error("Liquid swap tool process exited unexpectedly"));
+    });
+
+    setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
   });
 
 app.delete("/proposal/:id", auth, async (req, res) => {
@@ -116,7 +137,7 @@ app.get("/proposal", auth, async (req, res) => {
     res.send({ proposal });
   } catch (e) {
     l.error(e.message);
-    res.status(500).send(e.message);
+    res.status(500).send({ error: e.message });
   }
 });
 
@@ -348,7 +369,7 @@ app.post("/acceptance", async (req, res) => {
             reject(err.toString());
           });
 
-          setTimeout(() => reject("timeout", proc), 2000);
+          setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
         })
       );
 
@@ -457,10 +478,20 @@ const finalize = (filename = "finalized.txt", text) => {
     });
 
     proc.stderr.on("data", (err) => {
-      reject(err.toString());
+      reject(new Error(err.toString()));
     });
 
-    setTimeout(() => reject("timeout"), 2000);
+    proc.on("close", (code, signal) => {
+      let msg = (code && code.toString()) || (signal && signal.toString());
+      reject(new Error("Liquid swap tool process closed unexpectedly: ${msg}"));
+    });
+
+    proc.on("exit", (code, signal) => {
+      let msg = (code && code.toString()) || (signal && signal.toString());
+      reject(new Error("Liquid swap tool process exited unexpectedly"));
+    });
+
+    setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
   });
 };
 
