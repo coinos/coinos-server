@@ -46,12 +46,12 @@ const createProposal = (a1, v1, a2, v2) =>
     });
     
     proc.on("close", (code, signal) => {
-      let msg = code ? code.toString() : signal.toString();
+      let msg = (code && code.toString()) || (signal && signal.toString());
       reject(new Error("Liquid swap tool process closed unexpectedly while creating proposal: ${msg}"));
     });
 
     proc.on("exit", (code, signal) => {
-      let msg = code ? code.toString() : signal.toString();
+      let msg = (code && code.toString()) || (signal && signal.toString());
       reject(new Error("Liquid swap tool process exited unexpectedly while creating proposal: ${msg}"));
     });
 
@@ -186,6 +186,7 @@ app.post("/accept", optionalAuth, async (req, res) => {
           account_id: l1a1.id,
           memo: "Atomic Swap",
           user_id: user.id,
+          currency: user.currency,
           rate,
           confirmed: true,
           received: true,
@@ -198,6 +199,7 @@ app.post("/accept", optionalAuth, async (req, res) => {
           account_id: l1a2.id,
           memo: "Atomic Swap",
           user_id: proposal.user_id,
+          currency: proposal.user.currency,
           rate,
           confirmed: true,
           received: false,
@@ -219,6 +221,7 @@ app.post("/accept", optionalAuth, async (req, res) => {
           account_id: l2a1.id,
           memo: "Atomic Swap",
           user_id: user.id,
+          currency: user.currency,
           rate,
           confirmed: true,
           received: false,
@@ -231,6 +234,7 @@ app.post("/accept", optionalAuth, async (req, res) => {
           account_id: l2a2.id,
           memo: "Atomic Swap",
           user_id: proposal.user_id,
+          currency: proposal.user.currency,
           rate,
           confirmed: true,
           received: true,
@@ -301,6 +305,7 @@ app.post("/accept", optionalAuth, async (req, res) => {
           fee,
           memo: "Atomic Swap",
           user_id: proposal.user_id,
+          currency: proposal.user.currency,
           rate,
           address: u_address_r,
           confirmed: true,
