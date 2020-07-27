@@ -3,18 +3,22 @@ const crypto = require("crypto");
 
 app.get("/assets", async (req, res) => {
   try {
-    const { data: assets } = await axios.get("https://assets.blockstream.info/");
+    const { data: assets } = await axios.get(
+      "https://assets.blockstream.info/"
+    );
     const accounts = await db.Account.findAll({
-      group: ['asset'],
+      group: ["asset"],
     });
 
-    accounts.map(a => {
+    Object.keys(assets).map((a) => (assets[a].registered = true));
+
+    accounts.map((a) => {
       if (!assets[a.asset]) assets[a.asset] = a;
     });
 
     res.send(assets);
   } catch (e) {
-    l.error("error fetching assets", e);
+    l.error("error fetching assets", e.message);
     res.status(500).send("error fetching assets");
   }
 });
@@ -29,7 +33,14 @@ app.post("/assets", auth, async (req, res) => {
     const info = await lq.getAddressInfo(asset_address);
     const { pubkey: issuer_pubkey } = info;
 
-    const { domain, name, asset_amount, token_amount, precision, ticker } = req.body;
+    const {
+      domain,
+      name,
+      asset_amount,
+      token_amount,
+      precision,
+      ticker,
+    } = req.body;
     const version = 0;
 
     const contract = {
@@ -39,7 +50,7 @@ app.post("/assets", auth, async (req, res) => {
       name,
       precision,
       ticker,
-      version
+      version,
     };
 
     sha256.update(JSON.stringify(contract));
@@ -54,7 +65,7 @@ app.post("/assets", auth, async (req, res) => {
       asset_amount,
       asset_address,
       blind,
-      contract_hash
+      contract_hash,
     };
 
     params.asset_amount = parseInt(params.asset_amount);
@@ -80,18 +91,18 @@ app.post("/assets", auth, async (req, res) => {
     if (allowed) {
       const txid = await lq.sendRawTransaction(srt.hex);
 
-      await db.transaction(async transaction => {
+      await db.transaction(async (transaction) => {
         let account = await db.Account.findOne({
           where: {
             user_id,
-            asset: config.liquid.btcasset
+            asset: config.liquid.btcasset,
           },
           include: {
             model: db.User,
-            as: "user"
+            as: "user",
           },
           lock: transaction.LOCK.UPDATE,
-          transaction
+          transaction,
         });
 
         let { user } = account;
@@ -113,13 +124,14 @@ app.post("/assets", auth, async (req, res) => {
         account = await db.Account.create(
           {
             asset,
+            contract,
             domain,
             user_id,
             ticker,
             precision,
             name,
             balance: 0,
-            pending: asset_amount * SATS
+            pending: asset_amount * SATS,
           },
           { transaction }
         );
@@ -135,7 +147,7 @@ app.post("/assets", auth, async (req, res) => {
             received: true,
             confirmed: false,
             address: asset_address,
-            network: "LBTC"
+            network: "LBTC",
           },
           { transaction }
         );
@@ -145,7 +157,7 @@ app.post("/assets", auth, async (req, res) => {
           user_id,
           asset,
           asset_amount,
-          asset_payment_id: asset_payment.id
+          asset_payment_id: asset_payment.id,
         };
 
         if (token_amount) {
@@ -158,7 +170,7 @@ app.post("/assets", auth, async (req, res) => {
               precision: 8,
               name: `${name} Reissuance Token`,
               balance: 0,
-              pending: token_amount * SATS
+              pending: token_amount * SATS,
             },
             { transaction }
           );
@@ -173,7 +185,7 @@ app.post("/assets", auth, async (req, res) => {
               received: true,
               confirmed: false,
               address: token_address,
-              network: "LBTC"
+              network: "LBTC",
             },
             { transaction }
           );
@@ -191,4 +203,23 @@ app.post("/assets", auth, async (req, res) => {
     l.error("asset issuance failed", e.message);
     res.status(500).send(e.message);
   }
+});
+
+app.post("/assets/register", auth, async (req, res) => {
+  const { asset } = req.body;
+  const account = await db.Account.findOne({
+    where: {
+      user_id: req.user.id,
+      asset,
+    },
+  });
+
+  try {
+    const { data: result } = await axios.post("https://assets.blockstream.info/", { asset_id: asset, contract: account.contract });
+    l.info("register asset result", req.user.username, result);
+    res.send(result);
+  } catch(e) {
+    l.error("asset registration failed", e.message);
+    res.status(500).send(e.message);
+  } 
 });

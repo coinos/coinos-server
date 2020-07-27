@@ -46,6 +46,21 @@ const attributes = {
     comment: null,
     field: "name"
   },
+  contract: {
+    type: DataTypes.TEXT,
+    get: function() {
+      return JSON.parse(this.getDataValue("contract"));
+    },
+    set: function(value) {
+      return this.setDataValue("contract", JSON.stringify(value));
+    },
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "contract"
+  },
   domain: {
     type: DataTypes.STRING(255),
     allowNull: true,
