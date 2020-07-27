@@ -264,13 +264,14 @@ app.post("/address", auth, async (req, res) => {
 
 app.post("/account", auth, async (req, res) => {
   let { user } = req;
-  let { asset, precision, name, ticker, user_id } = req.body;
+  let { asset, domain, precision, name, ticker, user_id } = req.body;
 
   try {
     const account = await db.Account.findOne({
       where: { user_id, asset },
     });
 
+    account.domain = domain;
     account.name = name;
     account.ticker = ticker;
     account.precision = precision;

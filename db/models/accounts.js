@@ -46,6 +46,15 @@ const attributes = {
     comment: null,
     field: "name"
   },
+  domain: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "domain"
+  },
   ticker: {
     type: DataTypes.STRING(255),
     allowNull: true,

@@ -29,13 +29,13 @@ app.post("/assets", auth, async (req, res) => {
     const info = await lq.getAddressInfo(asset_address);
     const { pubkey: issuer_pubkey } = info;
 
-    const { name, asset_amount, token_amount, precision, ticker } = req.body;
-    const domain = "adamsoltys.com";
+    const { domain, name, asset_amount, token_amount, precision, ticker } = req.body;
     const version = 0;
 
     const contract = {
       entity: { domain },
       issuer_pubkey,
+      domain,
       name,
       precision,
       ticker,
@@ -113,6 +113,7 @@ app.post("/assets", auth, async (req, res) => {
         account = await db.Account.create(
           {
             asset,
+            domain,
             user_id,
             ticker,
             precision,
@@ -152,6 +153,7 @@ app.post("/assets", auth, async (req, res) => {
             {
               asset: token,
               user_id,
+              domain,
               ticker: `${ticker}REISSUANCETOKEN`,
               precision: 8,
               name: `${name} Reissuance Token`,

@@ -553,13 +553,14 @@ const getAccount = async (asset, user) => {
     asset,
   };
   let name = asset.substr(0, 6);
+  let domain = '';
   let ticker = asset.substr(0, 3).toUpperCase();
   let precision = 8;
 
   const assets = (await axios.get("https://assets.blockstream.info/")).data;
 
   if (assets[asset]) {
-    ({ ticker, precision, name } = assets[asset]);
+    ({ domain, ticker, precision, name } = assets[asset]);
   } else {
     const existing = await db.Account.findOne({
       where: {
@@ -570,11 +571,11 @@ const getAccount = async (asset, user) => {
     });
 
     if (existing) {
-      ({ ticker, precision, name } = existing);
+      ({ domain, ticker, precision, name } = existing);
     }
   }
 
-  params = { ...params, ...{ ticker, precision, name } };
+  params = { ...params, ...{ domain, ticker, precision, name } };
   params.balance = 0;
   params.pending = 0;
   return db.Account.create(params);
