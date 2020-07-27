@@ -46,7 +46,6 @@ app.post("/assets", auth, async (req, res) => {
     const contract = {
       entity: { domain },
       issuer_pubkey,
-      domain,
       name,
       precision,
       ticker,
@@ -68,8 +67,9 @@ app.post("/assets", auth, async (req, res) => {
       contract_hash,
     };
 
-    params.asset_amount = parseInt(params.asset_amount);
+    params.asset_amount = asset_amount / (SATS / 10 ** precision);
 
+    l.info("asset_amount", params.asset_amount);
     if (token_amount) {
       params.token_amount = token_amount;
       params.token_address = token_address;
@@ -131,7 +131,7 @@ app.post("/assets", auth, async (req, res) => {
             precision,
             name,
             balance: 0,
-            pending: asset_amount * SATS,
+            pending: params.asset_amount * SATS,
           },
           { transaction }
         );
@@ -143,7 +143,7 @@ app.post("/assets", auth, async (req, res) => {
             account_id: account.id,
             user_id,
             hash: txid,
-            amount: asset_amount * SATS,
+            amount: params.asset_amount * SATS,
             received: true,
             confirmed: false,
             address: asset_address,
@@ -156,7 +156,7 @@ app.post("/assets", auth, async (req, res) => {
         issuances[txid] = {
           user_id,
           asset,
-          asset_amount,
+          asset_amount: params.asset_amount,
           asset_payment_id: asset_payment.id,
         };
 
@@ -215,11 +215,17 @@ app.post("/assets/register", auth, async (req, res) => {
   });
 
   try {
-    const { data: result } = await axios.post("https://assets.blockstream.info/", { asset_id: asset, contract: account.contract });
+    const { data: result } = await axios.post(
+      "https://assets.blockstream.info/",
+      {
+        asset_id: asset,
+        contract: account.contract,
+      }
+    );
     l.info("register asset result", req.user.username, result);
     res.send(result);
-  } catch(e) {
+  } catch (e) {
     l.error("asset registration failed", e.message);
     res.status(500).send(e.message);
-  } 
+  }
 });
