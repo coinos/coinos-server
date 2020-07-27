@@ -47,12 +47,12 @@ const createProposal = (a1, v1, a2, v2) =>
     
     proc.on("close", (code, signal) => {
       let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error("Liquid swap tool process closed unexpectedly while creating proposal: ${msg}"));
+      reject(new Error(`Liquid swap tool process closed unexpectedly: ${msg}`));
     });
 
     proc.on("exit", (code, signal) => {
       let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error("Liquid swap tool process exited unexpectedly while creating proposal: ${msg}"));
+      reject(new Error(`Liquid swap tool process exited unexpectedly: ${msg}`));
     });
 
     setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
@@ -73,12 +73,12 @@ const getInfo = (filename) =>
 
     proc.on("close", (code, signal) => {
       let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error("Liquid swap tool process closed unexpectedly: ${msg}"));
+      reject(new Error(`Liquid swap tool process closed unexpectedly: ${msg}`));
     });
 
     proc.on("exit", (code, signal) => {
       let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error("Liquid swap tool process exited unexpectedly"));
+      reject(new Error(`Liquid swap tool process exited unexpectedly: ${msg}`));
     });
 
     setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
@@ -494,12 +494,12 @@ const finalize = (filename = "finalized.txt", text) => {
 
     proc.on("close", (code, signal) => {
       let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error("Liquid swap tool process closed unexpectedly: ${msg}"));
+      reject(new Error(`Liquid swap tool process closed unexpectedly: ${msg}`));
     });
 
     proc.on("exit", (code, signal) => {
       let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error("Liquid swap tool process exited unexpectedly"));
+      reject(new Error(`Liquid swap tool process exited unexpectedly: ${msg}`));
     });
 
     setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
