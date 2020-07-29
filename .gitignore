@@ -10,3 +10,4 @@ yarn-error.log
 tls.*
 leveldb
 swaps
+exceptions
