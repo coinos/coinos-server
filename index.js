@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const express = require("express");
 const { Op } = require("sequelize");
+ah = require("express-async-handler");
 
 l = require("pino")();
 config = require("./config");
@@ -63,7 +64,7 @@ app.use((err, req, res, next) => {
 
   if (req.user) details.username = req.user.username;
 
-  l.error("uncaught error", details);
+  l.error("uncaught error", details, err.message);
   res.status(500);
   res.send("An error occurred");
   return res.end();

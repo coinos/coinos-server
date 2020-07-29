@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, asset, amount, feeRate } = req.body;
   let tx, fee;
@@ -51,4 +51,4 @@ module.exports = async (req, res) => {
     l.error("error estimating liquid fee", e.message);
     return res.status(500).send(e.message);
   }
-};
+});

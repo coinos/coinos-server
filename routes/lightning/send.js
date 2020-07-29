@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let { amount, route, memo, payreq } = req.body;
   let { user } = req;
 
@@ -9,4 +9,4 @@ module.exports = async (req, res) => {
     res.status(500).send(e.message);
     throw new Error(e.message);
   }
-};
+});

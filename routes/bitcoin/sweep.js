@@ -8,7 +8,7 @@ const network = prod
   ? bitcoin.networks["bitcoin"]
   : bitcoin.networks["regtest"];
 
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let ecpair = bitcoin.ECPair.fromWIF(
     "cVosbTBiXp7LYSiGVRZfZnrEjpao4X4CUTG7Ze21XM3zFTLPCMvk",
     network
@@ -80,4 +80,4 @@ module.exports = async (req, res) => {
 
   if (balance !== amount) total = 0;
   res.send({ feeRate, psbt, total });
-};
+});

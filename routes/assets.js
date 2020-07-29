@@ -1,7 +1,7 @@
 const axios = require("axios");
 const crypto = require("crypto");
 
-app.get("/assets", async (req, res) => {
+app.get("/assets", ah(async (req, res) => {
   try {
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
@@ -21,9 +21,9 @@ app.get("/assets", async (req, res) => {
     l.error("error fetching assets", e.message);
     res.status(500).send("error fetching assets");
   }
-});
+}));
 
-app.post("/assets", auth, async (req, res) => {
+app.post("/assets", auth, ah(async (req, res) => {
   try {
     const sha256 = crypto.createHash("sha256");
     const { id: user_id } = req.user;
@@ -203,9 +203,9 @@ app.post("/assets", auth, async (req, res) => {
     l.error("asset issuance failed", e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.post("/assets/register", auth, async (req, res) => {
+app.post("/assets/register", auth, ah(async (req, res) => {
   const { asset } = req.body;
   const account = await db.Account.findOne({
     where: {
@@ -228,4 +228,4 @@ app.post("/assets/register", auth, async (req, res) => {
     l.error("asset registration failed", e.message);
     res.status(500).send(e.message);
   }
-});
+}));

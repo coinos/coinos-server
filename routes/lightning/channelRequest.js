@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let { localAmt, pushAmt } = req.body;
 
   pushAmt = 0;
@@ -17,4 +17,4 @@ module.exports = async (req, res) => {
     l.error("problem generating channel request", e.message);
     res.status(500).send(e.message);
   }
-};
+});

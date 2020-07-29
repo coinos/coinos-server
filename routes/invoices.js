@@ -1,6 +1,6 @@
 const { Op } = require("sequelize");
 
-app.get("/invoice", auth, async (req, res) => {
+app.get("/invoice", auth, ah(async (req, res, next) => {
   try {
     const invoice = await db.Invoice.findOne({
       where: {
@@ -12,9 +12,9 @@ app.get("/invoice", auth, async (req, res) => {
   } catch (e) {
     l.error("couldn't find invoice", e);
   }
-});
+}));
 
-app.post("/invoice", auth, async (req, res) => {
+app.post("/invoice", auth, ah(async (req, res, next) => {
   const { invoice } = req.body;
   invoice.user_id = req.user.id;
 
@@ -47,4 +47,4 @@ app.post("/invoice", auth, async (req, res) => {
   res.send(
     exists ? await exists.update(invoice) : await db.Invoice.create(invoice)
   );
-});
+}));

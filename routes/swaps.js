@@ -84,7 +84,7 @@ const getInfo = (filename) =>
     setTimeout(() => reject(new Error("Liquid swap tool timed out"), proc), timeout);
   });
 
-app.delete("/proposal/:id", auth, async (req, res) => {
+app.delete("/proposal/:id", auth, ah(async (req, res) => {
   const { id } = req.params;
   await db.Proposal.destroy({
     where: {
@@ -93,9 +93,9 @@ app.delete("/proposal/:id", auth, async (req, res) => {
     },
   });
   res.end();
-});
+}));
 
-app.get("/proposal", auth, async (req, res) => {
+app.get("/proposal", auth, ah(async (req, res) => {
   try {
     const { user } = req;
     const { a1, v1, a2, v2 } = req.query;
@@ -139,9 +139,9 @@ app.get("/proposal", auth, async (req, res) => {
     l.error(e.message);
     res.status(500).send({ error: e.message });
   }
-});
+}));
 
-app.post("/accept", optionalAuth, async (req, res) => {
+app.post("/accept", optionalAuth, ah(async (req, res) => {
   try {
     const { id, text } = req.body;
 
@@ -356,9 +356,9 @@ app.post("/accept", optionalAuth, async (req, res) => {
     l.error(e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.post("/acceptance", async (req, res) => {
+app.post("/acceptance", ah(async (req, res) => {
   const { acceptance: text } = req.body;
   l.info("acceptance received");
 
@@ -398,7 +398,7 @@ app.post("/acceptance", async (req, res) => {
       res.status(500).send({ error: e });
     }
   });
-});
+}));
 
 checkQueue = async () => {
   const ws = app.get("ws");
@@ -506,7 +506,7 @@ const finalize = (filename = "finalized.txt", text) => {
   });
 };
 
-app.get("/proposals", optionalAuth, async (req, res) => {
+app.get("/proposals", optionalAuth, ah(async (req, res) => {
   try {
     if (req.user) {
       res.send(await db.Proposal.findAll());
@@ -523,9 +523,9 @@ app.get("/proposals", optionalAuth, async (req, res) => {
   } catch (e) {
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.post("/publish", auth, async (req, res) => {
+app.post("/publish", auth, ah(async (req, res) => {
   try {
     const { id } = req.body;
     await db.Proposal.update(
@@ -536,7 +536,7 @@ app.post("/publish", auth, async (req, res) => {
   } catch (e) {
     res.status(500).send(e.message);
   }
-});
+}));
 
 const getAccount = async (asset, user) => {
   const account = await db.Account.findOne({

@@ -1,6 +1,6 @@
 const reverse = require("buffer-reverse");
 
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, memo, tx } = req.body;
 
@@ -120,4 +120,4 @@ module.exports = async (req, res) => {
     l.error("problem sending liquid", user.username, e.message);
     return res.status(500).send(e.message);
   }
-};
+});

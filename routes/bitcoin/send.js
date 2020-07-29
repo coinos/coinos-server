@@ -1,7 +1,7 @@
 const bitcoin = require("bitcoinjs-lib");
 const reverse = require("buffer-reverse");
 
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, memo, tx } = req.body;
   let { hex } = tx;
@@ -92,4 +92,4 @@ module.exports = async (req, res) => {
     l.error("error sending bitcoin", e.message);
     return res.status(500).send(e.message);
   }
-};
+});

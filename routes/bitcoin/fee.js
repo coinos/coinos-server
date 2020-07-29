@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, amount, feeRate } = req.body;
   let tx, fee;
@@ -37,4 +37,4 @@ module.exports = async (req, res) => {
     l.error("bitcoin fee estimation error", e);
     return res.status(500).send(e.message);
   }
-};
+});

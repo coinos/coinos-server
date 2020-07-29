@@ -1562,6 +1562,7 @@ __metadata:
     cors: ^2.8.5
     elementsjs-lib: "https://github.com/asoltys/elementsjs-lib"
     express: 4.17.1
+    express-async-handler: ^1.1.4
     express-session: ^1.16.2
     grpc: ^1.24.2
     http-proxy-middleware: ^0.20.0
@@ -2556,6 +2557,13 @@ __metadata:
   dependencies:
     homedir-polyfill: ^1.0.1
   checksum: 502e8b04a22094575c68639e68e0a2c19ad23d78441e440e5164ad2f38bef05e4b2c2568acfcf4af37b90bbf49ea587c253753ba6d351229e5858b96cb136125
+  languageName: node
+  linkType: hard
+
+"express-async-handler@npm:^1.1.4":
+  version: 1.1.4
+  resolution: "express-async-handler@npm:1.1.4"
+  checksum: 0cc72e8be4d748d40c27b0049653d2143c75ddbce0d3e7d5319db4d1a364f3934cd8eeb77ea3a2919a80e1e5eb9666f3008328fbe70141d4ce0f0e11d368be18
   languageName: node
   linkType: hard
 

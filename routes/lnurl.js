@@ -17,7 +17,7 @@ var optionalAuth = function (req, res, next) {
   })(req, res, next);
 };
 
-app.get("/url", async (req, res) => {
+app.get("/url", ah(async (req, res, next) => {
   try {
     const code = await db.Code.findOne({
       where: {
@@ -33,9 +33,9 @@ app.get("/url", async (req, res) => {
   } catch (e) {
     l.error("couldn't find url", e.message);
   }
-});
+}));
 
-app.get("/withdraw", auth, async (req, res) => {
+app.get("/withdraw", auth, ah(async (req, res, next) => {
   const { min, max } = req.query;
   try {
     const result = await lnurlServer.generateNewUrl("withdrawRequest", {
@@ -51,9 +51,9 @@ app.get("/withdraw", auth, async (req, res) => {
     l.error("problem generating withdrawl url", e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.post("/code", async (req, res) => {
+app.post("/code", ah(async (req, res, next) => {
   try {
     const { encoded } = req.body.lnurl;
     const code = await db.Code.create({
@@ -65,9 +65,9 @@ app.post("/code", async (req, res) => {
   } catch (e) {
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.post("/withdraw", auth, async (req, res) => {
+app.post("/withdraw", auth, ah(async (req, res, next) => {
   const { user } = req;
   const {
     amount: value,
@@ -94,7 +94,7 @@ app.post("/withdraw", auth, async (req, res) => {
     l.error("failed to withdraw", e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
 const pay = async ({ amount, minSendable, maxSendable }, res, user) => {
   minSendable = minSendable || 1000;
@@ -117,7 +117,7 @@ const pay = async ({ amount, minSendable, maxSendable }, res, user) => {
   }
 };
 
-app.get("/pay/:username", async (req, res) => {
+app.get("/pay/:username", ah(async (req, res, next) => {
   const { username } = req.params;
   let user = await db.User.findOne({
     where: {
@@ -125,14 +125,14 @@ app.get("/pay/:username", async (req, res) => {
     },
   });
   pay(req.query, res, user);
-});
+}));
 
-app.get("/pay", auth, async (req, res) => {
+app.get("/pay", auth, ah(async (req, res, next) => {
   const { user } = req;
   pay(req.query, res, user);
-});
+}));
 
-app.post("/pay", auth, async (req, res) => {
+app.post("/pay", auth, ah(async (req, res, next) => {
   const { user } = req;
   const {
     amount,
@@ -153,9 +153,9 @@ app.post("/pay", auth, async (req, res) => {
     l.error("failed to send payment", e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.get("/login", optionalAuth, async (req, res) => {
+app.get("/login", optionalAuth, ah(async (req, res, next) => {
   try {
     const result = await lnurlServer.generateNewUrl("login");
 
@@ -168,9 +168,9 @@ app.get("/login", optionalAuth, async (req, res) => {
     l.error("problem generating login url", e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
-app.get("/decode", async (req, res) => {
+app.get("/decode", ah(async (req, res, next) => {
   const { text } = req.query;
 
   try {
@@ -196,7 +196,7 @@ app.get("/decode", async (req, res) => {
     l.error("problem decoding lnurl", e.message);
     res.status(500).send(e.message);
   }
-});
+}));
 
 lnurlServer.bindToHook(
   "middleware:signedLnurl:afterCheckSignature",

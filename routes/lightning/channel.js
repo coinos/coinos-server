@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   const { params } = req.body;
   const [pubkey, host] = params.uri.split("@");
 
@@ -36,4 +36,4 @@ module.exports = async (req, res) => {
     l.error("problem sending channel request", e.message);
     return res.status(500).send({ status: "ERROR", reason: e.message });
   } 
-};
+});

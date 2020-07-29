@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res, next) => {
   let { amount, asset, memo, username } = req.body;
   let { user } = req;
 
@@ -137,4 +137,4 @@ module.exports = async (req, res) => {
     );
     return res.status(500).send(e.message);
   }
-};
+});

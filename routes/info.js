@@ -1,7 +1,7 @@
 const sequelize = require("sequelize");
 const { Op } = sequelize;
 
-app.get("/info", async (req, res) => {
+app.get("/info", ah(async (req, res, next) => {
   const { clientVersion } = config;
   const accounts = await db.Account.findAll({
     attributes: [
@@ -62,4 +62,4 @@ app.get("/info", async (req, res) => {
     parseInt(lnwallet);
 
   res.send(info);
-});
+}));

@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   const { payreq } = req.body;
 
   const invoice = await db.Invoice.findOne({
@@ -14,4 +14,4 @@ module.exports = async (req, res) => {
 
   if (invoice) emit(req.user.username, "to", invoice.user);
   res.end();
-};
+});

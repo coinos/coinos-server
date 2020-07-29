@@ -1,4 +1,4 @@
-module.exports = async (req, res) => {
+module.exports = ah(async (req, res) => {
   const { amount, memo, tip } = req.body;
 
   l.info("adding lightning invoice", req.user.username, amount, tip);
@@ -15,4 +15,4 @@ module.exports = async (req, res) => {
     l.error("problem creating invoice", e.message);
     res.status(500).send(e.message);
   }
-};
+});

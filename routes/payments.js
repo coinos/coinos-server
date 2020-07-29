@@ -68,7 +68,7 @@ const { join } = require("path");
     require("./liquid/receive");
   }
 
-  app.get("/payments", auth, async (req, res) => {
+  app.get("/payments", auth, ah(async (req, res, next) => {
     let payments = await req.user.getPayments({
       where: {
         account_id: req.user.account_id
@@ -81,5 +81,5 @@ const { join } = require("path");
     });
 
     res.send(payments);
-  });
+  }));
 })();
