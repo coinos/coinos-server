@@ -11,6 +11,7 @@ l = require("pino")();
 config = require("./config");
 networks = [];
 prod = process.env.NODE_ENV === "production";
+fail = (msg) => { throw new Error(msg) };
 
 challenge = {};
 logins = {};
@@ -66,7 +67,7 @@ app.use((err, req, res, next) => {
 
   l.error("uncaught error", details, err.message);
   res.status(500);
-  res.send("An error occurred");
+  res.send(err.message);
   return res.end();
 });
 

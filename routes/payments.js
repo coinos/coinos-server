@@ -5,7 +5,7 @@ const { join } = require("path");
 const fs = require("fs");
 const read = require("../lib/read");
 
-(async () => {
+(ah(async () => {
   seen = [];
   addresses = {};
   issuances = {};
@@ -121,7 +121,7 @@ const read = require("../lib/read");
   app.get(
     "/payments",
     auth,
-    ah(async (req, res, next) => {
+    ah(async (req, res) => {
       let payments = await req.user.getPayments({
         where: {
           account_id: req.user.account_id,
@@ -136,4 +136,32 @@ const read = require("../lib/read");
       res.send(payments);
     })
   );
-})();
+
+  app.get(
+    "/payment/:redeemcode",
+    ah(async (req, res) => {
+      try {
+      const { redeemcode } = req.params;
+      l.info("getting payment", redeemcode);
+      let payment = await db.Payment.findOne({
+        where: {
+          redeemcode,
+        },
+        include: {
+          model: db.Account,
+          as: "account",
+        },
+      });
+
+      l.info("oyyy");
+      if (!payment) fail("invalid code");
+
+      l.info("got payment", payment);
+
+      res.send(payment);
+      } catch(e) {
+        res.status(500).send(e.message);
+      } 
+    })
+  );
+}))();

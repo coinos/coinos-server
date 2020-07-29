@@ -4,6 +4,7 @@ const level = require("level");
 const fs = require("fs");
 const { spawn } = require("child_process");
 const leveldb = level("leveldb");
+const getAccount = require("../lib/account");
 
 const assets = {
   b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23: "bitcoin",
@@ -538,45 +539,3 @@ app.post("/publish", auth, ah(async (req, res) => {
   }
 }));
 
-const getAccount = async (asset, user) => {
-  const account = await db.Account.findOne({
-    where: {
-      user_id: user.id,
-      asset,
-    },
-  });
-
-  if (account) return account;
-
-  let params = {
-    user_id: user.id,
-    asset,
-  };
-  let name = asset.substr(0, 6);
-  let domain = '';
-  let ticker = asset.substr(0, 3).toUpperCase();
-  let precision = 8;
-
-  const assets = (await axios.get("https://assets.blockstream.info/")).data;
-
-  if (assets[asset]) {
-    ({ domain, ticker, precision, name } = assets[asset]);
-  } else {
-    const existing = await db.Account.findOne({
-      where: {
-        asset,
-      },
-      order: [["id", "ASC"]],
-      limit: 1,
-    });
-
-    if (existing) {
-      ({ domain, ticker, precision, name } = existing);
-    }
-  }
-
-  params = { ...params, ...{ domain, ticker, precision, name } };
-  params.balance = 0;
-  params.pending = 0;
-  return db.Account.create(params);
-};
