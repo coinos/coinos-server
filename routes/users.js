@@ -5,6 +5,7 @@ const authenticator = require("otplib").authenticator;
 const textToImage = require("text-to-image");
 const randomWord = require("random-words");
 const getAccount = require("../lib/account");
+const Sequelize = require("sequelize");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 require("../lib/whitelist");
@@ -27,9 +28,13 @@ app.get(
   "/users/:username",
   ah(async (req, res) => {
     const { username } = req.params;
+
     const user = await db.User.findOne({
       attributes: ["username"],
-      where: { username },
+      where: Sequelize.where(
+        Sequelize.fn("lower", Sequelize.col("username")),
+        username.toLowerCase()
+      ),
     });
     if (user) res.send(user);
     else res.status(500).send("User not found");
@@ -424,16 +429,20 @@ app.post(
 
     if (!user) {
       const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-      user = await register({
-        username: redeemcode.substr(0, 8),
-        password: '',
-      } , ip, false);
+      user = await register(
+        {
+          username: redeemcode.substr(0, 8),
+          password: "",
+        },
+        ip,
+        false
+      );
 
       let payload = { username: user.username };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       return res.send({ user });
-    } 
+    }
 
     let account = await getAccount(source.account.asset, user);
 
