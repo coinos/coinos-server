@@ -142,7 +142,6 @@ const read = require("../lib/read");
     ah(async (req, res) => {
       try {
       const { redeemcode } = req.params;
-      l.info("getting payment", redeemcode);
       let payment = await db.Payment.findOne({
         where: {
           redeemcode,
@@ -153,10 +152,7 @@ const read = require("../lib/read");
         },
       });
 
-      l.info("oyyy");
       if (!payment) fail("invalid code");
-
-      l.info("got payment", payment);
 
       res.send(payment);
       } catch(e) {
