@@ -442,6 +442,8 @@ app.post(
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       return res.send({ user });
+    } else {
+      l.info("user", user.username);
     }
 
     let account = await getAccount(source.account.asset, user);

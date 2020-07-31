@@ -75,7 +75,7 @@ const read = require("../lib/read");
 
     if (unaccounted.length)
       l.warn("wallet transactions missing from database", unaccounted);
-  }, 60000);
+  }, 720000);
 
   app.post("/send", auth, require("./send"));
 
