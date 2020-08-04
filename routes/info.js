@@ -3,6 +3,17 @@ const { Op } = sequelize;
 
 app.get("/info", ah(async (req, res, next) => {
   const { clientVersion } = config;
+
+  const info = {
+    rates: app.get("rates"),
+    nodes: networks,
+    clientVersion,
+  };
+
+  res.send(info);
+}));
+
+app.get("/balances", ah(async (req, res, next) => {
   const accounts = await db.Account.findAll({
     attributes: [
       "asset",
@@ -50,9 +61,6 @@ app.get("/info", ah(async (req, res, next) => {
     liquid,
     lnchannel,
     lnwallet,
-    rates: app.get("rates"),
-    nodes: networks,
-    clientVersion,
   };
 
   info.total =
