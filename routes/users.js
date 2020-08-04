@@ -297,12 +297,27 @@ app.post(
 app.get(
   "/address",
   ah(async (req, res) => {
+    const { network, type } = req.query;
+    let address;
+
+    if (network === 'bitcoin') {
     if (!config.bitcoin) return res.status(500).send("Bitcoin not configured");
 
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    res.send(await bc.getNewAddress("", req.query.type || "bech32"));
+      address = await bc.getNewAddress("", type || "bech32");
+    } else if (network === 'liquid') {
+
+    if (!config.liquid) return res.status(500).send("Liquid not configured");
+
+    if (config.liquid.walletpass)
+      await lq.walletPassphrase(config.liquid.walletpass, 300);
+
+      address = await lq.getNewAddress("", type || "bech32");
+    } 
+
+    res.send(address);
   })
 );
 

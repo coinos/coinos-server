@@ -66,7 +66,6 @@ app.use((err, req, res, next) => {
   if (req.user) details.username = req.user.username;
 
   l.error("Error: ", err.message);
-  throw err;
   res.status(500);
   res.send(err.message);
   return res.end();

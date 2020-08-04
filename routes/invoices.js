@@ -29,6 +29,7 @@ app.post("/invoice", ah(async (req, res, next) => {
 
   l.info(
     "creating invoice",
+    invoice.address,
     invoice.text,
     user.username,
     invoice.network,
@@ -55,5 +56,6 @@ app.post("/invoice", ah(async (req, res, next) => {
 
   invoice = exists ? await exists.update(invoice) : await db.Invoice.create(invoice);
   addresses[invoice.address] = user.username;
+  if (invoice.unconfidential) addresses[invoice.unconfidential] = user.username;
   res.send(invoice);
 }));
