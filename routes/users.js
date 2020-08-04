@@ -294,23 +294,15 @@ app.post(
   })
 );
 
-app.post(
+app.get(
   "/address",
-  auth,
   ah(async (req, res) => {
     if (!config.bitcoin) return res.status(500).send("Bitcoin not configured");
-
-    let { user } = req;
-    delete addresses[user.address];
 
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    user.address = await bc.getNewAddress("", req.body.type || "bech32");
-    await user.save();
-    addresses[user.address] = user.username;
-    emit(user.username, "user", user);
-    res.send(user.address);
+    res.send(await bc.getNewAddress("", req.query.type || "bech32"));
   })
 );
 

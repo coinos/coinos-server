@@ -14,14 +14,23 @@ app.get("/invoice", auth, ah(async (req, res, next) => {
   }
 }));
 
-app.post("/invoice", auth, ah(async (req, res, next) => {
-  const { invoice } = req.body;
-  invoice.user_id = req.user.id;
+app.post("/invoice", ah(async (req, res, next) => {
+  let { invoice, user } = req.body;
+  if (!user) ({ user } = req);
+  else {
+    user = await db.User.findOne({
+      where: {
+        username: user.username,
+      } 
+    }); 
+  } 
+  if (!user) throw new Error("user not provided");
+  invoice.user_id = user.id;
 
   l.info(
     "creating invoice",
     invoice.text,
-    req.user.username,
+    user.username,
     invoice.network,
     invoice.amount,
     invoice.tip,
@@ -44,7 +53,7 @@ app.post("/invoice", auth, ah(async (req, res, next) => {
     },
   });
 
-  res.send(
-    exists ? await exists.update(invoice) : await db.Invoice.create(invoice)
-  );
+  invoice = exists ? await exists.update(invoice) : await db.Invoice.create(invoice);
+  addresses[invoice.address] = user.username;
+  res.send(invoice);
 }));

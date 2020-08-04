@@ -1,8 +1,6 @@
 module.exports = ah(async (req, res) => {
   const { amount, memo, tip } = req.body;
 
-  l.info("adding lightning invoice", req.user.username, amount, tip);
-
   try {
     if (config.lna.clightning) {
       const invoice = await lnb.invoice(`${amount + tip}sat` || "any", new Date(), memo, 360);

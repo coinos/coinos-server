@@ -95,7 +95,7 @@ const read = require("../lib/read");
       "/lightning/channelRequest",
       require("./lightning/channelRequest")
     );
-    app.post("/lightning/invoice", auth, require("./lightning/invoice"));
+    app.post("/lightning/invoice", require("./lightning/invoice"));
     app.post("/lightning/query", auth, require("./lightning/query"));
     app.post("/lightning/send", auth, require("./lightning/send"));
     require("./lightning/receive");
