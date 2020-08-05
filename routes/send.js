@@ -44,7 +44,7 @@ module.exports = ah(async (req, res, next) => {
       if (!username) {
         l.info("creating redeemable payment");
         params.redeemcode = uuidv4();
-        params.hash = 'Voucher ' + params.redeemcode;
+        params.hash = `${req.get('origin')}/redeem/${params.redeemcode}`;
       }
 
       let payment = await db.Payment.create(params, { transaction });
