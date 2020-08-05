@@ -273,22 +273,26 @@ app.post(
 
 app.post(
   "/logout",
-  auth,
+  optionalAuth,
   ah(async (req, res) => {
     let { subscription } = req.body;
-    const { username } = req.user;
-    l.info("logging out", username);
     if (!subscription) return res.end();
-    let i = req.user.subscriptions.findIndex(
-      (s) => JSON.stringify(s) === subscription
-    );
-    if (i > -1) {
-      req.user.subscriptions.splice(i, 1);
+
+    const { username } = req.user;
+
+    if (username) {
+      l.info("logging out", username);
+      let i = req.user.subscriptions.findIndex(
+        (s) => JSON.stringify(s) === subscription
+      );
+      if (i > -1) {
+        req.user.subscriptions.splice(i, 1);
+      }
+      await req.user.save();
+      Object.keys(logins).map(
+        (k) => logins[k]["username"] === username && delete logins[k]
+      );
     }
-    await req.user.save();
-    Object.keys(logins).map(
-      (k) => logins[k]["username"] === username && delete logins[k]
-    );
 
     res.end();
   })
@@ -300,22 +304,22 @@ app.get(
     const { network, type } = req.query;
     let address;
 
-    if (network === 'bitcoin') {
-    if (!config.bitcoin) return res.status(500).send("Bitcoin not configured");
+    if (network === "bitcoin") {
+      if (!config.bitcoin)
+        return res.status(500).send("Bitcoin not configured");
 
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
       address = await bc.getNewAddress("", type || "bech32");
-    } else if (network === 'liquid') {
+    } else if (network === "liquid") {
+      if (!config.liquid) return res.status(500).send("Liquid not configured");
 
-    if (!config.liquid) return res.status(500).send("Liquid not configured");
-
-    if (config.liquid.walletpass)
-      await lq.walletPassphrase(config.liquid.walletpass, 300);
+      if (config.liquid.walletpass)
+        await lq.walletPassphrase(config.liquid.walletpass, 300);
 
       address = await lq.getNewAddress("", type || "bech32");
-    } 
+    }
 
     res.send(address);
   })
