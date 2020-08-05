@@ -11,7 +11,9 @@ l = require("pino")();
 config = require("./config");
 networks = [];
 prod = process.env.NODE_ENV === "production";
-fail = (msg) => { throw new Error(msg) };
+fail = (msg) => {
+  throw new Error(msg);
+};
 
 challenge = {};
 logins = {};
@@ -23,7 +25,7 @@ if (config.liquid) networks.push("liquid");
 if (config.lna) networks.push("lightning");
 
 SATS = 100000000;
-toSats = n => parseInt((n * SATS).toFixed());
+toSats = (n) => parseInt((n * SATS).toFixed());
 
 app = express();
 app.enable("trust proxy");
@@ -60,13 +62,16 @@ app.use((err, req, res, next) => {
     path: req.path,
     body: req.body,
     msg: err.message,
-    stack: err.stack
+    stack: err.stack,
   };
 
   if (req.user) details.username = req.user.username;
 
   l.error("Error: ", err.message);
   res.status(500);
+  res.set({
+      "Cache-Control": "no-cache",
+  });
   res.send(err.message);
   return res.end();
 });
@@ -74,4 +79,3 @@ app.use((err, req, res, next) => {
 server.listen(config.port, () =>
   console.log(`CoinOS Server listening on port ${config.port}`)
 );
-
