@@ -5,7 +5,7 @@ app.get("/info", ah(async (req, res, next) => {
   const { clientVersion } = config;
 
   const info = {
-    rates: app.get("rates"),
+    fx: app.get("fx"),
     nodes: networks,
     clientVersion,
   };
