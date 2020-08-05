@@ -11,3 +11,4 @@ tls.*
 leveldb
 swaps
 exceptions
+fx

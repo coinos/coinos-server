@@ -70,7 +70,7 @@ app.use((err, req, res, next) => {
   l.error("Error: ", err.message);
   res.status(500);
   res.set({
-      "Cache-Control": "no-cache",
+    "Cache-Control": "no-cache",
   });
   res.send(err.message);
   return res.end();
