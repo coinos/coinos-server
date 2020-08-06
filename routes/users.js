@@ -36,6 +36,8 @@ app.get(
         username.toLowerCase()
       ),
     });
+
+    l.info("username", username);
     if (user) res.send(user);
     else res.status(500).send("User not found");
   })
@@ -229,7 +231,7 @@ app.post(
 
     let twofa = req.body.token;
     l.info(
-      "login attempt",
+      "login",
       req.body.username,
       req.headers["x-forwarded-for"] || req.connection.remoteAddress
     );
