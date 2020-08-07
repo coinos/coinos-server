@@ -2,11 +2,11 @@ const { DataTypes } = require('sequelize');
 
 const attributes = {
   code: {
-    type: DataTypes.STRING(64),
+    type: DataTypes.STRING(255),
     allowNull: false,
     defaultValue: null,
     primaryKey: true,
-    autoIncrement: true,
+    autoIncrement: false,
     comment: null,
     field: "code"
   },

@@ -65,13 +65,14 @@ app.post(
   ah(async (req, res, next) => {
     try {
       const { encoded } = req.body.lnurl;
-      const code = await db.Code.create({
-        code: "lnurl:" + encoded.substr(-32),
+      const code = await db.Code.findOrCreate({ where: {
+        code: `lnurl:${encoded.substr(-32)}`,
         text: encoded,
-      });
+      }});
 
       res.send(code);
     } catch (e) {
+      l.error(e.errors);
       res.status(500).send(e.message);
     }
   })
