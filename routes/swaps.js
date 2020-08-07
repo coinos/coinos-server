@@ -100,7 +100,7 @@ app.get("/proposal", auth, ah(async (req, res) => {
   try {
     const { user } = req;
     const { a1, v1, a2, v2 } = req.query;
-    const b = app.get("balance");
+    const b = await lq.getBalance();
 
     Object.keys(b).map((asset) => {
       assets[asset] = asset;
