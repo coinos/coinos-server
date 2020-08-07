@@ -37,7 +37,6 @@ app.get(
       ),
     });
 
-    l.info("username", username);
     if (user) res.send(user);
     else res.status(500).send("User not found");
   })
@@ -116,13 +115,16 @@ app.post(
   })
 );
 
-app.get("/exists", ah(async (req, res) => {
-      let exists = await db.User.findOne({
-        where: { username: req.query.username },
-      });
+app.get(
+  "/exists",
+  ah(async (req, res) => {
+    let exists = await db.User.findOne({
+      where: { username: req.query.username },
+    });
 
-  res.send(!!exists);
-}));
+    res.send(!!exists);
+  })
+);
 
 app.post(
   "/user",
