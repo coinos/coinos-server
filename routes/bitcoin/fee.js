@@ -3,12 +3,19 @@ module.exports = ah(async (req, res) => {
   let { address, amount, feeRate } = req.body;
   let tx, fee;
 
-  let recipient = await db.User.findOne({
-    attributes: ['username'],
-    where: { address }
+  let invoice = await db.Invoice.findOne({
+    where: { address },
+    include: {
+      attributes: ['username'],
+      model: db.User,
+      as: 'user',
+    } 
   });
-  if (recipient)
-    emit(user.username, "to", recipient);
+
+  if (invoice) {
+    emit(user.username, "to", invoice.user);
+    return res.end();
+  }
 
   try {
     amount = parseInt(amount);

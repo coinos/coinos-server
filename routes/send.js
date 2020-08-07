@@ -133,7 +133,7 @@ module.exports = ah(async (req, res, next) => {
         emit(user.username, "payment", payment);
 
         l.info("received internal", user.username, amount);
-        notify(user, `Received ${amount} SAT`);
+        notify(user, `Received ${amount} ${account.ticker} sats`);
       }
     });
   } catch (e) {

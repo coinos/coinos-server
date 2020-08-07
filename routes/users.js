@@ -116,6 +116,14 @@ app.post(
   })
 );
 
+app.get("/exists", ah(async (req, res) => {
+      let exists = await db.User.findOne({
+        where: { username: req.query.username },
+      });
+
+  res.send(!!exists);
+}));
+
 app.post(
   "/user",
   auth,
