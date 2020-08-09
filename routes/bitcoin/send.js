@@ -87,6 +87,7 @@ module.exports = ah(async (req, res) => {
     emit(user.username, "payment", payment);
     res.send(payment);
 
+    payments.push(params.hash);
     l.info("sent bitcoin", user.username, total);
   } catch (e) {
     l.error("error sending bitcoin", e.message);
