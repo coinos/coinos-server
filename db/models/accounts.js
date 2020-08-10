@@ -106,6 +106,33 @@ const attributes = {
     comment: null,
     field: "pending"
   },
+  index: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "index"
+  },
+  address: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "address"
+  },
+  pubkey: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "pubkey"
+  },
   precision: {
     type: DataTypes.INTEGER(11),
     allowNull: true,

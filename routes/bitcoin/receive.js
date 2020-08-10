@@ -59,12 +59,15 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let confirmed = false;
 
-        const account = await db.Account.findOne({
+        const accounts = await db.Account.findAll({
           where: {
             user_id: user.id,
             asset: config.liquid.btcasset,
           },
         });
+
+        let account = accounts.find(a => a.address === address);
+        if (!account) account = accounts[0];
 
         account.pending += value;
         await account.save();

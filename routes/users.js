@@ -220,6 +220,29 @@ app.post(
 );
 
 app.post(
+  "/accounts",
+  auth,
+  ah(async (req, res) => {
+    const { address, pubkey } = req.body;
+    const { user } = req;
+
+    let account = await db.Account.create({
+      address,
+      user_id: user.id,
+      asset: config.liquid.btcasset,
+      balance: 0,
+      pending: 0,
+      name: "Bitcoin",
+      ticker: "BTC",
+      precision: 8,
+      pubkey,
+    });
+
+    res.send(account);
+  })
+);
+
+app.post(
   "/login",
   ah(async (req, res) => {
     const { params, sig, key } = req.body;
@@ -273,6 +296,7 @@ app.post(
       let payload = { username: user.username };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      user.accounts = await user.getAccounts();
       user.keys = await user.getKeys();
       user = pick(user, ...whitelist);
       res.send({ user, token });
@@ -341,20 +365,13 @@ app.post(
   "/account",
   auth,
   ah(async (req, res) => {
-    let { user } = req;
-    let { asset, domain, precision, name, ticker, user_id } = req.body;
+    const { user } = req;
+    const { id } = req.body;
 
     try {
-      const account = await db.Account.findOne({
-        where: { user_id, asset },
+      const account = await db.Account.update(req.body, {
+        where: { id, user_id: user.id },
       });
-
-      account.domain = domain;
-      account.name = name;
-      account.ticker = ticker;
-      account.precision = precision;
-
-      await account.save();
 
       emit(user.username, "account", account);
       res.end();
@@ -370,18 +387,18 @@ app.post(
   auth,
   ah(async (req, res) => {
     let { user } = req;
-    let { asset } = req.body;
+    let { id } = req.body;
 
     try {
       const account = await db.Account.findOne({
-        where: { user_id: user.id, asset },
+        where: { id },
       });
 
       user.account_id = account.id;
       await user.save();
       let payments = await user.getPayments({
         where: {
-          account_id: user.account_id,
+          account_id: id,
         },
         order: [["id", "DESC"]],
         limit: 12,
@@ -392,6 +409,8 @@ app.post(
       });
       user.payments = payments;
       user.account = account;
+
+      console.log(user.account.id);
 
       emit(user.username, "user", user);
       res.end();

@@ -1,32 +1,42 @@
+const buildTx = ({ address, amount, feeRate }) => {};
+
 module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, amount, feeRate } = req.body;
   let tx, fee;
 
+  if (user.account.pubkey) {
+    tx = buildTx(req.body);
+    return res.end();
+  }
+
   let invoice = await db.Invoice.findOne({
     where: { address },
     include: {
-      attributes: ['username'],
+      attributes: ["username"],
       model: db.User,
-      as: 'user',
-    } 
+      as: "user",
+    },
   });
 
   if (invoice) {
-    emit(user.username, "to", invoice.user);
-    return res.end();
+    let { ismine } = await bc.getAddressInfo(address);
+    if (ismine) {
+      emit(user.username, "to", invoice.user);
+      return res.end();
+    }
   }
 
   try {
     amount = parseInt(amount);
 
     let partial = await bc.createRawTransaction([], {
-      [address]: (amount / SATS).toFixed(8)
+      [address]: (amount / SATS).toFixed(8),
     });
 
     let params = {
-      subtractFeeFromOutputs: amount === user.balance ? [0] : []
-    } 
+      subtractFeeFromOutputs: amount === user.balance ? [0] : [],
+    };
 
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
 
@@ -35,10 +45,10 @@ module.exports = ah(async (req, res) => {
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    let signed = (await bc.signRawTransactionWithWallet(tx.hex));
+    let signed = await bc.signRawTransactionWithWallet(tx.hex);
     decoded = await bc.decodeRawTransaction(signed.hex);
-    feeRate = Math.round(tx.fee * SATS * 1000 / decoded.vsize);
-    
+    feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
+
     res.send({ feeRate, tx });
   } catch (e) {
     l.error("bitcoin fee estimation error", e);

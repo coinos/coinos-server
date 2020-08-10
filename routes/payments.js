@@ -5,7 +5,7 @@ const { join } = require("path");
 const fs = require("fs");
 const read = require("../lib/read");
 
-(ah(async () => {
+ah(async () => {
   seen = [];
   addresses = {};
   issuances = {};
@@ -25,16 +25,25 @@ const read = require("../lib/read");
   });
 
   await db.Invoice.findAll({
-    include: [
-      {
-        model: db.User,
-        as: "user",
-      },
-    ],
-  }).map((i) => {
-    if (i.address && i.user) addresses[i.address] = i.user.username;
-    if (i.unconfidential && i.user)
-      addresses[i.unconfidential] = i.user.username;
+    include: {
+      model: db.User,
+      as: "user",
+    },
+  }).map(({ address, user, unconfidential }) => {
+    if (address && user) addresses[address] = user.username;
+    if (unconfidential && user) addresses[unconfidential] = user.username;
+  });
+
+  const accounts = await db.Account.findAll({
+    where: { pubkey: { [Op.ne]: null } },
+    include: {
+      model: db.User,
+      as: "user",
+    },
+  });
+
+  accounts.map(({ address, user: { username } }) => {
+    addresses[address] = username;
   });
 
   payments = (
@@ -141,23 +150,23 @@ const read = require("../lib/read");
     "/payment/:redeemcode",
     ah(async (req, res) => {
       try {
-      const { redeemcode } = req.params;
-      let payment = await db.Payment.findOne({
-        where: {
-          redeemcode,
-        },
-        include: {
-          model: db.Account,
-          as: "account",
-        },
-      });
+        const { redeemcode } = req.params;
+        let payment = await db.Payment.findOne({
+          where: {
+            redeemcode,
+          },
+          include: {
+            model: db.Account,
+            as: "account",
+          },
+        });
 
-      if (!payment) fail("invalid code");
+        if (!payment) fail("invalid code");
 
-      res.send(payment);
-      } catch(e) {
+        res.send(payment);
+      } catch (e) {
         res.status(500).send(e.message);
-      } 
+      }
     })
   );
-}))();
+})();
