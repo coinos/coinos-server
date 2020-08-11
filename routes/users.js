@@ -369,9 +369,13 @@ app.post(
     const { id } = req.body;
 
     try {
-      const account = await db.Account.update(req.body, {
+      await db.Account.update(req.body, {
         where: { id, user_id: user.id },
       });
+
+      const account = await db.Account.findOne({
+        where: { id },
+      }); 
 
       emit(user.username, "account", account);
       res.end();
@@ -410,9 +414,9 @@ app.post(
       user.payments = payments;
       user.account = account;
 
-      console.log(user.account.id);
-
+      emit(user.username, "account", account.get({ plain: true }));
       emit(user.username, "user", user);
+
       res.end();
     } catch (e) {
       l.error(e.message);
@@ -523,5 +527,17 @@ app.post(
 
       res.send({ payment });
     });
+  })
+);
+
+app.post(
+  "/password",
+  auth,
+  ah(async function (req, res) {
+    const { user } = req;
+    const { password } = req.body;
+
+    if (!user.password) return res.send(true);
+    res.send(await bcrypt.compare(password, user.password));
   })
 );

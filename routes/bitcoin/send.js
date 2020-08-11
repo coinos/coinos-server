@@ -53,7 +53,7 @@ module.exports = ah(async (req, res) => {
       await account.save({ transaction });
 
       params = {
-        amount: -total,
+        amount: -amount,
         fee,
         memo,
         account_id: account.id,
