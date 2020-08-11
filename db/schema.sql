@@ -58,8 +58,12 @@ CREATE TABLE `accounts` (
   `precision` int(11) DEFAULT NULL,
   `domain` varchar(255) DEFAULT NULL,
   `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `pubkey` varchar(255) DEFAULT NULL,
+  `index` int(11) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `hide` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3767 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3786 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -100,7 +104,7 @@ CREATE TABLE `invoices` (
   `uuid` varchar(255) DEFAULT NULL,
   `memo` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4677 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=5068 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -117,7 +121,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4505 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4517 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -148,7 +152,7 @@ CREATE TABLE `payments` (
   `redeemcode` varchar(255) DEFAULT NULL,
   `redeemed` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4641 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4972 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -171,7 +175,7 @@ CREATE TABLE `proposals` (
   `text` text DEFAULT NULL,
   `public` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=71 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -219,7 +223,7 @@ CREATE TABLE `users` (
   `fiat` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=642 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=652 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -231,4 +235,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-07-29 16:40:25
+-- Dump completed on 2020-08-11 14:18:10

@@ -106,6 +106,15 @@ const attributes = {
     comment: null,
     field: "pending"
   },
+  hide: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "hide"
+  },
   index: {
     type: DataTypes.INTEGER(11),
     allowNull: true,
