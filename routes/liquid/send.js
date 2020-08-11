@@ -1,5 +1,3 @@
-const reverse = require("buffer-reverse");
-
 module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, memo, tx } = req.body;

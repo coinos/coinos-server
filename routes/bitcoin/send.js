@@ -1,5 +1,4 @@
 const bitcoin = require("bitcoinjs-lib");
-const reverse = require("buffer-reverse");
 
 module.exports = ah(async (req, res) => {
   let { user } = req;

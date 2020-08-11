@@ -1,4 +1,4 @@
-const buildTx = ({ address, amount, feeRate }) => {};
+const buildTx = require("../../lib/buildtx");
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
@@ -6,8 +6,12 @@ module.exports = ah(async (req, res) => {
   let tx, fee;
 
   if (user.account.pubkey) {
-    tx = buildTx(req.body);
-    return res.end();
+    try {
+      let psbt = await buildTx({ address, amount, feeRate, user });
+      return res.send(psbt);
+    } catch(e) {
+      return res.status(500).send(e.message);
+    } 
   }
 
   let invoice = await db.Invoice.findOne({

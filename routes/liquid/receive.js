@@ -1,5 +1,4 @@
 const axios = require("axios");
-const reverse = require("buffer-reverse");
 const zmq = require("zeromq");
 const { Op } = require("sequelize");
 const elements = require("elementsjs-lib");

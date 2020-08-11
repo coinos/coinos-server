@@ -35,7 +35,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         return;
       }
 
-      if (Object.keys(addresses).includes(address)) {
+      if (Object.keys(addresses).includes(address) && !change.includes(address)) {
         payments.push(hash);
 
         let user = await db.User.findOne({

@@ -8,6 +8,7 @@ const read = require("../lib/read");
 ah(async () => {
   seen = [];
   addresses = {};
+  change = [];
   issuances = {};
 
   const exceptions = [];
@@ -112,6 +113,7 @@ ah(async () => {
 
   if (config.bitcoin) {
     bc = new BitcoinCore(config.bitcoin);
+    app.post("/bitcoin/broadcast", optionalAuth, require("./bitcoin/broadcast"));
     app.get("/bitcoin/generate", auth, require("./bitcoin/generate"));
     app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
     app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
