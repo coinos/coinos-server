@@ -17,7 +17,11 @@ const getAccount = async (params, pending) => {
     where: params
   });
 
-  if (account) return account;
+
+  if (account) {
+    l.info("found account", params, account.asset, account.id);
+    return account;
+  } 
 
   let { asset } = params;
   let name = asset.substr(0, 6);
@@ -33,12 +37,14 @@ const getAccount = async (params, pending) => {
     const existing = await db.Account.findOne({
       where: {
         asset,
+        pubkey,
       },
       order: [["id", "ASC"]],
       limit: 1,
     });
 
     if (existing) {
+      l.info("existing", existing.id);
       ({ domain, ticker, precision, name } = existing);
     }
   }
@@ -101,7 +107,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           account.pending += value;
           await account.save();
         } else {
-          if (!account) account = await getAccount(
+          account = await getAccount(
             {
               user_id: user.id,
               asset,
