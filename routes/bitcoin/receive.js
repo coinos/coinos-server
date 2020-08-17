@@ -1,6 +1,7 @@
 const reverse = require("buffer-reverse");
 const zmq = require("zeromq");
 const { Op } = require("sequelize");
+const { fromBase58 } = require("bip32");
 
 const bitcoin = require("bitcoinjs-lib");
 
@@ -35,7 +36,10 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         return;
       }
 
-      if (Object.keys(addresses).includes(address) && !change.includes(address)) {
+      if (
+        Object.keys(addresses).includes(address) &&
+        !change.includes(address)
+      ) {
         payments.push(hash);
 
         let user = await db.User.findOne({
@@ -55,7 +59,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
         const tip = invoice ? invoice.tip : 0;
-        const memo = invoice ? invoice.memo : '';
+        const memo = invoice ? invoice.memo : "";
 
         let confirmed = false;
 
@@ -66,7 +70,19 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           },
         });
 
-        let account = accounts.find(a => a.address === address);
+        let account = accounts.find(({ index, pubkey }) => {
+          const { payments } = bitcoin;
+          index &&
+            pubkey &&
+            address ===
+              payments.p2wpkh({
+                pubkey: fromBase58(pubkey, network).derivePath(
+                  `${index}`
+                ).publicKey,
+                network,
+              }).address;
+        });
+
         if (!account) account = accounts[0];
 
         account.pending += value;

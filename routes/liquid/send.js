@@ -39,8 +39,9 @@ module.exports = ah(async (req, res) => {
     await db.transaction(async (transaction) => {
       for (let i = 0; i < assets.length; i++) {
         let asset = assets[i];
-        let total = totals[asset];
-        if (change[asset]) total -= change[asset];
+        let amount = totals[asset];
+        if (change[asset]) amount -= change[asset];
+        let total = amount;
         if (asset === config.liquid.btcasset) total += fee;
 
         l.info("creating liquid payment", user.username, asset, total, fee);
@@ -67,7 +68,7 @@ module.exports = ah(async (req, res) => {
         await account.save({ transaction });
 
         let payment = {
-          amount: -total,
+          amount: -amount,
           account_id: account.id,
           fee,
           memo,

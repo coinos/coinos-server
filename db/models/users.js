@@ -55,24 +55,6 @@ const attributes = {
     comment: null,
     field: "password"
   },
-  liquid: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "liquid"
-  },
-  confidential: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "confidential"
-  },
   unit: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -81,15 +63,6 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "unit"
-  },
-  address: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "address"
   },
   account_id: {
     type: DataTypes.INTEGER(11),

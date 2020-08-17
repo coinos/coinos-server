@@ -1,7 +1,19 @@
+const buildTx = require("../../lib/buildliquidtx");
+
 module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, asset, amount, feeRate } = req.body;
   let tx, fee;
+
+  if (user.account.pubkey) {
+    try {
+      let psbt = await buildTx({ address, asset, amount, feeRate, user });
+      return res.send(psbt);
+    } catch(e) {
+      throw e;
+      return res.status(500).send(e.message);
+    } 
+  }
 
   let invoice = await db.Invoice.findOne({
     where: { address },
@@ -13,8 +25,11 @@ module.exports = ah(async (req, res) => {
   });
 
   if (invoice) {
-    emit(user.username, "to", invoice.user);
-    return res.end();
+    let { ismine } = await lq.getAddressInfo(address);
+    if (ismine) {
+      emit(user.username, "to", invoice.user);
+      return res.end();
+    }
   }
 
   try {

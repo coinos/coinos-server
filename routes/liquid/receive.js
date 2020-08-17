@@ -1,7 +1,53 @@
 const axios = require("axios");
+const reverse = require("buffer-reverse");
 const zmq = require("zeromq");
 const { Op } = require("sequelize");
+const { fromBase58 } = require("bip32");
+const bitcoin = require("bitcoinjs-lib");
 const elements = require("elementsjs-lib");
+const liquid = require("liquidjs-lib");
+
+const network =
+  liquid.networks[
+    config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
+  ];
+
+const getAccount = async (params, pending) => {
+  let account = await db.Account.findOne({
+    where: params
+  });
+
+  if (account) return account;
+
+  let { asset } = params;
+  let name = asset.substr(0, 6);
+  let domain = "";
+  let ticker = asset.substr(0, 3).toUpperCase();
+  let precision = 8;
+
+  const assets = (await axios.get("https://assets.blockstream.info/")).data;
+
+  if (assets[asset]) {
+    ({ domain, ticker, precision, name } = assets[asset]);
+  } else {
+    const existing = await db.Account.findOne({
+      where: {
+        asset,
+      },
+      order: [["id", "ASC"]],
+      limit: 1,
+    });
+
+    if (existing) {
+      ({ domain, ticker, precision, name } = existing);
+    }
+  }
+
+  params = { ...params, ...{ domain, ticker, precision, name } };
+  params.balance = 0;
+  params.pending = pending;
+  return db.Account.create(params);
+};
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.liquid.zmqrawblock);
@@ -26,76 +72,49 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
       const value = toSats(o.value);
       const address = o.scriptPubKey.addresses[0];
 
-      if (Object.keys(addresses).includes(address)) {
+      if (
+        Object.keys(addresses).includes(address) &&
+        !change.includes(address)
+      ) {
         let user = await getUser(addresses[address]);
+
+        let invoice = await db.Invoice.findOne({
+          where: {
+            address,
+            user_id: user.id,
+            network: "LBTC",
+          },
+          order: [["id", "DESC"]],
+          include: {
+            model: db.Account,
+            as: "account",
+          },
+        });
+
+        if (!invoice) return;
 
         let confirmed = 0;
 
-        let params = {
-          user_id: user.id,
-          asset,
-        };
+        let { account } = invoice;
 
-        let account = await db.Account.findOne({
-          where: params,
-        });
-
-        if (account) {
+        if (account.asset === asset) {
           account.pending += value;
           await account.save();
         } else {
-          let name = asset.substr(0, 6);
-          let domain = '';
-          let ticker = asset.substr(0, 3).toUpperCase();
-          let precision = 8;
-
-          const assets = (await axios.get("https://assets.blockstream.info/"))
-            .data;
-
-          if (assets[asset]) {
-            ({ domain, ticker, precision, name } = assets[asset]);
-          } else {
-            const existing = await db.Account.findOne({
-              where: {
-                asset,
-              },
-              order: [["id", "ASC"]],
-              limit: 1,
-            });
-
-            if (existing) {
-              ({ domain, ticker, precision, name } = existing);
-            }
-          }
-
-          params = { ...params, ...{ domain, ticker, precision, name } };
-          params.balance = 0;
-          params.pending = value;
-          account = await db.Account.create(params);
+          if (!account) account = await getAccount(
+            {
+              user_id: user.id,
+              asset,
+              pubkey: account.pubkey,
+            },
+            value
+          );
         }
 
         if (config.liquid.walletpass)
           await lq.walletPassphrase(config.liquid.walletpass, 300);
 
-        user.confidential = await lq.getNewAddress();
-        user.liquid = (
-          await lq.getAddressInfo(user.confidential)
-        ).unconfidential;
-
         await user.save();
-
-        addresses[user.liquid] = user.username;
-
-        let invoice;
-        if (asset === config.liquid.btcasset) {
-          invoice = await db.Invoice.findOne({
-            where: {
-              user_id: user.id,
-              network: "LBTC",
-            },
-            order: [["id", "DESC"]],
-          });
-        }
 
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
@@ -123,7 +142,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         emit(user.username, "payment", payment);
         emit(user.username, "account", account);
-        l.info("liquid detected", user.username, asset, value);
+        l.info("liquid detected", address, user.username, asset, value);
         notify(user, `${value} SAT payment detected`);
       }
     })
@@ -218,6 +237,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 });
 
 setInterval(async () => {
+  //  throw new Error("boom");
   try {
     const arr = Object.keys(queue);
 

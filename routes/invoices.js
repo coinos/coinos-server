@@ -26,6 +26,7 @@ app.post("/invoice", ah(async (req, res, next) => {
   } 
   if (!user) throw new Error("user not provided");
   invoice.user_id = user.id;
+  invoice.account_id = user.account_id;
 
   l.info(
     "creating invoice",

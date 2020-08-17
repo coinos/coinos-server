@@ -32,6 +32,7 @@
     "jsonwebtoken": "^8.5.1",
     "knex": "^0.21.1",
     "level": "^6.0.1",
+    "liquidjs-lib": "https://github.com/asoltys/liquidjs-lib",
     "lnurl": "https://github.com/asoltys/lnurl-node",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",

@@ -408,7 +408,6 @@ checkQueue = async () => {
   leveldb
     .createReadStream()
     .on("data", async function (data) {
-      console.log("pushing", data.key);
       txs.push({ ...JSON.parse(data.value), key: data.key });
     })
     .on("end", async function (data) {

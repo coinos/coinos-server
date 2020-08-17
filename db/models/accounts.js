@@ -124,15 +124,6 @@ const attributes = {
     comment: null,
     field: "index"
   },
-  address: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "address"
-  },
   pubkey: {
     type: DataTypes.STRING,
     allowNull: true,

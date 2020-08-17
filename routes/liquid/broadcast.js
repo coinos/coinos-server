@@ -1,7 +1,7 @@
 module.exports = ah(async (req, res) => {
   try {
     const { user } = req;
-    let hash = await bc.sendRawTransaction(req.body.tx);
+    let hash = await lq.sendRawTransaction(req.body.tx);
 
     if (user) {
       let { account } = user;
@@ -16,7 +16,7 @@ module.exports = ah(async (req, res) => {
         currency: user.currency,
         confirmed: true,
         received: false,
-        network: "BTC",
+        network: "LBTC",
       });
 
       account.balance += payment.amount - payment.fee;

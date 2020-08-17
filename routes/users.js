@@ -157,10 +157,6 @@ app.post(
         sockets[username] = sockets[user.username];
         user.username = username;
 
-        if (user.address) addresses[user.address] = username;
-
-        if (user.liquid) addresses[user.liquid] = user.username;
-
         token = jwt.sign({ username }, config.jwt);
         res.cookie("token", token, {
           expires: new Date(Date.now() + 432000000),
@@ -223,17 +219,16 @@ app.post(
   "/accounts",
   auth,
   ah(async (req, res) => {
-    const { address, pubkey } = req.body;
+    const { name, pubkey, ticker } = req.body;
     const { user } = req;
 
     let account = await db.Account.create({
-      address,
       user_id: user.id,
       asset: config.liquid.btcasset,
       balance: 0,
       pending: 0,
-      name: "Bitcoin",
-      ticker: "BTC",
+      name,
+      ticker,
       precision: 8,
       pubkey,
     });
@@ -375,7 +370,7 @@ app.post(
 
       const account = await db.Account.findOne({
         where: { id },
-      }); 
+      });
 
       emit(user.username, "account", account);
       res.end();

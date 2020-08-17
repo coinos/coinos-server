@@ -18,19 +18,12 @@ ah(async () => {
     l.warn("couldn't read exceptions file", e.message);
   }
 
-  await db.User.findAll({
-    attributes: ["username", "address", "liquid"],
-  }).map((u) => {
-    if (u.address) addresses[u.address] = u.username;
-    if (u.liquid) addresses[u.liquid] = u.username;
-  });
-
-  await db.Invoice.findAll({
+  (await db.Invoice.findAll({
     include: {
       model: db.User,
       as: "user",
     },
-  }).map(({ address, user, unconfidential }) => {
+  })).map(({ address, user, unconfidential }) => {
     if (address && user) addresses[address] = user.username;
     if (unconfidential && user) addresses[unconfidential] = user.username;
   });
@@ -113,7 +106,11 @@ ah(async () => {
 
   if (config.bitcoin) {
     bc = new BitcoinCore(config.bitcoin);
-    app.post("/bitcoin/broadcast", optionalAuth, require("./bitcoin/broadcast"));
+    app.post(
+      "/bitcoin/broadcast",
+      optionalAuth,
+      require("./bitcoin/broadcast")
+    );
     app.get("/bitcoin/generate", auth, require("./bitcoin/generate"));
     app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
     app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
@@ -123,6 +120,11 @@ ah(async () => {
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
+    app.post(
+      "/liquid/broadcast",
+      optionalAuth,
+      require("./liquid/broadcast")
+    );
     app.get("/liquid/generate", auth, require("./liquid/generate"));
     app.post("/liquid/fee", auth, require("./liquid/fee"));
     app.post("/liquid/send", auth, require("./liquid/send"));

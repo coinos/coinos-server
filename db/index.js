@@ -41,6 +41,11 @@ db["User"].belongsTo(db["Account"], {
   foreignKey: "account_id"
 });
 
+db["Invoice"].belongsTo(db["Account"], {
+  as: "account",
+  foreignKey: "account_id"
+});
+
 db["Account"].belongsTo(db["User"], {
   as: "user",
   foreignKey: "user_id"
