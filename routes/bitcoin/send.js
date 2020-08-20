@@ -30,8 +30,6 @@ module.exports = ah(async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  l.info("attempting bitcoin payment", user.username, { total, change, amount, fee });
-
   let account, params;
   try {
     await db.transaction(async transaction => {

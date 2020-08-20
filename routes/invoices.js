@@ -30,8 +30,6 @@ app.post("/invoice", ah(async (req, res, next) => {
 
   l.info(
     "creating invoice",
-    invoice.address,
-    invoice.text,
     user.username,
     invoice.network,
     invoice.amount,
