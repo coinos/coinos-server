@@ -85,12 +85,9 @@ ah(async () => {
   if (config.lna) {
     if (config.lna.clightning) {
       const lnapath = join(require("os").homedir(), ".lightningreg/regtest");
-      const lnbpath = join(require("os").homedir(), ".lightningregb/regtest");
       lna = require("clightning-client")(lnapath);
-      lnb = require("clightning-client")(lnbpath);
     } else {
       lna = lnd(config.lna);
-      lnb = lnd(config.lnb);
     }
 
     app.post("/lightning/channel", require("./lightning/channel"));

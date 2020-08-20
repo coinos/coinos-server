@@ -111,11 +111,7 @@ if (config.lna.clightning) {
   };
 
   poll(lna);
-  poll(lnb);
 } else {
   const invoices = lna.subscribeInvoices({});
   invoices.on("data", handlePayment);
-
-  const invoicesb = lnb.subscribeInvoices({});
-  invoicesb.on("data", handlePayment);
 }

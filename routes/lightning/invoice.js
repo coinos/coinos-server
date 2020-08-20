@@ -3,10 +3,10 @@ module.exports = ah(async (req, res) => {
 
   try {
     if (config.lna.clightning) {
-      const invoice = await lnb.invoice(`${amount + tip}sat` || "any", new Date(), memo, 360);
+      const invoice = await lna.invoice(`${amount + tip}sat` || "any", new Date(), memo, 360);
       res.send(invoice.bolt11);
     } else {
-      const invoice = await lnb.addInvoice({ value: amount + tip, memo });
+      const invoice = await lna.addInvoice({ value: amount + tip, memo });
       res.send(invoice.payment_request);
     }
   } catch (e) {

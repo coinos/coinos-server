@@ -261,7 +261,7 @@ lnurlServer.bindToHook(
 
       if (recipient) {
         setTimeout(async () => {
-          let { invoices } = await lnb.listInvoices({
+          let { invoices } = await lna.listInvoices({
             pending_only: true,
           });
 

@@ -46,10 +46,4 @@ module.exports = {
     tls: '/home/user/.lnd.testa/tls.cert',
     macaroon: '/home/user/.lnd.testa/data/chain/bitcoin/testnet/admin.macaroon',
   },
-  lnb: {
-    server: 'localhost:10002',
-    tls: '/home/user/.lnd.testb/tls.cert',
-    macaroon: '/home/user/.lnd.testb/data/chain/bitcoin/testnet/admin.macaroon',
-    id: '029654df009f907a2f513d944fc9456c6cac5f3a9c34dab85289e1425856c1b0fe', // find with lightning-cli getinfo
-  },
 }
