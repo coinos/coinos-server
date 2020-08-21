@@ -60,7 +60,7 @@ zmqRawBlock.connect(config.liquid.zmqrawblock);
 zmqRawBlock.subscribe("rawblock");
 
 const zmqRawTx = zmq.socket("sub");
-zmqRawTx.connect("tcp://127.0.0.1:18603");
+zmqRawTx.connect(config.liquid.zmqrawtx);
 zmqRawTx.subscribe("rawtx");
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
@@ -86,7 +86,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let invoice = await db.Invoice.findOne({
           where: {
-            address,
+            unconfidential: address,
             user_id: user.id,
             network: "LBTC",
           },
