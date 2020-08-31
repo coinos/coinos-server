@@ -2,6 +2,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 
 app.get("/assets", ah(async (req, res) => {
+  l.info("hello");
   try {
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
@@ -69,7 +70,6 @@ app.post("/assets", auth, ah(async (req, res) => {
 
     params.asset_amount = asset_amount / (SATS / 10 ** precision);
 
-    l.info("asset_amount", params.asset_amount);
     if (token_amount) {
       params.token_amount = token_amount;
       params.token_address = token_address;

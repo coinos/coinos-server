@@ -59,6 +59,7 @@ if (config.lnurl) {
 }
 
 app.use((err, req, res, next) => {
+  throw err;
   const details = {
     path: req.path,
     body: req.body,
