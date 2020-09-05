@@ -57,12 +57,7 @@
   "devDependencies": {
     "nodemon": "^2.0.2",
     "pino-pretty": "^3.6.1",
-    "pm2": "^4.4.0",
+    "pm2": "^4.4.1",
     "prettier": "^1.18.2"
-  },
-  "dependenciesMeta": {
-    "bitcoin-core": {
-      "unplugged": true
-    }
   }
 }
