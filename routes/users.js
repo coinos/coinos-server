@@ -58,7 +58,7 @@ app.post(
   ah(async (req, res) => {
     try {
       const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-      const user = await register(req.body.user, ip, true);
+      const user = await register(req.body.user, ip, false);
       res.send(pick(user, ...whitelist));
     } catch (e) {
       res.status(500).send(e.message);
@@ -500,7 +500,7 @@ app.post(
           amount: -source.amount,
           account_id: account.id,
           user_id: user.id,
-          hash: "Redeemed Voucher " + redeemcode,
+          hash: "Voucher " + redeemcode,
           memo,
           rate: app.get("rates")[user.currency],
           currency: user.currency,
