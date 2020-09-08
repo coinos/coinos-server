@@ -251,7 +251,7 @@ app.post(
   auth,
   ah(async (req, res) => {
     const { id } = req.body;
-    const account = await db.Account.findOne({ where: { id }});
+    const account = await db.Account.findOne({ where: { id } });
     if (account) await account.destroy();
     res.end();
   })
@@ -279,11 +279,11 @@ app.post(
 
     emit(user.username, "account", account);
 
-    if (pubkey) {
-      user.index++;
-      await user.save();
-      emit(user.username, "user", user);
-    }
+    if (pubkey) user.index++;
+    user.account_id = account.id;
+    await user.save();
+    user.account = account;
+    emit(user.username, "user", user);
 
     res.send(account);
   })

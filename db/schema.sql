@@ -1,8 +1,8 @@
--- MySQL dump 10.17  Distrib 10.3.23-MariaDB, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.17  Distrib 10.3.24-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: coinos
 -- ------------------------------------------------------
--- Server version	10.3.23-MariaDB-1:10.3.23+maria~bionic
+-- Server version	10.3.24-MariaDB-1:10.3.24+maria~bionic
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -59,10 +59,12 @@ CREATE TABLE `accounts` (
   `domain` varchar(255) DEFAULT NULL,
   `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `pubkey` varchar(255) DEFAULT NULL,
-  `index` int(11) DEFAULT NULL,
+  `index` int(11) NOT NULL DEFAULT 0,
   `hide` tinyint(1) DEFAULT NULL,
+  `seed` varchar(255) DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3809 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=3943 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -103,8 +105,9 @@ CREATE TABLE `invoices` (
   `uuid` varchar(255) DEFAULT NULL,
   `memo` text DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5116 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=5161 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -121,7 +124,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4518 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4554 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -151,8 +154,9 @@ CREATE TABLE `payments` (
   `memo` text DEFAULT NULL,
   `redeemcode` varchar(255) DEFAULT NULL,
   `redeemed` tinyint(1) NOT NULL DEFAULT 0,
+  `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5169 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=5300 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -175,7 +179,7 @@ CREATE TABLE `proposals` (
   `text` text DEFAULT NULL,
   `public` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=77 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=173 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -218,9 +222,10 @@ CREATE TABLE `users` (
   `seed` varchar(255) DEFAULT NULL,
   `linkingKeys` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `fiat` tinyint(1) NOT NULL DEFAULT 0,
+  `index` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=653 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=690 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -232,4 +237,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-08-16 15:42:08
+-- Dump completed on 2020-09-08  7:24:41

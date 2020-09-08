@@ -63,6 +63,23 @@ module.exports = ah(async (req, res, next) => {
           where: { username },
         });
 
+
+        const invoice = await db.Invoice.findOne({
+          where: {
+            user_id: user.id,
+            network: "BTC"
+          },
+          order: [["id", "DESC"]],
+          include: {
+            model: db.Account,
+            as: "account",
+          },
+        });
+
+        if (invoice) ({ account } = invoice);
+        else if (user.account.asset === asset) ({ account } = user);
+        else {
+
         let params = {
           user_id: user.id,
           asset,
@@ -73,6 +90,7 @@ module.exports = ah(async (req, res, next) => {
           lock: transaction.LOCK.UPDATE,
           transaction,
         });
+        }
 
         if (account) {
           account.balance += amount;

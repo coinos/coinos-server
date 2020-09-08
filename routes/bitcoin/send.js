@@ -1,4 +1,5 @@
 const bitcoin = require("bitcoinjs-lib");
+const btc = config.liquid.btcasset;
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
@@ -34,11 +35,11 @@ module.exports = ah(async (req, res) => {
   let params;
   try {
     await db.transaction(async transaction => {
-      if (account.asset !== btcasset) {
+      if (account.asset !== btc) {
         account = await db.Account.findOne({
           where: {
             user_id: user.id,
-            asset: config.liquid.btcasset
+            asset: btc,
           },
           lock: transaction.LOCK.UPDATE,
           transaction

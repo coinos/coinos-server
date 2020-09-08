@@ -10,7 +10,6 @@ module.exports = ah(async (req, res) => {
       let psbt = await buildTx({ address, asset, amount, feeRate, user });
       return res.send(psbt);
     } catch(e) {
-      throw e;
       return res.status(500).send(e.message);
     } 
   }

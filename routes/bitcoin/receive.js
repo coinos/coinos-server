@@ -26,7 +26,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(hash)) return;
 
   Promise.all(
-    tx.outs.map(async (o) => {
+    tx.outs.map(async o => {
       const { value } = o;
 
       let address;
@@ -44,17 +44,23 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let user = await db.User.findOne({
           where: {
-            username: addresses[address],
-          },
+            username: addresses[address]
+          }
         });
 
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            network: "BTC",
+            network: "BTC"
           },
           order: [["id", "DESC"]],
+          include: {
+            model: db.Account,
+            as: "account",
+          },
         });
+
+        if (!invoice) return;
 
         const currency = invoice ? invoice.currency : user.currency;
         const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
@@ -63,27 +69,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let confirmed = false;
 
-        const accounts = await db.Account.findAll({
-          where: {
-            user_id: user.id,
-            asset: config.liquid.btcasset,
-          },
-        });
-
-        let account = accounts.find(({ index, pubkey }) => {
-          const { payments } = bitcoin;
-          index &&
-            pubkey &&
-            address ===
-              payments.p2wpkh({
-                pubkey: fromBase58(pubkey, network).derivePath(
-                  `${index}`
-                ).publicKey,
-                network,
-              }).address;
-        });
-
-        if (!account) account = accounts[0];
+        let { account } = invoice;
 
         account.pending += value;
         await account.save();
@@ -120,7 +106,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "BTC",
+          network: "BTC"
         });
         payment = payment.get({ plain: true });
         payment.account = account.get({ plain: true });
@@ -138,13 +124,13 @@ let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: false },
+    where: { confirmed: false }
   });
 
   let block = bitcoin.Block.fromHex(message.toString("hex"));
-  block.transactions.map((tx) => {
+  block.transactions.map(tx => {
     let hash = reverse(tx.getHash()).toString("hex");
-    if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
+    if (payments.find(p => p.hash === hash)) queue[hash] = 1;
   });
 });
 
@@ -154,21 +140,21 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      await db.transaction(async (transaction) => {
+      await db.transaction(async transaction => {
         let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
               model: db.Account,
-              as: "account",
+              as: "account"
             },
             {
               model: db.User,
-              as: "user",
-            },
+              as: "user"
+            }
           ],
           lock: transaction.LOCK.UPDATE,
-          transaction,
+          transaction
         });
 
         const { user } = p;
