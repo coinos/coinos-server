@@ -37,6 +37,24 @@ const attributes = {
     comment: null,
     field: "updatedAt"
   },
+  path: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "path"
+  },
+  seed: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "seed"
+  },
   name: {
     type: DataTypes.STRING(255),
     allowNull: true,

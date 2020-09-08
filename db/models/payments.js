@@ -28,6 +28,15 @@ const attributes = {
     comment: null,
     field: "user_id"
   },
+  path: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "path"
+  },
   memo: {
     type: DataTypes.TEXT,
     allowNull: true,

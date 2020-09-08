@@ -9,7 +9,7 @@ module.exports = ah(async (req, res) => {
 
   const isChange = async address =>
     (await bc.getAddressInfo(address)).ismine &&
-    (!Object.keys(addresses).includes(address));
+    !Object.keys(addresses).includes(address);
 
   tx = await bc.decodeRawTransaction(hex);
 
@@ -30,17 +30,20 @@ module.exports = ah(async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  let account, params;
+  let { account } = user;
+  let params;
   try {
     await db.transaction(async transaction => {
-      account = await db.Account.findOne({
-        where: {
-          user_id: user.id,
-          asset: config.liquid.btcasset
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
+      if (account.asset !== btcasset) {
+        account = await db.Account.findOne({
+          where: {
+            user_id: user.id,
+            asset: config.liquid.btcasset
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
+      }
 
       if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, account.balance);

@@ -13,7 +13,7 @@ require("../lib/whitelist");
 const twofa = ah((req, res, next) => {
   let {
     user,
-    body: { token },
+    body: { token }
   } = req;
   if (
     user.twofa &&
@@ -34,7 +34,7 @@ app.get(
       where: Sequelize.where(
         Sequelize.fn("lower", Sequelize.col("username")),
         username.toLowerCase()
-      ),
+      )
     });
 
     if (user) res.send(user);
@@ -119,7 +119,7 @@ app.get(
   "/exists",
   ah(async (req, res) => {
     let exists = await db.User.findOne({
-      where: { username: req.query.username },
+      where: { username: req.query.username }
     });
 
     res.send(!!exists);
@@ -141,13 +141,13 @@ app.post(
         twofa,
         pin,
         password,
-        passconfirm,
+        confirm,
         tokens,
-        seed,
+        seed
       } = req.body;
 
       let exists = await db.User.findOne({
-        where: { username },
+        where: { username }
       });
 
       let token;
@@ -159,7 +159,7 @@ app.post(
 
         token = jwt.sign({ username }, config.jwt);
         res.cookie("token", token, {
-          expires: new Date(Date.now() + 432000000),
+          expires: new Date(Date.now() + 432000000)
         });
       }
 
@@ -173,7 +173,7 @@ app.post(
       user.seed = seed;
       user.fiat = fiat;
 
-      if (password && password === passconfirm) {
+      if (password && password === confirm) {
         user.password = await bcrypt.hash(password, 1);
       }
 
@@ -193,7 +193,7 @@ app.post(
     const { key: hex } = req.body;
     const key = await db.Key.create({
       user_id: req.user.id,
-      hex,
+      hex
     });
     emit(req.user.username, "key", key);
   })
@@ -208,10 +208,52 @@ app.post(
       await db.Key.findOne({
         where: {
           user_id: req.user.id,
-          hex,
-        },
+          hex
+        }
       })
     ).destroy();
+  })
+);
+
+app.post(
+  "/updateSeeds",
+  auth,
+  ah(async (req, res) => {
+    let { user } = req;
+    let { seeds } = req.body;
+    let keys = Object.keys(seeds);
+
+    for (let i = 0; i < keys.length; i++) {
+      let id = keys[i];
+      let seed = seeds[id];
+      await db.Account.update(
+        { seed },
+        {
+          where: { id, user_id: user.id }
+        }
+      );
+
+      const account = await db.Account.findOne({
+        where: { id }
+      });
+
+      console.log("updated", account.id, account.asset);
+
+      emit(user.username, "account", account);
+    }
+
+    res.end();
+  })
+);
+
+app.post(
+  "/accounts/delete",
+  auth,
+  ah(async (req, res) => {
+    const { id } = req.body;
+    const account = await db.Account.findOne({ where: { id }});
+    if (account) await account.destroy();
+    res.end();
   })
 );
 
@@ -219,7 +261,7 @@ app.post(
   "/accounts",
   auth,
   ah(async (req, res) => {
-    const { name, pubkey, ticker } = req.body;
+    const { name, seed, pubkey, ticker, precision, path } = req.body;
     const { user } = req;
 
     let account = await db.Account.create({
@@ -229,9 +271,19 @@ app.post(
       pending: 0,
       name,
       ticker,
-      precision: 8,
+      precision,
       pubkey,
+      seed,
+      path
     });
+
+    emit(user.username, "account", account);
+
+    if (pubkey) {
+      user.index++;
+      await user.save();
+      emit(user.username, "user", user);
+    }
 
     res.send(account);
   })
@@ -314,14 +366,14 @@ app.post(
     if (username) {
       l.info("logging out", username);
       let i = req.user.subscriptions.findIndex(
-        (s) => JSON.stringify(s) === subscription
+        s => JSON.stringify(s) === subscription
       );
       if (i > -1) {
         req.user.subscriptions.splice(i, 1);
       }
       await req.user.save();
       Object.keys(logins).map(
-        (k) => logins[k]["username"] === username && delete logins[k]
+        k => logins[k]["username"] === username && delete logins[k]
       );
     }
 
@@ -361,15 +413,28 @@ app.post(
   auth,
   ah(async (req, res) => {
     const { user } = req;
-    const { id } = req.body;
+    const {
+      id,
+      name,
+      ticker,
+      precision,
+      domain,
+      seed,
+      pubkey,
+      path,
+      hide
+    } = req.body;
 
     try {
-      await db.Account.update(req.body, {
-        where: { id, user_id: user.id },
-      });
+      await db.Account.update(
+        { name, ticker, precision, domain, seed, pubkey, path, hide },
+        {
+          where: { id, user_id: user.id }
+        }
+      );
 
       const account = await db.Account.findOne({
-        where: { id },
+        where: { id }
       });
 
       emit(user.username, "account", account);
@@ -390,21 +455,22 @@ app.post(
 
     try {
       const account = await db.Account.findOne({
-        where: { id },
+        where: { id }
       });
 
       user.account_id = account.id;
       await user.save();
-      let payments = await user.getPayments({
+      let payments = await db.Payment.findAll({
         where: {
-          account_id: id,
+          user_id: user.id,
+          account_id: id
         },
         order: [["id", "DESC"]],
         limit: 12,
         include: {
           model: db.Account,
-          as: "account",
-        },
+          as: "account"
+        }
       });
       user.payments = payments;
       user.account = account;
@@ -420,20 +486,20 @@ app.post(
   })
 );
 
-app.get("/vapidPublicKey", function (req, res) {
+app.get("/vapidPublicKey", function(req, res) {
   res.send(config.vapid.publicKey);
 });
 
 app.post(
   "/subscribe",
   auth,
-  ah(async function (req, res) {
+  ah(async function(req, res) {
     let { subscriptions } = req.user;
     let { subscription } = req.body;
     if (!subscriptions) subscriptions = [];
     if (
       !subscriptions.find(
-        (s) => JSON.stringify(s) === JSON.stringify(subscription)
+        s => JSON.stringify(s) === JSON.stringify(subscription)
       )
     )
       subscriptions.push(subscription);
@@ -447,7 +513,7 @@ app.post(
 app.post(
   "/redeem",
   optionalAuth,
-  ah(async function (req, res) {
+  ah(async function(req, res) {
     const { redeemcode } = req.body;
     if (!redeemcode) fail("no code provided");
 
@@ -455,12 +521,12 @@ app.post(
 
     const source = await db.Payment.findOne({
       where: {
-        redeemcode: req.body.redeemcode,
+        redeemcode: req.body.redeemcode
       },
       include: {
         model: db.Account,
-        as: "account",
-      },
+        as: "account"
+      }
     });
 
     l.info("redeeming", redeemcode);
@@ -473,7 +539,7 @@ app.post(
       user = await register(
         {
           username: redeemcode.substr(0, 8),
-          password: "",
+          password: ""
         },
         ip,
         false
@@ -489,7 +555,7 @@ app.post(
 
     let account = await getAccount(source.account.asset, user);
 
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       let { hash, memo, confirmed, fee, network } = source;
 
       source.redeemed = true;
@@ -507,7 +573,7 @@ app.post(
           confirmed,
           network,
           received: true,
-          fee,
+          fee
         },
         { transaction }
       );
@@ -528,7 +594,7 @@ app.post(
 app.post(
   "/password",
   auth,
-  ah(async function (req, res) {
+  ah(async function(req, res) {
     const { user } = req;
     const { password } = req.body;
 

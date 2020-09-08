@@ -19,6 +19,15 @@ const attributes = {
     comment: null,
     field: "fiat"
   },
+  index: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: 0,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "index"
+  },
   ip: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,
