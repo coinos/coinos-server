@@ -237,8 +237,6 @@ app.post(
         where: { id }
       });
 
-      console.log("updated", account.id, account.asset);
-
       emit(user.username, "account", account);
     }
 
@@ -422,7 +420,8 @@ app.post(
       seed,
       pubkey,
       path,
-      hide
+      hide,
+      index,
     } = req.body;
 
     try {
@@ -588,6 +587,17 @@ app.post(
 
       res.send({ payment });
     });
+  })
+);
+
+app.post(
+  "/checkRedeemCode",
+  auth,
+  ah(async function(req, res) {
+    const { redeemcode } = req.body;
+
+    const payment = await db.Payment.findOne({ where: { redeemcode } });
+    res.send(payment);
   })
 );
 

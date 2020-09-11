@@ -1,5 +1,3 @@
-const asset = "LNBTC";
-
 const handlePayment = async (msg) => {
   try {
     await db.transaction(async (transaction) => {
@@ -49,7 +47,7 @@ const handlePayment = async (msg) => {
           rate,
           received: true,
           confirmed: true,
-          network: "LNBTC",
+          network: "lightning",
           tip,
         },
         { transaction }

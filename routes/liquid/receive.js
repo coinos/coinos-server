@@ -88,7 +88,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           where: {
             unconfidential: address,
             user_id: user.id,
-            network: "LBTC",
+            network: "liquid",
           },
           order: [["id", "DESC"]],
           include: {
@@ -139,7 +139,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "LBTC",
+          network: "liquid",
         });
 
         payments.push(blinded.txid);

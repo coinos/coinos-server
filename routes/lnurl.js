@@ -349,7 +349,7 @@ lnurlServer.bindToHook(
               rate: app.get("rates")[user.currency],
               currency: user.currency,
               confirmed: true,
-              network: "LNBTC",
+              network: "lightning",
             },
             { transaction }
           );

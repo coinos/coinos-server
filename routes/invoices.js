@@ -38,7 +38,7 @@ app.post("/invoice", ah(async (req, res, next) => {
     invoice.rate.toFixed(2)
   );
 
-  if (invoice.network === "LBTC") {
+  if (invoice.network === "liquid") {
     invoice.unconfidential = (
       await lq.getAddressInfo(invoice.address)
     ).unconfidential;

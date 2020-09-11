@@ -315,7 +315,7 @@ app.post("/accept", optionalAuth, ah(async (req, res) => {
           address: u_address_r,
           confirmed: true,
           received: false,
-          network: "LBTC",
+          network: "liquid",
         });
 
         amount = Math.round(leg2.amount * SATS);
@@ -328,7 +328,7 @@ app.post("/accept", optionalAuth, ah(async (req, res) => {
           rate,
           amount,
           tip: 0,
-          network: "LBTC",
+          network: "liquid",
         });
 
         addresses[u_address_p] = proposal.user.username;

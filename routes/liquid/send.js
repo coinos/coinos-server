@@ -78,7 +78,7 @@ module.exports = ah(async (req, res) => {
           address,
           confirmed: true,
           received: false,
-          network: "LBTC",
+          network: "liquid",
         };
 
         payment.account = account;

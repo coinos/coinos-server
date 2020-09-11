@@ -16,7 +16,7 @@ module.exports = ah(async (req, res) => {
         currency: user.currency,
         confirmed: true,
         received: false,
-        network: "LBTC",
+        network: "liquid",
       });
 
       account.balance += payment.amount - payment.fee;
