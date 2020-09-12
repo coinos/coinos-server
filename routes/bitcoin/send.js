@@ -65,7 +65,7 @@ module.exports = ah(async (req, res) => {
         address,
         confirmed: true,
         received: false,
-        network: "BTC"
+        network: "liquid"
       };
     });
   } catch (e) {

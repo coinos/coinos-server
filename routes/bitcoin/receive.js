@@ -51,7 +51,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            network: "BTC"
+            network: "bitcoin"
           },
           order: [["id", "DESC"]],
           include: {
@@ -106,12 +106,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           tip,
           confirmed,
           address,
-          network: "BTC"
+          network: "bitcoin"
         });
         payment = payment.get({ plain: true });
         payment.account = account.get({ plain: true });
 
         emit(user.username, "account", account);
+
         emit(user.username, "payment", payment);
         l.info("bitcoin detected", user.username, value);
         notify(user, `${value} SAT payment detected`);

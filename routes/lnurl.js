@@ -100,7 +100,7 @@ app.post(
       currency: user.currency,
       amount: value,
       tip: 0,
-      network: "BTC",
+      network: "bitcoin",
     });
 
     try {
@@ -273,7 +273,7 @@ lnurlServer.bindToHook(
               currency: recipient.currency,
               amount,
               tip: 0,
-              network: "BTC",
+              network: "bitcoin",
             });
             l.info("invoice created", invoice.text, invoice.amount);
           }

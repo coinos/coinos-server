@@ -2,12 +2,12 @@ const buildTx = require("../../lib/buildtx");
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
-  let { address, amount, feeRate } = req.body;
+  let { address, amount, feeRate, replaceable } = req.body;
   let tx, fee;
 
   if (user.account.pubkey) {
     try {
-      let psbt = await buildTx({ address, amount, feeRate, user });
+      let psbt = await buildTx({ address, amount, feeRate, replaceable, user });
       return res.send(psbt);
     } catch(e) {
       return res.status(500).send(e.message);
@@ -36,10 +36,11 @@ module.exports = ah(async (req, res) => {
 
     let partial = await bc.createRawTransaction([], {
       [address]: (amount / SATS).toFixed(8),
-    });
+    }, 0, replaceable);
 
     let params = {
       subtractFeeFromOutputs: amount === user.balance ? [0] : [],
+      replaceable,
     };
 
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);

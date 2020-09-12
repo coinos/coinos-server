@@ -147,7 +147,7 @@ app.post("/assets", auth, ah(async (req, res) => {
             received: true,
             confirmed: false,
             address: asset_address,
-            network: "LBTC",
+            network: "liquid",
           },
           { transaction }
         );
@@ -185,7 +185,7 @@ app.post("/assets", auth, ah(async (req, res) => {
               received: true,
               confirmed: false,
               address: token_address,
-              network: "LBTC",
+              network: "liquid",
             },
             { transaction }
           );

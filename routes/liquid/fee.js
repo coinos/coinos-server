@@ -2,25 +2,32 @@ const buildTx = require("../../lib/buildliquidtx");
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
-  let { address, asset, amount, feeRate } = req.body;
+  let { address, asset, amount, feeRate, replaceable } = req.body;
   let tx, fee;
 
   if (user.account.pubkey) {
     try {
-      let psbt = await buildTx({ address, asset, amount, feeRate, user });
+      let psbt = await buildTx({
+        address,
+        asset,
+        amount,
+        feeRate,
+        replaceable,
+        user
+      });
       return res.send(psbt);
-    } catch(e) {
+    } catch (e) {
       return res.status(500).send(e.message);
-    } 
+    }
   }
 
   let invoice = await db.Invoice.findOne({
     where: { address },
     include: {
-      attributes: ['username'],
+      attributes: ["username"],
       model: db.User,
-      as: 'user',
-    } 
+      as: "user"
+    }
   });
 
   if (invoice) {
@@ -38,7 +45,7 @@ module.exports = ah(async (req, res) => {
     amount = parseInt(amount);
 
     let params = {
-      subtractFeeFromOutputs: amount === user.balance ? [0] : [],
+      subtractFeeFromOutputs: amount === user.balance ? [0] : []
     };
 
     let value = (amount / SATS).toFixed(8);
@@ -49,12 +56,12 @@ module.exports = ah(async (req, res) => {
     tx = await lq.createRawTransaction(
       [],
       {
-        [address]: (amount / SATS).toFixed(8),
+        [address]: (amount / SATS).toFixed(8)
       },
       0,
-      false,
+      replaceable,
       {
-        [address]: asset,
+        [address]: asset
       }
     );
 

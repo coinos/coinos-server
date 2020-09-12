@@ -70,7 +70,7 @@ module.exports = ah(async (req, res, next) => {
         const invoice = await db.Invoice.findOne({
           where: {
             user_id: user.id,
-            network: "BTC"
+            network: "bitcoin"
           },
           order: [["id", "DESC"]],
           include: {
