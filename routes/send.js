@@ -56,11 +56,14 @@ module.exports = ah(async (req, res, next) => {
       emit(user.username, "payment", payment);
       emit(user.username, "account", account);
       emit(user.username, "user", user);
-      res.send(payment);
 
       if (username) {
         user = await db.User.findOne({
           where: { username },
+          include: {
+            model: db.Account,
+            as: 'account'
+          },
         });
 
 
@@ -76,13 +79,15 @@ module.exports = ah(async (req, res, next) => {
           },
         });
 
+
         if (invoice) ({ account } = invoice);
-        else if (user.account.asset === asset) ({ account } = user);
+        else if (user.account.asset === asset && !user.account.pubkey) ({ account } = user);
         else {
 
         let params = {
           user_id: user.id,
           asset,
+          pubkey: null,
         };
 
         account = await db.Account.findOne({
@@ -151,6 +156,8 @@ module.exports = ah(async (req, res, next) => {
 
         l.info("received internal", user.username, amount);
         notify(user, `Received ${amount} ${account.ticker} sats`);
+
+        res.send(payment);
       }
     });
   } catch (e) {
@@ -158,7 +165,7 @@ module.exports = ah(async (req, res, next) => {
       "problem sending internal payment",
       user.username,
       user.balance,
-      e.message
+      e.message,
     );
     return res.status(500).send(e.message);
   }
