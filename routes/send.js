@@ -9,14 +9,14 @@ module.exports = ah(async (req, res, next) => {
     return res.status(500).send("Amount must be greater than zero");
 
   try {
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       let account = await db.Account.findOne({
         where: {
           user_id: user.id,
-          asset,
+          asset
         },
         lock: transaction.LOCK.UPDATE,
-        transaction,
+        transaction
       });
 
       if (account.balance < amount) {
@@ -37,13 +37,13 @@ module.exports = ah(async (req, res, next) => {
         currency: user.currency,
         confirmed: true,
         hash: "Internal Transfer",
-        network: "COINOS",
+        network: "COINOS"
       };
 
       if (!username) {
         l.info("creating redeemable payment");
         params.redeemcode = uuidv4();
-        params.hash = `${req.get('origin')}/redeem/${params.redeemcode}`;
+        params.hash = `${req.get("origin")}/redeem/${params.redeemcode}`;
       }
 
       let payment = await db.Payment.create(params, { transaction });
@@ -62,10 +62,9 @@ module.exports = ah(async (req, res, next) => {
           where: { username },
           include: {
             model: db.Account,
-            as: 'account'
-          },
+            as: "account"
+          }
         });
-
 
         const invoice = await db.Invoice.findOne({
           where: {
@@ -75,26 +74,25 @@ module.exports = ah(async (req, res, next) => {
           order: [["id", "DESC"]],
           include: {
             model: db.Account,
-            as: "account",
-          },
+            as: "account"
+          }
         });
-
 
         if (invoice) ({ account } = invoice);
-        else if (user.account.asset === asset && !user.account.pubkey) ({ account } = user);
+        else if (user.account.asset === asset && !user.account.pubkey)
+          ({ account } = user);
         else {
+          let params = {
+            user_id: user.id,
+            asset,
+            pubkey: null
+          };
 
-        let params = {
-          user_id: user.id,
-          asset,
-          pubkey: null,
-        };
-
-        account = await db.Account.findOne({
-          where: params,
-          lock: transaction.LOCK.UPDATE,
-          transaction,
-        });
+          account = await db.Account.findOne({
+            where: params,
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
         }
 
         if (account) {
@@ -114,10 +112,10 @@ module.exports = ah(async (req, res, next) => {
           } else {
             const existing = await db.Account.findOne({
               where: {
-                asset,
+                asset
               },
               order: [["id", "ASC"]],
-              limit: 1,
+              limit: 1
             });
 
             l.info("existing", existing);
@@ -144,7 +142,7 @@ module.exports = ah(async (req, res, next) => {
             hash: "Internal Transfer",
             memo,
             network: "COINOS",
-            received: true,
+            received: true
           },
           { transaction }
         );
@@ -156,16 +154,15 @@ module.exports = ah(async (req, res, next) => {
 
         l.info("received internal", user.username, amount);
         notify(user, `Received ${amount} ${account.ticker} sats`);
-
-        res.send(payment);
       }
+      res.send(payment);
     });
   } catch (e) {
     l.error(
       "problem sending internal payment",
       user.username,
       user.balance,
-      e.message,
+      e.message
     );
     return res.status(500).send(e.message);
   }
