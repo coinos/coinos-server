@@ -28,7 +28,7 @@ module.exports = ah(async (req, res, next) => {
       account.balance -= amount;
       await account.save({ transaction });
 
-      const params = {
+      let params = {
         amount: -amount,
         account_id: account.id,
         memo,
@@ -162,7 +162,8 @@ module.exports = ah(async (req, res, next) => {
       "problem sending internal payment",
       user.username,
       user.balance,
-      e.message
+      e.message,
+      e.stack
     );
     return res.status(500).send(e.message);
   }
