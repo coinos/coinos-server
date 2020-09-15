@@ -23,7 +23,7 @@ const getAccount = async (params, pending) => {
     return account;
   } 
 
-  let { asset } = params;
+  let { asset, pubkey } = params;
   let name = asset.substr(0, 6);
   let domain = "";
   let ticker = asset.substr(0, 3).toUpperCase();
@@ -147,7 +147,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         payment.account = account.get({ plain: true });
 
         emit(user.username, "payment", payment);
-        emit(user.username, "account", account);
+        emit(user.username, "account", payment.account);
         l.info("liquid detected", address, user.username, asset, value);
         notify(user, `${value} SAT payment detected`);
       }
