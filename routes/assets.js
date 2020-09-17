@@ -104,6 +104,7 @@ app.post("/assets", auth, ah(async (req, res) => {
           where: {
             user_id,
             asset: config.liquid.btcasset,
+            pubkey: null,
           },
           include: {
             model: db.User,
@@ -139,6 +140,7 @@ app.post("/assets", auth, ah(async (req, res) => {
             precision,
             name,
             balance: 0,
+            network: 'liquid',
             pending: params.asset_amount * SATS,
           },
           { transaction }
