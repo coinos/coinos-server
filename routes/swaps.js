@@ -110,14 +110,14 @@ app.get("/proposal", auth, ah(async (req, res) => {
     assets["a0c358a0f6947864af3a06f3f6a2aeb304df7fd95c922f2f22d7412399ce7691"] = "adamcoin";
 
     if (!assets[a1]) throw new Error("unsupported asset");
-    if (v1 > b[assets[a1]]) throw new Error("insufficient server funds");
+    if (v1 > b[assets[a1]]) throw new Error(`insufficient server funds, ${v1} ${b[assets[a1]]}`);
     const account = await db.Account.findOne({
       where: {
         user_id: user.id,
         asset: a1,
       },
     });
-    if (v1 > account.balance) throw new Error("insufficient funds");
+    if (v1 > account.balance) throw new Error(`insufficient funds, ${v1} ${account.balance}`);
 
     l.info(
       `proposal requested to swap ${v1} ${assets[a1]} for ${v2} ${assets[a2]}`
@@ -137,7 +137,7 @@ app.get("/proposal", auth, ah(async (req, res) => {
 
     res.send({ proposal });
   } catch (e) {
-    l.error(e.message);
+    l.error(req.user.username, e.message);
     res.status(500).send({ error: e.message });
   }
 }));
