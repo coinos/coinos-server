@@ -10,14 +10,7 @@ module.exports = ah(async (req, res, next) => {
 
   try {
     await db.transaction(async transaction => {
-      let account = await db.Account.findOne({
-        where: {
-          user_id: user.id,
-          asset
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
+      let { account } = user;
 
       if (account.balance < amount) {
         throw new Error("Insufficient funds");
@@ -149,7 +142,6 @@ module.exports = ah(async (req, res, next) => {
       user.username,
       user.balance,
       e.message,
-      e.stack
     );
     return res.status(500).send(e.message);
   }

@@ -455,7 +455,7 @@ app.post(
 
     try {
       const account = await db.Account.findOne({
-        where: { id }
+        where: { id, user_id: user.id }
       });
 
       user.account_id = account.id;
