@@ -67,21 +67,24 @@ module.exports = ah(async (req, res, next) => {
         });
 
         let a2;
-        if (recipient.account.asset === asset && !recipient.account.pubkey)
-          ({ a2 } = recipient);
-        else {
-          let params = {
-            user_id: recipient.id,
-            asset,
-            pubkey: null
-          };
+        let acc = {
+          user_id: recipient.id,
+          asset,
+          pubkey: null
+        };
 
+        if (recipient.account.asset === asset && !recipient.account.pubkey)
+          ({ account: a2 } = recipient);
+        else {
           a2 = await db.Account.findOne({
-            where: params,
+            where: acc,
             lock: transaction.LOCK.UPDATE,
             transaction
           });
         }
+
+        console.log("a2", a2.id);
+        console.log("acc", acc);
 
         if (a2) {
           a2.balance += amount;
@@ -105,18 +108,16 @@ module.exports = ah(async (req, res, next) => {
               limit: 1
             });
 
-            l.info("existing", existing);
-
             if (existing) {
               ({ domain, ticker, precision, name } = existing);
             }
           }
 
-          params = { asset, ...params, ...{ domain, ticker, precision, name } };
-          params.balance = amount;
-          params.pending = 0;
-          params.network = 'liquid';
-          a2 = await db.Account.create(params, { transaction });
+          acc = { ...acc, ...{ domain, ticker, precision, name } };
+          acc.balance = amount;
+          acc.pending = 0;
+          acc.network = 'liquid';
+          a2 = await db.Account.create(acc, { transaction });
         }
 
         let p2 = await db.Payment.create(
