@@ -1,7 +1,8 @@
 const axios = require("axios");
 const crypto = require("crypto");
 
-app.get("/assets", ah(async (req, res) => {
+let fetchAssets;
+(fetchAssets = async () => {
   try {
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
@@ -16,11 +17,18 @@ app.get("/assets", ah(async (req, res) => {
       if (!assets[a.asset]) assets[a.asset] = a;
     });
 
-    res.send(assets);
+    app.set('assets', assets);
   } catch (e) {
     l.error("error fetching assets", e.message);
     res.status(500).send("error fetching assets");
   }
+
+  setTimeout(fetchAssets, 7200000);
+})();
+
+app.get("/assets", ah(async (req, res) => {
+  if (app.get('assets')) res.send(app.get('assets'));
+  else app.status(500).send('Problem fetching blockstream asset registry data');
 }));
 
 app.post("/assets", auth, ah(async (req, res) => {

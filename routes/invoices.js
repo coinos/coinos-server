@@ -47,7 +47,8 @@ app.post("/invoice", ah(async (req, res, next) => {
   const exists = await db.Invoice.findOne({
     where: {
       [Op.or]: {
-        address: invoice.address || "undefined",
+        address: invoice.address || "",
+        unconfidential: invoice.unconfidential || "",
         text: invoice.text,
       },
     },

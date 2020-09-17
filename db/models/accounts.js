@@ -55,6 +55,15 @@ const attributes = {
     comment: null,
     field: "seed"
   },
+  network: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "network"
+  },
   name: {
     type: DataTypes.STRING(255),
     allowNull: true,

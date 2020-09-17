@@ -12,7 +12,7 @@ const network =
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
-const getAccount = async (params, pending) => {
+const getAccount = async (params) => {
   let account = await db.Account.findOne({
     where: params
   });
@@ -29,7 +29,7 @@ const getAccount = async (params, pending) => {
   let ticker = asset.substr(0, 3).toUpperCase();
   let precision = 8;
 
-  const assets = (await axios.get("https://assets.blockstream.info/")).data;
+  const assets = app.get('assets');
 
   if (assets[asset]) {
     ({ domain, ticker, precision, name } = assets[asset]);
@@ -51,7 +51,7 @@ const getAccount = async (params, pending) => {
 
   params = { ...params, ...{ domain, ticker, precision, name } };
   params.balance = 0;
-  params.pending = pending;
+  params.network = 'liquid';
   return db.Account.create(params);
 };
 
@@ -103,17 +103,20 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         let { account } = invoice;
 
-        if (account.asset === asset) {
+        if (account.asset === asset && (!account.pubkey || account.network === 'liquid')) {
           account.pending += value;
           await account.save();
         } else {
           account = await getAccount(
             {
+              seed: account.seed,
+              path: account.path,
               user_id: user.id,
               asset,
               pubkey: account.pubkey,
+              pending: value,
+              index: 0,
             },
-            value
           );
         }
 

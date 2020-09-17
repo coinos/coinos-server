@@ -58,7 +58,7 @@ module.exports = ah(async (req, res, next) => {
       emit(user.username, "user", user);
 
       if (username) {
-        user = await db.User.findOne({
+        let recipient = await db.User.findOne({
           where: { username },
           include: {
             model: db.Account,
@@ -66,46 +66,33 @@ module.exports = ah(async (req, res, next) => {
           }
         });
 
-        const invoice = await db.Invoice.findOne({
-          where: {
-            user_id: user.id,
-            network: "bitcoin"
-          },
-          order: [["id", "DESC"]],
-          include: {
-            model: db.Account,
-            as: "account"
-          }
-        });
-
-        if (invoice) ({ account } = invoice);
-        else if (user.account.asset === asset && !user.account.pubkey)
-          ({ account } = user);
+        let a2;
+        if (recipient.account.asset === asset && !recipient.account.pubkey)
+          ({ a2 } = recipient);
         else {
           let params = {
-            user_id: user.id,
+            user_id: recipient.id,
             asset,
             pubkey: null
           };
 
-          account = await db.Account.findOne({
+          a2 = await db.Account.findOne({
             where: params,
             lock: transaction.LOCK.UPDATE,
             transaction
           });
         }
 
-        if (account) {
-          account.balance += amount;
-          await account.save({ transaction });
+        if (a2) {
+          a2.balance += amount;
+          await a2.save({ transaction });
         } else {
           let name = asset.substr(0, 6);
           let domain;
           let ticker = asset.substr(0, 3).toUpperCase();
           let precision = 8;
 
-          const assets = (await axios.get("https://assets.blockstream.info/"))
-            .data;
+          const assets = app.get('assets');
 
           if (assets[asset]) {
             ({ domain, ticker, precision, name } = assets[asset]);
@@ -125,19 +112,20 @@ module.exports = ah(async (req, res, next) => {
             }
           }
 
-          params = { ...params, ...{ domain, ticker, precision, name } };
+          params = { asset, ...params, ...{ domain, ticker, precision, name } };
           params.balance = amount;
           params.pending = 0;
-          account = await db.Account.create(params, { transaction });
+          params.network = 'liquid';
+          a2 = await db.Account.create(params, { transaction });
         }
 
-        payment = await db.Payment.create(
+        let p2 = await db.Payment.create(
           {
             amount,
-            account_id: account.id,
-            user_id: user.id,
-            rate: app.get("rates")[user.currency],
-            currency: user.currency,
+            account_id: a2.id,
+            user_id: recipient.id,
+            rate: app.get("rates")[recipient.currency],
+            currency: recipient.currency,
             confirmed: true,
             hash: "Internal Transfer",
             memo,
@@ -147,13 +135,13 @@ module.exports = ah(async (req, res, next) => {
           { transaction }
         );
 
-        payment = payment.get({ plain: true });
-        payment.account = account.get({ plain: true });
-        emit(user.username, "account", account);
-        emit(user.username, "payment", payment);
+        p2 = p2.get({ plain: true });
+        p2.account = a2.get({ plain: true });
+        emit(recipient.username, "account", p2.account);
+        emit(recipient.username, "payment", p2);
 
-        l.info("received internal", user.username, amount);
-        notify(user, `Received ${amount} ${account.ticker} sats`);
+        l.info("received internal", recipient.username, amount);
+        notify(recipient, `Received ${amount} ${a2.ticker} sats`);
       }
       res.send(payment);
     });
