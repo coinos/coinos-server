@@ -83,9 +83,6 @@ module.exports = ah(async (req, res, next) => {
           });
         }
 
-        console.log("a2", a2.id);
-        console.log("acc", acc);
-
         if (a2) {
           a2.balance += amount;
           await a2.save({ transaction });
