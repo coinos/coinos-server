@@ -7,15 +7,6 @@ let fetchAssets;
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
     );
-    const accounts = await db.Account.findAll({
-      group: ["asset"],
-    });
-
-    Object.keys(assets).map((a) => (assets[a].registered = true));
-
-    accounts.map((a) => {
-      if (!assets[a.asset]) assets[a.asset] = a;
-    });
 
     app.set('assets', assets);
   } catch (e) {
@@ -27,7 +18,20 @@ let fetchAssets;
 })();
 
 app.get("/assets", ah(async (req, res) => {
-  if (app.get('assets')) res.send(app.get('assets'));
+  if (app.get('assets')) {
+    const assets = app.get('assets');
+    const accounts = await db.Account.findAll({
+      group: ["asset"],
+    });
+
+    Object.keys(assets).map((a) => (assets[a].registered = true));
+
+    accounts.map((a) => {
+      if (!assets[a.asset]) assets[a.asset] = a;
+    });
+
+    res.send(assets);
+  } 
   else app.status(500).send('Problem fetching blockstream asset registry data');
 }));
 
