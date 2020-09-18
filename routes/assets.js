@@ -243,3 +243,106 @@ app.post("/assets/register", auth, ah(async (req, res) => {
     res.status(500).send(e.message);
   }
 }));
+
+app.post("/loadFaucet", auth, ah(async (req, res) => {
+  const { asset, amount } = req.body;
+
+  try {
+    await db.transaction(async transaction => {
+      let { account } = user;
+
+      if (account.balance < amount) {
+        throw new Error("Insufficient funds");
+      }
+
+      let fee = 0;
+
+      account.balance -= amount;
+      await account.save({ transaction });
+
+      let params = {
+        amount: -amount,
+        account_id: account.id,
+        memo,
+        user_id: user.id,
+        rate: app.get("rates")[user.currency],
+        currency: user.currency,
+        confirmed: true,
+        hash: "Internal Transfer",
+        network: "COINOS"
+      };
+
+      let payment = await db.Payment.create(params, { transaction });
+
+      payment = payment.get({ plain: true });
+      payment.account = account.get({ plain: true });
+
+      l.info("sent internal", user.username, -payment.amount);
+
+      emit(user.username, "payment", payment);
+      emit(user.username, "account", account);
+      emit(user.username, "user", user);
+
+        let a2;
+        let acc = {
+          user_id: null,
+          asset,
+        };
+
+        if (recipient.account.asset === asset && !recipient.account.pubkey)
+          ({ account: a2 } = recipient);
+        else {
+          a2 = await db.Account.findOne({
+            where: acc,
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
+        }
+
+        if (a2) {
+          a2.balance += amount;
+          await a2.save({ transaction });
+        } else {
+          let name = asset.substr(0, 6);
+          let domain;
+          let ticker = asset.substr(0, 3).toUpperCase();
+          let precision = 8;
+
+          const assets = app.get('assets');
+
+          if (assets[asset]) {
+            ({ domain, ticker, precision, name } = assets[asset]);
+          } else {
+            const existing = await db.Account.findOne({
+              where: {
+                asset
+              },
+              order: [["id", "ASC"]],
+              limit: 1
+            });
+
+            if (existing) {
+              ({ domain, ticker, precision, name } = existing);
+            }
+          }
+
+          acc = { ...acc, ...{ domain, ticker, precision, name } };
+          acc.balance = amount;
+          acc.pending = 0;
+          acc.network = 'liquid';
+          a2 = await db.Account.create(acc, { transaction });
+        }
+
+        l.info("loaded faucet", asset, amount);
+        res.end();
+    });
+  } catch (e) {
+    l.error(
+      "problem loading faucet",
+      user.username,
+      user.balance,
+      e.message,
+    );
+    return res.status(500).send(e.message);
+  }
+}));

@@ -65,7 +65,7 @@ CREATE TABLE `accounts` (
   `path` varchar(255) DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4030 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4037 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -100,7 +100,7 @@ CREATE TABLE `invoices` (
   `address` varchar(255) DEFAULT NULL,
   `received` double DEFAULT NULL,
   `amount` double DEFAULT NULL,
-  `tip` double DEFAULT NULL,
+  `tip` double NOT NULL DEFAULT 0,
   `network` varchar(255) DEFAULT NULL,
   `unconfidential` varchar(255) DEFAULT NULL,
   `uuid` varchar(255) DEFAULT NULL,
@@ -108,7 +108,7 @@ CREATE TABLE `invoices` (
   `account_id` int(11) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6191 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=6264 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -125,7 +125,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4583 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4587 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -157,7 +157,7 @@ CREATE TABLE `payments` (
   `redeemed` tinyint(1) NOT NULL DEFAULT 0,
   `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5488 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=5511 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -226,7 +226,7 @@ CREATE TABLE `users` (
   `index` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=712 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=715 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -238,4 +238,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-09-16 23:05:04
+-- Dump completed on 2020-09-18 11:53:57

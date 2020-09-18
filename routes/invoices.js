@@ -44,6 +44,8 @@ app.post("/invoice", ah(async (req, res, next) => {
     ).unconfidential;
   }
 
+  if (!invoice.tip) invoice.tip = 0;
+
   const exists = await db.Invoice.findOne({
     where: {
       [Op.or]: {
