@@ -87,7 +87,7 @@ module.exports = ah(async (req, res) => {
               balance: account.balance
             });
             throw new Error(
-              `Insufficient funds, need ${total} ${account.ticker}, have ${account.balance}`
+              `Insufficient funds, need ${total} ${account.ticker === 'BTC' ? 'SAT' : account.ticker}, have ${account.balance}`
             );
           }
 
