@@ -1,8 +1,10 @@
+const btc = config.liquid.btcasset;
+
 module.exports = ah(async (req, res) => {
   let { user } = req;
   let { address, memo, tx } = req.body;
 
-  const isChange = async (address) =>
+  const isChange = async address =>
     (await lq.getAddressInfo(address)).ismine &&
     !Object.keys(addresses).includes(address);
 
@@ -16,7 +18,7 @@ module.exports = ah(async (req, res) => {
     let {
       asset,
       value,
-      scriptPubKey: { type, addresses },
+      scriptPubKey: { type, addresses }
     } = vout[i];
 
     if (type === "fee") fee = toSats(value);
@@ -36,53 +38,79 @@ module.exports = ah(async (req, res) => {
   const payments = [];
 
   try {
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       for (let i = 0; i < assets.length; i++) {
         let asset = assets[i];
         let amount = totals[asset];
         if (change[asset]) amount -= change[asset];
         let total = amount;
-        if (asset === config.liquid.btcasset) total += fee;
 
-        l.info("creating liquid payment", user.username, asset, total, fee);
+        if (asset === btc) {
+          let covered = 0;
+          let nonbtc = assets.filter(a => a !== btc);
+          if (nonbtc.length === 1) {
+            let faucet = await db.Account.findOne({
+              where: {
+                asset: nonbtc[0],
+                user_id: null
+              }
+            });
 
-        let account = await db.Account.findOne({
-          where: {
-            user_id: user.id,
-            asset,
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction,
-        });
+            if (faucet) {
+              covered = faucet.balance;
+              if (covered > fee) covered = fee;
+              faucet.balance -= covered;
+              await faucet.save({ transaction });
+            }
 
-        if (total > account.balance) {
-          l.warn("amount exceeds balance", {
-            total,
-            fee,
-            balance: account.balance,
-          });
-          throw new Error("Insufficient funds");
+            total += fee - covered;
+          }
         }
 
-        account.balance -= total;
-        await account.save({ transaction });
+        if (asset !== btc || total) {
+          l.info("creating liquid payment", user.username, asset, total, fee);
 
-        let payment = {
-          amount: -amount,
-          account_id: account.id,
-          fee,
-          memo,
-          user_id: user.id,
-          rate: app.get("rates")[user.currency],
-          currency: user.currency,
-          address,
-          confirmed: true,
-          received: false,
-          network: "liquid",
-        };
+          let account = await db.Account.findOne({
+            where: {
+              user_id: user.id,
+              asset,
+              pubkey: null
+            },
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
 
-        payment.account = account;
-        payments.push(payment);
+          if (total > account.balance) {
+            l.warn("amount exceeds balance", {
+              total,
+              fee,
+              balance: account.balance
+            });
+            throw new Error(
+              `Insufficient funds, need ${total} ${account.ticker}, have ${account.balance}`
+            );
+          }
+
+          account.balance -= total;
+          await account.save({ transaction });
+
+          let payment = {
+            amount: -amount,
+            account_id: account.id,
+            fee,
+            memo,
+            user_id: user.id,
+            rate: app.get("rates")[user.currency],
+            currency: user.currency,
+            address,
+            confirmed: true,
+            received: false,
+            network: "liquid"
+          };
+
+          payment.account = account;
+          payments.push(payment);
+        }
       }
     });
   } catch (e) {
@@ -91,7 +119,7 @@ module.exports = ah(async (req, res) => {
   }
 
   try {
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       if (config.liquid.walletpass)
         await lq.walletPassphrase(config.liquid.walletpass, 300);
 
@@ -102,12 +130,14 @@ module.exports = ah(async (req, res) => {
       let main;
       for (let i = 0; i < assets.length; i++) {
         p = payments[i];
-        let { account } = p;
-        p.hash = txid;
-        p = await db.Payment.create(p, { transaction });
-        if (account.ticker !== "BTC" || !main) {
-          main = p.get({ plain: true });
-          main.account = account.get({ plain: true });
+        if (p) {
+          let { account } = p;
+          p.hash = txid;
+          p = await db.Payment.create(p, { transaction });
+          if (account.ticker !== "BTC" || !main) {
+            main = p.get({ plain: true });
+            main.account = account.get({ plain: true });
+          }
         }
       }
 
