@@ -56,7 +56,7 @@ const attributes = {
     field: "a2"
   },
   v1: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.DOUBLE,
     allowNull: true,
     defaultValue: null,
     primaryKey: false,
@@ -65,13 +65,22 @@ const attributes = {
     field: "v1"
   },
   v2: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.DOUBLE,
     allowNull: true,
     defaultValue: null,
     primaryKey: false,
     autoIncrement: false,
     comment: null,
     field: "v2"
+  },
+  rate: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "rate"
   },
   text: {
     type: DataTypes.TEXT,

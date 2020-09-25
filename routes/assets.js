@@ -87,7 +87,6 @@ app.post(
 
       params.asset_amount = asset_amount / (SATS / 10 ** precision);
 
-      l.info("asset_amount", params.asset_amount);
       if (token_amount) {
         params.token_amount = token_amount;
         params.token_address = token_address;
@@ -159,6 +158,7 @@ app.post(
           );
 
           emit(user.username, "account", account);
+          l.info("issued asset", user.username, params.asset_amount, ticker, name);
 
           const asset_payment = await db.Payment.create(
             {

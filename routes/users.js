@@ -553,9 +553,8 @@ app.post(
       l.info("user", user.username);
     }
 
-    let account = await getAccount(source.account.asset, user);
-
     await db.transaction(async transaction => {
+      let account = await getAccount(source.account.asset, user, transaction);
       let { hash, memo, confirmed, fee, network } = source;
 
       source.redeemed = true;
