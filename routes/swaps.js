@@ -144,7 +144,7 @@ app.get(
 
         v1 = Math.round(v1 * SATS);
         v2 = Math.round(v2 * SATS);
-        let rate = v2 / v1;
+        let rate = v2/v1;
 
         if (v1 > account.balance)
           throw new Error(`insufficient funds, ${v1} ${account.balance}`);
@@ -160,10 +160,13 @@ app.get(
           where: {
             a1: a2,
             a2: a1,
-            rate: { [Op.lte]: 1/rate },
-            accepted: false,
+            rate: { [Op.lte]: v1/v2 },
+            accepted: false
           },
-          order: [["rate", "ASC"], ["id", "ASC"]]
+          order: [
+            ["rate", "ASC"],
+            ["id", "ASC"]
+          ]
         });
 
         for (let i = 0; i < proposals.length; i++) {
@@ -177,6 +180,7 @@ app.get(
           } else {
             v1 -= p.v2;
             p.accepted = true;
+            p.completedAt = new Date();
             await p.save();
             broadcast("proposal", p);
           }
@@ -188,9 +192,9 @@ app.get(
             {
               a1,
               a2,
-              v1, 
+              v1,
               v2,
-              user_id: user.id
+              user_id: user.id,
             },
             { transaction }
           );

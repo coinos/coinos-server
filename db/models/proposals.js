@@ -19,6 +19,15 @@ const attributes = {
     comment: null,
     field: "user_id"
   },
+  completedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "completedAt"
+  },
   createdAt: {
     type: DataTypes.DATE,
     allowNull: false,
