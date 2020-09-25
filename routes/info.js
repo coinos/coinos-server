@@ -17,9 +17,10 @@ app.get("/balances", ah(async (req, res, next) => {
   const accounts = await db.Account.findAll({
     attributes: [
       "asset",
+      "pubkey",
       [sequelize.fn("sum", sequelize.col("balance")), "total"]
     ],
-    group: ["asset"],
+    group: ["asset", "pubkey"],
   });
 
   let lnchannel; 
