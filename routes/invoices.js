@@ -15,6 +15,7 @@ app.get("/invoice", auth, ah(async (req, res, next) => {
 }));
 
 app.post("/invoice", ah(async (req, res, next) => {
+  try {
   let { invoice, user } = req.body;
   if (!user) ({ user } = req);
   else {
@@ -35,7 +36,6 @@ app.post("/invoice", ah(async (req, res, next) => {
     invoice.amount,
     invoice.tip,
     invoice.currency,
-    invoice.rate.toFixed(2)
   );
 
   if (invoice.network === "liquid") {
@@ -60,4 +60,8 @@ app.post("/invoice", ah(async (req, res, next) => {
   addresses[invoice.address] = user.username;
   if (invoice.unconfidential) addresses[invoice.unconfidential] = user.username;
   res.send(invoice);
+  } catch(e) {
+    l.error(e.message, e.stack);
+    res.status(500).send(`Problem during invoice creation: ${e.message}`);
+  } 
 }));
