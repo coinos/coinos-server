@@ -5,7 +5,12 @@ const fs = require("fs");
 const { spawn } = require("child_process");
 const leveldb = level("leveldb");
 const getAccount = require("../lib/account");
-const { Op } = require("sequelize");
+const { Op, col } = require("sequelize");
+const shallow = a => {
+  let b = {};
+  for (x in a) { if(a[x] instanceof Date || typeof a[x] !== 'object') b[x] = a[x]; }
+  return b;
+} 
 
 const assets = {
   b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23: "bitcoin",
@@ -97,14 +102,48 @@ app.delete(
   auth,
   ah(async (req, res) => {
     const { id } = req.params;
-    await db.Proposal.destroy({
-      where: {
-        id,
-        user_id: req.user.id
-      }
+    const { user } = req;
+
+    await db.transaction(async transaction => {
+      let proposal = await db.Proposal.findOne(
+        {
+          where: {
+            id,
+            user_id: user.id
+          },
+          include: {
+            model: db.Account,
+            as: "acc1"
+          }
+        },
+
+        { transaction }
+      );
+
+      let { acc1: account, v1, v2 } = proposal;
+      account.balance += v1;
+      await account.save({ transaction });
+
+      let rate = v2 / v1;
+      let payment = await db.Payment.create(
+        {
+          hash: "Trade Cancelled",
+          amount: v1,
+          account_id: account.id,
+          user_id: user.id,
+          currency: user.currency,
+          rate,
+          confirmed: true,
+          received: true,
+          network: "COINOS"
+        },
+        { transaction }
+      );
+
+      emit(user.username, "payment", payment);
+      broadcast("removeProposal", id);
+      res.end();
     });
-    broadcast("removeProposal", id);
-    res.end();
   })
 );
 
@@ -114,12 +153,19 @@ app.get(
   ah(async (req, res) => {
     try {
       const { user } = req;
+
       let { a1, v1, a2, v2 } = req.query;
+      v1 = Math.round(v1 * SATS);
+      v2 = Math.round(v2 * SATS);
+
+      let rate = v2 / v1;
+
       const b = await lq.getBalance();
 
       Object.keys(b).map(asset => {
         assets[asset] = asset;
       });
+
       assets[config.liquid.btcasset] = "bitcoin";
       assets[
         "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"
@@ -129,60 +175,170 @@ app.get(
       ] = "adamcoin";
 
       if (!assets[a1]) throw new Error("unsupported asset");
-      if (parseFloat(v1) > parseFloat(b[assets[a1]]))
+      if (v1 > Math.round(b[assets[a1]] * SATS))
         throw new Error(`insufficient server funds, ${v1} ${b[assets[a1]]}`);
 
       await db.transaction(async transaction => {
-        const account = await db.Account.findOne({
-          where: {
-            user_id: user.id,
-            asset: a1
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
+        let a1acc = await getAccount(a1, user, transaction);
+        let a2acc = await getAccount(a2, user, transaction);
 
-        v1 = Math.round(v1 * SATS);
-        v2 = Math.round(v2 * SATS);
-        let rate = v2/v1;
-
-        if (v1 > account.balance)
-          throw new Error(`insufficient funds, ${v1} ${account.balance}`);
+        if (v1 > a1acc.balance)
+          throw new Error(`insufficient funds, ${v1} ${a1acc.balance}`);
 
         l.info(
-          `proposal requested to swap ${v1} ${assets[a1]} for ${v2} ${assets[a2]}`
+          `trade ${v1} ${a1.substr(0, 6)} for ${v2} ${a2.substr(0, 6)}`,
+          user.username
         );
 
-        //let text = await createProposal(a1, v1, a2, v2);
-        //text = text.replace(/\s+/g, "").trim();
+        a1acc.balance -= v1;
+        await a1acc.save({ transaction });
 
-        const proposals = await db.Proposal.findAll({
-          where: {
-            a1: a2,
-            a2: a1,
-            rate: { [Op.lte]: v1/v2 },
-            accepted: false
+        let payment = await db.Payment.create(
+          {
+            hash: "Trade Funding",
+            amount: -v1,
+            account_id: a1acc.id,
+            user_id: user.id,
+            currency: user.currency,
+            rate,
+            confirmed: true,
+            received: false,
+            network: "COINOS"
           },
-          order: [
-            ["rate", "ASC"],
-            ["id", "ASC"]
-          ]
-        });
+          { transaction }
+        );
+
+        emit(user.username, "payment", payment);
+
+        const proposals = await db.Proposal.findAll(
+          {
+            where: {
+              "$acc1.asset$": a2,
+              "$acc2.asset$": a1,
+              rate: { [Op.lte]: v1 / v2 },
+              accepted: false
+            },
+            order: [
+              ["rate", "ASC"],
+              ["id", "ASC"]
+            ],
+            include: [
+              {
+                model: db.User,
+                as: "user"
+              },
+              {
+                model: db.Account,
+                as: "acc1"
+              },
+              {
+                model: db.Account,
+                as: "acc2"
+              }
+            ]
+          },
+          { transaction }
+        );
 
         for (let i = 0; i < proposals.length; i++) {
           if (!v1) break;
           p = proposals[i];
           if (p.v2 > v1) {
             p.v2 -= v1;
-            await p.save();
-            broadcast("proposal", p);
+            await p.save({ transaction });
+
+            p.acc1.balance += v1;
+            await p.acc1.save({ transaction });
+
+            p = p.get({ plain: true });
+            p.a1 = p.acc1.asset;
+            p.a2 = p.acc2.asset;
+            broadcast("proposal", shallow(p));
+
             v1 = 0;
+
+            let payment = await db.Payment.create(
+              {
+                hash: "Oh",
+                amount: v2,
+                account_id: p.a1_id,
+                user_id: p.user_id,
+                currency: p.user.currency,
+                rate,
+                confirmed: true,
+                received: true,
+                network: "COINOS"
+              },
+              { transaction }
+            );
+
+            emit(p.user.username, "payment", payment);
+            emit(p.user.username, "account", p.acc1);
+
+            payment = await db.Payment.create(
+              {
+                hash: "My",
+                amount: v1,
+                account_id: a1acc.id,
+                user_id: user.id,
+                currency: user.currency,
+                rate,
+                confirmed: true,
+                received: true,
+                network: "COINOS"
+              },
+              { transaction }
+            );
+
+            emit(user.username, "payment", payment);
+            emit(user.username, "account", a1acc);
           } else {
             v1 -= p.v2;
+
             p.accepted = true;
             p.completedAt = new Date();
-            await p.save();
-            broadcast("proposal", p);
+
+            await p.save({ transaction });
+            p = p.get({ plain: true });
+            p.a1 = p.acc1.asset;
+            p.a2 = p.acc2.asset;
+            broadcast("proposal", shallow(p));
+
+            let payment = await db.Payment.create(
+              {
+                hash: "Humm",
+                amount: p.v1,
+                account_id: a2acc.id,
+                user_id: user.id,
+                currency: user.currency,
+                rate,
+                confirmed: true,
+                received: true,
+                network: "COINOS"
+              },
+              { transaction }
+            );
+
+            emit(user.username, "payment", payment);
+            emit(user.username, "account", a2acc);
+
+            payment = await db.Payment.create(
+              {
+                hash: "Gosh",
+                amount: p.v2,
+                account_id: p.a2_id,
+                user_id: p.user_id,
+                currency: p.user.currency,
+                rate,
+                confirmed: true,
+                received: true,
+                network: "COINOS"
+              },
+              { transaction }
+            );
+
+            emit(p.user.username, "payment", payment);
+            emit(p.user.username, "account", p.acc2);
           }
         }
 
@@ -190,16 +346,19 @@ app.get(
         if (v1) {
           proposal = await db.Proposal.create(
             {
-              a1,
-              a2,
               v1,
               v2,
               user_id: user.id,
+              a1_id: a1acc.id,
+              a2_id: a2acc.id
             },
             { transaction }
           );
 
+          proposal = proposal.get({ plain: true });
           proposal.rate = v2 / v1;
+          proposal.a1 = a1;
+          proposal.a2 = a2;
           broadcast("proposal", proposal);
         }
 
@@ -617,18 +776,33 @@ app.get(
   optionalAuth,
   ah(async (req, res) => {
     try {
-      if (req.user) {
-        res.send(await db.Proposal.findAll());
-      } else {
-        res.send(
-          await db.Proposal.findAll({
-            attributes: { exclude: ["user_id"] },
-            where: {
-              accepted: false
-            }
-          })
-        );
-      }
+      let proposals = await db.Proposal.findAll({
+        attributes: {
+          include: [
+            [col("acc1.asset"), "a1"],
+            [col("acc2.asset"), "a2"]
+          ]
+        },
+        include: [
+          {
+            model: db.Account,
+            as: "acc1",
+            attributes: []
+          },
+          {
+            model: db.Account,
+            as: "acc2",
+            attributes: []
+          }
+        ]
+      });
+
+      res.send(
+        proposals.map(p => {
+          if (p.user_id !== req.user.id) p.user_id = null;
+          return p;
+        })
+      );
     } catch (e) {
       res.status(500).send(e.message);
     }

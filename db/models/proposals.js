@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes } = require("sequelize");
 
 const attributes = {
   id: {
@@ -9,6 +9,24 @@ const attributes = {
     autoIncrement: true,
     comment: null,
     field: "id"
+  },
+  a1_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "a1_id"
+  },
+  a2_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "a2_id"
   },
   user_id: {
     type: DataTypes.INTEGER(11),
@@ -45,24 +63,6 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "updatedAt"
-  },
-  a1: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "a1"
-  },
-  a2: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "a2"
   },
   v1: {
     type: DataTypes.DOUBLE,
@@ -126,4 +126,4 @@ const options = {
   indexes: []
 };
 
-db["Proposal"] = db.define("proposals_model", attributes, options);
+db.Proposal = db.define("proposals_model", attributes, options);

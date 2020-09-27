@@ -57,7 +57,8 @@ module.exports = ah(async (req, res, next) => {
             model: db.Account,
             as: "account"
           }
-        });
+        },
+          { transaction });
 
         let a2;
         let acc = {
@@ -71,9 +72,7 @@ module.exports = ah(async (req, res, next) => {
         else {
           a2 = await db.Account.findOne({
             where: acc,
-            lock: transaction.LOCK.UPDATE,
-            transaction
-          });
+          }, { transaction });
         }
 
         if (a2) {
@@ -96,7 +95,7 @@ module.exports = ah(async (req, res, next) => {
               },
               order: [["id", "ASC"]],
               limit: 1
-            });
+            }, { transaction });
 
             if (existing) {
               ({ domain, ticker, precision, name } = existing);

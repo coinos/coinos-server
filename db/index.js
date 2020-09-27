@@ -16,62 +16,76 @@ require("./models/payments.js");
 require("./models/proposals.js");
 require("./models/users.js");
 
-db["User"].hasMany(db["Account"], {
+const { User, Account, Payment, Invoice, Key, Proposal } = db;
+
+User.hasMany(Account, {
   as: "accounts",
   foreignKey: "user_id"
 });
 
-db["User"].hasMany(db["Invoice"], {
+User.hasMany(Invoice, {
   as: "invoices",
   foreignKey: "user_id"
 });
 
-db["User"].hasMany(db["Key"], {
+User.hasMany(Key, {
   as: "keys",
   foreignKey: "user_id"
 });
 
-db["User"].hasMany(db["Payment"], {
+User.hasMany(Payment, {
   as: "payments",
   foreignKey: "user_id"
 });
 
-db["User"].belongsTo(db["Account"], {
+User.belongsTo(Account, {
   as: "account",
   foreignKey: "account_id"
 });
 
-db["Invoice"].belongsTo(db["Account"], {
+Invoice.belongsTo(Account, {
   as: "account",
   foreignKey: "account_id"
 });
 
-db["Account"].belongsTo(db["User"], {
+Account.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
 });
 
-db["Invoice"].belongsTo(db["User"], {
+Invoice.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
 });
 
-db["Key"].belongsTo(db["User"], {
+Key.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
 });
 
-db["Payment"].belongsTo(db["Account"], {
+Payment.belongsTo(Account, {
   as: "account",
   foreignKey: "account_id"
 });
 
-db["Payment"].belongsTo(db["User"], {
+Payment.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
 });
 
-db["Proposal"].belongsTo(db["User"], {
+Proposal.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
 });
+
+Proposal.belongsTo(Account, {
+  as: "acc1",
+  foreignKey: "a1_id"
+});
+
+Proposal.belongsTo(Account, {
+  as: "acc2",
+  foreignKey: "a2_id"
+});
+
+db.Proposal = Proposal;
