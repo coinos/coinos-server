@@ -466,7 +466,7 @@ app.post(
           }
         });
 
-        acc.balance = queue[keys[i]];
+        acc.balance += queue[keys[i]];
         await acc.save();
         emit(acc.user.username, "account", acc.get({ plain: true }));
       }
