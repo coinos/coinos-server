@@ -64,6 +64,15 @@ const attributes = {
     comment: null,
     field: "updatedAt"
   },
+  fee: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "fee"
+  },
   v1: {
     type: DataTypes.DOUBLE,
     allowNull: true,

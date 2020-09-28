@@ -8,9 +8,11 @@ const getAccount = require("../lib/account");
 const { Op, col } = require("sequelize");
 const shallow = a => {
   let b = {};
-  for (x in a) { if(a[x] instanceof Date || typeof a[x] !== 'object') b[x] = a[x]; }
+  for (x in a) {
+    if (a[x] instanceof Date || typeof a[x] !== "object") b[x] = a[x];
+  }
   return b;
-} 
+};
 
 const assets = {
   b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23: "bitcoin",
@@ -30,43 +32,6 @@ const cli = (...args) => {
   l.info("spawning liquidswap-cli with params:", params);
   return spawn("liquidswap-cli", params);
 };
-
-const createProposal = (a1, v1, a2, v2) =>
-  new Promise((resolve, reject) => {
-    l.info(
-      "running liquid-cli tool %s %s %s %s %s",
-      config.liquid.conf,
-      a1,
-      v1,
-      a2,
-      v2
-    );
-    const proc = cli("propose", a1, v1, a2, v2);
-
-    proc.stdout.on("data", data => {
-      resolve(data.toString());
-    });
-
-    proc.stderr.on("error", err => {
-      l.error("proposal error", err.toString());
-      reject(err.toString());
-    });
-
-    proc.on("close", (code, signal) => {
-      let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error(`Liquid swap tool process closed unexpectedly: ${msg}`));
-    });
-
-    proc.on("exit", (code, signal) => {
-      let msg = (code && code.toString()) || (signal && signal.toString());
-      reject(new Error(`Liquid swap tool process exited unexpectedly: ${msg}`));
-    });
-
-    setTimeout(
-      () => reject(new Error("Liquid swap tool timed out"), proc),
-      timeout
-    );
-  });
 
 const getInfo = filename =>
   new Promise((resolve, reject) => {
@@ -142,21 +107,21 @@ app.delete(
 
       emit(user.username, "payment", payment);
       broadcast("removeProposal", id);
+
+      await proposal.destroy({ transaction });
       res.end();
     });
   })
 );
 
-app.get(
-  "/proposal",
+app.post(
+  "/orders",
   auth,
   ah(async (req, res) => {
     try {
       const { user } = req;
 
-      let { a1, v1, a2, v2 } = req.query;
-      v1 = Math.round(v1 * SATS);
-      v2 = Math.round(v2 * SATS);
+      let { a1, v1, a2, v2 } = req.body;
 
       let rate = v2 / v1;
 
@@ -259,12 +224,12 @@ app.get(
 
             let payment = await db.Payment.create(
               {
-                hash: "Oh",
+                hash: "Trade Fill",
                 amount: v2,
                 account_id: p.a1_id,
                 user_id: p.user_id,
                 currency: p.user.currency,
-                rate,
+                rate: app.get("rates")[p.user.currency],
                 confirmed: true,
                 received: true,
                 network: "COINOS"
@@ -277,12 +242,12 @@ app.get(
 
             payment = await db.Payment.create(
               {
-                hash: "My",
+                hash: "Trade Fill",
                 amount: v1,
                 account_id: a1acc.id,
                 user_id: user.id,
                 currency: user.currency,
-                rate,
+                rate: app.get("rates")[user.currency],
                 confirmed: true,
                 received: true,
                 network: "COINOS"
@@ -306,12 +271,12 @@ app.get(
 
             let payment = await db.Payment.create(
               {
-                hash: "Humm",
+                hash: "Trade Fill",
                 amount: p.v1,
                 account_id: a2acc.id,
                 user_id: user.id,
                 currency: user.currency,
-                rate,
+                rate: app.get("rates")[user.currency],
                 confirmed: true,
                 received: true,
                 network: "COINOS"
@@ -324,12 +289,12 @@ app.get(
 
             payment = await db.Payment.create(
               {
-                hash: "Gosh",
+                hash: "Trade Fill",
                 amount: p.v2,
                 account_id: p.a2_id,
                 user_id: p.user_id,
                 currency: p.user.currency,
-                rate,
+                rate: app.get("rates")[p.user.currency],
                 confirmed: true,
                 received: true,
                 network: "COINOS"
@@ -339,6 +304,32 @@ app.get(
 
             emit(p.user.username, "payment", payment);
             emit(p.user.username, "account", p.acc2);
+
+            const btc = await getAccount(
+              config.liquid.btcasset,
+              p.user,
+              transaction
+            );
+
+            btc.balance += p.fee;
+
+            payment = await db.Payment.create(
+              {
+                hash: "Swap Fee Refund",
+                amount: p.fee,
+                account_id: btc.id,
+                user_id: p.user_id,
+                currency: p.user.currency,
+                rate: app.get("rates")[p.user.currency],
+                confirmed: true,
+                received: true,
+                network: "COINOS"
+              },
+              { transaction }
+            );
+
+            emit(p.user.username, "payment", payment);
+            emit(p.user.username, "account", btc);
           }
         }
 
@@ -355,10 +346,100 @@ app.get(
             { transaction }
           );
 
+          const text = await new Promise((resolve, reject) => {
+            l.info(
+              "running liquid-cli tool %s %s %s %s %s",
+              config.liquid.conf,
+              a1,
+              v1,
+              a2,
+              v2
+            );
+            const proc = cli(
+              "propose",
+              a1,
+              (v1 / SATS).toFixed(8),
+              a2,
+              (v2 / SATS).toFixed(8)
+            );
+
+            proc.stdout.on("data", data => {
+              resolve(data.toString());
+            });
+
+            proc.stderr.on("error", err => {
+              l.error("proposal error", err.toString());
+              reject(err.toString());
+            });
+
+            proc.on("close", (code, signal) => {
+              let msg =
+                (code && code.toString()) || (signal && signal.toString());
+              reject(
+                new Error(
+                  `Liquid swap tool process closed unexpectedly: ${msg}`
+                )
+              );
+            });
+
+            proc.on("exit", (code, signal) => {
+              let msg =
+                (code && code.toString()) || (signal && signal.toString());
+              reject(
+                new Error(
+                  `Liquid swap tool process exited unexpectedly: ${msg}`
+                )
+              );
+            });
+
+            setTimeout(
+              () => reject(new Error("Liquid swap tool timed out"), proc),
+              timeout
+            );
+          });
+
+          const filename = `proposal-${proposal.id}.txt`;
+
+          fs.writeFileSync(swapsdir + filename, text);
+          let info = JSON.parse(await getInfo(filename));
+          let [fee, rate, asset] = parse(info);
+
+          const btc = await getAccount(
+            config.liquid.btcasset,
+            user,
+            transaction
+          );
+          fee = Math.round(fee * SATS);
+          btc.balance -= fee;
+          await btc.save({ transaction });
+          emit(user.username, "account", btc);
+
+          let payment = await db.Payment.create(
+            {
+              hash: "Swap Fee Deposit",
+              amount: -fee,
+              account_id: btc.id,
+              user_id: user.id,
+              currency: user.currency,
+              rate: app.get("rates")[user.currency],
+              confirmed: true,
+              received: false,
+              network: "COINOS"
+            },
+            { transaction }
+          );
+
+          emit(user.username, "payment", payment);
+
+          proposal.fee = fee;
+          proposal.text = text;
+          await proposal.save({ transaction });
+
           proposal = proposal.get({ plain: true });
           proposal.rate = v2 / v1;
           proposal.a1 = a1;
           proposal.a2 = a2;
+
           broadcast("proposal", proposal);
         }
 
@@ -378,10 +459,9 @@ app.post(
     try {
       const { id, text } = req.body;
 
-      const proposal = await db.Proposal.findOne({
+      let proposal = await db.Proposal.findOne({
         where: {
-          id,
-          accepted: false
+          id
         },
         include: {
           model: db.User,
@@ -391,138 +471,13 @@ app.post(
 
       if (!proposal) throw new Error("Proposal not found");
 
-      const filename = `proposal-${id}.txt`;
-
-      fs.writeFileSync(swapsdir + filename, proposal.text);
-      let info = JSON.parse(await getInfo(filename));
-
       const { user } = req;
 
-      if (user) {
-        let [fee, rate, asset] = parse(info);
-        const leg1 = info.legs.find(leg => !leg.incoming && leg.funded);
-        const leg2 = info.legs.find(leg => leg.incoming && !leg.funded);
-        await db.transaction(async transaction => {
-          const l1a1 = await getAccount(leg1.asset, user, transaction);
-          const l1a2 = await getAccount(leg1.asset, proposal.user, transaction);
-
-          let amount = Math.round(leg1.amount * SATS);
-          if (amount > l1a2.balance)
-            throw new Error(
-              `Proposer has insufficient funds: ${amount}, ${l1a2.balance}`
-            );
-
-          l1a1.balance += amount;
-          l1a2.balance -= amount;
-
-          let l1a1p = await db.Payment.create(
-            {
-              hash: "Internal Transfer",
-              amount,
-              account_id: l1a1.id,
-              memo: "Atomic Swap",
-              user_id: user.id,
-              currency: user.currency,
-              rate,
-              confirmed: true,
-              received: true,
-              network: "COINOS"
-            },
-            { transaction }
-          );
-
-          let l1a2p = await db.Payment.create(
-            {
-              hash: "Internal Transfer",
-              amount: -amount,
-              account_id: l1a2.id,
-              memo: "Atomic Swap",
-              user_id: proposal.user_id,
-              currency: proposal.user.currency,
-              rate,
-              confirmed: true,
-              received: false,
-              network: "COINOS"
-            },
-            { transaction }
-          );
-
-          const l2a1 = await getAccount(leg2.asset, user);
-          const l2a2 = await getAccount(leg2.asset, proposal.user);
-
-          amount = Math.round(leg2.amount * SATS);
-          if (amount > l2a1.balance) throw new Error("Insufficient funds");
-
-          l2a1.balance -= amount;
-          l2a2.balance += amount;
-
-          let l2a1p = await db.Payment.create(
-            {
-              hash: "Internal Transfer",
-              amount: -amount,
-              account_id: l2a1.id,
-              memo: "Atomic Swap",
-              user_id: user.id,
-              currency: user.currency,
-              rate,
-              confirmed: true,
-              received: false,
-              network: "COINOS"
-            },
-            { transaction }
-          );
-
-          let l2a2p = await db.Payment.create(
-            {
-              hash: "Internal Transfer",
-              amount,
-              account_id: l2a2.id,
-              memo: "Atomic Swap",
-              user_id: proposal.user_id,
-              currency: proposal.user.currency,
-              rate,
-              confirmed: true,
-              received: true,
-              network: "COINOS"
-            },
-            { transaction }
-          );
-
-          await l1a1.save({ transaction });
-          await l1a2.save({ transaction });
-          await l2a1.save({ transaction });
-          await l2a2.save({ transaction });
-
-          proposal.accepted = true;
-          await proposal.save({ transaction });
-
-          l1a1p = l1a1p.get({ plain: true });
-          l1a1p.account = l1a1.get({ plain: true });
-          l1a2p = l1a2p.get({ plain: true });
-          l1a2p.account = l1a2.get({ plain: true });
-          l2a1p = l2a1p.get({ plain: true });
-          l2a1p.account = l2a1.get({ plain: true });
-          l2a2p = l2a2p.get({ plain: true });
-          l2a2p.account = l2a2.get({ plain: true });
-
-          emit(user.username, "account", l1a1);
-          emit(user.username, "account", l2a1);
-          emit(proposal.user.username, "account", l1a2);
-          emit(proposal.user.username, "account", l2a2);
-          emit(user.username, "payment", l1a1p);
-          emit(user.username, "payment", l2a1p);
-          emit(proposal.user.username, "payment", l1a2p);
-          emit(proposal.user.username, "payment", l2a2p);
-          emit(user.username, "proposal", proposal);
-
-          console.log("emitting", proposal.user.username, proposal);
-          emit(proposal.user.username, "proposal", proposal);
-        });
-      } else if (text) {
+      if (text) {
         const filename = `acceptance-${id}.txt`;
         fs.writeFileSync(swapsdir + filename, text);
 
-        info = JSON.parse(await getInfo(filename));
+        let info = JSON.parse(await getInfo(filename));
         let [fee, rate, asset] = parse(info);
         let { tx, u_address_p, u_address_r } = JSON.parse(
           Buffer.from(text, "base64").toString()
@@ -536,7 +491,9 @@ app.post(
 
         await db.transaction(async transaction => {
           const l1a2 = await getAccount(leg1.asset, proposal.user, transaction);
-          const bc = await getAccount(
+          const l2a2 = await getAccount(leg2.asset, proposal.user, transaction);
+
+          const btc = await getAccount(
             config.liquid.btcasset,
             proposal.user,
             transaction
@@ -544,16 +501,6 @@ app.post(
 
           let amount = Math.round(leg1.amount * SATS);
           fee = Math.round(fee * SATS);
-
-          if (amount > l1a2.balance)
-            throw new Error(
-              `Proposer has insufficient funds: ${amount}, ${l1a2.balance}`
-            );
-
-          if (fee > btc.balance)
-            throw new Error(
-              `Proposer has insufficient funds for fee: ${fee}, ${btc.balance}`
-            );
 
           l1a2.balance -= amount;
           btc.balance -= fee;
@@ -566,7 +513,7 @@ app.post(
             memo: "Atomic Swap",
             user_id: proposal.user_id,
             currency: proposal.user.currency,
-            rate,
+            rate: app.get("rates")[proposal.user.currency],
             address: u_address_r,
             confirmed: true,
             received: false,
@@ -578,12 +525,15 @@ app.post(
           await db.Invoice.create({
             user_id: proposal.user_id,
             text: u_address_p,
+            address: u_address_p,
+            unconfidential: u_address_p,
             currency: proposal.user.currency,
             memo: "Atomic Swap",
-            rate,
+            rate: app.get("rates")[proposal.user.currency],
             amount,
             tip: 0,
-            network: "liquid"
+            network: "liquid",
+            account_id: l2a2.id
           });
 
           addresses[u_address_p] = proposal.user.username;
@@ -593,6 +543,7 @@ app.post(
           await btc.save({ transaction });
 
           proposal.accepted = true;
+          proposal.completedAt = new Date();
           await proposal.save({ transaction });
 
           payment = payment.get({ plain: true });
@@ -601,13 +552,17 @@ app.post(
           emit(proposal.user.username, "payment", payment);
           emit(proposal.user.username, "account", l1a2);
           emit(proposal.user.username, "account", btc);
-          emit(proposal.user.username, "proposal", proposal);
+
+          proposal = proposal.get({ plain: true });
+          proposal.a1 = leg1.asset;
+          proposal.a2 = leg2.asset;
+          broadcast("proposal", shallow(proposal));
         });
+
+        res.send(info);
       } else {
         throw new Error("no acceptance provided");
       }
-
-      res.send(info);
     } catch (e) {
       l.error(e.message);
       res.status(500).send(e.message);
