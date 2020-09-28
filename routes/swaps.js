@@ -237,6 +237,9 @@ app.post(
               { transaction }
             );
 
+            p.acc1.balance += v2;
+            await p.acc1.save({ transaction });
+
             emit(p.user.username, "payment", payment);
             emit(p.user.username, "account", p.acc1);
 
@@ -254,6 +257,9 @@ app.post(
               },
               { transaction }
             );
+
+            a1acc.balance += v1;
+            await a1acc.save({ transaction });
 
             emit(user.username, "payment", payment);
             emit(user.username, "account", a1acc);
@@ -284,6 +290,9 @@ app.post(
               { transaction }
             );
 
+            a2acc.balance += p.v1;
+            await a2acc.save({ transaction });
+
             emit(user.username, "payment", payment);
             emit(user.username, "account", a2acc);
 
@@ -302,6 +311,9 @@ app.post(
               { transaction }
             );
 
+            p.acc2.balance += p.v2;
+            await p.acc2.save({ transaction });
+
             emit(p.user.username, "payment", payment);
             emit(p.user.username, "account", p.acc2);
 
@@ -310,8 +322,6 @@ app.post(
               p.user,
               transaction
             );
-
-            btc.balance += p.fee;
 
             payment = await db.Payment.create(
               {
@@ -327,6 +337,9 @@ app.post(
               },
               { transaction }
             );
+
+            btc.balance += p.fee;
+            await btc.save({ transaction });
 
             emit(p.user.username, "payment", payment);
             emit(p.user.username, "account", btc);
