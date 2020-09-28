@@ -86,8 +86,8 @@ app.delete(
       );
 
       let { acc1: account, v1, v2 } = proposal;
-      account.balance += v1;
-      await account.save({ transaction });
+      await account.increment({ balance: v1 }, { transaction });
+      await account.reload({ transaction });
 
       let rate = v2 / v1;
       let payment = await db.Payment.create(
@@ -97,7 +97,7 @@ app.delete(
           account_id: account.id,
           user_id: user.id,
           currency: user.currency,
-          rate,
+          rate: app.get("rates")[user.currency],
           confirmed: true,
           received: true,
           network: "COINOS"
@@ -105,7 +105,34 @@ app.delete(
         { transaction }
       );
 
-      emit(user.username, "payment", payment);
+      emit(user.username, "account", account.get({ plain: true }));
+      emit(user.username, "payment", payment.get({ plain: true }));
+
+      if (proposal.fee) {
+        const btc = await getAccount(config.liquid.btcasset, user, transaction);
+
+        payment = await db.Payment.create(
+          {
+            hash: "Swap Fee Refund",
+            amount: proposal.fee,
+            account_id: btc.id,
+            user_id: user.id,
+            currency: user.currency,
+            rate: app.get("rates")[user.currency],
+            confirmed: true,
+            received: true,
+            network: "COINOS"
+          },
+          { transaction }
+        );
+
+        await btc.increment({ balance: proposal.fee }, { transaction });
+        await btc.reload({ transaction });
+
+        emit(user.username, "account", btc.get({ plain: true }));
+        emit(user.username, "payment", payment.get({ plain: true }));
+      }
+
       broadcast("removeProposal", id);
 
       await proposal.destroy({ transaction });
@@ -143,7 +170,6 @@ app.post(
       if (v1 > Math.round(b[assets[a1]] * SATS))
         throw new Error(`insufficient server funds, ${v1} ${b[assets[a1]]}`);
 
-      let queue = {};
       await db.transaction(async transaction => {
         let a1acc = await getAccount(a1, user, transaction);
         let a2acc = await getAccount(a2, user, transaction);
@@ -156,8 +182,8 @@ app.post(
           user.username
         );
 
-        a1acc.balance -= v1;
-        await a1acc.save({ transaction });
+        await a1acc.decrement({ balance: v1 }, { transaction });
+        await a1acc.reload({ transaction });
 
         let payment = await db.Payment.create(
           {
@@ -166,7 +192,7 @@ app.post(
             account_id: a1acc.id,
             user_id: user.id,
             currency: user.currency,
-            rate,
+            rate: app.get("rates")[user.currency],
             confirmed: true,
             received: false,
             network: "COINOS"
@@ -229,8 +255,8 @@ app.post(
               { transaction }
             );
 
-            p.acc1.balance += v2;
-            await p.acc1.save({ transaction });
+            await p.acc1.increment({ balance: v2 }, { transaction });
+            await p.acc1.reload({ transaction });
 
             emit(p.user.username, "payment", payment.get({ plain: true }));
             emit(p.user.username, "account", p.acc1.get({ plain: true }));
@@ -250,35 +276,37 @@ app.post(
               { transaction }
             );
 
-            a1acc.balance += v1;
-            await a1acc.save({ transaction });
+            a1acc.increment({ balance: v1 }, { transaction });
+            await a1acc.reload({ transaction });
 
             emit(user.username, "payment", payment.get({ plain: true }));
             emit(user.username, "account", a1acc.get({ plain: true }));
 
-            const btc = await getAccount(
-              config.liquid.btcasset,
-              p.user,
-              transaction
-            );
+            if (p.fee) {
+              const btc = await getAccount(
+                config.liquid.btcasset,
+                p.user,
+                transaction
+              );
 
-            payment = await db.Payment.create(
-              {
-                hash: "Swap Fee Refund",
-                amount: p.fee,
-                account_id: btc.id,
-                user_id: p.user_id,
-                currency: p.user.currency,
-                rate: app.get("rates")[p.user.currency],
-                confirmed: true,
-                received: true,
-                network: "COINOS"
-              },
-              { transaction }
-            );
+              payment = await db.Payment.create(
+                {
+                  hash: "Swap Fee Refund",
+                  amount: p.fee,
+                  account_id: btc.id,
+                  user_id: p.user_id,
+                  currency: p.user.currency,
+                  rate: app.get("rates")[p.user.currency],
+                  confirmed: true,
+                  received: true,
+                  network: "COINOS"
+                },
+                { transaction }
+              );
 
-            btc.balance += p.fee;
-            await btc.save({ transaction });
+              await btc.increment({ balance: p.fee }, { transaction });
+              await btc.reload({ transaction });
+            }
 
             emit(p.user.username, "payment", payment.get({ plain: true }));
             emit(p.user.username, "account", btc.get({ plain: true }));
@@ -311,8 +339,8 @@ app.post(
               { transaction }
             );
 
-            a2acc.balance += p.v1;
-            await a2acc.save({ transaction });
+            await a2acc.increment({ balance: p.v1 }, { transaction });
+            await a2acc.reload({ transaction });
 
             emit(user.username, "payment", payment.get({ plain: true }));
             emit(user.username, "account", a2acc.get({ plain: true }));
@@ -333,8 +361,8 @@ app.post(
             );
 
             emit(p.user.username, "payment", payment.get({ plain: true }));
-            if (!queue[p.acc2.id]) queue[p.acc2.id] = 0;
-            queue[p.acc2.id] += p.v2;
+            await p.acc2.increment({ balance: p.v2 }, { transaction });
+            await p.acc2.reload({ transaction });
 
             p = p.get({ plain: true });
             p.a1 = p.acc1.asset;
@@ -420,7 +448,7 @@ app.post(
             transaction
           );
           fee = Math.round(fee * SATS);
-          btc.balance -= fee;
+          await btc.decrement({ balance: fee }, { transaction });
           await btc.save({ transaction });
           emit(user.username, "account", btc.get({ plain: true }));
 
@@ -453,23 +481,6 @@ app.post(
           broadcast("proposal", proposal);
         }
       });
-
-      let keys = Object.keys(queue);
-      for (let i = 0; i < keys.length; i++) {
-        let acc = await db.Account.findOne({
-          where: {
-            id: keys[i]
-          },
-          include: {
-            model: db.User,
-            as: "user"
-          }
-        });
-
-        acc.balance += queue[keys[i]];
-        await acc.save();
-        emit(acc.user.username, "account", acc.get({ plain: true }));
-      }
 
       res.end();
     } catch (e) {
@@ -529,8 +540,11 @@ app.post(
           let amount = Math.round(leg1.amount * SATS);
           fee = Math.round(fee * SATS);
 
-          l1a2.balance -= amount;
-          btc.balance -= fee;
+          await l1a2.decrement({ balance: amount }, { transaction });
+          await l1a2.reload({ transaction });
+
+          await btc.decrement({ balance: fee }, { transaction });
+          await btc.reload({ transaction });
 
           let payment = await db.Payment.create({
             hash,
