@@ -259,7 +259,7 @@ app.post(
   "/accounts",
   auth,
   ah(async (req, res) => {
-    const { name, seed, pubkey, ticker, precision, path, network } = req.body;
+    const { name, seed, pubkey, ticker, precision, path, privkey, network } = req.body;
     const { user } = req;
 
     let account = await db.Account.create({
@@ -271,6 +271,7 @@ app.post(
       ticker,
       precision,
       pubkey,
+      privkey,
       seed,
       path,
       network
@@ -420,6 +421,7 @@ app.post(
       domain,
       seed,
       pubkey,
+      privkey,
       path,
       hide,
       index
@@ -427,7 +429,7 @@ app.post(
 
     try {
       await db.Account.update(
-        { name, ticker, precision, domain, seed, pubkey, path, hide, index },
+        { name, ticker, precision, domain, seed, pubkey, path, hide, index, privkey },
         {
           where: { id, user_id: user.id }
         }

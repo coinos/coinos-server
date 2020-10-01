@@ -151,6 +151,15 @@ const attributes = {
     comment: null,
     field: "index"
   },
+  privkey: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "privkey"
+  },
   pubkey: {
     type: DataTypes.STRING,
     allowNull: true,

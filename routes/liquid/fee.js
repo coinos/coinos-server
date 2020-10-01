@@ -17,6 +17,7 @@ module.exports = ah(async (req, res) => {
       });
       return res.send(psbt);
     } catch (e) {
+      l.error(e.message, e.stack);
       return res.status(500).send(e.message);
     }
   }
