@@ -306,10 +306,11 @@ app.post(
 
               await btc.increment({ balance: p.fee }, { transaction });
               await btc.reload({ transaction });
+
+              emit(p.user.username, "account", btc.get({ plain: true }));
             }
 
             emit(p.user.username, "payment", payment.get({ plain: true }));
-            emit(p.user.username, "account", btc.get({ plain: true }));
 
             p = p.get({ plain: true });
             p.a1 = p.acc1.asset;
