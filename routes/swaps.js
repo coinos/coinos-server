@@ -529,38 +529,10 @@ app.post(
         const leg2 = info.legs.find(leg => leg.incoming);
 
         await db.transaction(async transaction => {
-          const l1a2 = await getAccount(leg1.asset, proposal.user, transaction);
           const l2a2 = await getAccount(leg2.asset, proposal.user, transaction);
-
-          const btc = await getAccount(
-            config.liquid.btcasset,
-            proposal.user,
-            transaction
-          );
 
           let amount = Math.round(leg1.amount * SATS);
           fee = Math.round(fee * SATS);
-
-          await l1a2.decrement({ balance: amount }, { transaction });
-          await l1a2.reload({ transaction });
-
-          await btc.decrement({ balance: fee }, { transaction });
-          await btc.reload({ transaction });
-
-          let payment = await db.Payment.create({
-            hash,
-            amount: -amount,
-            account_id: l1a2.id,
-            fee,
-            memo: "Atomic Swap",
-            user_id: proposal.user_id,
-            currency: proposal.user.currency,
-            rate: app.get("rates")[proposal.user.currency],
-            address: u_address_r,
-            confirmed: true,
-            received: false,
-            network: "liquid"
-          });
 
           amount = Math.round(leg2.amount * SATS);
 
@@ -581,19 +553,10 @@ app.post(
           addresses[u_address_p] = proposal.user.username;
 
           await finalize(filename);
-          await l1a2.save({ transaction });
-          await btc.save({ transaction });
 
           proposal.accepted = true;
           proposal.completedAt = new Date();
           await proposal.save({ transaction });
-
-          payment = payment.get({ plain: true });
-          payment.account = l1a2.get({ plain: true });
-
-          emit(proposal.user.username, "payment", payment);
-          emit(proposal.user.username, "account", l1a2);
-          emit(proposal.user.username, "account", btc);
 
           proposal = proposal.get({ plain: true });
           proposal.a1 = leg1.asset;
