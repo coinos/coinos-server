@@ -65,7 +65,7 @@ ah(async () => {
           unconfirmed.includes(tx.address)
       )
       .map((tx) => {
-        l.warn("tx unconfirmed in db", tx.txid);
+        l.warn("tx unconfirmed in db", tx.txid, tx.address);
       });
 
     const unaccounted = [];
