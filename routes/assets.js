@@ -34,7 +34,7 @@ app.get(
 
       res.send(assets);
     } else
-      app.status(500).send("Problem fetching blockstream asset registry data");
+      res.status(500).send("Problem fetching blockstream asset registry data");
   })
 );
 
