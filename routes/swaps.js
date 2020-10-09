@@ -834,11 +834,11 @@ app.post(
 
 setInterval(async () => {
   if (!app.get("rates")) return;
-  const amount = 0.01;
+  const amount = 0.0001;
   const btc =
-    "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+    config.liquid.btcasset;
   const lcad =
-    "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
+    config.liquid.cadasset;
   const { CAD, USD } = app.get("rates");
   const user = await db.User.findOne({
     where: {
@@ -917,7 +917,7 @@ setInterval(async () => {
       try {
         await swap(user, params);
       } catch (e) {
-        l.error("Failed to make ask", e.message);
+        l.warn("Failed to make ask", e.message);
       }
     }
 
@@ -968,4 +968,4 @@ setInterval(async () => {
       }
     }
   });
-}, 2000);
+}, 10000);
