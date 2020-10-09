@@ -119,7 +119,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         where: {
           "$acc1.asset$": a2,
           "$acc2.asset$": a1,
-          rate: { [Op.lte]: 1/rate },
+          rate: { [Op.lte]: v1 / v2 },
           accepted: false
         },
         order: [
@@ -226,13 +226,13 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         p = p.get({ plain: true });
         p.a1 = p.acc1.asset;
         p.a2 = p.acc2.asset;
+        p.rate = p.v2 / p.v1;
+
         broadcast("proposal", shallow(p));
         v1 = 0;
       } else {
-        console.log("b4", v1, p.v2, v2, p.v1, rate);
         v1 -= p.v2;
         v2 = Math.round(v1 * rate);
-        console.log("after", v1, v2);
 
         p.accepted = true;
         p.completedAt = new Date();
@@ -282,6 +282,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         p = p.get({ plain: true });
         p.a1 = p.acc1.asset;
         p.a2 = p.acc2.asset;
+        p.rate = p.v2 / p.v1;
+
         broadcast("proposal", shallow(p));
       }
     }
@@ -298,85 +300,6 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         },
         { transaction }
       );
-
-      const text = await new Promise((resolve, reject) => {
-        l.info(
-          "running liquid-cli tool %s %s %s %s %s",
-          config.liquid.conf,
-          a1,
-          v1,
-          a2,
-          v2
-        );
-        const proc = cli(
-          "propose",
-          a1,
-          (v1 / SATS).toFixed(8),
-          a2,
-          (v2 / SATS).toFixed(8)
-        );
-
-        proc.stdout.on("data", data => {
-          resolve(data.toString());
-        });
-
-        proc.stderr.on("error", err => {
-          l.error("proposal error", err.toString());
-          reject(err.toString());
-        });
-
-        proc.on("close", (code, signal) => {
-          let msg = (code && code.toString()) || (signal && signal.toString());
-          reject(
-            new Error(`Liquid swap tool process closed unexpectedly: ${msg}`)
-          );
-        });
-
-        proc.on("exit", (code, signal) => {
-          let msg = (code && code.toString()) || (signal && signal.toString());
-          reject(
-            new Error(`Liquid swap tool process exited unexpectedly: ${msg}`)
-          );
-        });
-
-        setTimeout(
-          () => reject(new Error("Liquid swap tool timed out"), proc),
-          timeout
-        );
-      });
-
-      const filename = `proposal-${proposal.id}.txt`;
-
-      fs.writeFileSync(swapsdir + filename, text);
-      let info = JSON.parse(await getInfo(filename));
-      let [fee, rate, asset] = parse(info);
-
-      const btc = await getAccount(config.liquid.btcasset, user, transaction);
-      fee = Math.round(fee * SATS);
-      await btc.decrement({ balance: fee }, { transaction });
-      await btc.save({ transaction });
-      emit(user.username, "account", btc.get({ plain: true }));
-
-      let payment = await db.Payment.create(
-        {
-          hash: "Swap Fee Deposit",
-          amount: -fee,
-          account_id: btc.id,
-          user_id: user.id,
-          currency: user.currency,
-          rate: app.get("rates")[user.currency],
-          confirmed: true,
-          received: false,
-          network: "COINOS"
-        },
-        { transaction }
-      );
-
-      emit(user.username, "payment", payment.get({ plain: true }));
-
-      proposal.fee = fee;
-      proposal.text = text;
-      await proposal.save({ transaction });
 
       proposal = proposal.get({ plain: true });
       proposal.rate = v2 / v1;
@@ -555,6 +478,8 @@ app.post(
           proposal = proposal.get({ plain: true });
           proposal.a1 = leg1.asset;
           proposal.a2 = leg2.asset;
+          proposal.rate = proposal.v2 / proposal.v1;
+
           broadcast("proposal", shallow(proposal));
         });
 
@@ -783,8 +708,10 @@ app.post(
 setInterval(async () => {
   if (!app.get("rates")) return;
   const amount = 0.01;
-  const btc = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-  const lcad = "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
+  const btc =
+    "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+  const lcad =
+    "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
   const { CAD, USD } = app.get("rates");
   const user = await db.User.findOne({
     where: {
@@ -798,12 +725,17 @@ setInterval(async () => {
         where: {
           user_id: user.id,
           "$acc1.asset$": btc,
+          "$acc2.asset$": lcad,
           accepted: false
         },
         include: [
           {
             model: db.Account,
             as: "acc1"
+          },
+          {
+            model: db.Account,
+            as: "acc2"
           }
         ]
       },
@@ -818,19 +750,47 @@ setInterval(async () => {
     };
 
     if (p) {
-      p.v2 = params.v2;
-      await p.save();
-      p = p.get({ plain: true });
-      p.a1 = params.a1;
-      p.a2 = params.a2;
+      let bestBid = await db.Proposal.findOne(
+        {
+          where: {
+            "$acc1.asset$": lcad,
+            "$acc2.asset$": btc,
+            accepted: false,
+            id: {
+              [Op.ne]: p.id
+            }
+          },
+          include: [
+            {
+              model: db.Account,
+              as: "acc1"
+            },
+            {
+              model: db.Account,
+              as: "acc2"
+            }
+          ],
+          order: [["rate", "DESC"]],
+          limit: 1
+        },
+        { transaction }
+      );
+      if (!bestBid || params.v2 / params.v1 > bestBid.rate) {
+        p.v2 = params.v2;
+        await p.save();
+        p = p.get({ plain: true });
+        p.a1 = params.a1;
+        p.a2 = params.a2;
+        p.rate = p.v2 / p.v1;
 
-      broadcast("proposal", shallow(p));
-    } else { 
+        broadcast("proposal", shallow(p));
+      }
+    } else {
       try {
         await swap(user, params);
-      } catch(e) {
+      } catch (e) {
         l.error("Failed to make ask", e.message);
-      } 
+      }
     }
 
     p = await db.Proposal.findOne(
@@ -838,12 +798,17 @@ setInterval(async () => {
         where: {
           user_id: user.id,
           "$acc1.asset$": lcad,
+          "$acc2.asset$": btc,
           accepted: false
         },
         include: [
           {
             model: db.Account,
             as: "acc1"
+          },
+          {
+            model: db.Account,
+            as: "acc2"
           }
         ]
       },
@@ -855,22 +820,23 @@ setInterval(async () => {
       a2: btc,
       v1: Math.round(amount * SATS * ((app.get("bid") * CAD) / USD) * 0.99),
       v2: amount * SATS
-    }
-    
+    };
+
     if (p) {
       p.v1 = params.v1;
       await p.save();
       p = p.get({ plain: true });
       p.a1 = params.a1;
       p.a2 = params.a2;
+      p.rate = p.v2 / p.v1;
 
       broadcast("proposal", shallow(p));
-    } else { 
+    } else {
       try {
-      await swap(user, params);
-      } catch(e) {
+        await swap(user, params);
+      } catch (e) {
         l.warn("Failed to make bid", e.message);
-      } 
+      }
     }
   });
-}, 6000);
+}, 2000);
