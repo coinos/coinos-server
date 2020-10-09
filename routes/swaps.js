@@ -135,16 +135,16 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
   assets["a0c358a0f6947864af3a06f3f6a2aeb304df7fd95c922f2f22d7412399ce7691"] =
     "adamcoin";
 
-  if (!assets[a1]) throw new Error("unsupported asset");
+  if (!assets[a1]) throw new Error("Asset not found on server");
   if (v1 > Math.round(b[assets[a1]] * SATS))
-    throw new Error(`insufficient server funds, ${v1} ${b[assets[a1]]}`);
+    throw new Error(`Insufficient server funds, ${v1} ${b[assets[a1]]}`);
 
   await db.transaction(async transaction => {
     let a1acc = await getAccount(a1, user, transaction);
     let a2acc = await getAccount(a2, user, transaction);
 
     if (v1 > a1acc.balance)
-      throw new Error(`insufficient funds, ${v1} ${a1acc.balance}`);
+      throw new Error(`Insufficient funds, ${v1} ${a1acc.balance}`);
 
     l.info(
       `trade ${v1} ${a1.substr(0, 6)} for ${v2} ${a2.substr(0, 6)}`,
