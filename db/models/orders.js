@@ -64,15 +64,6 @@ const attributes = {
     comment: null,
     field: "updatedAt"
   },
-  fee: {
-    type: DataTypes.DOUBLE,
-    allowNull: true,
-    defaultValue: null,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "fee"
-  },
   v1: {
     type: DataTypes.DOUBLE,
     allowNull: true,
@@ -100,24 +91,6 @@ const attributes = {
     comment: null,
     field: "rate"
   },
-  text: {
-    type: DataTypes.TEXT,
-    allowNull: false,
-    defaultValue: false,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "text"
-  },
-  public: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false,
-    primaryKey: false,
-    autoIncrement: false,
-    comment: null,
-    field: "public"
-  },
   accepted: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
@@ -130,9 +103,9 @@ const attributes = {
 };
 
 const options = {
-  tableName: "proposals",
+  tableName: "orders",
   comment: "",
   indexes: []
 };
 
-db.Proposal = db.define("proposals_model", attributes, options);
+db.Order = db.define("orders_model", attributes, options);

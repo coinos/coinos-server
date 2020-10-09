@@ -13,10 +13,10 @@ require("./models/codes.js");
 require("./models/invoices.js");
 require("./models/keys.js");
 require("./models/payments.js");
-require("./models/proposals.js");
+require("./models/orders.js");
 require("./models/users.js");
 
-const { User, Account, Payment, Invoice, Key, Proposal } = db;
+const { User, Account, Payment, Invoice, Key, Order } = db;
 
 User.hasMany(Account, {
   as: "accounts",
@@ -73,19 +73,19 @@ Payment.belongsTo(User, {
   foreignKey: "user_id"
 });
 
-Proposal.belongsTo(User, {
+Order.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
 });
 
-Proposal.belongsTo(Account, {
+Order.belongsTo(Account, {
   as: "acc1",
   foreignKey: "a1_id"
 });
 
-Proposal.belongsTo(Account, {
+Order.belongsTo(Account, {
   as: "acc2",
   foreignKey: "a2_id"
 });
 
-db.Proposal = Proposal;
+db.Order = Order;

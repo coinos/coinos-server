@@ -6,8 +6,6 @@ const { spawn } = require("child_process");
 const leveldb = level("leveldb");
 const getAccount = require("../lib/account");
 const { Op, col } = require("sequelize");
-const uuidv4 = require("uuid/v4");
-
 const shallow = a => {
   let b = {};
   for (x in a) {
@@ -63,62 +61,6 @@ const getInfo = filename =>
       timeout
     );
   });
-
-app.post(
-  "/propose",
-  auth,
-  ah(async (req, res) => {
-    const { a1, v1, a2, v2 } = req.body;
-
-    const text = await new Promise((resolve, reject) => {
-      l.info(
-        "running liquid-cli tool %s %s %s %s %s",
-        config.liquid.conf,
-        a1,
-        v1,
-        a2,
-        v2
-      );
-      const proc = cli(
-        "propose",
-        a1,
-        (v1 / SATS).toFixed(8),
-        a2,
-        (v2 / SATS).toFixed(8)
-      );
-
-      proc.stdout.on("data", data => {
-        resolve(data.toString());
-      });
-
-      proc.stderr.on("error", err => {
-        l.error("order error", err.toString());
-        reject(err.toString());
-      });
-
-      proc.on("close", (code, signal) => {
-        let msg = (code && code.toString()) || (signal && signal.toString());
-        reject(
-          new Error(`Liquid swap tool process closed unexpectedly: ${msg}`)
-        );
-      });
-
-      proc.on("exit", (code, signal) => {
-        let msg = (code && code.toString()) || (signal && signal.toString());
-        reject(
-          new Error(`Liquid swap tool process exited unexpectedly: ${msg}`)
-        );
-      });
-
-      setTimeout(
-        () => reject(new Error("Liquid swap tool timed out"), proc),
-        timeout
-      );
-    });
-
-    res.send(text);
-  })
-);
 
 const swap = async (user, { a1, a2, v1, v2 }) => {
   let rate = v2 / v1;
@@ -177,7 +119,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         where: {
           "$acc1.asset$": a2,
           "$acc2.asset$": a1,
-          rate: { [Op.lte]: v1 / v2 },
+          rate: { [Op.lte]: 1/rate },
           accepted: false
         },
         order: [
@@ -284,8 +226,6 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         p = p.get({ plain: true });
         p.a1 = p.acc1.asset;
         p.a2 = p.acc2.asset;
-        p.rate = p.v2 / p.v1;
-
         broadcast("order", shallow(p));
         v1 = 0;
       } else {
@@ -340,8 +280,6 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         p = p.get({ plain: true });
         p.a1 = p.acc1.asset;
         p.a2 = p.acc2.asset;
-        p.rate = p.v2 / p.v1;
-
         broadcast("order", shallow(p));
       }
     }
@@ -358,6 +296,85 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         },
         { transaction }
       );
+
+      const text = await new Promise((resolve, reject) => {
+        l.info(
+          "running liquid-cli tool %s %s %s %s %s",
+          config.liquid.conf,
+          a1,
+          v1,
+          a2,
+          v2
+        );
+        const proc = cli(
+          "propose",
+          a1,
+          (v1 / SATS).toFixed(8),
+          a2,
+          (v2 / SATS).toFixed(8)
+        );
+
+        proc.stdout.on("data", data => {
+          resolve(data.toString());
+        });
+
+        proc.stderr.on("error", err => {
+          l.error("order error", err.toString());
+          reject(err.toString());
+        });
+
+        proc.on("close", (code, signal) => {
+          let msg = (code && code.toString()) || (signal && signal.toString());
+          reject(
+            new Error(`Liquid swap tool process closed unexpectedly: ${msg}`)
+          );
+        });
+
+        proc.on("exit", (code, signal) => {
+          let msg = (code && code.toString()) || (signal && signal.toString());
+          reject(
+            new Error(`Liquid swap tool process exited unexpectedly: ${msg}`)
+          );
+        });
+
+        setTimeout(
+          () => reject(new Error("Liquid swap tool timed out"), proc),
+          timeout
+        );
+      });
+
+      const filename = `order-${order.id}.txt`;
+
+      fs.writeFileSync(swapsdir + filename, text);
+      let info = JSON.parse(await getInfo(filename));
+      let [fee, rate, asset] = parse(info);
+
+      const btc = await getAccount(config.liquid.btcasset, user, transaction);
+      fee = Math.round(fee * SATS);
+      await btc.decrement({ balance: fee }, { transaction });
+      await btc.save({ transaction });
+      emit(user.username, "account", btc.get({ plain: true }));
+
+      let payment = await db.Payment.create(
+        {
+          hash: "Swap Fee Deposit",
+          amount: -fee,
+          account_id: btc.id,
+          user_id: user.id,
+          currency: user.currency,
+          rate: app.get("rates")[user.currency],
+          confirmed: true,
+          received: false,
+          network: "COINOS"
+        },
+        { transaction }
+      );
+
+      emit(user.username, "payment", payment.get({ plain: true }));
+
+      order.fee = fee;
+      order.text = text;
+      await order.save({ transaction });
 
       order = order.get({ plain: true });
       order.rate = v2 / v1;
@@ -471,9 +488,21 @@ app.post(
   optionalAuth,
   ah(async (req, res) => {
     try {
-      const { text } = req.body;
+      const { id, text } = req.body;
+
+      let order = await db.Order.findOne({
+        where: {
+          id
+        },
+        include: {
+          model: db.User,
+          as: "user"
+        }
+      });
+
+      if (!order) throw new Error("Order not found");
+
       const { user } = req;
-      const id = uuidv4();
 
       if (text) {
         const filename = `acceptance-${id}.txt`;
@@ -491,123 +520,40 @@ app.post(
         const leg1 = info.legs.find(leg => !leg.incoming);
         const leg2 = info.legs.find(leg => leg.incoming);
 
-        console.log(info, rate, leg2.amount / leg1.amount);
-        let orders = await db.Order.findAll({
-          where: {
-            rate: { [Op.lte]: leg2.amount / leg1.amount },
-            accepted: false,
-            "$acc1.asset$": leg1.asset,
-            "$acc2.asset$": leg2.asset
-          },
-          attributes: {
-            include: [
-              [col("acc1.asset"), "a1"],
-              [col("acc2.asset"), "a2"]
-            ]
-          },
-          order: [["rate", "DESC"]],
-          include: [
-            {
-              model: db.User,
-              as: "user",
-            },
-            {
-              model: db.Account,
-              as: "acc1",
-              attributes: []
-            },
-            {
-              model: db.Account,
-              as: "acc2",
-              attributes: []
-            }
-          ]
-        });
-
-        console.log(orders.map(p => ({ rate: p.rate, v1: p.v1, a1: p.a1 })));
-
-        let total = orders.reduce((a, b) => a + b.v1, 0);
-        let remaining = Math.round(leg1.amount * SATS);
-        if (total < remaining)
-          throw new Error("Not enough coins for sale at that price");
-
         await db.transaction(async transaction => {
-          for (let i = 0; i < orders.length; i++) {
-            let order = orders[i];
-            const account = await getAccount(
-              leg1.asset,
-              order.user,
-              transaction
-            );
+          const l2a2 = await getAccount(leg2.asset, order.user, transaction);
 
-            console.log("aid", account.id);
+          let amount = Math.round(leg1.amount * SATS);
+          fee = Math.round(fee * SATS);
 
-            let { v1: amount } = order;
-            if (remaining >= amount) {
-              console.log(remaining);
-              remaining -= amount;
+          amount = Math.round(leg2.amount * SATS);
 
-              await db.Invoice.create({
-                user_id: order.user_id,
-                text: u_address_p,
-                address: u_address_p,
-                unconfidential: u_address_p,
-                currency: order.user.currency,
-                memo: "Atomic Swap",
-                rate: app.get("rates")[order.user.currency],
-                amount,
-                tip: 0,
-                network: "liquid",
-                account_id: account.id
-              });
+          await db.Invoice.create({
+            user_id: order.user_id,
+            text: u_address_p,
+            address: u_address_p,
+            unconfidential: u_address_p,
+            currency: order.user.currency,
+            memo: "Atomic Swap",
+            rate: app.get("rates")[order.user.currency],
+            amount,
+            tip: 0,
+            network: "liquid",
+            account_id: l2a2.id
+          });
 
-              addresses[u_address_p] = order.user.username;
+          addresses[u_address_p] = order.user.username;
 
-              order.accepted = true;
-              order.completedAt = new Date();
-              await order.save({ transaction });
-
-              order = order.get({ plain: true });
-              order.a1 = leg2.asset;
-              order.a2 = leg1.asset;
-              order.rate = order.v2 / order.v1;
-
-              console.log("broadcasting", order.id);
-
-              broadcast("order", shallow(order));
-            } else {
-              await db.Invoice.create({
-                user_id: order.user_id,
-                text: u_address_p,
-                address: u_address_p,
-                unconfidential: u_address_p,
-                currency: order.user.currency,
-                memo: "Atomic Swap",
-                rate: app.get("rates")[order.user.currency],
-                amount: remaining,
-                tip: 0,
-                network: "liquid",
-                account_id: account.id
-              });
-
-              addresses[u_address_p] = order.user.username;
-
-              console.log("new math", order.v2, Math.round(order.v2 * remaining / amount), amount, remaining, order.v1 - remaining);
-              order.decrement({ v1: remaining, v2: Math.round(order.v2 * remaining / amount) }, { transaction });
-              await order.save({ transaction });
-              await order.reload({ transaction });
-
-              order = order.get({ plain: true });
-              order.a1 = leg2.asset;
-              order.a2 = leg1.asset;
-              order.rate = order.v2 / order.v1;
-
-              broadcast("order", shallow(order));
-            }
-          }
-
-          console.log("finalizing", filename);
           await finalize(filename);
+
+          order.accepted = true;
+          order.completedAt = new Date();
+          await order.save({ transaction });
+
+          order = order.get({ plain: true });
+          order.a1 = leg1.asset;
+          order.a2 = leg2.asset;
+          broadcast("order", shallow(order));
         });
 
         res.send(info);
@@ -615,7 +561,7 @@ app.post(
         throw new Error("No acceptance provided");
       }
     } catch (e) {
-      l.error(e.message, e.stack);
+      l.error(e.message);
       res.status(500).send(e.message);
     }
   })
@@ -835,10 +781,8 @@ app.post(
 setInterval(async () => {
   if (!app.get("rates")) return;
   const amount = 0.01;
-  const btc =
-    "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-  const lcad =
-    "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
+  const btc = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+  const lcad = "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
   const { CAD, USD } = app.get("rates");
   const user = await db.User.findOne({
     where: {
@@ -852,17 +796,12 @@ setInterval(async () => {
         where: {
           user_id: user.id,
           "$acc1.asset$": btc,
-          "$acc2.asset$": lcad,
           accepted: false
         },
         include: [
           {
             model: db.Account,
             as: "acc1"
-          },
-          {
-            model: db.Account,
-            as: "acc2"
           }
         ]
       },
@@ -876,49 +815,21 @@ setInterval(async () => {
       v2: Math.round(amount * SATS * (((app.get("ask") * CAD) / USD) * 1.01))
     };
 
-    if (p) {
-      let bestBid = await db.Order.findOne(
-        {
-          where: {
-            "$acc1.asset$": lcad,
-            "$acc2.asset$": btc,
-            accepted: false,
-            id: {
-              [Op.ne]: p.id
-            }
-          },
-          include: [
-            {
-              model: db.Account,
-              as: "acc1"
-            },
-            {
-              model: db.Account,
-              as: "acc2"
-            }
-          ],
-          order: [["rate", "DESC"]],
-          limit: 1
-        },
-        { transaction }
-      );
-      if (!bestBid || (params.v2 / params.v1 > bestBid.rate && p.acc2.balance >= params.v2)) {
-        p.v1 = params.v1;
-        p.v2 = params.v2;
-        await p.save();
-        p = p.get({ plain: true });
-        p.a1 = params.a1;
-        p.a2 = params.a2;
-        p.rate = p.v2 / p.v1;
+    if (p && p.acc1.balance > p.v1) {
+      p.v1 = params.v1;
+      p.v2 = params.v2;
+      await p.save();
+      p = p.get({ plain: true });
+      p.a1 = params.a1;
+      p.a2 = params.a2;
 
-        broadcast("order", shallow(p));
-      }
-    } else {
+      broadcast("order", shallow(p));
+    } else { 
       try {
         await swap(user, params);
-      } catch (e) {
+      } catch(e) {
         l.error("Failed to make ask", e.message);
-      }
+      } 
     }
 
     p = await db.Order.findOne(
@@ -926,17 +837,12 @@ setInterval(async () => {
         where: {
           user_id: user.id,
           "$acc1.asset$": lcad,
-          "$acc2.asset$": btc,
           accepted: false
         },
         include: [
           {
             model: db.Account,
             as: "acc1"
-          },
-          {
-            model: db.Account,
-            as: "acc2"
           }
         ]
       },
@@ -948,24 +854,23 @@ setInterval(async () => {
       a2: btc,
       v1: Math.round(amount * SATS * ((app.get("bid") * CAD) / USD) * 0.99),
       v2: amount * SATS
-    };
-
-    if (p && p.acc1.balance >= p.v1) {
+    }
+    
+    if (p && p.acc1.balance > p.v1) {
       p.v1 = params.v1;
       p.v2 = params.v2;
       await p.save();
       p = p.get({ plain: true });
       p.a1 = params.a1;
       p.a2 = params.a2;
-      p.rate = p.v2 / p.v1;
 
       broadcast("order", shallow(p));
-    } else {
+    } else { 
       try {
-        await swap(user, params);
-      } catch (e) {
+      await swap(user, params);
+      } catch(e) {
         l.warn("Failed to make bid", e.message);
-      }
+      } 
     }
   });
-}, 2000);
+}, 6000);
