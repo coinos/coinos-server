@@ -66,7 +66,7 @@ CREATE TABLE `accounts` (
   `network` varchar(255) DEFAULT NULL,
   `privkey` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4076 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4095 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,7 +109,7 @@ CREATE TABLE `invoices` (
   `account_id` int(11) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6422 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7010 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -126,7 +126,30 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4605 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4606 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `orders`
+--
+
+DROP TABLE IF EXISTS `orders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `v1` double DEFAULT NULL,
+  `v2` double DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `accepted` tinyint(1) NOT NULL DEFAULT 0,
+  `rate` double GENERATED ALWAYS AS (`v2` / `v1`) VIRTUAL,
+  `completedAt` datetime DEFAULT NULL,
+  `a1_id` int(11) DEFAULT NULL,
+  `a2_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9062 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -158,33 +181,7 @@ CREATE TABLE `payments` (
   `redeemed` tinyint(1) NOT NULL DEFAULT 0,
   `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6682 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `proposals`
---
-
-DROP TABLE IF EXISTS `proposals`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `proposals` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `v1` double DEFAULT NULL,
-  `v2` double DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `createdAt` datetime NOT NULL,
-  `updatedAt` datetime NOT NULL,
-  `accepted` tinyint(1) NOT NULL DEFAULT 0,
-  `text` text DEFAULT NULL,
-  `public` tinyint(1) DEFAULT NULL,
-  `rate` double GENERATED ALWAYS AS (`v2` / `v1`) VIRTUAL,
-  `completedAt` datetime DEFAULT NULL,
-  `a1_id` int(11) DEFAULT NULL,
-  `a2_id` int(11) DEFAULT NULL,
-  `fee` double DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1023 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=38830 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -230,7 +227,7 @@ CREATE TABLE `users` (
   `index` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=729 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=730 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -242,4 +239,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-10-01  0:16:52
+-- Dump completed on 2020-10-09 10:06:08
