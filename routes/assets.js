@@ -351,7 +351,7 @@ app.post(
         res.end();
       });
     } catch (e) {
-      l.error("problem loading faucet", user.username, user.balance);
+      l.error("problem loading faucet", user.username, e.message);
       return res.status(500).send(e.message);
     }
   })
