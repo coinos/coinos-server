@@ -17,6 +17,8 @@ app.get("/invoice", auth, ah(async (req, res, next) => {
 app.post("/invoice", ah(async (req, res, next) => {
   try {
   let { invoice, user } = req.body;
+  let { blindkey } = invoice;
+
   if (!user) ({ user } = req);
   else {
     user = await db.User.findOne({
@@ -38,7 +40,7 @@ app.post("/invoice", ah(async (req, res, next) => {
     invoice.currency,
   );
 
-  if (invoice.network === "liquid") {
+  if (invoice.network === "liquid" && !invoice.unconfidential) {
     invoice.unconfidential = (
       await lq.getAddressInfo(invoice.address)
     ).unconfidential;
@@ -58,7 +60,10 @@ app.post("/invoice", ah(async (req, res, next) => {
 
   invoice = exists ? await exists.update(invoice) : await db.Invoice.create(invoice);
   addresses[invoice.address] = user.username;
-  if (invoice.unconfidential) addresses[invoice.unconfidential] = user.username;
+  if (invoice.unconfidential) {
+    addresses[invoice.unconfidential] = user.username;
+    // await lq.importBlindingKey(invoice.address, blindkey);
+  } 
   res.send(invoice);
   } catch(e) {
     l.error(e.message, e.stack);

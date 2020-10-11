@@ -12,16 +12,15 @@ const network =
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
-const getAccount = async (params) => {
+const getAccount = async params => {
   let account = await db.Account.findOne({
     where: params
   });
 
-
   if (account) {
     l.info("found account", params, account.asset, account.id);
     return account;
-  } 
+  }
 
   let { asset, pubkey } = params;
   let name = asset.substr(0, 6);
@@ -29,7 +28,7 @@ const getAccount = async (params) => {
   let ticker = asset.substr(0, 3).toUpperCase();
   let precision = 8;
 
-  const assets = app.get('assets');
+  const assets = app.get("assets");
 
   if (assets[asset]) {
     ({ domain, ticker, precision, name } = assets[asset]);
@@ -37,10 +36,10 @@ const getAccount = async (params) => {
     const existing = await db.Account.findOne({
       where: {
         asset,
-        pubkey,
+        pubkey
       },
       order: [["id", "ASC"]],
-      limit: 1,
+      limit: 1
     });
 
     if (existing) {
@@ -51,7 +50,7 @@ const getAccount = async (params) => {
 
   params = { ...params, ...{ domain, ticker, precision, name } };
   params.balance = 0;
-  params.network = 'liquid';
+  params.network = "liquid";
   return db.Account.create(params);
 };
 
@@ -71,88 +70,93 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(blinded.txid)) return;
 
   Promise.all(
-    tx.vout.map(async (o) => {
-      if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
+    tx.vout.map(async o => {
+      try {
+        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
-      const { asset } = o;
-      const value = toSats(o.value);
-      const address = o.scriptPubKey.addresses[0];
+        const { asset } = o;
+        const value = toSats(o.value);
+        const address = o.scriptPubKey.addresses[0];
 
-      if (
-        Object.keys(addresses).includes(address) &&
-        !change.includes(address)
-      ) {
-        let user = await getUser(addresses[address]);
+        if (
+          Object.keys(addresses).includes(address) &&
+          !change.includes(address)
+        ) {
+          let user = await getUser(addresses[address]);
 
-        let invoice = await db.Invoice.findOne({
-          where: {
-            unconfidential: address,
-            user_id: user.id,
-            network: "liquid",
-          },
-          order: [["id", "DESC"]],
-          include: {
-            model: db.Account,
-            as: "account",
-          },
-        });
+          let invoice = await db.Invoice.findOne({
+            where: {
+              unconfidential: address,
+              user_id: user.id,
+              network: "liquid"
+            },
+            order: [["id", "DESC"]],
+            include: {
+              model: db.Account,
+              as: "account"
+            }
+          });
 
-        if (!invoice) return;
+          if (!invoice) return;
 
-        let confirmed = 0;
+          let confirmed = 0;
 
-        let { account } = invoice;
+          let { account } = invoice;
 
-        if (account.asset === asset && (!account.pubkey || account.network === 'liquid')) {
-          account.pending += value;
-          await account.save();
-        } else {
-          account = await getAccount(
-            {
+          if (
+            account.asset === asset &&
+            (!account.pubkey || account.network === "liquid")
+          ) {
+            account.pending += value;
+            await account.save();
+          } else {
+            account = await getAccount({
               seed: account.seed,
               path: account.path,
               user_id: user.id,
               asset,
               pubkey: account.pubkey,
               pending: value,
-              index: 0,
-            },
-          );
+              index: 0
+            });
+          }
+
+          if (config.liquid.walletpass)
+            await lq.walletPassphrase(config.liquid.walletpass, 300);
+
+          await user.save();
+
+          const currency = invoice ? invoice.currency : user.currency;
+          const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
+          const tip = invoice ? invoice.tip : 0;
+          const memo = invoice ? invoice.memo : "";
+
+          let payment = await db.Payment.create({
+            account_id: account.id,
+            user_id: user.id,
+            hash: blinded.txid,
+            amount: value - tip,
+            currency,
+            memo,
+            rate,
+            received: true,
+            tip,
+            confirmed,
+            address,
+            network: "liquid"
+          });
+
+          payments.push(blinded.txid);
+          payment = payment.get({ plain: true });
+          payment.account = account.get({ plain: true });
+
+          emit(user.username, "payment", payment);
+          emit(user.username, "account", payment.account);
+          l.info("liquid detected", address, user.username, asset, value);
+          notify(user, `${value} SAT payment detected`);
         }
-
-        if (config.liquid.walletpass)
-          await lq.walletPassphrase(config.liquid.walletpass, 300);
-
-        await user.save();
-
-        const currency = invoice ? invoice.currency : user.currency;
-        const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
-        const tip = invoice ? invoice.tip : 0;
-        const memo = invoice ? invoice.memo : "";
-
-        let payment = await db.Payment.create({
-          account_id: account.id,
-          user_id: user.id,
-          hash: blinded.txid,
-          amount: value - tip,
-          currency,
-          memo,
-          rate,
-          received: true,
-          tip,
-          confirmed,
-          address,
-          network: "liquid",
-        });
-
-        payments.push(blinded.txid);
-        payment = payment.get({ plain: true });
-        payment.account = account.get({ plain: true });
-
-        emit(user.username, "payment", payment);
-        emit(user.username, "account", payment.account);
-        l.info("liquid detected", address, user.username, asset, value);
-        notify(user, `${value} SAT payment detected`);
+      } catch (e) {
+        l.error("Problem processing transaction", e.message, e.stack);
       }
     })
   );
@@ -162,16 +166,16 @@ let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: 0 },
+    where: { confirmed: 0 }
   });
 
   const block = elements.Block.fromHex(message.toString("hex"), true);
   const hash = await lq.getBlockHash(block.height);
   const json = await lq.getBlock(hash, 2);
 
-  json.tx.map(async (tx) => {
+  json.tx.map(async tx => {
     if (issuances[tx.txid]) {
-      await db.transaction(async (transaction) => {
+      await db.transaction(async transaction => {
         const {
           user_id,
           asset,
@@ -179,7 +183,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           asset_payment_id,
           token,
           token_amount,
-          token_payment_id,
+          token_payment_id
         } = issuances[tx.txid];
 
         const user = await getUserById(user_id);
@@ -187,7 +191,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
         let account = await db.Account.findOne({
           where: { user_id, asset },
           lock: transaction.LOCK.UPDATE,
-          transaction,
+          transaction
         });
         account.balance = asset_amount * SATS;
         account.pending = 0;
@@ -197,10 +201,10 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           where: { id: asset_payment_id },
           include: {
             model: db.Account,
-            as: "account",
+            as: "account"
           },
           lock: transaction.LOCK.UPDATE,
-          transaction,
+          transaction
         });
 
         payment.confirmed = true;
@@ -215,7 +219,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           account = await db.Account.findOne({
             where: { user_id, asset: token },
             lock: transaction.LOCK.UPDATE,
-            transaction,
+            transaction
           });
           account.balance = token_amount * SATS;
           account.pending = 0;
@@ -225,10 +229,10 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             where: { id: token_payment_id },
             include: {
               model: db.Account,
-              as: "account",
+              as: "account"
             },
             lock: transaction.LOCK.UPDATE,
-            transaction,
+            transaction
           });
 
           payment.confirmed = true;
@@ -241,7 +245,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           emit(user.username, "payment", payment);
         }
       });
-    } else if (payments.find((p) => p.hash === tx.txid)) queue[tx.txid] = 1;
+    } else if (payments.find(p => p.hash === tx.txid)) queue[tx.txid] = 1;
   });
 });
 
@@ -253,21 +257,21 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      await db.transaction(async (transaction) => {
+      await db.transaction(async transaction => {
         let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
               model: db.Account,
-              as: "account",
+              as: "account"
             },
             {
               model: db.User,
-              as: "user",
-            },
+              as: "user"
+            }
           ],
           lock: transaction.LOCK.UPDATE,
-          transaction,
+          transaction
         });
 
         const { user } = p;

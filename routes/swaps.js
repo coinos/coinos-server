@@ -509,7 +509,7 @@ app.post(
           include: [
             {
               model: db.User,
-              as: "user",
+              as: "user"
             },
             {
               model: db.Account,
@@ -592,8 +592,21 @@ app.post(
 
               addresses[u_address_p] = order.user.username;
 
-              console.log("new math", order.v2, Math.round(order.v2 * remaining / amount), amount, remaining, order.v1 - remaining);
-              order.decrement({ v1: remaining, v2: Math.round(order.v2 * remaining / amount) }, { transaction });
+              console.log(
+                "new math",
+                order.v2,
+                Math.round((order.v2 * remaining) / amount),
+                amount,
+                remaining,
+                order.v1 - remaining
+              );
+              order.decrement(
+                {
+                  v1: remaining,
+                  v2: Math.round((order.v2 * remaining) / amount)
+                },
+                { transaction }
+              );
               await order.save({ transaction });
               await order.reload({ transaction });
 
@@ -835,10 +848,8 @@ app.post(
 setInterval(async () => {
   if (!app.get("rates")) return;
   const amount = 0.0001;
-  const btc =
-    config.liquid.btcasset;
-  const lcad =
-    config.liquid.cadasset;
+  const btc = config.liquid.btcasset;
+  const lcad = config.liquid.cadasset;
   const { CAD, USD } = app.get("rates");
   const user = await db.User.findOne({
     where: {
@@ -902,7 +913,10 @@ setInterval(async () => {
         },
         { transaction }
       );
-      if (!bestBid || (params.v2 / params.v1 > bestBid.rate && p.acc2.balance >= params.v2)) {
+      if (
+        !bestBid ||
+        (params.v2 / params.v1 > bestBid.rate && p.acc2.balance >= params.v2)
+      ) {
         p.v1 = params.v1;
         p.v2 = params.v2;
         await p.save();
@@ -950,16 +964,47 @@ setInterval(async () => {
       v2: amount * SATS
     };
 
-    if (p && p.acc1.balance >= p.v1) {
-      p.v1 = params.v1;
-      p.v2 = params.v2;
-      await p.save();
-      p = p.get({ plain: true });
-      p.a1 = params.a1;
-      p.a2 = params.a2;
-      p.rate = p.v2 / p.v1;
+    if (p) {
+      let bestAsk = await db.Order.findOne(
+        {
+          where: {
+            "$acc1.asset$": btc,
+            "$acc2.asset$": lcad,
+            accepted: false,
+            id: {
+              [Op.ne]: p.id
+            }
+          },
+          include: [
+            {
+              model: db.Account,
+              as: "acc1"
+            },
+            {
+              model: db.Account,
+              as: "acc2"
+            }
+          ],
+          order: [["rate", "ASC"]],
+          limit: 1
+        },
+        { transaction }
+      );
 
-      broadcast("order", shallow(p));
+      if (
+        !bestAsk ||
+        (params.v1 / params.v2 < bestAsk.rate && p.acc1.balance >= params.v1)
+      ) {
+        p.v1 = params.v1;
+        p.v2 = params.v2;
+        await p.save();
+        p = p.get({ plain: true });
+        p.a1 = params.a1;
+        p.a2 = params.a2;
+        p.rate = p.v2 / p.v1;
+
+        broadcast("order", shallow(p));
+      }
     } else {
       try {
         await swap(user, params);
@@ -968,4 +1013,4 @@ setInterval(async () => {
       }
     }
   });
-}, 10000);
+}, 20000);

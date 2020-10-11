@@ -1,4 +1,5 @@
 const btc = config.liquid.btcasset;
+const lcad = config.liquid.cadasset;
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
