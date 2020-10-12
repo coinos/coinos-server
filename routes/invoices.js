@@ -62,7 +62,7 @@ app.post("/invoice", ah(async (req, res, next) => {
   addresses[invoice.address] = user.username;
   if (invoice.unconfidential) {
     addresses[invoice.unconfidential] = user.username;
-    // await lq.importBlindingKey(invoice.address, blindkey);
+    await lq.importBlindingKey(invoice.address, blindkey);
   } 
   res.send(invoice);
   } catch(e) {
