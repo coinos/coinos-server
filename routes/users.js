@@ -399,7 +399,7 @@ app.get(
   "/address",
   ah(async (req, res) => {
     let { network, type } = req.query;
-    let address;
+    let address, confidentialAddress;
 
     type = {
       bech32: "p2wpkh",
@@ -460,13 +460,13 @@ app.get(
           n
         );
 
-        ({ confidentialAddress: address } = p[type]({
+        ({ confidentialAddress } = p[type]({
           redeem: p2wpkh,
           network: n,
           blindkey: blindkey.publicKey
         }));
 
-        lq.importBlindingKey(address, blindkey.privateKey.toString('hex'));
+        lq.importBlindingKey(confidentialAddress, blindkey.privateKey.toString('hex'));
       } else {
         ({ address } = p[type]({
           redeem: p.p2wpkh({
@@ -478,7 +478,7 @@ app.get(
       }
     }
 
-    res.send(address);
+    res.send({ address, confidentialAddress });
   })
 );
 

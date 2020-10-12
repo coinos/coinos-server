@@ -47,26 +47,6 @@ app.post(
         invoice.currency
       );
 
-      if (invoice.network === "liquid" && !invoice.unconfidential) {
-        try {
-          const { username, password, port, wallet } = config.liquid;
-        const { data: { result } }= await axios.post(
-          `http://${username}:${password}@127.0.0.1:${port}/wallet/${wallet}`,
-          {
-            jsonrpc: "1.0",
-            id: "curltext",
-            method: "getaddressinfo",
-            params: [invoice.address]
-          }
-        );
-
-        invoice.unconfidential = result.unconfidential; 
-        } catch(e) {
-          l.error("problem getting confidential address info", e.message);
-          return res.status(500).send("Problem getting confidential address");
-        } 
-      }
-
       if (!invoice.tip) invoice.tip = 0;
 
       const exists = await db.Invoice.findOne({
