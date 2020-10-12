@@ -77,11 +77,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         if (config.bitcoin.walletpass)
           await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-        user.address = await bc.getNewAddress("", "bech32");
-        await user.save();
-
-        addresses[user.address] = user.username;
-
         let totalOutputs = tx.outs.reduce((a, b) => a + b.value, 0);
         let totalInputs = 0;
         for (let i = 0; i < tx.ins.length; i++) {

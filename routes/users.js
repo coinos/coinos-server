@@ -6,6 +6,11 @@ const textToImage = require("text-to-image");
 const randomWord = require("random-words");
 const getAccount = require("../lib/account");
 const Sequelize = require("sequelize");
+const bitcoin = require("bitcoinjs-lib");
+const liquid = require("liquidjs-lib");
+const { fromBase58, fromPrivateKey } = require("bip32");
+const { Mutex } = require("async-mutex");
+const bip32 = require("bip32");
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 require("../lib/whitelist");
@@ -259,7 +264,16 @@ app.post(
   "/accounts",
   auth,
   ah(async (req, res) => {
-    const { name, seed, pubkey, ticker, precision, path, privkey, network } = req.body;
+    const {
+      name,
+      seed,
+      pubkey,
+      ticker,
+      precision,
+      path,
+      privkey,
+      network
+    } = req.body;
     const { user } = req;
 
     let account = await db.Account.create({
@@ -384,24 +398,84 @@ app.post(
 app.get(
   "/address",
   ah(async (req, res) => {
-    const { network, type } = req.query;
+    let { network, type } = req.query;
     let address;
 
-    if (network === "bitcoin") {
-      if (!config.bitcoin)
-        return res.status(500).send("Bitcoin not configured");
+    type = {
+      bech32: "p2wpkh",
+      "p2sh-segwit": "p2sh",
+      legacy: "p2pkh"
+    }[type];
 
-      if (config.bitcoin.walletpass)
-        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+    let hd, i, p, n;
+    const mutex = new Mutex();
+    const release = await mutex.acquire();
+    try {
+      if (network === "bitcoin") {
+        if (!config.bitcoin)
+          return res.status(500).send("Bitcoin not configured");
+        p = bitcoin.payments;
+        n = prod ? bitcoin.networks["bitcoin"] : bitcoin.networks["regtest"];
 
-      address = await bc.getNewAddress("", type || "bech32");
-    } else if (network === "liquid") {
-      if (!config.liquid) return res.status(500).send("Liquid not configured");
+        i = parseInt(app.get("bcAddressIndex"));
+        hd = fromBase58(config.bitcoin.masterkey, n).derivePath(
+          `m/0'/0'/${i}'`
+        );
+        app.set("bcAddressIndex", i + 1);
+      } else if (network === "liquid") {
+        p = liquid.payments;
+        n =
+          liquid.networks[
+            config.liquid.network === "mainnet"
+              ? "liquid"
+              : config.liquid.network
+          ];
+        type = "p2sh";
 
-      if (config.liquid.walletpass)
-        await lq.walletPassphrase(config.liquid.walletpass, 300);
+        i = parseInt(app.get("lqAddressIndex"));
+        hd = fromBase58(config.liquid.masterkey, n).derivePath(`m/0'/0'/${i}'`);
+        app.set("lqAddressIndex", i + 1);
+      } else {
+        throw new Error("Unsupported network");
+      }
+    } finally {
+      release();
+    }
 
-      address = await lq.getNewAddress("", type || "bech32");
+    if (type !== "p2sh") {
+      ({ address } = p[type]({
+        pubkey: hd.publicKey,
+        network: n
+      }));
+    } else {
+      if (network === "liquid") {
+        const p2wpkh = p.p2wpkh({
+          pubkey: hd.publicKey,
+          network: n
+        });
+
+        const blindkey = fromPrivateKey(
+          Buffer.from(config.liquid.blindkey, "hex"),
+          hd.chainCode,
+          n
+        );
+
+        ({ confidentialAddress: address } = p[type]({
+          redeem: p2wpkh,
+          network: n,
+          blindkey: blindkey.publicKey
+        }));
+
+        lq.importBlindingKey(address, blindkey.privateKey.toString('hex'));
+      } else {
+        ({ address } = p[type]({
+          redeem: p.p2wpkh({
+            pubkey: hd.publicKey,
+            network: n
+          }),
+          network: n
+        }));
+      }
     }
 
     res.send(address);
@@ -429,7 +503,18 @@ app.post(
 
     try {
       await db.Account.update(
-        { name, ticker, precision, domain, seed, pubkey, path, hide, index, privkey },
+        {
+          name,
+          ticker,
+          precision,
+          domain,
+          seed,
+          pubkey,
+          path,
+          hide,
+          index,
+          privkey
+        },
         {
           where: { id, user_id: user.id }
         }

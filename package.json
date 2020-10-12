@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@grpc/proto-loader": "^0.5.3",
+    "async-mutex": "^0.2.4",
     "axios": "^0.19.0",
     "bcrypt": "^5.0.0",
     "bip32": "^2.0.5",

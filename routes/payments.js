@@ -113,6 +113,13 @@ ah(async () => {
     app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
     app.post("/bitcoin/send", auth, require("./bitcoin/send"));
     require("./bitcoin/receive");
+
+    setTimeout(async () => {
+      const address = await bc.getNewAddress();
+      const { hdkeypath } = await bc.getAddressInfo(address);
+      const parts = hdkeypath.split('/');
+      app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
+    }, 50);
   }
 
   if (config.liquid) {
@@ -126,6 +133,13 @@ ah(async () => {
     app.post("/liquid/fee", auth, require("./liquid/fee"));
     app.post("/liquid/send", auth, require("./liquid/send"));
     require("./liquid/receive");
+
+    setTimeout(async () => {
+      const address = await lq.getNewAddress();
+      const { hdkeypath } = await lq.getAddressInfo(address);
+      const parts = hdkeypath.split('/');
+      app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+    }, 50);
   }
 
   app.get(
