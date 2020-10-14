@@ -10,8 +10,8 @@ withdrawals = {};
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
-var optionalAuth = function (req, res, next) {
-  passport.authenticate("jwt", { session: false }, function (err, user, info) {
+var optionalAuth = function(req, res, next) {
+  passport.authenticate("jwt", { session: false }, function(err, user, info) {
     req.user = user;
     next();
   })(req, res, next);
@@ -23,8 +23,8 @@ app.get(
     try {
       const code = await db.Code.findOne({
         where: {
-          code: req.query.code,
-        },
+          code: req.query.code
+        }
       });
 
       if (code) {
@@ -47,7 +47,7 @@ app.get(
       const result = await lnurlServer.generateNewUrl("withdrawRequest", {
         minWithdrawable: min * 1000,
         maxWithdrawable: max * 1000,
-        defaultDescription: "coinos voucher",
+        defaultDescription: "coinos voucher"
       });
 
       withdrawals[result.secret] = req.user;
@@ -68,8 +68,8 @@ app.post(
       const code = await db.Code.findOrCreate({
         where: {
           code: `lnurl:${encoded.substr(-32)}`,
-          text: encoded,
-        },
+          text: encoded
+        }
       });
 
       res.send(code);
@@ -87,7 +87,7 @@ app.post(
     const { user } = req;
     const {
       amount: value,
-      params: { callback, k1 },
+      params: { callback, k1 }
     } = req.body;
     const invoice = await lna.addInvoice({ value });
     const { payment_request: pr } = invoice;
@@ -100,7 +100,7 @@ app.post(
       currency: user.currency,
       amount: value,
       tip: 0,
-      network: "bitcoin",
+      network: "bitcoin"
     });
 
     try {
@@ -119,8 +119,8 @@ app.get(
     const { username } = req.params;
     let user = await db.User.findOne({
       where: {
-        username,
-      },
+        username
+      }
     });
 
     let { amount, minSendable, maxSendable } = req.query;
@@ -130,10 +130,10 @@ app.get(
 
     let invoices = await db.Invoice.findAll({
       where: {
-        amount,
+        amount
       },
       order: [["id", "DESC"]],
-      limit: 1,
+      limit: 1
     });
 
     if (invoices.length) await invoices[0].destroy();
@@ -142,7 +142,7 @@ app.get(
       const result = await lnurlServer.generateNewUrl("payRequest", {
         minSendable,
         maxSendable,
-        metadata: JSON.stringify([["text/plain", `paying ${user.username}`]]),
+        metadata: JSON.stringify([["text/plain", `paying ${user.username}`]])
       });
 
       recipients[result.secret] = user;
@@ -162,7 +162,7 @@ app.post(
     const { user } = req;
     const {
       amount,
-      params: { callback, k1 },
+      params: { callback, k1 }
     } = req.body;
 
     const url = `${callback}?amount=${amount * 1000}`;
@@ -219,7 +219,7 @@ app.get(
             .split("/")[0]
             .split("@")
             .slice(-1)[0]
-            .split(":")[0],
+            .split(":")[0]
         });
       }
 
@@ -249,7 +249,8 @@ lnurlServer.bindToHook(
           where: {
             user_id: user.id,
             asset: config.liquid.btcasset,
-          },
+            pubkey: null
+          }
         });
 
         if (account.balance < amount) {
@@ -262,7 +263,7 @@ lnurlServer.bindToHook(
       if (recipient) {
         setTimeout(async () => {
           let { invoices } = await lna.listInvoices({
-            pending_only: true,
+            pending_only: true
           });
 
           if (invoices.length) {
@@ -273,7 +274,7 @@ lnurlServer.bindToHook(
               currency: recipient.currency,
               amount,
               tip: 0,
-              network: "bitcoin",
+              network: "lightning"
             });
             l.info("invoice created", invoice.text, invoice.amount);
           }
@@ -290,9 +291,9 @@ lnurlServer.bindToHook(
           include: [
             {
               model: db.User,
-              as: "user",
-            },
-          ],
+              as: "user"
+            }
+          ]
         });
 
         if (keyObj) ({ user } = keyObj);
@@ -303,7 +304,7 @@ lnurlServer.bindToHook(
           user = await register(
             {
               username: key.substr(0, 8),
-              password: key,
+              password: key
             },
             ip
           );
@@ -326,14 +327,14 @@ lnurlServer.bindToHook(
         let decoded = await lna.decodePayReq({ pay_req: pr });
         let amount = decoded.num_satoshis;
 
-        await db.transaction(async (transaction) => {
+        await db.transaction(async transaction => {
           let account = await db.Account.findOne({
             where: {
               user_id: user.id,
-              asset: config.liquid.btcasset,
+              asset: config.liquid.btcasset
             },
             lock: transaction.LOCK.UPDATE,
-            transaction,
+            transaction
           });
 
           if (account.balance < amount) {
@@ -349,7 +350,7 @@ lnurlServer.bindToHook(
               rate: app.get("rates")[user.currency],
               currency: user.currency,
               confirmed: true,
-              network: "lightning",
+              network: "lightning"
             },
             { transaction }
           );
@@ -359,10 +360,10 @@ lnurlServer.bindToHook(
               let { payments } = await lna.listPayments({
                 include_incomplete: false,
                 max_payments: 5,
-                reversed: true,
+                reversed: true
               });
 
-              let p = payments.find((p) => p.payment_request === pr);
+              let p = payments.find(p => p.payment_request === pr);
               if (p) {
                 l.info("found payment", pr);
                 payment.fee = p.fee;
@@ -400,28 +401,28 @@ lnurlServer.bindToHook(
   }
 );
 
-lnurlServer.bindToHook("login", async (key) => {
+lnurlServer.bindToHook("login", async key => {
   try {
     if (!key) throw new Error("login key not defined");
 
     const exists = await db.Key.findOne({
       where: { hex: key },
-      include: [{ model: db.User, as: "user" }],
+      include: [{ model: db.User, as: "user" }]
     });
 
     let user;
     if (logins[key] && logins[key] !== "undefined") {
       const { username } = logins[key];
       user = await db.User.findOne({
-        where: { username },
+        where: { username }
       });
 
       if (user) {
         const [k, created] = await db.Key.findOrCreate({
           where: {
             user_id: user.id,
-            hex: key,
-          },
+            hex: key
+          }
         });
 
         if (created) {
@@ -432,7 +433,7 @@ lnurlServer.bindToHook("login", async (key) => {
         l.info("user not found");
         user = await register({
           username: key.substr(0, 8),
-          password: key,
+          password: key
         });
       }
     } else if (exists) ({ user } = exists);

@@ -7,6 +7,5 @@ module.exports = ah(async (req, res) => {
   } catch (e) {
     l.error("problem sending lightning payment", user.username, e.message);
     res.status(500).send(e.message);
-    throw new Error(e.message);
   }
 });
