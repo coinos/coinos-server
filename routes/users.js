@@ -406,6 +406,7 @@ app.get(
       "p2sh-segwit": "p2sh",
       legacy: "p2pkh"
     }[type];
+    if (!type) type = "p2wpkh";
 
     let hd, i, p, n;
     const mutex = new Mutex();
