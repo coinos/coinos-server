@@ -162,10 +162,11 @@ app.post(
     const { user } = req;
     const {
       amount,
+      comment,
       params: { callback, k1 }
     } = req.body;
 
-    const url = `${callback}?amount=${amount * 1000}`;
+    const url = `${callback}?amount=${amount * 1000}&comment=${comment}`;
 
     try {
       const parts = callback.split("/");
