@@ -461,7 +461,7 @@ app.get(
           n
         );
 
-        ({ confidentialAddress } = p[type]({
+        ({ address, confidentialAddress } = p[type]({
           redeem: p2wpkh,
           network: n,
           blindkey: blindkey.publicKey
