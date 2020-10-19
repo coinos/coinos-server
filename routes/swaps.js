@@ -121,6 +121,7 @@ app.post(
 );
 
 const swap = async (user, { a1, a2, v1, v2 }) => {
+  if (!parseInt(v1) || v1 < 0 || !parseInt(v2) || v2 < 0) throw new Error("Invalid amount");
   let rate = v2 / v1;
 
   const b = await lq.getBalance();
@@ -491,7 +492,6 @@ app.post(
         const leg1 = info.legs.find(leg => !leg.incoming);
         const leg2 = info.legs.find(leg => leg.incoming);
 
-        console.log(info, rate, leg2.amount / leg1.amount);
         let orders = await db.Order.findAll({
           where: {
             rate: { [Op.lte]: leg2.amount / leg1.amount },
@@ -524,8 +524,6 @@ app.post(
           ]
         });
 
-        console.log(orders.map(p => ({ rate: p.rate, v1: p.v1, a1: p.a1 })));
-
         let total = orders.reduce((a, b) => a + b.v1, 0);
         let remaining = Math.round(leg1.amount * SATS);
         if (total < remaining)
@@ -540,11 +538,8 @@ app.post(
               transaction
             );
 
-            console.log("aid", account.id);
-
             let { v1: amount } = order;
             if (remaining >= amount) {
-              console.log(remaining);
               remaining -= amount;
 
               await db.Invoice.create({
@@ -592,14 +587,6 @@ app.post(
 
               addresses[u_address_p] = order.user.username;
 
-              console.log(
-                "new math",
-                order.v2,
-                Math.round((order.v2 * remaining) / amount),
-                amount,
-                remaining,
-                order.v1 - remaining
-              );
               order.decrement(
                 {
                   v1: remaining,
