@@ -29,11 +29,17 @@ app.get(
       Object.keys(assets).map(a => {
         assets[a].registered = true;
         assets[a].asset = assets[a].asset_id;
-      }); 
+      });
 
-      accounts.map(a => {
-        if (!a.asset) console.log(a.id);
-        if (!assets[a.asset]) assets[a.asset] = a.get({ plain: true });
+      accounts.map(({ asset, name, domain, ticker, precision }) => {
+        if (!assets[asset])
+          assets[asset] = {
+            asset,
+            name,
+            domain,
+            ticker,
+            precision
+          };
       });
 
       res.send(assets);
@@ -162,7 +168,13 @@ app.post(
           );
 
           emit(user.username, "account", account);
-          l.info("issued asset", user.username, params.asset_amount, ticker, name);
+          l.info(
+            "issued asset",
+            user.username,
+            params.asset_amount,
+            ticker,
+            name
+          );
 
           const asset_payment = await db.Payment.create(
             {
@@ -369,15 +381,16 @@ app.get(
     let faucet = await db.Account.findOne({
       where: {
         asset,
-        user_id: null,
+        user_id: null
       }
     });
 
-    if (!faucet) faucet = {
-      asset,
-      balance: 0,
-      ticker: 'Unknown',
-    };
+    if (!faucet)
+      faucet = {
+        asset,
+        balance: 0,
+        ticker: "Unknown"
+      };
 
     res.send(faucet);
   })

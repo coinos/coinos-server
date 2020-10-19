@@ -832,58 +832,34 @@ app.post(
   })
 );
 
-setInterval(async () => {
-  if (!app.get("rates")) return;
-  const amount = 0.0001;
-  const btc = config.liquid.btcasset;
-  const lcad = config.liquid.cadasset;
-  const { CAD, USD } = app.get("rates");
-  const user = await db.User.findOne({
-    where: {
-      username: "maker"
-    }
-  });
+[
+  {
+    c1: config.liquid.btcasset,
+    c2: config.liquid.cadasset
+  },
+  {
+    c1: config.liquid.btcasset,
+    c2: config.liquid.usdtasset
+  }
+].map(({ c1, c2 }) => {
+  setInterval(async () => {
+    if (!app.get("rates")) return;
+    const amount = 0.0001;
+    const { CAD, USD } = app.get("rates");
+    const user = await db.User.findOne({
+      where: {
+        username: "maker"
+      }
+    });
 
-  await db.transaction(async transaction => {
-    let p = await db.Order.findOne(
-      {
-        where: {
-          user_id: user.id,
-          "$acc1.asset$": btc,
-          "$acc2.asset$": lcad,
-          accepted: false
-        },
-        include: [
-          {
-            model: db.Account,
-            as: "acc1"
-          },
-          {
-            model: db.Account,
-            as: "acc2"
-          }
-        ]
-      },
-      { transaction }
-    );
-
-    let params = {
-      a1: btc,
-      a2: lcad,
-      v1: amount * SATS,
-      v2: Math.round(amount * SATS * (((app.get("ask") * CAD) / USD) * 1.01))
-    };
-
-    if (p) {
-      let bestBid = await db.Order.findOne(
+    await db.transaction(async transaction => {
+      let p = await db.Order.findOne(
         {
           where: {
-            "$acc1.asset$": lcad,
-            "$acc2.asset$": btc,
-            accepted: false,
-            id: {
-              [Op.ne]: p.id
-            }
+            user_id: user.id,
+            "$acc1.asset$": c1,
+            "$acc2.asset$": c2,
+            accepted: false
           },
           include: [
             {
@@ -894,73 +870,73 @@ setInterval(async () => {
               model: db.Account,
               as: "acc2"
             }
-          ],
-          order: [["rate", "DESC"]],
-          limit: 1
+          ]
         },
         { transaction }
       );
-      if (
-        !bestBid ||
-        (params.v2 / params.v1 > bestBid.rate && p.acc2.balance >= params.v2)
-      ) {
-        p.v1 = params.v1;
-        p.v2 = params.v2;
-        await p.save();
-        p = p.get({ plain: true });
-        p.a1 = params.a1;
-        p.a2 = params.a2;
-        p.rate = p.v2 / p.v1;
 
-        broadcast("order", shallow(p));
-      }
-    } else {
-      try {
-        await swap(user, params);
-      } catch (e) {
-        l.warn("Failed to make ask", e.message);
-      }
-    }
+      let params = {
+        a1: c1,
+        a2: c2,
+        v1: amount * SATS,
+        v2: Math.round(amount * SATS * (((app.get("ask") * CAD) / USD) * 1.01))
+      };
 
-    p = await db.Order.findOne(
-      {
-        where: {
-          user_id: user.id,
-          "$acc1.asset$": lcad,
-          "$acc2.asset$": btc,
-          accepted: false
-        },
-        include: [
+      if (p) {
+        let bestBid = await db.Order.findOne(
           {
-            model: db.Account,
-            as: "acc1"
+            where: {
+              "$acc1.asset$": c2,
+              "$acc2.asset$": c1,
+              accepted: false,
+              id: {
+                [Op.ne]: p.id
+              }
+            },
+            include: [
+              {
+                model: db.Account,
+                as: "acc1"
+              },
+              {
+                model: db.Account,
+                as: "acc2"
+              }
+            ],
+            order: [["rate", "DESC"]],
+            limit: 1
           },
-          {
-            model: db.Account,
-            as: "acc2"
-          }
-        ]
-      },
-      { transaction }
-    );
+          { transaction }
+        );
+        if (
+          !bestBid ||
+          (params.v2 / params.v1 > bestBid.rate && p.acc2.balance >= params.v2)
+        ) {
+          p.v1 = params.v1;
+          p.v2 = params.v2;
+          await p.save();
+          p = p.get({ plain: true });
+          p.a1 = params.a1;
+          p.a2 = params.a2;
+          p.rate = p.v2 / p.v1;
 
-    params = {
-      a1: lcad,
-      a2: btc,
-      v1: Math.round(amount * SATS * ((app.get("bid") * CAD) / USD) * 0.99),
-      v2: amount * SATS
-    };
+          broadcast("order", shallow(p));
+        }
+      } else {
+        try {
+          await swap(user, params);
+        } catch (e) {
+          l.warn("Failed to make ask", e.message);
+        }
+      }
 
-    if (p) {
-      let bestAsk = await db.Order.findOne(
+      p = await db.Order.findOne(
         {
           where: {
-            "$acc1.asset$": btc,
-            "$acc2.asset$": lcad,
-            accepted: false,
-            id: {
-              [Op.ne]: p.id
-            }
+            user_id: user.id,
+            "$acc1.asset$": c2,
+            "$acc2.asset$": c1,
+            accepted: false
           },
           include: [
             {
@@ -971,33 +947,66 @@ setInterval(async () => {
               model: db.Account,
               as: "acc2"
             }
-          ],
-          order: [["rate", "ASC"]],
-          limit: 1
+          ]
         },
         { transaction }
       );
 
-      if (
-        !bestAsk ||
-        (params.v1 / params.v2 < bestAsk.rate && p.acc1.balance >= params.v1)
-      ) {
-        p.v1 = params.v1;
-        p.v2 = params.v2;
-        await p.save();
-        p = p.get({ plain: true });
-        p.a1 = params.a1;
-        p.a2 = params.a2;
-        p.rate = p.v2 / p.v1;
+      params = {
+        a1: c2,
+        a2: c1,
+        v1: Math.round(amount * SATS * ((app.get("bid") * CAD) / USD) * 0.99),
+        v2: amount * SATS
+      };
 
-        broadcast("order", shallow(p));
+      if (p) {
+        let bestAsk = await db.Order.findOne(
+          {
+            where: {
+              "$acc1.asset$": c1,
+              "$acc2.asset$": c2,
+              accepted: false,
+              id: {
+                [Op.ne]: p.id
+              }
+            },
+            include: [
+              {
+                model: db.Account,
+                as: "acc1"
+              },
+              {
+                model: db.Account,
+                as: "acc2"
+              }
+            ],
+            order: [["rate", "ASC"]],
+            limit: 1
+          },
+          { transaction }
+        );
+
+        if (
+          !bestAsk ||
+          (params.v1 / params.v2 < bestAsk.rate && p.acc1.balance >= params.v1)
+        ) {
+          p.v1 = params.v1;
+          p.v2 = params.v2;
+          await p.save();
+          p = p.get({ plain: true });
+          p.a1 = params.a1;
+          p.a2 = params.a2;
+          p.rate = p.v2 / p.v1;
+
+          broadcast("order", shallow(p));
+        }
+      } else {
+        try {
+          await swap(user, params);
+        } catch (e) {
+          l.warn("Failed to make bid", e.message);
+        }
       }
-    } else {
-      try {
-        await swap(user, params);
-      } catch (e) {
-        l.warn("Failed to make bid", e.message);
-      }
-    }
-  });
-}, 2000);
+    });
+  }, 5000);
+});
