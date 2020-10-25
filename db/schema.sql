@@ -1,8 +1,8 @@
--- MySQL dump 10.17  Distrib 10.3.24-MariaDB, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.17  Distrib 10.3.25-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: coinos
 -- ------------------------------------------------------
--- Server version	10.3.24-MariaDB-1:10.3.24+maria~bionic
+-- Server version	10.3.25-MariaDB-1:10.3.25+maria~bionic
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -66,7 +66,7 @@ CREATE TABLE `accounts` (
   `network` varchar(255) DEFAULT NULL,
   `privkey` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4095 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4108 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -81,6 +81,25 @@ CREATE TABLE `codes` (
   `text` text DEFAULT NULL,
   PRIMARY KEY (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `deposits`
+--
+
+DROP TABLE IF EXISTS `deposits`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `deposits` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `amount` double DEFAULT NULL,
+  `credited` tinyint(1) DEFAULT NULL,
+  `code` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4110 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,7 +128,7 @@ CREATE TABLE `invoices` (
   `account_id` int(11) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7010 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7341 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -126,7 +145,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4606 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4612 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -149,7 +168,7 @@ CREATE TABLE `orders` (
   `a1_id` int(11) DEFAULT NULL,
   `a2_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9062 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=9106 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -181,7 +200,7 @@ CREATE TABLE `payments` (
   `redeemed` tinyint(1) NOT NULL DEFAULT 0,
   `path` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=38830 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=38951 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -225,9 +244,33 @@ CREATE TABLE `users` (
   `linkingKeys` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `fiat` tinyint(1) NOT NULL DEFAULT 0,
   `index` int(11) NOT NULL DEFAULT 0,
+  `verified` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=730 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=736 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `withdrawals`
+--
+
+DROP TABLE IF EXISTS `withdrawals`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `withdrawals` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `amount` double DEFAULT NULL,
+  `completed` tinyint(1) DEFAULT NULL,
+  `transit` varchar(255) DEFAULT NULL,
+  `account` varchar(255) DEFAULT NULL,
+  `institution` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4113 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -239,4 +282,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-10-09 10:06:08
+-- Dump completed on 2020-10-24 15:08:28

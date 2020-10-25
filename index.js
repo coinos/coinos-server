@@ -12,7 +12,7 @@ l = require("pino")();
 config = require("./config");
 networks = [];
 prod = process.env.NODE_ENV === "production";
-fail = (msg) => {
+fail = msg => {
   throw new Error(msg);
 };
 
@@ -26,7 +26,7 @@ if (config.liquid) networks.push("liquid");
 if (config.lna) networks.push("lightning");
 
 SATS = 100000000;
-toSats = (n) => parseInt((n * SATS).toFixed());
+toSats = n => parseInt((n * SATS).toFixed());
 
 app = express();
 app.enable("trust proxy");
@@ -53,6 +53,7 @@ require("./routes/payments");
 require("./routes/info");
 require("./routes/swaps");
 require("./routes/users");
+require("./routes/funding");
 
 if (config.lnurl) {
   require("./routes/lnurl");
@@ -63,7 +64,7 @@ app.use((err, req, res, next) => {
     path: req.path,
     body: req.body,
     msg: err.message,
-    stack: err.stack,
+    stack: err.stack
   };
 
   if (req.user) details.username = req.user.username;
@@ -71,7 +72,7 @@ app.use((err, req, res, next) => {
   l.error("Error: ", details);
   res.status(500);
   res.set({
-    "Cache-Control": "no-cache",
+    "Cache-Control": "no-cache"
   });
   res.send(err.message);
   return res.end();

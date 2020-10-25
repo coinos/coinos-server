@@ -26,10 +26,14 @@ app.get(
         group: ["asset"]
       });
 
-      Object.keys(assets).map(a => (assets[a].registered = true));
+      Object.keys(assets).map(a => {
+        assets[a].registered = true;
+        assets[a].asset = assets[a].asset_id;
+      }); 
 
       accounts.map(a => {
-        if (!assets[a.asset]) assets[a.asset] = a;
+        if (!a.asset) console.log(a.id);
+        if (!assets[a.asset]) assets[a.asset] = a.get({ plain: true });
       });
 
       res.send(assets);

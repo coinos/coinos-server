@@ -10,6 +10,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  verified: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "verified"
+  },
   fiat: {
     type: DataTypes.BOOLEAN,
     allowNull: true,

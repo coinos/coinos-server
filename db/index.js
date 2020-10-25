@@ -10,11 +10,13 @@ db = new Sequelize(conf.database, conf.username, conf.password, {
 
 require("./models/accounts.js");
 require("./models/codes.js");
+require("./models/deposits.js");
 require("./models/invoices.js");
 require("./models/keys.js");
 require("./models/payments.js");
 require("./models/orders.js");
 require("./models/users.js");
+require("./models/withdrawals.js");
 
 const { User, Account, Payment, Invoice, Key, Order } = db;
 
