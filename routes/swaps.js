@@ -835,17 +835,18 @@ app.post(
 [
   {
     c1: config.liquid.btcasset,
-    c2: config.liquid.cadasset
+    c2: config.liquid.cadasset,
+    currency: 'CAD',
   },
   {
     c1: config.liquid.btcasset,
-    c2: config.liquid.usdtasset
+    c2: config.liquid.usdtasset,
+    currency: 'USD',
   }
-].map(({ c1, c2 }) => {
+].map(({ c1, c2, currency }) => {
   setInterval(async () => {
     if (!app.get("rates")) return;
     const amount = 0.0001;
-    const { CAD, USD } = app.get("rates");
     const user = await db.User.findOne({
       where: {
         username: "maker"
@@ -879,7 +880,7 @@ app.post(
         a1: c1,
         a2: c2,
         v1: amount * SATS,
-        v2: Math.round(amount * SATS * (((app.get("ask") * CAD) / USD) * 1.01))
+        v2: Math.round(amount * SATS * (((app.get("ask") * app.get("rates")[currency]) / app.get("rates")['USD']) * 1.01))
       };
 
       if (p) {
@@ -955,7 +956,7 @@ app.post(
       params = {
         a1: c2,
         a2: c1,
-        v1: Math.round(amount * SATS * ((app.get("bid") * CAD) / USD) * 0.99),
+        v1: Math.round(amount * SATS * ((app.get("bid") * app.get("rates")[currency]) / app.get("rates")['USD']) * 0.99),
         v2: amount * SATS
       };
 
