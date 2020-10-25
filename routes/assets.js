@@ -28,7 +28,7 @@ app.get(
 
       Object.keys(assets).map(a => {
         assets[a].registered = true;
-        assets[a].asset = assets[a].asset_id;
+        if (!assets[a].asset) assets[a].asset = assets[a].asset_id;
       });
 
       accounts.map(({ asset, name, domain, ticker, precision }) => {
