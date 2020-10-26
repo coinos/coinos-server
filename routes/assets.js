@@ -29,6 +29,13 @@ app.get(
       Object.keys(assets).map(a => {
         assets[a].registered = true;
         if (!assets[a].asset) assets[a].asset = assets[a].asset_id;
+        if ((
+          assets[a].ticker === 'BTC' && assets[a].asset !== config.liquid.btcasset
+        ) || (
+          assets[a].ticker === 'CAD' && assets[a].asset !== config.liquid.cadasset
+        ) || (
+          assets[a].ticker === 'USDt' && assets[a].asset !== config.liquid.usdtasset
+        )) delete assets[a];
       });
 
       accounts.map(({ asset, name, domain, ticker, precision }) => {

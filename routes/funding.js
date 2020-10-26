@@ -43,16 +43,34 @@ app.post("/proof", auth, upload.single("proof"), ah(async (req, res) => {
 
 app.post("/funding", auth, ah(async (req, res) => {
   try {
-    const { amount, code } = req.body;
-    if (!parseFloat(amount) || parseFloat(amount) < 0) throw new Error("Invalid amount");
+    let { id, amount, code } = req.body;
 
-    await db.Deposit.create({
+    if (!code) {
+      code = '';
+      let d = 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789';
+      let l = d.length;
+      for (let i = 0; i < 8; i++) {
+        code += d.charAt(Math.floor(Math.random() * l));
+      }
+    }
+
+    let params = {
       user_id: req.user.id,
       amount,
       code,
-    });
+    };
 
-    res.end();
+    let deposit;
+    if (id) {
+      if (!parseFloat(amount) || parseFloat(amount) < 0) throw new Error("Invalid amount");
+      deposit = await db.Deposit.findOne({ where: { id } })
+      deposit.update(params);
+      await deposit.save();
+    } else { 
+      deposit = await db.Deposit.create(params);
+    }
+
+    res.send(deposit);
   } catch(e) {
     l.error("funding error", e.message);
     res.status(500).send("Funding request failed");
