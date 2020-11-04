@@ -121,7 +121,8 @@ app.post(
 );
 
 const swap = async (user, { a1, a2, v1, v2 }) => {
-  if (!parseInt(v1) || v1 < 0 || !parseInt(v2) || v2 < 0) throw new Error("Invalid amount");
+  if (!parseInt(v1) || v1 < 0 || !parseInt(v2) || v2 < 0)
+    throw new Error("Invalid amount");
   let rate = v2 / v1;
 
   const b = await lq.getBalance();
@@ -205,31 +206,24 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
 
     for (let i = 0; i < orders.length; i++) {
       if (!v1) break;
-      p = orders[i];
-      if (p.v2 > v1) {
-        p.v2 -= v1;
-        await p.save({ transaction });
-
-        let payment = await db.Payment.create(
+      let order = orders[i];
+      if (order.v2 > v1) {
+        let rate = order.rate;
+        await order.decrement(
           {
-            hash: "Trade Fill",
-            amount: v2,
-            account_id: p.a1_id,
-            user_id: p.user_id,
-            currency: p.user.currency,
-            rate: app.get("rates")[p.user.currency],
-            confirmed: true,
-            received: true,
-            network: "COINOS"
+            v2: v1
           },
           { transaction }
         );
+        await order.save({ transaction });
+        await order.reload({ transaction });
+        order.v1 = Math.round(order.v2 / rate);
+        await order.save({ transaction });
 
-        await p.acc1.increment({ balance: v2 }, { transaction });
-        await p.acc1.reload({ transaction });
+        await order.acc1.increment({ balance: v2 }, { transaction });
+        await order.acc1.reload({ transaction });
 
-        emit(p.user.username, "payment", payment.get({ plain: true }));
-        emit(p.user.username, "account", p.acc1.get({ plain: true }));
+        emit(order.user.username, "account", order.acc1.get({ plain: true }));
 
         payment = await db.Payment.create(
           {
@@ -252,21 +246,21 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         emit(user.username, "payment", payment.get({ plain: true }));
         emit(user.username, "account", a1acc.get({ plain: true }));
 
-        if (p.fee) {
+        if (order.fee) {
           const btc = await getAccount(
             config.liquid.btcasset,
-            p.user,
+            order.user,
             transaction
           );
 
           payment = await db.Payment.create(
             {
               hash: "Swap Fee Refund",
-              amount: p.fee,
+              amount: order.fee,
               account_id: btc.id,
-              user_id: p.user_id,
-              currency: p.user.currency,
-              rate: app.get("rates")[p.user.currency],
+              user_id: order.user_id,
+              currency: order.user.currency,
+              rate: app.get("rates")[order.user.currency],
               confirmed: true,
               received: true,
               network: "COINOS"
@@ -274,34 +268,34 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             { transaction }
           );
 
-          await btc.increment({ balance: p.fee }, { transaction });
+          await btc.increment({ balance: order.fee }, { transaction });
           await btc.reload({ transaction });
 
-          emit(p.user.username, "account", btc.get({ plain: true }));
+          emit(order.user.username, "account", btc.get({ plain: true }));
         }
 
-        emit(p.user.username, "payment", payment.get({ plain: true }));
+        emit(order.user.username, "payment", payment.get({ plain: true }));
 
-        p = p.get({ plain: true });
-        p.a1 = p.acc1.asset;
-        p.a2 = p.acc2.asset;
-        p.rate = p.v2 / p.v1;
+        order = order.get({ plain: true });
+        order.a1 = order.acc1.asset;
+        order.a2 = order.acc2.asset;
+        order.rate = order.v2 / order.v1;
 
-        broadcast("order", shallow(p));
+        broadcast("order", shallow(order));
         v1 = 0;
       } else {
-        v1 -= p.v2;
+        v1 -= order.v2;
         v2 = Math.round(v1 * rate);
 
-        p.accepted = true;
-        p.completedAt = new Date();
+        order.accepted = true;
+        order.completedAt = new Date();
 
-        await p.save({ transaction });
+        await order.save({ transaction });
 
         let payment = await db.Payment.create(
           {
             hash: "Trade Fill",
-            amount: p.v1,
+            amount: order.v1,
             account_id: a2acc.id,
             user_id: user.id,
             currency: user.currency,
@@ -313,7 +307,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        await a2acc.increment({ balance: p.v1 }, { transaction });
+        await a2acc.increment({ balance: order.v1 }, { transaction });
         await a2acc.reload({ transaction });
 
         emit(user.username, "payment", payment.get({ plain: true }));
@@ -322,11 +316,11 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         payment = await db.Payment.create(
           {
             hash: "Trade Fill",
-            amount: p.v2,
-            account_id: p.a2_id,
-            user_id: p.user_id,
-            currency: p.user.currency,
-            rate: app.get("rates")[p.user.currency],
+            amount: order.v2,
+            account_id: order.a2_id,
+            user_id: order.user_id,
+            currency: order.user.currency,
+            rate: app.get("rates")[order.user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -334,16 +328,16 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        emit(p.user.username, "payment", payment.get({ plain: true }));
-        await p.acc2.increment({ balance: p.v2 }, { transaction });
-        await p.acc2.reload({ transaction });
+        emit(order.user.username, "payment", payment.get({ plain: true }));
+        await order.acc2.increment({ balance: order.v2 }, { transaction });
+        await order.acc2.reload({ transaction });
 
-        p = p.get({ plain: true });
-        p.a1 = p.acc1.asset;
-        p.a2 = p.acc2.asset;
-        p.rate = p.v2 / p.v1;
+        order = order.get({ plain: true });
+        order.a1 = order.acc1.asset;
+        order.a2 = order.acc2.asset;
+        order.rate = order.v2 / order.v1;
 
-        broadcast("order", shallow(p));
+        broadcast("order", shallow(order));
       }
     }
 
@@ -567,8 +561,6 @@ app.post(
               order.a2 = leg1.asset;
               order.rate = order.v2 / order.v1;
 
-              console.log("broadcasting", order.id);
-
               broadcast("order", shallow(order));
             } else {
               await db.Invoice.create({
@@ -606,7 +598,6 @@ app.post(
             }
           }
 
-          console.log("finalizing", filename);
           await finalize(filename);
         });
 
@@ -804,9 +795,9 @@ app.get(
       });
 
       res.send(
-        orders.map(p => {
-          if (p.user_id !== req.user.id) p.user_id = null;
-          return p;
+        orders.map(order => {
+          if (order.user_id !== req.user.id) order.user_id = null;
+          return order;
         })
       );
     } catch (e) {
@@ -836,7 +827,7 @@ app.post(
   {
     c1: config.liquid.btcasset,
     c2: config.liquid.cadasset,
-    currency: 'CAD',
+    currency: "CAD"
   },
   {
     c1: config.liquid.btcasset,
@@ -854,7 +845,7 @@ app.post(
     });
 
     await db.transaction(async transaction => {
-      let p = await db.Order.findOne(
+      let order = await db.Order.findOne(
         {
           where: {
             user_id: user.id,
@@ -880,10 +871,16 @@ app.post(
         a1: c1,
         a2: c2,
         v1: amount * SATS,
-        v2: Math.round(amount * SATS * (((app.get("ask") * app.get("rates")[currency]) / app.get("rates")['USD']) * 1.01))
+        v2: Math.round(
+          amount *
+            SATS *
+            (((app.get("ask") * app.get("rates")[currency]) /
+              app.get("rates")["USD"]) *
+              1.01)
+        )
       };
 
-      if (p) {
+      if (order) {
         let bestBid = await db.Order.findOne(
           {
             where: {
@@ -891,7 +888,7 @@ app.post(
               "$acc2.asset$": c1,
               accepted: false,
               id: {
-                [Op.ne]: p.id
+                [Op.ne]: order.id
               }
             },
             include: [
@@ -911,17 +908,18 @@ app.post(
         );
         if (
           !bestBid ||
-          (params.v2 / params.v1 > bestBid.rate && p.acc2.balance >= params.v2)
+          (params.v2 / params.v1 > bestBid.rate &&
+            order.acc2.balance >= params.v2)
         ) {
-          p.v1 = params.v1;
-          p.v2 = params.v2;
-          await p.save();
-          p = p.get({ plain: true });
-          p.a1 = params.a1;
-          p.a2 = params.a2;
-          p.rate = p.v2 / p.v1;
+          order.v1 = params.v1;
+          order.v2 = params.v2;
+          await order.save();
+          order = order.get({ plain: true });
+          order.a1 = params.a1;
+          order.a2 = params.a2;
+          order.rate = order.v2 / order.v1;
 
-          broadcast("order", shallow(p));
+          broadcast("order", shallow(order));
         }
       } else {
         try {
@@ -931,7 +929,7 @@ app.post(
         }
       }
 
-      p = await db.Order.findOne(
+      order = await db.Order.findOne(
         {
           where: {
             user_id: user.id,
@@ -956,11 +954,17 @@ app.post(
       params = {
         a1: c2,
         a2: c1,
-        v1: Math.round(amount * SATS * ((app.get("bid") * app.get("rates")[currency]) / app.get("rates")['USD']) * 0.99),
+        v1: Math.round(
+          amount *
+            SATS *
+            ((app.get("bid") * app.get("rates")[currency]) /
+              app.get("rates")["USD"]) *
+            0.99
+        ),
         v2: amount * SATS
       };
 
-      if (p) {
+      if (order) {
         let bestAsk = await db.Order.findOne(
           {
             where: {
@@ -968,7 +972,7 @@ app.post(
               "$acc2.asset$": c2,
               accepted: false,
               id: {
-                [Op.ne]: p.id
+                [Op.ne]: order.id
               }
             },
             include: [
@@ -987,19 +991,24 @@ app.post(
           { transaction }
         );
 
+        if (bestAsk)
         if (
           !bestAsk ||
-          (params.v1 / params.v2 < bestAsk.rate && p.acc1.balance >= params.v1)
+          (params.v1 / params.v2 < bestAsk.rate &&
+            order.acc1.balance >= params.v1)
         ) {
-          p.v1 = params.v1;
-          p.v2 = params.v2;
-          await p.save();
-          p = p.get({ plain: true });
-          p.a1 = params.a1;
-          p.a2 = params.a2;
-          p.rate = p.v2 / p.v1;
+          order.v1 = params.v1;
+          order.v2 = params.v2;
+          await order.save();
+          order = order.get({ plain: true });
+          order.a1 = params.a1;
+          order.a2 = params.a2;
+          order.rate = order.v2 / order.v1;
 
-          broadcast("order", shallow(p));
+          broadcast("order", shallow(order));
+        } else {
+          broadcast("removeOrder", order.id);
+          await order.destroy({ transaction });
         }
       } else {
         try {
