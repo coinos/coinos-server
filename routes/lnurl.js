@@ -302,13 +302,19 @@ lnurlServer.bindToHook(
         if (!user) {
           let ip =
             req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-          user = await register(
-            {
-              username: key.substr(0, 8),
-              password: key
-            },
-            ip
-          );
+
+          let username = `satoshi-${key.substr(0, 12)}`;
+          let existing = await db.User.findOne({ where: { username } });
+          if (existing) user = existing;
+          else {
+            user = await register(
+              {
+                username,
+                password: key
+              },
+              ip
+            );
+          }
         }
 
         ({ username } = user);
