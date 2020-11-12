@@ -166,7 +166,7 @@ app.post(
       params: { callback, k1 }
     } = req.body;
 
-    const url = `${callback}?amount=${amount * 1000}&comment=${comment}`;
+    const url = `${callback}${callback.includes('?') ? '&' : '?'}amount=${amount * 1000}${comment ? '&comment=' + comment : ''}`;
 
     try {
       const parts = callback.split("/");
@@ -177,7 +177,6 @@ app.post(
       res.send(await send(amount, "", result.pr, user));
     } catch (e) {
       l.error("failed to send payment", e.message);
-      throw e;
       res.status(500).send(e.message);
     }
   })
