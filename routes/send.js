@@ -5,6 +5,8 @@ module.exports = ah(async (req, res, next) => {
   let { amount, asset, memo, username } = req.body;
   let { user } = req;
 
+  if (!asset) asset = config.liquid.btcasset;
+
   if (!amount || amount < 0)
     return res.status(500).send("Amount must be greater than zero");
 

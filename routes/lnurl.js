@@ -2,11 +2,12 @@ const axios = require("axios");
 const lnurl = require("lnurl");
 const jwt = require("jsonwebtoken");
 const qs = require("query-string");
+const persist = require("../lib/persist");
 
-logins = {};
-recipients = {};
-payments = {};
-withdrawals = {};
+logins = persist('data/logins.json');
+recipients = persist('data/recipients.json');
+payments = persist('data/payments.json');
+withdrawals = persist('data/withdrawals.json');
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
@@ -166,15 +167,36 @@ app.post(
       params: { callback, k1 }
     } = req.body;
 
-    const url = `${callback}${callback.includes('?') ? '&' : '?'}amount=${amount * 1000}${comment ? '&comment=' + comment : ''}`;
+    let url = `${callback}${callback.includes("?") ? "&" : "?"}amount=${amount *
+      1000}${comment ? "&comment=" + comment : ""}`;
+    console.log(url);
 
     try {
       const parts = callback.split("/");
       const secret = parts[parts.length - 1];
       payments[secret] = user;
 
-      const result = (await axios.get(url)).data;
-      res.send(await send(amount, "", result.pr, user));
+      if (recipients[secret]) {
+        url = `${req.protocol}://${req.get("host")}/api/send`;
+        const { data } = await axios.post(
+          url,
+          {
+            amount,
+            memo: comment,
+            username: recipients[secret].username
+          },
+          {
+            headers: {
+              Authorization: req.get("Authorization")
+            }
+          }
+        );
+
+        res.send(data);
+      } else {
+        const { data } = await axios.get(url);
+        res.send(await send(amount, "", data.pr, user));
+      }
     } catch (e) {
       l.error("failed to send payment", e.message);
       res.status(500).send(e.message);
