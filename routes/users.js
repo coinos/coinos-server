@@ -306,31 +306,26 @@ app.post(
 app.post(
   "/login",
   ah(async (req, res) => {
-    const { params, sig, key } = req.body;
+    try {
+      const { params, sig, key } = req.body;
 
-    if (sig) {
-      const { callback } = params;
+      if (sig) {
+        const { callback } = params;
 
-      try {
-        const url = `${callback}&sig=${sig}&key=${key}`;
-        const response = await axios.get(url);
-        res.send(response.data);
-      } catch (e) {
-        l.error("problem calling lnurl login", e.message);
-        res.status(500).send(e.message);
+        try {
+          const url = `${callback}&sig=${sig}&key=${key}`;
+          const response = await axios.get(url);
+          res.send(response.data);
+        } catch (e) {
+          l.error("problem calling lnurl login", e.message);
+          res.status(500).send(e.message);
+        }
+
+        return;
       }
 
-      return;
-    }
+      let twofa = req.body.token;
 
-    let twofa = req.body.token;
-    l.info(
-      "login",
-      req.body.username,
-      req.headers["x-forwarded-for"] || req.connection.remoteAddress
-    );
-
-    try {
       let user = await getUser(req.body.username);
 
       if (
@@ -354,6 +349,12 @@ app.post(
         return res.status(401).send("2fa required");
       }
 
+      l.info(
+        "login",
+        req.body.username,
+        req.headers["x-forwarded-for"] || req.connection.remoteAddress
+      );
+
       let payload = { username: user.username };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
@@ -362,7 +363,7 @@ app.post(
       user = pick(user, ...whitelist);
       res.send({ user, token });
     } catch (e) {
-      l.error("login error", e.message);
+      // l.error("login error", e.message);
       res.status(401).end();
     }
   })
@@ -467,7 +468,10 @@ app.get(
           blindkey: blindkey.publicKey
         }));
 
-        lq.importBlindingKey(confidentialAddress, blindkey.privateKey.toString('hex'));
+        lq.importBlindingKey(
+          confidentialAddress,
+          blindkey.privateKey.toString("hex")
+        );
       } else {
         ({ address } = p[type]({
           redeem: p.p2wpkh({
