@@ -13,7 +13,7 @@
     "bcrypt": "^5.0.0",
     "bip32": "^2.0.5",
     "bip39": "^3.0.2",
-    "bitcoin-core": "asoltys/bitcoin-core",
+    "bitcoin-core": "https://github.com/asoltys/bitcoin-core",
     "bitcoinjs-lib": "^5.1.8",
     "body-parser": "^1.19.0",
     "bolt11": "^1.2.5",
