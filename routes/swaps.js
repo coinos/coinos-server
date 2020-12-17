@@ -756,6 +756,7 @@ app.post(
 );
 
 [
+  /*
   {
     c1: config.liquid.btcasset,
     c2: config.liquid.cadasset,
@@ -766,10 +767,15 @@ app.post(
     c2: config.liquid.usdtasset,
     currency: 'USD',
   }
+  */
 ].map(({ c1, c2, currency }) => {
   setInterval(async () => {
     if (!app.get("rates")) return;
-    const amount = 0.0001;
+    const amount = {
+      [config.liquid.cadasset]: 0.001,
+      [config.liquid.usdtasset]: 0.00001,
+    }[c2];
+
     const user = await db.User.findOne({
       where: {
         username: "maker"
