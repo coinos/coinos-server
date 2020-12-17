@@ -23,6 +23,7 @@ module.exports = {
     backend: 'knex',
     config: {
       client: 'sqlite3',
+      useNullAsDefault: true,
       connection: {
         filename: './lnurl-server.sqlite3',
       },
