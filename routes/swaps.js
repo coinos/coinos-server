@@ -756,7 +756,7 @@ app.post(
 );
 
 if (config.maker)
-  config.maker.map(({ amount, c1, c2, currency }) => {
+  config.maker.map(({ amount, c1, c2, currency, askMultiplier, bidMultiplier }) => {
     setInterval(async () => {
       if (!app.get("rates")) return;
 
@@ -798,7 +798,7 @@ if (config.maker)
               SATS *
               (((app.get("ask") * app.get("rates")[currency]) /
                 app.get("rates")["USD"]) *
-                1.01)
+                askMultiplier)
           )
         };
 
@@ -881,7 +881,7 @@ if (config.maker)
               SATS *
               ((app.get("bid") * app.get("rates")[currency]) /
                 app.get("rates")["USD"]) *
-              0.99
+              bidMultiplier
           ),
           v2: amount * SATS
         };

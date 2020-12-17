@@ -60,12 +60,16 @@ module.exports = {
       c2: cadasset,
       currency: "CAD".
       amount: 0.001,
+      askMultiplier: 1.01,
+      bidMultiplier: 0.99,
     },
     {
       c1: btcasset,
       c2: usdtasset,
       currency: 'USD',
       amount: 0.001,
+      askMultiplier: 1.01,
+      bidMultiplier: 0.99,
     }
   ],
 }
