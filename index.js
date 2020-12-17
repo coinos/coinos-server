@@ -32,6 +32,24 @@ app = express();
 app.enable("trust proxy");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.use((err, req, res, next) => {
+  const details = {
+    path: req.path,
+    body: req.body,
+    msg: err.message,
+    stack: err.stack
+  };
+
+  if (req.user) details.username = req.user.username;
+
+  l.error("JSON Error: ", details);
+  res.status(500);
+  res.set({
+    "Cache-Control": "no-cache"
+  });
+  res.send(err.message);
+  return res.end();
+});
 app.use(cookieParser());
 app.use(cors({ credentials: true, origin: "http://*:*" }));
 app.use(compression());
@@ -69,7 +87,7 @@ app.use((err, req, res, next) => {
 
   if (req.user) details.username = req.user.username;
 
-  // l.error("Error: ", details);
+  l.error("Error: ", details);
   res.status(500);
   res.set({
     "Cache-Control": "no-cache"

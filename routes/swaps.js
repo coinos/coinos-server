@@ -771,9 +771,10 @@ app.post(
 ].map(({ c1, c2, currency }) => {
   setInterval(async () => {
     if (!app.get("rates")) return;
-    const amount = {
-      [config.liquid.cadasset]: 0.001,
-      [config.liquid.usdtasset]: 0.00001,
+    const amount = 
+    {
+      [config.liquid.cadasset]: 0.01,
+      [config.liquid.usdtasset]: 0.0001,
     }[c2];
 
     const user = await db.User.findOne({
