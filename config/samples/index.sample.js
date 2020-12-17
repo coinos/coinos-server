@@ -7,6 +7,10 @@ try {
   l.warn("lnurl config not found");
 } 
 
+const btcasset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
+const cadasset = "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
+const usdtasset = "4dddd1d0d0beeaee17df7722b512906cc5bc660c81225083b72b05820ecd3d91";
+
 module.exports = {
   lnurl,
   clientVersion: "x11111xx11xx11x11x11111111xx1111111xx111",
@@ -25,6 +29,7 @@ module.exports = {
     specialFriend: '10102176487832944',
   }, 
   bitcoin: {
+    masterkey: 'tprv8ZgxMBicQKsPfBhnpvyFH3PxL7sWhT3bVzk4WE77QRoARn2xxzisfQph34Vv25RnJ5kpoDZunJvy7dSGSSRBkTDkqqVH12W8ikKtWfyj1zw', // get from bitcoin-cli dumpwallet "walletfile"
     username: "user",
     password: "password",
     network: "regtest",
@@ -33,6 +38,9 @@ module.exports = {
     zmqrawtx: "tcp://127.0.0.1:18507"
   },
   liquid: {
+    masterkey: 'tprv8ZgxMBicQKsPe2qXQ8U9qMQKGE5M3qTKbacCG5nrjsBYCB4AbNeRiJR2rPm86S7UoVLd9ubEmHSVtnZqSrJc76BzKrkhuiPYReNWiFzWWVR', // get from elements-cli dumpwallet "walletfile"
+    blindkey: '0e66557c1dfa0c7daa371314ffd763979d3f7c5db69380e5c15ea72b85453c2e',
+    wallet: "coinos",
     username: "user",
     password: "password",
     network: "regtest",
@@ -46,4 +54,18 @@ module.exports = {
     tls: '/home/user/.lnd.testa/tls.cert',
     macaroon: '/home/user/.lnd.testa/data/chain/bitcoin/testnet/admin.macaroon',
   },
+  maker: [ // special account with username "maker" places orders on the exchange
+    {
+      c1: btcasset,
+      c2: cadasset,
+      currency: "CAD".
+      amount: 0.001,
+    },
+    {
+      c1: btcasset,
+      c2: usdtasset,
+      currency: 'USD',
+      amount: 0.001,
+    }
+  ],
 }

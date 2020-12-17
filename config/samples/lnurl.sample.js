@@ -19,16 +19,13 @@ module.exports = {
       macaroon: "/home/user/.lnd.sima/data/chain/bitcoin/regtest/admin.macaroon"
     }
   },
-  store: {
-    backend: "knex",
+	store: {
+    backend: 'knex',
     config: {
-      client: "mysql",
+      client: 'sqlite3',
       connection: {
-        host: "localhost",
-        user: "root",
-        password: "password",
-        database: "coinos"
-      }
-    }
-  }
+        filename: './lnurl-server.sqlite3',
+      },
+    },
+  },
 };
