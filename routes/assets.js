@@ -32,6 +32,8 @@ app.get(
         if ((
           assets[a].ticker === 'BTC' && assets[a].asset !== config.liquid.btcasset
         ) || (
+          assets[a].ticker === 'EUR' && assets[a].asset !== config.liquid.eurasset
+        ) || (
           assets[a].ticker === 'CAD' && assets[a].asset !== config.liquid.cadasset
         ) || (
           assets[a].ticker === 'USDt' && assets[a].asset !== config.liquid.usdtasset
