@@ -2,7 +2,7 @@ const axios = require("axios");
 const bitcoin = require("bitcoinjs-lib");
 const coinselect = require("coinselect");
 const split = require("coinselect/split");
-const api = prod ? "https://blockstream.info/api" : "http://localhost:3002";
+const api = prod ? "https://blockstream.info/api" : config.bitcoin.electrs;
 const SATS = 100000000;
 const network = prod
   ? bitcoin.networks["bitcoin"]
@@ -15,64 +15,70 @@ module.exports = ah(async (req, res) => {
   feeRate = Math.round(feeRate / 1000);
   l.info("sweeping", req.user.username, from, amount, feeRate);
 
-  let {
-    data: {
-      chain_stats: { funded_txo_sum: funded, spent_txo_sum: spent }
-    }
-  } = await axios.get(`${api}/address/${from}`);
-
-  let balance = funded - spent;
-
   try {
-    ({ data: utxos } = await axios.get(`${api}/address/${from}/utxo`));
-  } catch (e) {
-    l.error("problem fetching utxos", e.message);
-  }
+    let {
+      data: {
+        chain_stats: { funded_txo_sum: funded, spent_txo_sum: spent }
+      }
+    } = await axios.get(`${api}/address/${from}`);
+    let balance = funded - spent;
+    console.log("boom");
 
-  let targets = [
-    {
-      address: target,
-      value: amount
+    try {
+      console.log("fetching utxo");
+      ({ data: utxos } = await axios.get(`${api}/address/${from}/utxo`));
+      console.log("got utxos", utxos);
+    } catch (e) {
+      l.error("problem fetching utxos", e.message);
     }
-  ];
 
-  let { inputs, outputs, fee } = coinselect(utxos, targets, feeRate);
+    let targets = [
+      {
+        address: target,
+        value: amount
+      }
+    ];
 
-  if (balance === amount) {
-    delete targets[0].value;
-    ({ inputs, outputs, fee } = split(utxos, targets, feeRate));
-    l.info("split", inputs, outputs, fee);
-  }
+    let { inputs, outputs, fee } = coinselect(utxos, targets, feeRate);
 
-  if (!inputs || !outputs)
-    return res
-      .status(500)
-      .send("Unable to construct sweep transaction, try a lower fee rate?");
+    if (balance === amount) {
+      delete targets[0].value;
+      ({ inputs, outputs, fee } = split(utxos, targets, feeRate));
+      l.info("split", inputs, outputs, fee);
+    }
 
-  let psbt = new bitcoin.Psbt({ network });
-  let total = 0;
+    if (!inputs || !outputs)
+      return res
+        .status(500)
+        .send("Unable to construct sweep transaction, try a lower fee rate?");
 
-  outputs.map(({ address, value }) => {
-    total += value;
-    psbt = psbt.addOutput({
-      address: address || from,
-      value
+    let psbt = new bitcoin.Psbt({ network });
+    let total = 0;
+
+    outputs.map(({ address, value }) => {
+      total += value;
+      psbt = psbt.addOutput({
+        address: address || from,
+        value
+      });
     });
-  });
 
-  for (let i = 0; i < inputs.length; i++) {
-    let { txid, vout } = inputs[i];
-    let nonWitnessUtxo = Buffer.from(await bc.getRawTransaction(txid), "hex");
-    psbt = psbt.addInput({
-      hash: txid,
-      index: vout,
-      nonWitnessUtxo
-    });
+    for (let i = 0; i < inputs.length; i++) {
+      let { txid, vout } = inputs[i];
+      let nonWitnessUtxo = Buffer.from(await bc.getRawTransaction(txid), "hex");
+      psbt = psbt.addInput({
+        hash: txid,
+        index: vout,
+        nonWitnessUtxo
+      });
+    }
+
+    feeRate = Math.round(feeRate * 1000);
+    psbt = psbt.toBase64();
+
+    if (balance !== amount) total = 0;
+    res.send({ feeRate, psbt, total });
+  } catch (e) {
+    l.error("problem getting address stats", from, e.message);
   }
-
-  feeRate = Math.round(feeRate * 1000);
-  psbt = psbt.toBase64();
-
-  if (balance !== amount) total = 0;
-  res.send({ feeRate, psbt, total });
 });
