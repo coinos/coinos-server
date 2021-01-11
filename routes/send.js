@@ -4,6 +4,7 @@ const uuidv4 = require("uuid/v4");
 module.exports = ah(async (req, res, next) => {
   let { amount, asset, memo, username } = req.body;
   let { user } = req;
+  amount = parseInt(amount);
 
   if (!asset) asset = config.liquid.btcasset;
 

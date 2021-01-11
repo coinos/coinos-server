@@ -286,11 +286,13 @@ app.post(
   ah(async (req, res) => {
     const { user } = req;
     const { asset, amount } = req.body;
+    amount = parseInt(amount);
 
     try {
       await db.transaction(async transaction => {
         let { account } = user;
 
+        if (amount < 0) throw new Error("Amount to load cannot be negative");
         if (account.asset !== config.liquid.btcasset)
           throw new Error(
             "Faucet has to be funded with bitcoin. Try sending from another wallet."
