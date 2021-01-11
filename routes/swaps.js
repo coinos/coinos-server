@@ -149,7 +149,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
       throw new Error(`Insufficient funds, ${v1} ${a1acc.balance}`);
 
     l.info(
-      `trade ${v1} ${a1.substr(0, 6)} for ${v2} ${a2.substr(0, 6)}`,
+      `placing order ${v1} ${a1.substr(0, 6)} for ${v2} ${a2.substr(0, 6)}`,
       user.username
     );
 
