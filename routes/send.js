@@ -13,7 +13,15 @@ module.exports = ah(async (req, res, next) => {
 
   try {
     await db.transaction(async transaction => {
-      let { account } = user;
+      let account = await db.Account.findOne({
+        where: {
+          user_id: user.id,
+          asset: config.liquid.btcasset,
+          pubkey: null
+        },
+        lock: transaction.LOCK.UPDATE,
+        transaction
+      });
 
       if (account.balance < amount) {
         throw new Error("Insufficient funds");
@@ -54,14 +62,16 @@ module.exports = ah(async (req, res, next) => {
       emit(user.username, "user", user);
 
       if (username) {
-        let recipient = await db.User.findOne({
-          where: { username },
-          include: {
-            model: db.Account,
-            as: "account"
-          }
-        },
-          { transaction });
+        let recipient = await db.User.findOne(
+          {
+            where: { username },
+            include: {
+              model: db.Account,
+              as: "account"
+            }
+          },
+          { transaction }
+        );
 
         let a2;
         let acc = {
@@ -73,9 +83,12 @@ module.exports = ah(async (req, res, next) => {
         if (recipient.account.asset === asset && !recipient.account.pubkey)
           ({ account: a2 } = recipient);
         else {
-          a2 = await db.Account.findOne({
-            where: acc,
-          }, { transaction });
+          a2 = await db.Account.findOne(
+            {
+              where: acc
+            },
+            { transaction }
+          );
         }
 
         if (a2) {
@@ -87,18 +100,21 @@ module.exports = ah(async (req, res, next) => {
           let ticker = asset.substr(0, 3).toUpperCase();
           let precision = 8;
 
-          const assets = app.get('assets');
+          const assets = app.get("assets");
 
           if (assets[asset]) {
             ({ domain, ticker, precision, name } = assets[asset]);
           } else {
-            const existing = await db.Account.findOne({
-              where: {
-                asset
+            const existing = await db.Account.findOne(
+              {
+                where: {
+                  asset
+                },
+                order: [["id", "ASC"]],
+                limit: 1
               },
-              order: [["id", "ASC"]],
-              limit: 1
-            }, { transaction });
+              { transaction }
+            );
 
             if (existing) {
               ({ domain, ticker, precision, name } = existing);
@@ -108,7 +124,7 @@ module.exports = ah(async (req, res, next) => {
           acc = { ...acc, ...{ domain, ticker, precision, name } };
           acc.balance = amount;
           acc.pending = 0;
-          acc.network = 'liquid';
+          acc.network = "liquid";
           a2 = await db.Account.create(acc, { transaction });
         }
 
@@ -143,7 +159,7 @@ module.exports = ah(async (req, res, next) => {
       "problem sending internal payment",
       user.username,
       user.balance,
-      e.message,
+      e.message
     );
     return res.status(500).send(e.message);
   }

@@ -507,6 +507,12 @@ app.post(
     } = req.body;
 
     try {
+      let account = await db.Account.findOne({
+        where: { id, user_id: user.id }
+      });
+
+      if (!account || (account.pubkey && !pubkey)) throw new Error("Problem updating account");
+
       await db.Account.update(
         {
           name,
@@ -525,7 +531,7 @@ app.post(
         }
       );
 
-      const account = await db.Account.findOne({
+      account = await db.Account.findOne({
         where: { id }
       });
 
