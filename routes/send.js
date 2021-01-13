@@ -21,8 +21,8 @@ module.exports = ah(async (req, res, next) => {
 
       let fee = 0;
 
-      account.balance -= amount;
-      await account.save({ transaction });
+      await account.decrement({ balance: amount }, { transaction });
+      await account.reload({ transaction });
 
       let params = {
         amount: -amount,
@@ -79,8 +79,8 @@ module.exports = ah(async (req, res, next) => {
         }
 
         if (a2) {
-          a2.balance += amount;
-          await a2.save({ transaction });
+          await a2.increment({ balance: amount }, { transaction });
+          await a2.reload({ transaction });
         } else {
           let name = asset.substr(0, 6);
           let domain;
