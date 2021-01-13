@@ -157,6 +157,7 @@ app.post(
 
       let token;
       if (user.username !== username && exists) {
+        l.error("username taken", username, user.username, exists.username);
         return res.status(500).send("Username taken");
       } else {
         sockets[username] = sockets[user.username];
