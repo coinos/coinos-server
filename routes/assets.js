@@ -286,6 +286,8 @@ app.post(
   "/loadFaucet",
   auth,
   ah(async (req, res) => {
+    return res.status(500).send("Faucet feature temporarily disabled");
+
     const { user } = req;
     const { asset, amount } = req.body;
     amount = parseInt(amount);

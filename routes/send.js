@@ -2,6 +2,7 @@ const axios = require("axios");
 const uuidv4 = require("uuid/v4");
 
 module.exports = ah(async (req, res, next) => {
+  return res.status(500).send("Internal payments are temporarily disabled");
   let { amount, asset, memo, username } = req.body;
   let { user } = req;
   amount = parseInt(amount);
