@@ -508,14 +508,14 @@ app.post(
     } = req.body;
 
     try {
-      let account = await db.Account.findOne({
-        where: { id, user_id: user.id }
-      });
+      await db.transaction(async transaction => {
+        let account = await db.Account.findOne({
+          where: { id, user_id: user.id },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
 
-      if (!account || (account.pubkey && !pubkey)) throw new Error("Problem updating account");
-
-      await db.Account.update(
-        {
+        let params = {
           name,
           ticker,
           precision,
@@ -526,18 +526,19 @@ app.post(
           hide,
           index,
           privkey
-        },
-        {
-          where: { id, user_id: user.id }
-        }
-      );
+        };
 
-      account = await db.Account.findOne({
-        where: { id }
+        if (!account || (account.pubkey && !pubkey)) delete params.pubkey;
+
+        await db.Account.update(params, {
+          where: { id, user_id: user.id },
+          transaction
+        });
+
+        await account.reload({ transaction });
+        emit(user.username, "account", account);
+        res.end();
       });
-
-      emit(user.username, "account", account);
-      res.end();
     } catch (e) {
       l.error(e.message);
       return res.status(500).send("There was a problem updating the account");
@@ -676,8 +677,8 @@ app.post(
         { transaction }
       );
 
-      account.balance -= source.amount;
-      await account.save();
+      await account.decrement({ balance: source.amount }, { transaction });
+      await account.reload({ transaction });
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
@@ -709,5 +710,39 @@ app.post(
 
     if (!user.password) return res.send(true);
     res.send(await bcrypt.compare(password, user.password));
+  })
+);
+
+app.get(
+  "/isInternal",
+  auth,
+  ah(async function(req, res) {
+    let { user } = req;
+    let { address } = req.query;
+    if (!address) throw new Error("Address not provided");
+
+    let invoice = await db.Invoice.findOne({
+      where: { address },
+      include: {
+        attributes: ["username"],
+        model: db.User,
+        as: "user"
+      }
+    });
+
+    if (invoice) {
+      let info;
+      try {
+        info = await bc.getAddressInfo(address);
+      } catch (e) {
+        info = await lq.getAddressInfo(address);
+      }
+      if (info.ismine) {
+        emit(user.username, "to", invoice.user);
+        return res.send(true);
+      }
+    }
+
+    res.send(false);
   })
 );

@@ -55,9 +55,9 @@ const handlePayment = async (msg) => {
 
       let total = amount + tip;
       invoice.received += total;
-      account.balance += total;
 
-      await account.save({ transaction });
+      await account.increment({ balance: total }, { transaction });
+      await account.reload({ transaction });
       await invoice.save({ transaction });
       await payment.save({ transaction });
       payments.push(msg.payment_request);

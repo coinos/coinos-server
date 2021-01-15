@@ -29,15 +29,17 @@ app.get(
       Object.keys(assets).map(a => {
         assets[a].registered = true;
         if (!assets[a].asset) assets[a].asset = assets[a].asset_id;
-        if ((
-          assets[a].ticker === 'BTC' && assets[a].asset !== config.liquid.btcasset
-        ) || (
-          assets[a].ticker === 'EUR' && assets[a].asset !== config.liquid.eurasset
-        ) || (
-          assets[a].ticker === 'CAD' && assets[a].asset !== config.liquid.cadasset
-        ) || (
-          assets[a].ticker === 'USDt' && assets[a].asset !== config.liquid.usdtasset
-        )) delete assets[a];
+        if (
+          (assets[a].ticker === "BTC" &&
+            assets[a].asset !== config.liquid.btcasset) ||
+          (assets[a].ticker === "EUR" &&
+            assets[a].asset !== config.liquid.eurasset) ||
+          (assets[a].ticker === "CAD" &&
+            assets[a].asset !== config.liquid.cadasset) ||
+          (assets[a].ticker === "USDt" &&
+            assets[a].asset !== config.liquid.usdtasset)
+        )
+          delete assets[a];
       });
 
       accounts.map(({ asset, name, domain, ticker, precision }) => {
@@ -156,8 +158,11 @@ app.post(
             );
           }
 
-          account.balance -= Math.round(funded.fee * SATS);
-          await account.save({ transaction });
+          await account.decrement(
+            { balance: Math.round(funded.fee * SATS) },
+            { transaction }
+          );
+          await account.reload({ transaction });
           emit(user.username, "account", account);
 
           account = await db.Account.create(
@@ -294,7 +299,11 @@ app.post(
 
     try {
       await db.transaction(async transaction => {
-        let { account } = user;
+        let account = await getAccount(
+          config.liquid.btcasset,
+          user,
+          transaction
+        );
 
         if (amount < 0) throw new Error("Amount to load cannot be negative");
         if (account.asset !== config.liquid.btcasset)
@@ -305,8 +314,8 @@ app.post(
 
         let fee = 0;
 
-        account.balance -= amount;
-        await account.save({ transaction });
+        await account.decrement({ balance: amount }, { transaction });
+        await account.reload({ transaction });
 
         let a2;
         let acc = {
@@ -321,8 +330,8 @@ app.post(
         });
 
         if (a2) {
-          a2.balance += amount;
-          await a2.save({ transaction });
+          await a2.increment({ balance: amount }, { transaction });
+          await a2.reload({ transaction });
         } else {
           let name = asset.substr(0, 6);
           let domain;
@@ -339,7 +348,9 @@ app.post(
                 asset
               },
               order: [["id", "ASC"]],
-              limit: 1
+              limit: 1,
+              lock: transaction.LOCK.UPDATE,
+              transaction
             });
 
             if (existing) {

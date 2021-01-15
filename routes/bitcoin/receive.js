@@ -159,10 +159,13 @@ setInterval(async () => {
           let total = p.amount + p.tip;
 
           p.confirmed = 1;
-          p.account.balance += total;
-          p.account.pending -= Math.min(p.account.pending, total);
-
           await p.account.save({ transaction });
+          await p.account.increment({ balance: total }, { transaction });
+          await p.account.decrement(
+            { pending: Math.min(p.account.pending, total) },
+            { transaction }
+          );
+          await p.account.reload({ transaction });
           await p.save({ transaction });
 
           p = p.get({ plain: true });

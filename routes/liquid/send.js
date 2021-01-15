@@ -54,13 +54,16 @@ module.exports = ah(async (req, res) => {
               where: {
                 asset: nonbtc[0],
                 user_id: null
-              }
+              },
+              lock: transaction.LOCK.UPDATE,
+              transaction
             });
 
             if (faucet) {
               covered = faucet.balance;
               if (covered > fee) covered = fee;
-              faucet.balance -= covered;
+              await faucet.decrement({ balance: covered }, { transaction });
+              await faucet.reload({ transaction });
               await faucet.save({ transaction });
             }
 
@@ -88,12 +91,14 @@ module.exports = ah(async (req, res) => {
               balance: account.balance
             });
             throw new Error(
-              `Insufficient funds, need ${total} ${account.ticker === 'BTC' ? 'SAT' : account.ticker}, have ${account.balance}`
+              `Insufficient funds, need ${total} ${
+                account.ticker === "BTC" ? "SAT" : account.ticker
+              }, have ${account.balance}`
             );
           }
 
-          account.balance -= total;
-          await account.save({ transaction });
+          await account.decrement({ balance: total }, { transaction });
+          await account.reload({ transaction });
 
           let payment = {
             amount: -amount,
@@ -113,14 +118,7 @@ module.exports = ah(async (req, res) => {
           payments.push(payment);
         }
       }
-    });
-  } catch (e) {
-    l.error("problem creating liquid payment", user.username, e.message);
-    return res.status(500).send(e.message);
-  }
 
-  try {
-    await db.transaction(async transaction => {
       if (config.liquid.walletpass)
         await lq.walletPassphrase(config.liquid.walletpass, 300);
 

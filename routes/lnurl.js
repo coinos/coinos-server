@@ -395,8 +395,8 @@ lnurlServer.bindToHook(
               if (p) {
                 l.info("found payment", pr);
                 payment.fee = p.fee;
-                account.balance -= p.fee;
-                await account.save();
+                await account.decrement({ balance: p.fee }, { transaction });
+                await account.reload({ transaction });
                 await payment.save();
                 payment = payment.get({ plain: true });
                 payment.account = account.get({ plain: true });
@@ -410,8 +410,8 @@ lnurlServer.bindToHook(
             }
           }, 1000);
 
-          account.balance -= amount;
-          await account.save({ transaction });
+          await account.decrement({ balance: amount }, { transaction });
+          await account.reload({ transaction });
 
           let p = payment.get({ plain: true });
           p.account = account.get({ plain: true });

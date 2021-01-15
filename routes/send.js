@@ -2,7 +2,6 @@ const axios = require("axios");
 const uuidv4 = require("uuid/v4");
 
 module.exports = ah(async (req, res, next) => {
-  return res.status(500).send("Internal payments are temporarily disabled");
   let { amount, asset, memo, username } = req.body;
   let { user } = req;
   amount = parseInt(amount);
@@ -84,12 +83,11 @@ module.exports = ah(async (req, res, next) => {
         if (recipient.account.asset === asset && !recipient.account.pubkey)
           ({ account: a2 } = recipient);
         else {
-          a2 = await db.Account.findOne(
-            {
-              where: acc
-            },
-            { transaction }
-          );
+          a2 = await db.Account.findOne({
+            where: acc,
+            lock: transaction.LOCK.UPDATE,
+            transaction
+          });
         }
 
         if (a2) {
@@ -106,16 +104,15 @@ module.exports = ah(async (req, res, next) => {
           if (assets[asset]) {
             ({ domain, ticker, precision, name } = assets[asset]);
           } else {
-            const existing = await db.Account.findOne(
-              {
-                where: {
-                  asset
-                },
-                order: [["id", "ASC"]],
-                limit: 1
+            const existing = await db.Account.findOne({
+              where: {
+                asset
               },
-              { transaction }
-            );
+              order: [["id", "ASC"]],
+              limit: 1,
+              lock: transaction.LOCK.UPDATE,
+              transaction
+            });
 
             if (existing) {
               ({ domain, ticker, precision, name } = existing);
