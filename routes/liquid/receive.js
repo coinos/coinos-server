@@ -110,7 +110,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
               transaction
             });
 
-            console.log(account);
             if (
               account.asset === asset &&
               (!account.pubkey || account.network === "liquid")
