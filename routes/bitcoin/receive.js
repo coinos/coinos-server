@@ -155,7 +155,7 @@ setInterval(async () => {
 
         const { user } = p;
 
-        if (p) {
+        if (p && p.account) {
           let total = p.amount + p.tip;
 
           p.confirmed = 1;
