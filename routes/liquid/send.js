@@ -81,6 +81,7 @@ module.exports = ah(async (req, res) => {
               pubkey: null
             },
             lock: transaction.LOCK.UPDATE,
+            order: [['balance', 'DESC']],
             transaction
           });
 

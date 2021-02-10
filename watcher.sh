@@ -12,6 +12,7 @@ do
   if "$low"; then 
     echo "Balance below threshold, shutting down"
     yarn pm2 stop 0 > /dev/null
+    cd /root/mailgun && node index.js
     exit
   fi
   sleep 10 
