@@ -5,7 +5,7 @@ const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 const bitcoin = require("bitcoinjs-lib");
 const elements = require("elementsjs-lib");
-const liquid = require("liquidjs-lib");
+const liquid = require("@asoltys/liquidjs-lib");
 
 const network =
   liquid.networks[
