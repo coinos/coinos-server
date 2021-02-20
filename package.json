@@ -10,7 +10,7 @@
     "@asoltys/liquidjs-lib": "*",
     "@grpc/proto-loader": "^0.5.3",
     "async-mutex": "^0.2.4",
-    "axios": "^0.19.0",
+    "axios": "^0.21.1",
     "bcrypt": "^5.0.0",
     "bip32": "^2.0.5",
     "bip39": "^3.0.2",
