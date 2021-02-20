@@ -17,6 +17,7 @@ fail = msg => {
 };
 
 challenge = {};
+convert = {};
 logins = {};
 sessions = {};
 sockets = {};

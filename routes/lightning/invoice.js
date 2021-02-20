@@ -1,5 +1,6 @@
 module.exports = ah(async (req, res) => {
-  const { amount, memo, tip } = req.body;
+  let { amount, memo, tip } = req.body;
+  if (!tip) tip = 0;
 
   try {
     if (config.lna.clightning) {

@@ -21,10 +21,13 @@ app.get(
 
 app.post(
   "/invoice",
+  optionalAuth,
   ah(async (req, res, next) => {
     try {
-      let { invoice, user } = req.body;
+      let { liquidAddress, invoice, user } = req.body;
       let { blindkey } = invoice;
+
+      if (liquidAddress) convert[invoice.text] = liquidAddress;
 
       if (!user) ({ user } = req);
       else {
@@ -35,6 +38,7 @@ app.post(
         });
       }
       if (!user) throw new Error("user not provided");
+      if (!invoice.currency) invoice.currency = user.currency;
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
 
@@ -49,15 +53,17 @@ app.post(
 
       if (!invoice.tip) invoice.tip = 0;
 
-      const exists = await db.Invoice.findOne({
-        where: {
-          [Op.or]: {
-            address: invoice.address || "",
-            unconfidential: invoice.unconfidential || "",
-            text: invoice.text
+      const exists =
+        invoice.text &&
+        (await db.Invoice.findOne({
+          where: {
+            [Op.or]: {
+              address: invoice.address || "",
+              unconfidential: invoice.unconfidential || "",
+              text: invoice.text
+            }
           }
-        }
-      });
+        }));
 
       invoice = exists
         ? await exists.update(invoice)

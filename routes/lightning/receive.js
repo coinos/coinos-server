@@ -1,12 +1,12 @@
-const handlePayment = async (msg) => {
+const handlePayment = async msg => {
   try {
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       if (!msg.settled) return;
 
       const invoice = await db.Invoice.findOne({
         where: {
-          text: msg.payment_request,
-        },
+          text: msg.payment_request
+        }
       });
 
       if (!invoice)
@@ -22,16 +22,37 @@ const handlePayment = async (msg) => {
         where: {
           user_id,
           asset: config.liquid.btcasset,
+          pubkey: null
         },
         include: {
           model: db.User,
-          as: "user",
+          as: "user"
         },
         lock: transaction.LOCK.UPDATE,
-        transaction,
+        transaction
       });
 
       const { user } = account;
+
+      let address = convert[msg.payment_request];
+      if (address) {
+        user.account = account;
+
+        let { tx } = await liquidTx({
+          address,
+          asset: config.liquid.btcasset,
+          amount,
+          feeRate: 1000,
+          replaceable: true,
+          user
+        });
+
+        return sendLiquid({
+          address,
+          user,
+          tx
+        });
+      }
 
       let preimage = msg.r_preimage.toString("hex");
 
@@ -48,7 +69,7 @@ const handlePayment = async (msg) => {
           received: true,
           confirmed: true,
           network: "lightning",
-          tip,
+          tip
         },
         { transaction }
       );
@@ -82,14 +103,14 @@ const handlePayment = async (msg) => {
 };
 
 if (config.lna.clightning) {
-  const poll = async (ln) => {
-    const wait = async (i) => {
+  const poll = async ln => {
+    const wait = async i => {
       const {
         bolt11: payment_request,
         pay_index,
         status,
         msatoshi_received,
-        payment_preimage: r_preimage,
+        payment_preimage: r_preimage
       } = await ln.waitanyinvoice(i);
 
       let settled = status === "paid";
@@ -99,13 +120,13 @@ if (config.lna.clightning) {
         payment_request,
         settled,
         amt_paid_sat,
-        r_preimage,
+        r_preimage
       });
       wait(pay_index);
     };
 
     const { invoices } = await ln.listinvoices();
-    wait(Math.max(...invoices.map((i) => i.pay_index).filter((n) => n)));
+    wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
   };
 
   poll(lna);
