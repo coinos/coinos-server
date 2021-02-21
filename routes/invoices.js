@@ -24,10 +24,10 @@ app.post(
   optionalAuth,
   ah(async (req, res, next) => {
     try {
-      let { liquidAddress, invoice, user } = req.body;
+      let { liquidAddress, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
-      if (liquidAddress) convert[invoice.text] = liquidAddress;
+      if (liquidAddress) convert[invoice.text] = { address: liquidAddress, tx };
 
       if (!user) ({ user } = req);
       else {
@@ -39,6 +39,7 @@ app.post(
       }
       if (!user) throw new Error("user not provided");
       if (!invoice.currency) invoice.currency = user.currency;
+      if (!invoice.rate) invoice.rate = app.get("rates")[invoice.currency];
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
 
@@ -73,6 +74,7 @@ app.post(
         addresses[invoice.unconfidential] = user.username;
         if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
       }
+
       res.send(invoice);
     } catch (e) {
       l.error(e.message, e.stack);

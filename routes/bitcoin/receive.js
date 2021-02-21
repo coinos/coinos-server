@@ -56,8 +56,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           order: [["id", "DESC"]],
           include: {
             model: db.Account,
-            as: "account",
-          },
+            as: "account"
+          }
         });
 
         if (!invoice) return;
@@ -136,6 +136,7 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
+      let account, address, user;
       await db.transaction(async transaction => {
         let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
@@ -153,24 +154,25 @@ setInterval(async () => {
           transaction
         });
 
-        const { user } = p;
+        ({ account, address, user } = p);
 
         if (p && p.account) {
           let total = p.amount + p.tip;
 
           p.confirmed = 1;
-          await p.account.save({ transaction });
-          await p.account.increment({ balance: total }, { transaction });
-          await p.account.decrement(
-            { pending: Math.min(p.account.pending, total) },
+          await account.save({ transaction });
+
+          await account.increment({ balance: total }, { transaction });
+          await account.decrement(
+            { pending: Math.min(account.pending, total) },
             { transaction }
           );
-          await p.account.reload({ transaction });
+          await account.reload({ transaction });
           await p.save({ transaction });
 
           p = p.get({ plain: true });
 
-          emit(user.username, "account", p.account);
+          emit(user.username, "account", account);
           emit(user.username, "payment", p);
           l.info("bitcoin confirmed", user.username, p.amount, p.tip);
           notify(user, `${total} SAT payment confirmed`);
@@ -180,6 +182,20 @@ setInterval(async () => {
 
         delete queue[hash];
       });
+
+      let c = convert[address];
+      if (c) {
+        let { tx } = c;
+        user.account = account;
+
+        delete queue[hash];
+
+        await sendLiquid({
+          address,
+          user,
+          tx
+        });
+      }
     }
   } catch (e) {
     l.error("problem processing queued bitcoin transaction", e.message);

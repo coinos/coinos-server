@@ -1,4 +1,5 @@
 const handlePayment = async msg => {
+  let account, total, user;
   try {
     await db.transaction(async transaction => {
       if (!msg.settled) return;
@@ -18,7 +19,7 @@ const handlePayment = async msg => {
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
       const amount = parseInt(msg.amt_paid_sat) - tip;
 
-      const account = await db.Account.findOne({
+      account = await db.Account.findOne({
         where: {
           user_id,
           asset: config.liquid.btcasset,
@@ -32,27 +33,7 @@ const handlePayment = async msg => {
         transaction
       });
 
-      const { user } = account;
-
-      let address = convert[msg.payment_request];
-      if (address) {
-        user.account = account;
-
-        let { tx } = await liquidTx({
-          address,
-          asset: config.liquid.btcasset,
-          amount,
-          feeRate: 1000,
-          replaceable: true,
-          user
-        });
-
-        return sendLiquid({
-          address,
-          user,
-          tx
-        });
-      }
+      ({ user } = account);
 
       let preimage = msg.r_preimage.toString("hex");
 
@@ -74,7 +55,7 @@ const handlePayment = async msg => {
         { transaction }
       );
 
-      let total = amount + tip;
+      total = amount + tip;
       invoice.received += total;
 
       await account.increment({ balance: total }, { transaction });
@@ -97,6 +78,23 @@ const handlePayment = async msg => {
         payment.tip
       );
     });
+
+    let c = convert[msg.payment_request];
+    if (c) {
+      let { address, tx } = c;
+      user.account = account;
+
+      try {
+        await sendLiquid({
+          address,
+          user,
+          tx,
+          limit: total
+        });
+      } catch (e) {
+        l.error("problem sending liquid payment");
+      }
+    }
   } catch (e) {
     l.error("problem receiving lightning payment", e.message);
   }
