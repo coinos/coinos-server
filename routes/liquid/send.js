@@ -1,7 +1,7 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 
-sendLiquid = async ({ user, address, memo, tx }) => {
+sendLiquid = async ({ user, address, memo, tx, limit }) => {
   const isChange = async address =>
     (await lq.getAddressInfo(address)).ismine &&
     !Object.keys(addresses).includes(address);
@@ -66,6 +66,8 @@ sendLiquid = async ({ user, address, memo, tx }) => {
           total += fee - covered;
         }
       }
+
+      if (limit && total > limit) throw new Error("Tx amount exceeds authorized amount");
 
       if (asset !== btc || total) {
         l.info("creating liquid payment", user.username, asset, total, fee);

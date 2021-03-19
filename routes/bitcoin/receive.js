@@ -136,7 +136,7 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      let account, address, user;
+      let account, address, user, total;
       await db.transaction(async transaction => {
         let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
@@ -157,7 +157,7 @@ setInterval(async () => {
         ({ account, address, user } = p);
 
         if (p && p.account) {
-          let total = p.amount + p.tip;
+          total = p.amount + p.tip;
 
           p.confirmed = 1;
           await account.save({ transaction });
@@ -193,7 +193,8 @@ setInterval(async () => {
         await sendLiquid({
           address,
           user,
-          tx
+          tx,
+          limit: total
         });
       }
     }
