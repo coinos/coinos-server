@@ -31,6 +31,7 @@
     "express-session": "^1.16.2",
     "grpc": "^1.24.2",
     "http-proxy-middleware": "^0.20.0",
+    "imap": "^0.8.19",
     "jsonwebtoken": "^8.5.1",
     "knex": "^0.21.17",
     "level": "^6.0.1",
