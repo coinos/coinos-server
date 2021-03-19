@@ -16,7 +16,7 @@ module.exports = ah(async (req, res, next) => {
       let account = await db.Account.findOne({
         where: {
           user_id: user.id,
-          asset: config.liquid.btcasset,
+          asset,
           pubkey: null
         },
         lock: transaction.LOCK.UPDATE,
