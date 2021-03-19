@@ -66,7 +66,7 @@ require("./lib/notifications");
 require("./lib/register");
 require("./lib/send");
 
-require("./mail");
+require("./lib/mail");
 
 require("./routes/assets");
 require("./routes/invoices");
