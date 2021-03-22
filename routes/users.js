@@ -146,7 +146,6 @@ app.post(
         twofa,
         pin,
         password,
-        confirm,
         tokens,
         seed
       } = req.body;
@@ -179,7 +178,7 @@ app.post(
       user.seed = seed;
       user.fiat = fiat;
 
-      if (password && password === confirm) {
+      if (password) {
         user.password = await bcrypt.hash(password, 1);
       }
 
