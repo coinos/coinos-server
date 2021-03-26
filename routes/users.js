@@ -202,6 +202,7 @@ app.post(
       hex
     });
     emit(req.user.username, "key", key);
+    res.send(key);
   })
 );
 
@@ -364,7 +365,7 @@ app.post(
       user = pick(user, ...whitelist);
       res.send({ user, token });
     } catch (e) {
-      // l.error("login error", e.message);
+      l.error("login error", e.message);
       res.status(401).end();
     }
   })
