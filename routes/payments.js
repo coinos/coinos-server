@@ -68,7 +68,7 @@ ah(async () => {
         tx =>
           tx.category === "receive" &&
           tx.confirmations > 0 &&
-          unconfirmed.includes(tx.address)
+          unconfirmed.includes(tx.txid)
       )
       .map(tx => {
         l.warn("tx unconfirmed in db", tx.txid, tx.address);

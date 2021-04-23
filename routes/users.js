@@ -337,8 +337,7 @@ app.post(
       ) {
         l.warn(
           "invalid username or password attempt",
-          req.body.username,
-          req.body.password
+          req.body.username
         );
         return res.status(401).end();
       }
