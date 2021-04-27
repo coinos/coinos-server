@@ -59,7 +59,7 @@ ah(async () => {
           confirmed: 0
         }
       })
-    ).map(p => p.address);
+    ).map(p => p.hash);
 
     const transactions = await bc.listTransactions("*", 1000);
 
