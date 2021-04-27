@@ -5,10 +5,10 @@ const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 const bitcoin = require("bitcoinjs-lib");
 const elements = require("elementsjs-lib");
-const liquid = require("liquidjs-lib");
+const { networks } = require("liquidjs-lib");
 
 const network =
-  liquid.networks[
+  networks[
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
@@ -68,9 +68,16 @@ zmqRawTx.subscribe("rawtx");
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
-  const unblinded = await lq.unblindRawTransaction(hex);
-  const tx = await lq.decodeRawTransaction(unblinded.hex);
-  const blinded = await lq.decodeRawTransaction(hex);
+
+  let unblinded, tx, blinded;
+  try {
+    unblinded = await lq.unblindRawTransaction(hex);
+    tx = await lq.decodeRawTransaction(unblinded.hex);
+    blinded = await lq.decodeRawTransaction(hex);
+  } catch (e) {
+    return console.log(e);
+  }
+
   if (payments.includes(blinded.txid)) return;
 
   Promise.all(
@@ -186,8 +193,15 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
   });
 
   const block = elements.Block.fromHex(message.toString("hex"), true);
-  const hash = await lq.getBlockHash(block.height);
-  const json = await lq.getBlock(hash, 2);
+
+  let hash, json;
+
+  try {
+    hash = await lq.getBlockHash(block.height);
+    json = await lq.getBlock(hash, 2);
+  } catch (e) {
+    return console.log(e);
+  }
 
   json.tx.map(async tx => {
     if (issuances[tx.txid]) {
