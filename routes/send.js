@@ -81,7 +81,7 @@ module.exports = ah(async (req, res, next) => {
         };
 
         if (recipient.account.asset === asset && !recipient.account.pubkey)
-          ({ account: a2 } = recipient);
+          a2 = recipient.account;
         else {
           a2 = await db.Account.findOne({
             where: acc,
