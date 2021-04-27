@@ -240,9 +240,6 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        a1acc.increment({ balance: v1 }, { transaction });
-        await a1acc.reload({ transaction });
-
         emit(user.username, "payment", payment.get({ plain: true }));
         emit(user.username, "account", a1acc.get({ plain: true }));
 
@@ -450,13 +447,12 @@ app.post(
   "/orders",
   auth,
   ah(async (req, res) => {
-    return res.status(500).send("Trading temporarily disabled");
     const { user } = req;
     try {
       await swap(user, req.body);
       res.end();
     } catch (e) {
-      l.error(req.user.username, e.message, e.stack);
+      l.error(req.user.username, e.message);
       res.status(500).send(e.message);
     }
   })

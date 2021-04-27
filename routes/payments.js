@@ -13,64 +13,70 @@ ah(async () => {
 
   const exceptions = [];
   try {
-    read(fs.createReadStream("exceptions"), (data) => exceptions.push(data));
+    read(fs.createReadStream("exceptions"), data => exceptions.push(data));
   } catch (e) {
     l.warn("couldn't read exceptions file", e.message);
   }
 
-  (await db.Invoice.findAll({
-    include: {
-      model: db.User,
-      as: "user",
-    },
-  })).map(({ address, user, unconfidential }) => {
+  (
+    await db.Invoice.findAll({
+      include: {
+        model: db.User,
+        as: "user"
+      }
+    })
+  ).map(({ address, user, unconfidential }) => {
     if (address && user) addresses[address] = user.username;
     if (unconfidential && user) addresses[unconfidential] = user.username;
   });
 
-  const accounts = await db.Account.findAll({
-    where: { pubkey: { [Op.ne]: null } },
-    include: {
-      model: db.User,
-      as: "user",
-    },
-  });
+  try {
+    const accounts = await db.Account.findAll({
+      where: { pubkey: { [Op.ne]: null } },
+      include: {
+        model: db.User,
+        as: "user"
+      }
+    });
 
-  accounts.map(({ address, user: { username } }) => {
-    addresses[address] = username;
-  });
+    accounts.map(({ address, user: { username } }) => {
+      addresses[address] = username;
+    });
+  } catch (e) {
+    console.log(e);
+  }
 
   payments = (
     await db.Payment.findAll({
-      attributes: ["hash"],
+      attributes: ["hash"]
     })
-  ).map((p) => p.hash);
+  ).map(p => p.hash);
 
   setInterval(async () => {
     const unconfirmed = (
       await db.Payment.findAll({
         where: {
-          confirmed: 0,
-        },
+          confirmed: 0
+        }
       })
-    ).map((p) => p.address);
+    ).map(p => p.address);
 
     const transactions = await bc.listTransactions("*", 1000);
 
     transactions
       .filter(
-        (tx) =>
+        tx =>
           tx.category === "receive" &&
           tx.confirmations > 0 &&
           unconfirmed.includes(tx.address)
       )
-      .map((tx) => {
+      .map(tx => {
         l.warn("tx unconfirmed in db", tx.txid, tx.address);
       });
 
     const unaccounted = [];
 
-    transactions.map((tx) => {
+    transactions.map(tx => {
       if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
         unaccounted.push(tx.txid);
       }
@@ -117,18 +123,14 @@ ah(async () => {
     setTimeout(async () => {
       const address = await bc.getNewAddress();
       const { hdkeypath } = await bc.getAddressInfo(address);
-      const parts = hdkeypath.split('/');
+      const parts = hdkeypath.split("/");
       app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
     }, 50);
   }
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
-    app.post(
-      "/liquid/broadcast",
-      optionalAuth,
-      require("./liquid/broadcast")
-    );
+    app.post("/liquid/broadcast", optionalAuth, require("./liquid/broadcast"));
     app.get("/liquid/generate", auth, require("./liquid/generate"));
     app.post("/liquid/fee", auth, require("./liquid/fee"));
     app.post("/liquid/send", auth, require("./liquid/send"));
@@ -137,7 +139,7 @@ ah(async () => {
     setTimeout(async () => {
       const address = await lq.getNewAddress();
       const { hdkeypath } = await lq.getAddressInfo(address);
-      const parts = hdkeypath.split('/');
+      const parts = hdkeypath.split("/");
       app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
     }, 50);
   }
@@ -148,13 +150,13 @@ ah(async () => {
     ah(async (req, res) => {
       let payments = await req.user.getPayments({
         where: {
-          account_id: req.user.account_id,
+          account_id: req.user.account_id
         },
         order: [["id", "DESC"]],
         include: {
           model: db.Account,
-          as: "account",
-        },
+          as: "account"
+        }
       });
 
       res.send(payments);
@@ -168,12 +170,12 @@ ah(async () => {
         const { redeemcode } = req.params;
         let payment = await db.Payment.findOne({
           where: {
-            redeemcode,
+            redeemcode
           },
           include: {
             model: db.Account,
-            as: "account",
-          },
+            as: "account"
+          }
         });
 
         if (!payment) fail("invalid code");
