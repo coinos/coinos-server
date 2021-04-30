@@ -447,6 +447,7 @@ app.post(
   "/orders",
   auth,
   ah(async (req, res) => {
+    return res.status(500).send("Trading temporarily disabled");
     const { user } = req;
     try {
       await swap(user, req.body);

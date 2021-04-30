@@ -147,7 +147,12 @@ sendLiquid = async ({ user, address, memo, tx, limit }) => {
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
-  let { address, memo, tx } = req.body;
+  let { address, feeRate, memo, tx } = req.body;
+
+  if (!tx) {
+    ({ tx } = await liquidTx({ ...req.body, user }));
+  } 
+
   try {
     res.send(await sendLiquid({ user, address, memo, tx }));
   } catch (e) {

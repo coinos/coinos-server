@@ -52,7 +52,7 @@ app.use((err, req, res, next) => {
   return res.end();
 });
 app.use(cookieParser());
-app.use(cors({ credentials: true, origin: "https://coinos.io" }));
+app.use(cors({ credentials: true, origin: "*" }));
 app.use(compression());
 
 server = require("http").Server(app);

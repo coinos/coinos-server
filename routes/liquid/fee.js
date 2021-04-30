@@ -72,7 +72,8 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
 
 module.exports = ah(async (req, res) => {
   try {
-    res.send(await liquidTx({ ...req.body, user: req.user }));
+    let tx = await liquidTx({ ...req.body, user: req.user })
+    res.send(tx);
   } catch (e) {
     l.error("error estimating liquid fee", e.message, e.stack);
     return res.status(500).send(e.message);
