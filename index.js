@@ -96,7 +96,6 @@ app.use((err, req, res, next) => {
     "Cache-Control": "no-cache"
   });
   res.send(err.message);
-  return res.end();
 });
 
 server.listen(config.port, () =>

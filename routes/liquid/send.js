@@ -67,7 +67,8 @@ sendLiquid = async ({ user, address, memo, tx, limit }) => {
         }
       }
 
-      if (limit && total > limit) throw new Error("Tx amount exceeds authorized amount");
+      if (limit && total > limit)
+        throw new Error("Tx amount exceeds authorized amount");
 
       if (asset !== btc || total) {
         l.info("creating liquid payment", user.username, asset, total, fee);
@@ -147,13 +148,13 @@ sendLiquid = async ({ user, address, memo, tx, limit }) => {
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
-  let { address, feeRate, memo, tx } = req.body;
-
-  if (!tx) {
-    ({ tx } = await liquidTx({ ...req.body, user }));
-  } 
 
   try {
+    let { address, feeRate, memo, tx } = req.body;
+
+    if (!tx) {
+      ({ tx } = await liquidTx({ ...req.body, user }));
+    }
     res.send(await sendLiquid({ user, address, memo, tx }));
   } catch (e) {
     l.error("problem sending liquid", user.username, e.message);
