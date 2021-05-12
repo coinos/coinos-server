@@ -42,6 +42,7 @@ app.post(
     };
 
     mailgun.messages().send(data);
+    l.info("id uploaded", user.username);
 
     res.end();
   })
@@ -57,6 +58,7 @@ app.post(
     else user.verified = "proof";
     await user.save();
     emit(user.username, "user", user);
+    l.info("id proof uploaded", user.username);
 
     res.end();
   })
