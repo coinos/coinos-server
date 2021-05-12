@@ -23,11 +23,11 @@
 
   "BITCOIN_KEY": "*****",
   "LIQUID_KEY": "*****",
-  "VAPID_KEY": "*****"
+  "VAPID_KEY": "*****",
   
   "facebook": {
     "appToken": "****",
-    "specialFriend": "****",
-  },
+    "specialFriend": "****"
+  }
 }
 
