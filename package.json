@@ -28,7 +28,7 @@
     "express": "4.17.1",
     "express-async-handler": "^1.1.4",
     "express-session": "^1.16.2",
-    "grpc": "^1.24.2",
+    "grpc": "^1.24.9",
     "http-proxy-middleware": "^0.20.0",
     "imap": "^0.8.19",
     "jsonwebtoken": "^8.5.1",
