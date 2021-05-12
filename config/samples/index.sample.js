@@ -1,10 +1,12 @@
-const dbOptions = require("./config.json")[process.env.NODE_ENV || "development"];
+const private = require("./private.json") || {}
+const debug = require('debug')('test')
+
 let lnurl;
 
 try {
   lnurl = require("./lnurl");
 } catch(e) {
-  l.warn("lnurl config not found");
+  debug("lnurl config not found");
 } 
 
 const btcasset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -20,7 +22,10 @@ module.exports = {
       "xxxxxx111xxxx1xxx111xxxxxxxxxxxxxxxxx_x-xxx1xxx1xxxxxxxx1xxxxxxxxx1x1xxxxxxxx1xxx1xxxxx",
     privateKey: "1xxx1x1xxxxx1xxx1x-xx_xxxx1xxxxx1x1xxx1x1x1"
   },
-  dbOptions,
+  knex: {
+    client: 'mysql2',
+    connection: private.connection[process.env.NODE_ENV || "development"]
+  },
   ipstack: "2e1805258268b4992ebac06e20fc1865", // optional, set default currency based on IP
   jwt: '2ad260b2202ad557b205ba17c7d8d62c69ffc95021b6147597c32eb30e3cf899',
   port: 3119,
@@ -58,7 +63,7 @@ module.exports = {
     {
       c1: btcasset,
       c2: cadasset,
-      currency: "CAD".
+      currency: "CAD",
       amount: 0.001,
       askMultiplier: 1.01,
       bidMultiplier: 0.99,

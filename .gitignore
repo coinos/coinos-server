@@ -1,9 +1,5 @@
 node_modules/
 .env
-config/config.json
-config/index.js
-config/lnurl.js
-config/clientversion
 yarn-error.log
 .pnp*
 .yarn*
@@ -19,3 +15,4 @@ lnurl-server.sqlite3
 watcher.log
 build.json
 build.sh
+config

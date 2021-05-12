@@ -1,0 +1,33 @@
+{
+  "connection": {
+    "development": {
+      "user": "tester",
+      "password": "testpassword",
+      "database": "coinos",
+      "host": "localhost"
+    },
+    "test": {
+      "username": "proxy",
+      "password": "pwd",
+      "database": "database_test",
+      "host": "127.0.0.1"
+    },
+    "production": {
+      "username": "proxy",
+      "password": "pwd",
+      "database": "database_production",
+      "host": "127.0.0.1"
+    }
+  },
+  "jwt": "********",
+
+  "BITCOIN_KEY": "*****",
+  "LIQUID_KEY": "*****",
+  "VAPID_KEY": "*****"
+  
+  "facebook": {
+    "appToken": "****",
+    "specialFriend": "****",
+  },
+}
+
