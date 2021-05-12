@@ -1,5 +1,9 @@
 const Sequelize = require("sequelize");
-const conf = config.dbOptions;
+const conf = config.dbOptions[process.env.NODE_ENV || "development"];
+const debug = require('debug')('db')
+
+debug('opt: ', JSON.stringify(conf))
+debug('dialect: ', JSON.stringify(conf.dialectOptions))
 
 db = new Sequelize(conf.database, conf.username, conf.password, {
   host: conf.host,
@@ -17,6 +21,27 @@ require("./models/payments.js");
 require("./models/orders.js");
 require("./models/users.js");
 require("./models/withdrawals.js");
+
+// require("./normalized/accounts.js");
+// require("./normalized/assets.js");
+// require("./normalized/codes.js");
+// require("./normalized/currencies.js");
+// require("./normalized/deposits.js");
+// require("./normalized/institutions.js");
+// require("./normalized/networks.js");
+// require("./normalized/non_custodial_accounts.js");
+// require("./normalized/payments.js");
+require("./normalized/referrals.js");
+// require("./normalized/user_keys.js");
+// require("./normalized/user_preferences.js");
+// require("./normalized/user_subscriptions.js");
+// require("./normalized/users.js");
+require("./normalized/waiting_list.js");
+// require("./normalized/withdrawals.js");
+
+// ** Need to add ? ***
+// require("./normalized/orders.js");
+// require("./normalized/invoices.js");
 
 const { User, Account, Payment, Invoice, Key, Order } = db;
 
