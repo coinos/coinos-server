@@ -1,8 +1,6 @@
 node_modules/
 .env
-config/config.json
-config/index.js
-config/lnurl.js
+config/private.json
 config/clientversion
 yarn-error.log
 .pnp*
@@ -17,3 +15,7 @@ verified
 data
 lnurl-server.sqlite3
 watcher.log
+
+config/config.json
+config/index.js
+config/lnurl.js
