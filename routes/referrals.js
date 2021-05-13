@@ -3,7 +3,6 @@ var router = express.Router();
 var debug = require('debug')('referral')
 
 const { v4: uuidv4 } = require('uuid')
-const config = require('./../config')
 
 router.get('/', function(req, res, next) {
   res.send('list of referrals...');
