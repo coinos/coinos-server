@@ -1,9 +1,8 @@
 const Sequelize = require("sequelize");
-const conf = config.dbOptions[process.env.NODE_ENV || "development"];
+const conf = config.dbOptions;
 const debug = require('debug')('db')
 
 debug('opt: ', JSON.stringify(conf))
-debug('dialect: ', JSON.stringify(conf.dialectOptions))
 
 db = new Sequelize(conf.database, conf.username, conf.password, {
   host: conf.host,
