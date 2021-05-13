@@ -75,4 +75,16 @@ module.exports = {
       bidMultiplier: 0.99,
     }
   ],
+  mailgun: {
+    domain: "coinos.io",
+    apiKey: "key-59cd7eaxxxxxxxxxxxxxxxxxxx"
+  },
+  imap: {
+    user: "user@example.com",
+    password: "xxxxxxxxxxxxx",
+    host: "imap.mailserver.com",
+    port: 993,
+    tls: true,
+    accounts: { "STRING_TO_GREP_FOR": 999999 },
+  }
 }

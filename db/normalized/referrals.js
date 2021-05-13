@@ -1,8 +1,5 @@
-const { DataTypes } = require('sequelize/types');
-const config = require('./../config')
-const dbc = require('knex')(config.knex)
-
-const { DataTypes } = require('sequelize');
+const Sequelize = require('sequelize');
+const { DataTypes } = Sequelize;
 
 const attributes = {
   id: {
@@ -13,13 +10,13 @@ const attributes = {
   },
   sponsor_id: {
     type: DataTypes.INTEGER(11),
-    references: { model: User, key: 'id' },
+    references: { model: db.User, key: 'id' },
     allowNull: false,
     comment: "Referral made by this user"
   },
   user_id: {
     type: DataTypes.INTEGER(11),
-    references: { model: User, key: 'id' },
+    references: { model: db.User, key: 'id' },
     allowNull: true,
     comment: "Referral granted to this user (updated when token used)"
   },
