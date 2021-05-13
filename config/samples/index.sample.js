@@ -1,6 +1,7 @@
 const private = require("./private.json") || {}
 const debug = require('debug')('test')
 
+const dbOptions = private.connection[process.env.NODE_ENV || "development"]
 let lnurl;
 
 try {
@@ -14,27 +15,24 @@ const cadasset = "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab5
 const usdtasset = "4dddd1d0d0beeaee17df7722b512906cc5bc660c81225083b72b05820ecd3d91";
 
 module.exports = {
+  dbOptions: dbOptions,
   lnurl,
   clientVersion: "x11111xx11xx11x11x11111111xx1111111xx111",
   vapid: {
     url: "https://coinos.io/",
-    publicKey:
-      "xxxxxx111xxxx1xxx111xxxxxxxxxxxxxxxxx_x-xxx1xxx1xxxxxxxx1xxxxxxxxx1x1xxxxxxxx1xxx1xxxxx",
-    privateKey: "1xxx1x1xxxxx1xxx1x-xx_xxxx1xxxxx1x1xxx1x1x1"
+    publicKey: "xxxxxx111xxxx1xxx111xxxxxxxxxxxxxxxxx_x-xxx1xxx1xxxxxxxx1xxxxxxxxx1x1xxxxxxxx1xxx1xxxxx",
+    privateKey: private.VAPID_KEY
   },
   knex: {
     client: 'mysql2',
-    connection: private.connection[process.env.NODE_ENV || "development"]
+    connection: dbOptions
   },
   ipstack: "2e1805258268b4992ebac06e20fc1865", // optional, set default currency based on IP
-  jwt: '2ad260b2202ad557b205ba17c7d8d62c69ffc95021b6147597c32eb30e3cf899',
+  jwt: private.jwt,
   port: 3119,
-  facebook: {
-    appToken: '290368338052652|WorpE7Brn61TTKUOQUyy1T8cKvc',
-    specialFriend: '10102176487832944',
-  }, 
+  facebook: private.facebook,
   bitcoin: {
-    masterkey: 'tprv8ZgxMBicQKsPfBhnpvyFH3PxL7sWhT3bVzk4WE77QRoARn2xxzisfQph34Vv25RnJ5kpoDZunJvy7dSGSSRBkTDkqqVH12W8ikKtWfyj1zw', // get from bitcoin-cli dumpwallet "walletfile"
+    masterkey: private.BITCOIN_KEY, // get from bitcoin-cli dumpwallet "walletfile"
     username: "user",
     password: "password",
     network: "regtest",
@@ -43,7 +41,7 @@ module.exports = {
     zmqrawtx: "tcp://127.0.0.1:18507"
   },
   liquid: {
-    masterkey: 'tprv8ZgxMBicQKsPe2qXQ8U9qMQKGE5M3qTKbacCG5nrjsBYCB4AbNeRiJR2rPm86S7UoVLd9ubEmHSVtnZqSrJc76BzKrkhuiPYReNWiFzWWVR', // get from elements-cli dumpwallet "walletfile"
+    masterkey: private.LIQUID_KEY, // get from elements-cli dumpwallet "walletfile"
     blindkey: '0e66557c1dfa0c7daa371314ffd763979d3f7c5db69380e5c15ea72b85453c2e',
     wallet: "coinos",
     username: "user",
