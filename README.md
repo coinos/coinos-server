@@ -19,7 +19,7 @@ The reason for running two lightning nodes is so that one can create invoices wh
 
     git clone https://github.com/asoltys/coinos-server
     cd coinos-server
-    cp config/index.js.sample config/index.js <-- edit with connection info for servers and keys for 3rd party API's
+    cp ./config/samples/private.json ./config/ <-- edit with connection info for servers and keys for 3rd party API's -->
     yarn
     yarn start
 
