@@ -18,11 +18,10 @@ const attributes = {
     allowNull: false,
     comment: "Referral granted to this user (updated when token used)"
   },
-  asset_id: {
-    type: DataTypes.INTEGER(11),
-    references: { model: Asset, key: 'code' },
+  asset: {
+    type: DataTypes.STRING,
     allowNull: false,
-    comment: "Reference to asset"
+    comment: "Reference to liquid asset on liquid blockchain"
   },
   balance: {
     type: DataTypes.DOUBLE,
@@ -31,12 +30,14 @@ const attributes = {
   pending: {
     type: DataTypes.DOUBLE,
     allowNull: false,
-    comment: "What is this ?"
+    comment: "Pending balance indicates that the transaction has been detected on the blockchain but not confirmed"
   },
+  /* DEPRECATED
   precision: {
     type: DataTypes.INTEGER(11),
-    comment: "what is this for ? ... is it unique for each account ?"
+    comment: "The decimal precision for the liquid asset "
   }
+  */
 }
 const options = {
   tableName: "accounts",

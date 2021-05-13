@@ -17,9 +17,9 @@ const attributes = {
     type: DataTypes.DECIMAL(10,2),
     allowNull: false
   },
-  code: {
-    // is this unique ?
-    type: DataTypes.STRING(255)
+  deposit_code: {
+    type: DataTypes.STRING(255),
+    comment: "Unique randomly generated code to be put in the interac deposit reference/message to link the deposit to this record/user",
   },
   status: {
     type: DataTypes.ENUM,
