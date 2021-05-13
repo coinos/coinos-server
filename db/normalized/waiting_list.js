@@ -1,7 +1,3 @@
-const { DataTypes } = require('sequelize/types');
-const config = require('./../config')
-const dbc = require('knex')(config.knex)
-
 const { DataTypes } = require('sequelize');
 
 const attributes = {
