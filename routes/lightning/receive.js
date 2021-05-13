@@ -18,6 +18,7 @@ const handlePayment = async msg => {
 
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
       const amount = parseInt(msg.amt_paid_sat) - tip;
+      if (amount > 10000000 || amount < 0) throw new Error("amount out of range");
 
       account = await db.Account.findOne({
         where: {

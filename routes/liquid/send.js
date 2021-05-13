@@ -158,6 +158,6 @@ module.exports = ah(async (req, res) => {
     res.send(await sendLiquid({ user, address, memo, tx }));
   } catch (e) {
     l.error("problem sending liquid", user.username, e.message);
-    return res.status(500).send(e.message);
+    return res.status(500).send(e);
   }
 });

@@ -161,7 +161,7 @@ app.post(
         return res.status(500).send("Username taken");
       } else {
         sockets[username] = sockets[user.username];
-        l.info("changing username", user.username, username);
+        if (user.username !== username) l.info("changing username", user.username, username);
         user.username = username;
 
         token = jwt.sign({ username }, config.jwt);
