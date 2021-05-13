@@ -9,6 +9,8 @@ router.get('/', function(req, res, next) {
   res.send('list of referrals...');
 });
 
+// Grant & Retrieve Referral tokens for existing user
+
 router.get(
   "/grant",
   ah(async (req, res) => {
@@ -24,10 +26,26 @@ router.get(
     })
 
     debug('generated referral: ' + JSON.stringify(ref))
-    return res.send(token)
+    return res.send({token: token, expiry: expiry})
   })
 );
 
+router.get(
+  "/checkTokens/:sponsor_id",
+  ah(async (req, res) => {
+    const {sponsor_id} = req.params
+
+    var tokens = await db.Referrals.findAll({
+      attributes: ['status', 'token'],
+      where: { sponsor_id: sponsor_id }
+    })
+
+    debug('my tokens: ' + JSON.stringify(tokens))
+    return res.send({tokens: tokens})
+  })
+);
+
+// Verify token and apply to existing user
 router.get(
   "/verify/:user_id/:token",
   ah(async (req, res) => {
@@ -68,18 +86,21 @@ router.get(
   })
 );
 
+// Add email / sms to waiting list 
 router.post(
   "/joinQueue",
   ah(async (req, res) => {
     const { email, sms } = req.query;
 
     debug('email: ' + email)
+    debug('sms: ' + sms)
 
     const added = db.WaitingList.create({
-      email: email     
+      email: email,
+      sms: sms    
     })
 
-    res.send({message: 'Added to waiting list'})
+    res.send({success: true, message: 'Added to waiting list'})
   })
 );
 
