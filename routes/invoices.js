@@ -40,6 +40,7 @@ app.post(
       if (!user) throw new Error("user not provided");
       if (!invoice.currency) invoice.currency = user.currency;
       if (!invoice.rate) invoice.rate = app.get("rates")[invoice.currency];
+      if (invoice.tip > invoice.amount || invoice.tip > 1000000) throw new Error("tip is too large")
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
 

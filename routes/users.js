@@ -161,6 +161,7 @@ app.post(
         return res.status(500).send("Username taken");
       } else {
         sockets[username] = sockets[user.username];
+        if (user.username !== username) l.info("changing username", user.username, username);
         user.username = username;
 
         token = jwt.sign({ username }, config.jwt);
@@ -614,6 +615,7 @@ app.post(
   "/redeem",
   optionalAuth,
   ah(async function(req, res) {
+    return res.status(500).send("Vouchers temporarily disabled");
     const { redeemcode } = req.body;
     if (!redeemcode) fail("no code provided");
 
