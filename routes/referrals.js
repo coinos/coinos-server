@@ -11,6 +11,13 @@ router.get('/', function(req, res, next) {
 
 // Grant & Retrieve Referral tokens for existing user
 
+// usage:  GET '/grant?sponsor_id=N&expiry=2021-09-01'
+//
+// Required: 
+//   sponsor_id (= user.id)
+// Changes to DB: 
+//    adds record to referrals table:
+//      { token: <uuid>, sponsor_id: <user.id>, status: "pending" }
 router.get(
   "/grant",
   ah(async (req, res) => {
@@ -30,6 +37,13 @@ router.get(
   })
 );
 
+// usage:  GET '/checkTokens/<user_id>'
+//
+// Required: 
+//   sponsor_id (= user.id)
+// Returns: 
+//    { tokens: <list of tokens>}
+// TO FIX - change sponsor_id so that it is retrieved from current payload (NOT FROM URL)
 router.get(
   "/checkTokens/:sponsor_id",
   ah(async (req, res) => {
@@ -46,6 +60,14 @@ router.get(
 );
 
 // Verify token and apply to existing user
+// usage:  GET '/verify/<user_id>/<token>'
+//
+// Required: 
+//   current user_id (= user.id)
+//   token
+// Changes to DB (on success): 
+//    referral token is updated from 'pending' to 'active'
+//    referral token is updated with existing user_id
 router.get(
   "/verify/:user_id/:token",
   ah(async (req, res) => {
@@ -87,6 +109,14 @@ router.get(
 );
 
 // Add email / sms to waiting list 
+// usage:  POST '/joinQueue'  { email: , sms: }
+//
+// Required: 
+//   either email or sms
+// Changes to DB (on success): 
+//    adds record to waiting_list:
+//       { email: <email>, sms: <sms> }
+// Returns: { success: true, message: <message>} 
 router.post(
   "/joinQueue",
   ah(async (req, res) => {
