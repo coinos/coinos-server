@@ -70,7 +70,6 @@ require("./lib/notifications");
 require("./lib/register");
 require("./lib/send");
 
-
 require("./routes/assets");
 require("./routes/invoices");
 require("./routes/payments");
@@ -81,73 +80,6 @@ require("./routes/funding");
 
 if (config.lnurl) require("./routes/lnurl");
 if (config.imap) require("./lib/mail");
-
-
-const sigHeaderName = "X-Hub-Signature-256";
-const sigHashAlg = "sha256";
-function verifyPostData(req, res, next) {
-  try {
-    if (!req.rawBody) {
-      return next("Request body empty");
-    }
-
-    const sig = Buffer.from(req.get(sigHeaderName) || "", "utf8");
-    const hmac = crypto.createHmac(sigHashAlg, config.github);
-    const digest = Buffer.from(
-      sigHashAlg + "=" + hmac.update(req.rawBody).digest("hex"),
-      "utf8"
-    );
-
-    if (sig.length !== digest.length || !crypto.timingSafeEqual(digest, sig)) {
-      return next(
-        `Request body digest (${digest}) did not match ${sigHeaderName} (${sig})`
-      );
-    }
-  } catch (e) {
-    console.log(e.message);
-  }
-
-  return next();
-}
-
-app.post("/build", (req, res) => {
-  const mailgun = require("mailgun-js")(config.mailgun);
-  let data = {
-    subject: "Build started",
-    text: `Build started at ${new Date()}`,
-    from: "adam@coinos.io",
-    to: "build@coinos.io"
-  };
-
-  mailgun.messages().send(data);
-  l.info("build starting");
-  fs.writeFileSync("build.json", req.body.payload);
-
-  const { exec } = require("child_process");
-  exec("bash build.sh", (error, stdout, stderr) => {
-    if (error) {
-      data = {
-        subject: "Build error",
-        text: `Build failed at ${new Date()}`,
-        from: "adam@coinos.io",
-        to: "build@coinos.io"
-      };
-
-      mailgun.messages().send(data);
-      l.warn("build failed");
-    } else {
-      data = {
-        subject: "Build finished",
-        text: `Build finished at ${new Date()}`,
-        from: "adam@coinos.io",
-        to: "build@coinos.io"
-      };
-
-      mailgun.messages().send(data);
-      l.info("build finished");
-    }
-  });
-});
 
 app.use((err, req, res, next) => {
   const details = {
