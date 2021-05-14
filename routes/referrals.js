@@ -124,7 +124,7 @@ router.post(
     debug('email: ' + email)
     debug('sms: ' + sms)
 
-    const added = db.WaitingList.create({
+    await db.WaitingList.create({
       email: email,
       sms: sms    
     })
