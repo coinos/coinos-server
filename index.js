@@ -1,10 +1,12 @@
 const axios = require("axios");
+const crypto = require("crypto");
 const bodyParser = require("body-parser");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const express = require("express");
 const { Op } = require("sequelize");
+const fs = require("fs");
 
 ah = require("express-async-handler");
 
@@ -80,6 +82,44 @@ if (config.lnurl) {
   require("./routes/lnurl");
 }
 
+const sigHeaderName = "X-Hub-Signature-256";
+const sigHashAlg = "sha256";
+function verifyPostData(req, res, next) {
+  try {
+    if (!req.rawBody) {
+      return next("Request body empty");
+    }
+
+    const sig = Buffer.from(req.get(sigHeaderName) || "", "utf8");
+    const hmac = crypto.createHmac(sigHashAlg, config.github);
+    const digest = Buffer.from(
+      sigHashAlg + "=" + hmac.update(req.rawBody).digest("hex"),
+      "utf8"
+    );
+
+    if (sig.length !== digest.length || !crypto.timingSafeEqual(digest, sig)) {
+      return next(
+        `Request body digest (${digest}) did not match ${sigHeaderName} (${sig})`
+      );
+    }
+  } catch (e) {
+    console.log(e.message);
+  }
+
+  return next();
+}
+
+app.post("/build", verifyPostData, (req, res) => {
+  fs.writeFileSync("build.json", req.body.payload);
+
+  const { exec } = require("child_process");
+  exec("bash build.sh", (error, stdout, stderr) => {
+    if (error !== null) {
+      console.log(`exec error: ${error}`);
+    }
+  });
+});
+
 app.use((err, req, res, next) => {
   const details = {
     path: req.path,
@@ -104,6 +144,6 @@ server.listen(config.port, () =>
 
 process.on("SIGINT", process.exit);
 
-process.on('uncaughtException', function (exception) {
+process.on("uncaughtException", function(exception) {
   console.log(exception);
 });
