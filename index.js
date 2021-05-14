@@ -76,6 +76,12 @@ require("./routes/swaps");
 require("./routes/users");
 require("./routes/funding");
 
+//  Scope based Route Handling
+
+var referralsRouter = require('./routes/referrals.js');
+app.use('/referrals', referralsRouter)
+
+
 if (config.lnurl) {
   require("./routes/lnurl");
 }
