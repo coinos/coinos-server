@@ -81,6 +81,14 @@ require("./routes/funding");
 if (config.lnurl) require("./routes/lnurl");
 if (config.imap) require("./lib/mail");
 
+//  Scope based Route Handling
+
+var referralsRouter = require('./routes/referrals.js');
+app.use('/referrals', referralsRouter)
+
+var adminRouter = require('./routes/admin.js');
+app.use('/admin', adminRouter)
+
 app.use((err, req, res, next) => {
   const details = {
     path: req.path,
