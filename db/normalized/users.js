@@ -40,6 +40,11 @@ const attributes = {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false,
+  },
+  access: {
+    type: DataTypes.ENUM,
+    values: ['Public', 'Member', 'Admin'],
+    defaultValue: 'member'
   }
 }
 
