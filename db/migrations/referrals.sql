@@ -28,7 +28,7 @@ CREATE TABLE `waiting_list` (
   `updated_at` timestamp,
   PRIMARY KEY (`id`)
   -- CONSTRAINT `user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
 
 ALTER TABLE users ADD `email` varchar(255) DEFAULT NULL;
 ALTER TABLE users ADD `sms` varchar(255) DEFAULT NULL;  
