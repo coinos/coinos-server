@@ -43,8 +43,8 @@ const attributes = {
   },
   access: {
     type: DataTypes.ENUM,
-    values: ['Public', 'Member', 'Admin'],
-    defaultValue: 'member'
+    values: ['Member', 'Tester', 'Admin'],
+    defaultValue: 'Member'
   }
 }
 
