@@ -1,5 +1,4 @@
-const Sequelize = require('sequelize');
-const { DataTypes } = Sequelize;
+const { DataTypes } = require('sequelize');
 
 const attributes = {
   id: {
@@ -14,6 +13,11 @@ const attributes = {
     allowNull: false,
     comment: "Referral made by this user"
   },
+  token: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    comment: "Unique referral token"
+  },
   user_id: {
     type: DataTypes.INTEGER(11),
     references: { model: db.User, key: 'id' },
@@ -21,7 +25,7 @@ const attributes = {
     comment: "Referral granted to this user (updated when token used)"
   },
   expiry: {
-    type: Sequelize.DATE
+    type: DataTypes.DATE
   },
   status: {
     type: DataTypes.ENUM,
@@ -29,7 +33,6 @@ const attributes = {
     defaultValue: 'pending'
   }
 }
-
 
 const options = {
   tableName: "referrals",
