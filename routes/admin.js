@@ -83,4 +83,27 @@ router.get(
   })
 );
 
+// usage:  GET '/user_kyc'
+//
+// Returns: 
+//    { 
+//  users: [
+//    <list of user attributes>,
+//    kyc: <list of kyc attributes for this user>
+//  ] 
+router.get(
+  "/user_kyc",
+  auth,
+  ah(async (req, res) => {
+    var kyc = await db.User.findAll({
+      // include: [
+      //   { model: db.Kyc, as: 'kyc' }
+      // ]
+    })
+
+    debug('kyc: ' + JSON.stringify(kyc))
+    return res.send({users: kyc})
+  })
+);
+
 module.exports = router;
