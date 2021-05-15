@@ -32,4 +32,34 @@ router.get(
   })
 );
 
+// usage:  GET '/accounts'
+//
+// Returns: 
+//    { referrals: <list of referral tokens> }
+router.get(
+  "/accounts",
+  ah(async (req, res) => {
+    var referrals = await db.User
+      .findAll({
+        attributes: ['users.id', 'accounts.balance'],
+        where: {
+          '$accounts.user_id$' : '$users.id$'
+          // user_id: users.id
+          // $or: [
+          //     {'$accounts.user_id$' : $users.id$},
+          // ]
+        },
+        include: [
+          {
+            model: Account,
+            required: false
+          }
+        ]
+      });
+
+    debug('balances: ' + JSON.stringify(balances))
+    return res.send({accounts: balances})
+  })
+);
+
 module.exports = router;
