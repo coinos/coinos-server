@@ -53,6 +53,25 @@ router.get(
   })
 );
 
+// usage:  GET '/accounts'
+//
+// Returns: 
+//    { referrals: <list of referral tokens> }
+router.get(
+  "/user_accounts",
+  auth,
+  ah(async (req, res) => {
+    var accounts = await db.Account.findAll({
+      include: [
+        { model: db.User, as: 'user' }
+      ]
+    })
+
+    debug('accounts: ' + JSON.stringify(accounts))
+    return res.send({accounts: accounts})
+  })
+);
+
 // usage:  GET '/user/transactions'
 //
 // Returns: 
