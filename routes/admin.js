@@ -39,8 +39,9 @@ router.get(
 router.get(
   "/accounts",
   ah(async (req, res) => {
-    var accounts = await db.Accounts.findAll({
-      include: [ db.User ]
+    var accounts = await db.Account.findAll({
+      include: [
+        { model: db.User, as: 'User' ]
     })
 
     debug('accounts: ' + JSON.stringify(accounts))
@@ -65,7 +66,11 @@ router.get(
   "/user_transactions",
   ah(async (req, res) => {
     var transactions = await db.User.findAll({
-      include: [ db.Invoice, db.Payment, db.Order ]
+      include: [
+        { model: db.Invoice, as: 'Invoices' },
+        { model: db.Payment, as: 'Payments' },
+        { model: db.Order, as: 'Orders'
+      ]
     })
 
     debug('transactions: ' + JSON.stringify(transactions))
