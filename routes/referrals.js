@@ -25,7 +25,7 @@ router.get(
     var token = uuidv4()
     debug('generated token: ' + token + ' sponsored by ' + sponsor_id)
 
-    var ref = await db.Referrals.create({
+    var ref = await db.Referral.create({
       sponsor_id: sponsor_id, 
       token: token, 
       status: 'pending'
@@ -48,7 +48,7 @@ router.get(
   ah(async (req, res) => {
     const {sponsor_id} = req.params
 
-    var tokens = await db.Referrals.findAll({
+    var tokens = await db.Referral.findAll({
       attributes: ['status', 'token'],
       where: { sponsor_id: sponsor_id }
     })

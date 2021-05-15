@@ -12,7 +12,7 @@ const { v4: uuidv4 } = require('uuid')
 router.get(
   "/users",
   ah(async (req, res) => {
-    var users = await db.Users.findAll()
+    var users = await db.User.findAll()
 
     debug('users: ' + JSON.stringify(users))
     return res.send({users: users})
@@ -22,7 +22,7 @@ router.get(
 router.get(
   "/referrals",
   ah(async (req, res) => {
-    var referrals = await db.Referrals.findAll()
+    var referrals = await db.Referral.findAll()
 
     debug('referrals: ' + JSON.stringify(referrals))
     return res.send({referrals: referrals})
