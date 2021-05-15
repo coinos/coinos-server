@@ -44,4 +44,5 @@
   - is invoices table required or is this just summary information ?
   - orders table needs to be investigated and refactored 
   - need to add subscriptions table if applicable ( what is this comprised of ?)
+  - user_keys table should be commented to clarify application of each of these values.
 
