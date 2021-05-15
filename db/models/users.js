@@ -179,10 +179,10 @@ const attributes = {
     field: "pin"
   },
   email: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(255)
   },
   sms: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(255)
   }
 };
 
