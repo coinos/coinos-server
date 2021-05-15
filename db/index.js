@@ -52,10 +52,10 @@ require("./normalized/waiting_list.js");
 const { User, Account, Payment, Invoice, Key, Order } = db;
 
 // move relationships to specfic models
-// User.hasMany(Account, {
-//   as: "accounts",
-//   foreignKey: "user_id"
-// });
+User.hasMany(Account, {
+  as: "accounts",
+  foreignKey: "user_id"
+});
 
 User.hasMany(Invoice, {
   as: "invoices",
@@ -64,6 +64,11 @@ User.hasMany(Invoice, {
 
 User.hasMany(Key, {
   as: "keys",
+  foreignKey: "user_id"
+});
+
+User.hasMany(Order, {
+  as: "orders",
   foreignKey: "user_id"
 });
 
@@ -82,10 +87,10 @@ Invoice.belongsTo(Account, {
   foreignKey: "account_id"
 });
 
-// Account.belongsTo(User, {
-//   as: "user",
-//   foreignKey: "user_id"
-// });
+Account.belongsTo(User, {
+  as: "user",
+  foreignKey: "user_id"
+});
 
 Invoice.belongsTo(User, {
   as: "user",

@@ -32,16 +32,16 @@ router.get(
   })
 );
 
-// usage:  GET '/accounts'
+// usage:  GET '/user_accounts'
 //
 // Returns: 
 //    { referrals: <list of referral tokens> }
 router.get(
-  "/accounts",
+  "/user_accounts",
   ah(async (req, res) => {
-    var accounts = await db.Account.findAll({
+    var accounts = await db.User.findAll({
       include: [
-        { model: db.User, as: 'user', required: true }
+        { model: db.Account, as: 'accounts' }
       ]
     })
 
