@@ -17,11 +17,12 @@ const usdtasset = "4dddd1d0d0beeaee17df7722b512906cc5bc660c81225083b72b05820ecd3
 module.exports = {
   dbOptions: dbOptions,
   lnurl,
-  clientVersion: "x11111xx11xx11x11x11111111xx1111111xx111",
+  clientVersion: private.CLIENT_VERSION,
+  private: private,
   vapid: {
     url: "https://coinos.io/",
-    publicKey: "xxxxxx111xxxx1xxx111xxxxxxxxxxxxxxxxx_x-xxx1xxx1xxxxxxxx1xxxxxxxxx1x1xxxxxxxx1xxx1xxxxx",
-    privateKey: private.VAPID_KEY
+    publicKey: private.VAPID_PUBLIC_KEY,
+    privateKey: private.VAPID_PRIVATE_KEY
   },
   knex: {
     client: 'mysql2',
@@ -77,14 +78,8 @@ module.exports = {
   ],
   mailgun: {
     domain: "coinos.io",
-    apiKey: "key-59cd7eaxxxxxxxxxxxxxxxxxxx"
+    apiKey: private.MAILGUN_KEY
+    
   },
-  imap: {
-    user: "user@example.com",
-    password: "xxxxxxxxxxxxx",
-    host: "imap.mailserver.com",
-    port: 993,
-    tls: true,
-    accounts: { "STRING_TO_GREP_FOR": 999999 },
-  }
+  imap: private.IMAP_SETTINGS
 }

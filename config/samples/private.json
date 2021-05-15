@@ -4,26 +4,47 @@
       "user": "tester",
       "password": "testpassword",
       "database": "coinos",
-      "host": "localhost"
+      "host": "localhost",
+      "dialect": "mariadb",
+      "dialectOptions": { "multipleStatements": true, "timezone": "Etc/GMT+7" }
     },
     "test": {
       "username": "proxy",
       "password": "pwd",
       "database": "database_test",
-      "host": "127.0.0.1"
+      "host": "127.0.0.1",
+      "dialect": "mariadb",
+      "dialectOptions": { "multipleStatements": true, "timezone": "Etc/GMT+7" }
     },
     "production": {
       "username": "proxy",
       "password": "pwd",
       "database": "database_production",
-      "host": "127.0.0.1"
+      "host": "127.0.0.1",
+      "dialect": "mariadb",
+      "dialectOptions": { "multipleStatements": true, "timezone": "Etc/GMT+7" }
     }
   },
   "jwt": "********",
 
+  "CLIENT_VERSION": "*****",
+
+  "MAILGUIN_KEY": "*****",
+
+  "IMAP_SETTINGS": {
+    "user": "**",
+    "password": "**",
+    "host": "**",
+    "port": "**",
+    "tls": true,
+    "accounts": {}
+  },
+
   "BITCOIN_KEY": "*****",
   "LIQUID_KEY": "*****",
-  "VAPID_KEY": "*****",
+  
+  "VAPID_PUBLIC_KEY": "*****",
+  "VAPID_PRIVATE_KEY": "*****",
   
   "facebook": {
     "appToken": "****",
