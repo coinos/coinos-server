@@ -178,6 +178,12 @@ const attributes = {
     comment: null,
     field: "pin"
   },
+  email: {
+    type: DataTypes.STRING(255),
+  },
+  sms: {
+    type: DataTypes.STRING(255),
+  }
 };
 
 const options = {
