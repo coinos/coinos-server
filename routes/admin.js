@@ -57,7 +57,7 @@ router.get(
     //     ]
     //   });
 
-    var accounts = await.db.Account.findAll()
+    var accounts = await db.Account.findAll()
 
     debug('accounts: ' + JSON.stringify(accounts))
     return res.send({accounts: accounts})
