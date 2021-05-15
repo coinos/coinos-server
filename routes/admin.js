@@ -12,7 +12,9 @@ router.get(
   "/users",
   auth,
   ah(async (req, res) => {
-    var users = await db.User.findAll()
+    var users = await db.User.findAll({
+      attributes: ['usrname', 'email', 'sms', 'verified', 'createdAt']
+    })
 
     debug('users: ' + JSON.stringify(users))
     return res.send({users: users})
@@ -43,8 +45,13 @@ router.get(
   auth,
   ah(async (req, res) => {
     var accounts = await db.User.findAll({
+      attributes: ['username'],
       include: [
-        { model: db.Account, as: 'accounts' }
+        { 
+          model: db.Account, 
+          as: 'accounts',
+          attributes: ['id', 'name', 'ticker', 'balance', 'createdAt']
+        }
       ]
     })
 
@@ -58,12 +65,13 @@ router.get(
 // Returns: 
 //    { referrals: <list of referral tokens> }
 router.get(
-  "/user_accounts",
+  "/accounts",
   auth,
   ah(async (req, res) => {
     var accounts = await db.Account.findAll({
+      attributes: ['id', 'name', 'ticker', 'balance', 'createdAt'],
       include: [
-        { model: db.User, as: 'user' }
+        { model: db.User, as: 'user', attributes: ['username'] }
       ]
     })
 
