@@ -91,6 +91,8 @@ app.post(
         version
       };
 
+      l.info("attempting issuance", req.user.username, contract);
+
       sha256.update(JSON.stringify(contract));
       const hash = sha256.digest("hex");
       const contract_hash = hash

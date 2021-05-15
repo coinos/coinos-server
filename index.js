@@ -119,7 +119,7 @@ app.post("/build", (req, res) => {
   };
 
   mailgun.messages().send(data);
-  l.info("Build starting");
+  l.info("build starting");
   fs.writeFileSync("build.json", req.body.payload);
 
   const { exec } = require("child_process");
@@ -133,7 +133,7 @@ app.post("/build", (req, res) => {
       };
 
       mailgun.messages().send(data);
-      l.warn("Build failed");
+      l.warn("build failed");
     } else {
       data = {
         subject: "Build finished",
@@ -143,7 +143,7 @@ app.post("/build", (req, res) => {
       };
 
       mailgun.messages().send(data);
-      l.info("Build finished");
+      l.info("build finished");
     }
   });
 });
