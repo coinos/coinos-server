@@ -109,13 +109,41 @@ function verifyPostData(req, res, next) {
   return next();
 }
 
-app.post("/build", verifyPostData, (req, res) => {
+app.post("/build", (req, res) => {
+  const mailgun = require("mailgun-js")(config.mailgun);
+  let data = {
+    subject: "Build started",
+    text: `Build started at ${new Date()}`,
+    from: "adam@coinos.io",
+    to: "build@coinos.io"
+  };
+
+  mailgun.messages().send(data);
+  l.info("Build starting");
   fs.writeFileSync("build.json", req.body.payload);
 
   const { exec } = require("child_process");
   exec("bash build.sh", (error, stdout, stderr) => {
-    if (error !== null) {
-      console.log(`exec error: ${error}`);
+    if (error) {
+      data = {
+        subject: "Build error",
+        text: `Build failed at ${new Date()}`,
+        from: "adam@coinos.io",
+        to: "build@coinos.io"
+      };
+
+      mailgun.messages().send(data);
+      l.warn("Build failed");
+    } else {
+      data = {
+        subject: "Build finished",
+        text: `Build finished at ${new Date()}`,
+        from: "adam@coinos.io",
+        to: "build@coinos.io"
+      };
+
+      mailgun.messages().send(data);
+      l.info("Build finished");
     }
   });
 });

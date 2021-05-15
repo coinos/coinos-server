@@ -34,11 +34,10 @@ app.post(
     emit(user.username, "user", user);
 
     let data = {
-      ...config.mail,
-      subject: "KYC Documents",
-      text: `ID uploaded for ${user.username}`,
+      subject: "Build started",
+      text: `Build started at ${new Date()}`,
       from: "adam@coinos.io",
-      to: "kyc@coinos.io"
+      to: "build@coinos.io"
     };
 
     mailgun.messages().send(data);
