@@ -39,26 +39,28 @@ router.get(
 router.get(
   "/accounts",
   ah(async (req, res) => {
-    var referrals = await db.User
-      .findAll({
-        attributes: ['users.id', 'accounts.balance'],
-        where: {
-          '$accounts.user_id$' : '$users.id$'
-          // user_id: users.id
-          // $or: [
-          //     {'$accounts.user_id$' : $users.id$},
-          // ]
-        },
-        include: [
-          {
-            model: Account,
-            required: false
-          }
-        ]
-      });
+    // var referrals = await db.User
+    //   .findAll({
+    //     attributes: ['users.id', 'accounts.balance'],
+    //     where: {
+    //       '$accounts.user_id$' : '$users.id$'
+    //       // user_id: users.id
+    //       // $or: [
+    //       //     {'$accounts.user_id$' : $users.id$},
+    //       // ]
+    //     },
+    //     include: [
+    //       {
+    //         model: Account,
+    //         required: false
+    //       }
+    //     ]
+    //   });
 
-    debug('balances: ' + JSON.stringify(balances))
-    return res.send({accounts: balances})
+    var accounts = await.db.Account.findAll()
+
+    debug('accounts: ' + JSON.stringify(accounts))
+    return res.send({accounts: accounts})
   })
 );
 
