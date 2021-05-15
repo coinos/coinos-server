@@ -41,7 +41,8 @@ router.get(
   ah(async (req, res) => {
     var accounts = await db.Account.findAll({
       include: [
-        { model: db.User, as: 'User' ]
+        { model: db.User, as: 'User' }
+      ]
     })
 
     debug('accounts: ' + JSON.stringify(accounts))
@@ -69,7 +70,7 @@ router.get(
       include: [
         { model: db.Invoice, as: 'Invoices' },
         { model: db.Payment, as: 'Payments' },
-        { model: db.Order, as: 'Orders'
+        { model: db.Order, as: 'Orders'}
       ]
     })
 
