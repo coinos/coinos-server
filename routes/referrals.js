@@ -17,10 +17,10 @@ router.get('/', function(req, res, next) {
 // Changes to DB: 
 //    adds record to referrals table:
 //      { token: <uuid>, sponsor_id: <user.id>, status: "pending" }
-router.get(
+router.post(
   "/grant",
   ah(async (req, res) => {
-    const {sponsor_id, expiry} = req.query
+    const {sponsor_id, expiry} = req.body
 
     var token = uuidv4()
     debug('generated token: ' + token + ' sponsored by ' + sponsor_id)
