@@ -1,8 +1,8 @@
 const Sequelize = require("sequelize");
 const conf = config.dbOptions;
-const debug = require('debug')('db')
+const debug = require('debug')('test')
 
-debug('opt: ', JSON.stringify(conf))
+debug('DB connection: ', conf.database + ':' + conf.user)
 
 db = new Sequelize(conf.database, conf.username, conf.password, {
   host: conf.host,
@@ -127,4 +127,5 @@ Order.belongsTo(Account, {
   foreignKey: "a2_id"
 });
 
+debug('added model relationships')
 db.Order = Order;
