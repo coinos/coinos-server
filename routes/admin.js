@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid')
 //    { users: <list of users }
 router.get(
   "/users",
+  auth,
   ah(async (req, res) => {
     var users = await db.User.findAll()
 
@@ -24,6 +25,7 @@ router.get(
 //    { referrals: <list of referral tokens> }
 router.get(
   "/referrals",
+  auth,
   ah(async (req, res) => {
     var referrals = await db.Referral.findAll()
 
@@ -38,6 +40,7 @@ router.get(
 //    { referrals: <list of referral tokens> }
 router.get(
   "/user_accounts",
+  auth,
   ah(async (req, res) => {
     var accounts = await db.User.findAll({
       include: [
@@ -46,7 +49,7 @@ router.get(
     })
 
     debug('accounts: ' + JSON.stringify(accounts))
-    return res.send({accounts: accounts})
+    return res.send({users: accounts})
   })
 );
 
@@ -65,6 +68,7 @@ router.get(
 //    }
 router.get(
   "/user_transactions",
+  auth,
   ah(async (req, res) => {
     var transactions = await db.User.findAll({
       include: [
@@ -75,7 +79,7 @@ router.get(
     })
 
     debug('transactions: ' + JSON.stringify(transactions))
-    return res.send({transactions: transactions})
+    return res.send({users: transactions})
   })
 );
 
