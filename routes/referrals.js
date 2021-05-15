@@ -19,6 +19,7 @@ router.get('/', function(req, res, next) {
 //      { token: <uuid>, sponsor_id: <user.id>, status: "pending" }
 router.post(
   "/grant",
+  auth,
   ah(async (req, res) => {
     const {sponsor_id, expiry} = req.body
 
@@ -45,6 +46,7 @@ router.post(
 // TO FIX - change sponsor_id so that it is retrieved from current payload (NOT FROM URL)
 router.get(
   "/checkTokens/:sponsor_id",
+  auth,
   ah(async (req, res) => {
     const {sponsor_id} = req.params
 
@@ -69,6 +71,7 @@ router.get(
 //    referral token is updated with existing user_id
 router.get(
   "/verify/:user_id/:token",
+  auth,
   ah(async (req, res) => {
     const { user_id, token } = req.params;
 
