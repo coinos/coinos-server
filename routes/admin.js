@@ -8,7 +8,6 @@ const { v4: uuidv4 } = require('uuid')
 //
 // Returns: 
 //    { users: <list of users }
-// TO FIX - change sponsor_id so that it is retrieved from current payload (NOT FROM URL)
 router.get(
   "/users",
   ah(async (req, res) => {
@@ -19,6 +18,10 @@ router.get(
   })
 );
 
+// usage:  GET '/referrals'
+//
+// Returns: 
+//    { referrals: <list of referral tokens> }
 router.get(
   "/referrals",
   ah(async (req, res) => {
