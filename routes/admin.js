@@ -39,28 +39,37 @@ router.get(
 router.get(
   "/accounts",
   ah(async (req, res) => {
-    // var referrals = await db.User
-    //   .findAll({
-    //     attributes: ['users.id', 'accounts.balance'],
-    //     where: {
-    //       '$accounts.user_id$' : '$users.id$'
-    //       // user_id: users.id
-    //       // $or: [
-    //       //     {'$accounts.user_id$' : $users.id$},
-    //       // ]
-    //     },
-    //     include: [
-    //       {
-    //         model: Account,
-    //         required: false
-    //       }
-    //     ]
-    //   });
-
-    var accounts = await db.Account.findAll()
+    var accounts = await db.Accounts.findAll({
+      include: [ db.User ]
+    })
 
     debug('accounts: ' + JSON.stringify(accounts))
     return res.send({accounts: accounts})
+  })
+);
+
+// usage:  GET '/user/transactions'
+//
+// Returns: 
+//    { users: [
+//         <user attributes>, 
+//         Invoices: 
+//           <invoice attributes>, 
+//         Payments: 
+//           <invoice attributes>, 
+//         Orders: 
+//           <invoice attributes>, 
+//       ], ...
+//    }
+router.get(
+  "/user_transactions",
+  ah(async (req, res) => {
+    var transactions = await db.User.findAll({
+      include: [ db.Invoice, db.Payment, db.Order ]
+    })
+
+    debug('transactions: ' + JSON.stringify(transactions))
+    return res.send({transactions: transactions})
   })
 );
 

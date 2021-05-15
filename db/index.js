@@ -21,22 +21,29 @@ require("./models/orders.js");
 require("./models/users.js");
 require("./models/withdrawals.js");
 
-// require("./normalized/accounts.js");
+// Require models in order (to enable FK relationship specs in models)
+
+// require("./normalized/users.js");
+// require("./normalized/user_keys.js");
+// require("./normalized/user_preferences.js");
+
+require("./normalized/referrals.js");
+require("./normalized/waiting_list.js");
+
+// require("./normalized/subscriptions.js");
+// require("./normalized/user_subscriptions.js");
+
 // require("./normalized/assets.js");
 // require("./normalized/codes.js");
 // require("./normalized/currencies.js");
-// require("./normalized/deposits.js");
-// require("./normalized/institutions.js");
 // require("./normalized/networks.js");
+// require("./normalized/institutions.js");
+
+// require("./normalized/accounts.js");
 // require("./normalized/non_custodial_accounts.js");
-// require("./normalized/payments.js");
-require("./normalized/referrals.js");
-// require("./normalized/user_keys.js");
-// require("./normalized/user_preferences.js");
-// require("./normalized/user_subscriptions.js");
-// require("./normalized/users.js");
-require("./normalized/waiting_list.js");
+// require("./normalized/deposits.js");
 // require("./normalized/withdrawals.js");
+// require("./normalized/payments.js");
 
 // ** Need to add ? ***
 // require("./normalized/orders.js");
@@ -44,10 +51,11 @@ require("./normalized/waiting_list.js");
 
 const { User, Account, Payment, Invoice, Key, Order } = db;
 
-User.hasMany(Account, {
-  as: "accounts",
-  foreignKey: "user_id"
-});
+// move relationships to specfic models
+// User.hasMany(Account, {
+//   as: "accounts",
+//   foreignKey: "user_id"
+// });
 
 User.hasMany(Invoice, {
   as: "invoices",
@@ -74,10 +82,10 @@ Invoice.belongsTo(Account, {
   foreignKey: "account_id"
 });
 
-Account.belongsTo(User, {
-  as: "user",
-  foreignKey: "user_id"
-});
+// Account.belongsTo(User, {
+//   as: "user",
+//   foreignKey: "user_id"
+// });
 
 Invoice.belongsTo(User, {
   as: "user",
