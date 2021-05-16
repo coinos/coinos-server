@@ -2,9 +2,9 @@ const Sequelize = require("sequelize");
 const conf = config.dbOptions;
 const debug = require('debug')('test')
 
-debug('DB connection: ', conf.database + ':' + conf.user)
+debug('DB connection: ', conf.host + ' : ' + conf.database + ' : ' + conf.user)
 
-db = new Sequelize(conf.database, conf.username, conf.password, {
+db = new Sequelize(conf.database, conf.user, conf.password, {
   host: conf.host,
   dialect: conf.dialect,
   logging: false,
