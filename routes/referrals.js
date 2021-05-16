@@ -22,7 +22,7 @@ router.post(
   auth,
   ah(async (req, res) => {
     const {sponsor_id, expiry} = req.body
-
+    debug('grant token..')
     var token = uuidv4()
     debug('generated token: ' + token + ' sponsored by ' + sponsor_id)
 
@@ -37,6 +37,27 @@ router.post(
   })
 );
 
+router.get(
+  "/grant",
+  // auth,
+  ah(async (req, res) => {
+    const {sponsor_id, expiry} = req.query
+    debug('grant token..')
+    var token = uuidv4()
+    debug('generated token: ' + token + ' sponsored by ' + sponsor_id)
+
+    var ref = await db.Referral.create({
+      sponsor_id: sponsor_id, 
+      token: token, 
+      status: 'pending'
+    })
+
+    debug('generated referral: ' + JSON.stringify(ref))
+    return res.send({token: token, status: 'pending', expiry: expiry})
+  })
+);
+
+
 // usage:  GET '/checkTokens/<user_id>'
 //
 // Required: 
@@ -46,12 +67,15 @@ router.post(
 // TO FIX - change sponsor_id so that it is retrieved from current payload (NOT FROM URL)
 router.get(
   "/checkTokens/:sponsor_id",
-  auth,
+  // auth,
   ah(async (req, res) => {
     const {sponsor_id} = req.params
 
     var tokens = await db.Referral.findAll({
-      attributes: ['status', 'token'],
+      // attributes: ['token', 'created_at', 'user_id', 'status'],
+      include: [
+        { model: db.User, as: 'user', attributes: ['username']}
+      ],
       where: { sponsor_id: sponsor_id }
     })
 
