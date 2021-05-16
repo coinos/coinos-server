@@ -2,6 +2,9 @@ var express = require('express');
 var router = express.Router();
 var debug = require('debug')('admin')
 
+const Sequelize = require('sequelize')
+const Op = Sequelize.Op;
+
 const { v4: uuidv4 } = require('uuid')
 
 // usage:  GET '/users'
@@ -13,7 +16,7 @@ router.get(
   auth,
   ah(async (req, res) => {
     var users = await db.User.findAll({
-      attributes: ['usrname', 'email', 'sms', 'verified', 'createdAt']
+      attributes: ['username', 'email', 'sms', 'verified', 'createdAt']
     })
 
     debug('users: ' + JSON.stringify(users))
@@ -29,7 +32,12 @@ router.get(
   "/referrals",
   auth,
   ah(async (req, res) => {
-    var referrals = await db.Referral.findAll()
+    var referrals = await db.Referral.findAll({
+      include: [ 
+        {model: db.User, as: 'user', attributes: [['username', 'user']]},
+        {model: db.User, as: 'sponsor', attributes: [['username', 'sponsor']]}
+      ]
+    })
 
     debug('referrals: ' + JSON.stringify(referrals))
     return res.send({referrals: referrals})
@@ -45,12 +53,17 @@ router.get(
   auth,
   ah(async (req, res) => {
     var accounts = await db.User.findAll({
-      attributes: ['username'],
+      // attributes: ['id', 'username'], // Cannot specify attributes when using joins ! (?)
       include: [
+        // { model: db.Invoice, as: 'invoices' },
+        // { model: db.Payment, as: 'payments' },
+        // { model: db.Order, as: 'orders'},
         { 
           model: db.Account, 
-          as: 'accounts',
-          attributes: ['id', 'name', 'ticker', 'balance', 'createdAt']
+          as: 'accounts', 
+          attributes: [['id', 'account_id'], 'user_id', 'ticker', 'balance', 'createdAt', 'updatedAt'], 
+          required: true
+          // where: { balance: { [Op.gt]: 0 }}
         }
       ]
     })
