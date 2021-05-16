@@ -49,7 +49,7 @@ require("./normalized/waiting_list.js");
 // require("./normalized/orders.js");
 // require("./normalized/invoices.js");
 
-const { User, Account, Payment, Invoice, Key, Order } = db;
+const { User, Account, Payment, Invoice, Key, Order, Referral} = db;
 
 // move relationships to specfic models
 User.hasMany(Account, {
@@ -77,10 +77,10 @@ User.hasMany(Payment, {
   foreignKey: "user_id"
 });
 
-User.belongsTo(Account, {
-  as: "account",
-  foreignKey: "account_id"
-});
+// User.belongsTo(Account, {
+//   as: "account",
+//   foreignKey: "account_id"
+// });
 
 Invoice.belongsTo(Account, {
   as: "account",
@@ -125,6 +125,24 @@ Order.belongsTo(Account, {
 Order.belongsTo(Account, {
   as: "acc2",
   foreignKey: "a2_id"
+});
+
+User.hasMany(Referral, {
+  as: "referral_codes",
+  foreignKey: "sponsor_id"
+});
+User.hasMany(Referral, {
+  as: "sponsors",
+  foreignKey: "user_id"
+});
+
+Referral.belongsTo(User, {
+  as: "sponsor",
+  foreignKey: "sponsor_id"
+});
+Referral.belongsTo(User, {
+  as: "user",
+  foreignKey: "user_id"
 });
 
 debug('added model relationships')
