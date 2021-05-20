@@ -11,6 +11,17 @@ db = new Sequelize(conf.database, conf.user, conf.password, {
   dialectOptions: conf.dialectOptions
 });
 
+debug('knex conf: ' + JSON.stringify(conf))
+knex = require('knex')({
+    client: 'mysql2',
+    connection: {
+      user: conf.user,
+      password: conf.password,
+      database: conf.database,
+      host: conf.host
+    }
+})
+
 require("./models/accounts.js");
 require("./models/codes.js");
 require("./models/deposits.js");
