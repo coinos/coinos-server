@@ -1,7 +1,19 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 
-sendLiquid = async ({ user, address, memo, tx, limit }) => {
+sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
+  l.info("sending liquid", amount, user, address);
+  if (!tx) {
+    ({ tx } = await liquidTx({
+      address,
+      asset,
+      amount,
+      feeRate: 100,
+      replaceable: false,
+      user
+    }));
+  }
+
   const isChange = async address =>
     (await lq.getAddressInfo(address)).ismine &&
     !Object.keys(addresses).includes(address);
@@ -126,6 +138,8 @@ sendLiquid = async ({ user, address, memo, tx, limit }) => {
     let signed = await lq.signRawTransactionWithWallet(blinded);
     let txid = await lq.sendRawTransaction(signed.hex);
 
+    l.info("sent liquid tx", txid, address);
+
     let main;
     for (let i = 0; i < assets.length; i++) {
       p = payments[i];
@@ -150,12 +164,7 @@ module.exports = ah(async (req, res) => {
   let { user } = req;
 
   try {
-    let { address, feeRate, memo, tx } = req.body;
-
-    if (!tx) {
-      ({ tx } = await liquidTx({ ...req.body, user }));
-    }
-    res.send(await sendLiquid({ user, address, memo, tx }));
+    res.send(await sendLiquid({...req.body, user }));
   } catch (e) {
     l.error("problem sending liquid", user.username, e.message);
     return res.status(500).send(e);

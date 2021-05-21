@@ -2,6 +2,12 @@ const buildTx = require("../../lib/buildliquidtx");
 
 liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let tx, fee;
+  let node = lq;
+  /*
+  if (asset === config.liquid.btcasset) {
+    node = rare;
+  } 
+  */
 
   if (user.account.pubkey) {
     let psbt = await buildTx({
@@ -25,7 +31,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   });
 
   if (invoice) {
-    let { ismine } = await lq.getAddressInfo(address);
+    let { ismine } = await node.getAddressInfo(address);
     if (ismine) {
       emit(user.username, "to", invoice.user);
       return;
@@ -33,7 +39,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   }
 
   if (config.liquid.walletpass)
-    await lq.walletPassphrase(config.liquid.walletpass, 300);
+    await node.walletPassphrase(config.liquid.walletpass, 300);
 
   amount = parseInt(amount);
 
@@ -44,9 +50,9 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let value = (amount / SATS).toFixed(8);
   if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
 
-  let info = await lq.getAddressInfo(address);
+  let info = await node.getAddressInfo(address);
 
-  tx = await lq.createRawTransaction(
+  tx = await node.createRawTransaction(
     [],
     {
       [address]: (amount / SATS).toFixed(8)
@@ -58,12 +64,12 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
     }
   );
 
-  tx = await lq.fundRawTransaction(tx, params);
+  tx = await node.fundRawTransaction(tx, params);
 
-  let blinded = await lq.blindRawTransaction(tx.hex);
-  let signed = await lq.signRawTransactionWithWallet(blinded);
+  let blinded = await node.blindRawTransaction(tx.hex);
+  let signed = await node.signRawTransactionWithWallet(blinded);
 
-  decoded = await lq.decodeRawTransaction(signed.hex);
+  decoded = await node.decodeRawTransaction(signed.hex);
   feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
   l.info("estimated", asset, feeRate);
 

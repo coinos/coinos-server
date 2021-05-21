@@ -308,7 +308,7 @@ setInterval(async () => {
         ({ account, address, user } = p);
 
         if (p && p.account) {
-          let total = p.amount + p.tip;
+          total = p.amount + p.tip;
           p.confirmed = 1;
           await p.account.save({ transaction });
 
@@ -344,20 +344,17 @@ setInterval(async () => {
 
       let c = convert[address];
       if (c) {
-        let { tx } = c;
         user.account = account;
 
-        delete queue[hash];
-
         await sendLiquid({
-          address,
+          address: c.address,
+          amount: total - 100,
           user,
-          tx,
           limit: total
         });
       }
     }
   } catch (e) {
-    l.error("problem processing queued liquid transaction", e.message);
+    l.error("problem processing queued liquid transaction", e.message, e.stack);
   }
 }, 1000);

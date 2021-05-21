@@ -27,7 +27,9 @@ app.post(
       let { liquidAddress, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
-      if (liquidAddress) convert[invoice.text] = { address: liquidAddress, tx };
+      if (liquidAddress) {
+        convert[invoice.text] = { address: liquidAddress, tx };
+      }
 
       if (!user) ({ user } = req);
       else {

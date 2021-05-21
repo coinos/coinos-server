@@ -127,12 +127,14 @@ module.exports = ah(async (req, res, next) => {
           a2 = await db.Account.create(acc, { transaction });
         }
 
+        let spread = user.username === "coinos" ? 1.02 : 1;
+        amount = Math.round(amount/spread);
         let p2 = await db.Payment.create(
           {
             amount,
             account_id: a2.id,
             user_id: recipient.id,
-            rate: app.get("rates")[recipient.currency],
+            rate: app.get("rates")[recipient.currency] * spread,
             currency: recipient.currency,
             confirmed: true,
             hash: "Payment from " + user.username,

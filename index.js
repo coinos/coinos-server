@@ -7,6 +7,7 @@ const cors = require("cors");
 const express = require("express");
 const { Op } = require("sequelize");
 const fs = require("fs");
+const persist = require("./lib/persist");
 
 ah = require("express-async-handler");
 
@@ -19,10 +20,11 @@ fail = msg => {
 };
 
 challenge = {};
-convert = {};
 logins = {};
 sessions = {};
 sockets = {};
+
+convert = persist("data/conversions.json");
 
 if (config.bitcoin) networks.push("bitcoin");
 if (config.liquid) networks.push("liquid");

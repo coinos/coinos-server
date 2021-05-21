@@ -154,9 +154,11 @@ setInterval(async () => {
           transaction
         });
 
-        ({ account, address, user } = p);
+
+        ({ address, user } = p);
 
         if (p && p.account) {
+          ({ account } = p);
           total = p.amount + p.tip;
 
           p.confirmed = 1;
@@ -179,21 +181,18 @@ setInterval(async () => {
         } else {
           l.warn("couldn't find payment", hash);
         }
-
-        delete queue[hash];
       });
 
       let c = convert[address];
       if (c) {
-        let { tx } = c;
         user.account = account;
 
         delete queue[hash];
 
         await sendLiquid({
-          address,
+          address: c.address,
+          amount: total - 100,
           user,
-          tx,
           limit: total
         });
       }

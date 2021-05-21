@@ -130,6 +130,7 @@ ah(async () => {
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
+    rare = new BitcoinCore(config.rare);
     app.post("/liquid/broadcast", optionalAuth, require("./liquid/broadcast"));
     app.get("/liquid/generate", auth, require("./liquid/generate"));
     app.post("/liquid/fee", auth, require("./liquid/fee"));
