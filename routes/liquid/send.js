@@ -2,7 +2,7 @@ const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
-  l.info("sending liquid", amount, user, address);
+  l.info("sending liquid", amount, address);
   if (!tx) {
     ({ tx } = await liquidTx({
       address,

@@ -82,7 +82,7 @@ const handlePayment = async msg => {
     });
 
     let c = convert[msg.payment_request];
-    if (c) {
+    if (msg.payment_request && c) {
       user.account = account;
 
       try {

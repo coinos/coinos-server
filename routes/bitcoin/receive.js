@@ -154,8 +154,9 @@ setInterval(async () => {
           transaction
         });
 
-
-        ({ address, user } = p);
+ 
+        if (p && p.address) address = p.address;
+        if (p && p.user) user = p.user;
 
         if (p && p.account) {
           ({ account } = p);
@@ -179,15 +180,15 @@ setInterval(async () => {
           l.info("bitcoin confirmed", user.username, p.amount, p.tip);
           notify(user, `${total} SAT payment confirmed`);
         } else {
-          l.warn("couldn't find payment", hash);
+          l.warn("couldn't find bitcoin payment", hash);
         }
+
+        delete queue[hash];
       });
 
       let c = convert[address];
-      if (c) {
+      if (address && c) {
         user.account = account;
-
-        delete queue[hash];
 
         await sendLiquid({
           address: c.address,
@@ -198,6 +199,6 @@ setInterval(async () => {
       }
     }
   } catch (e) {
-    l.error("problem processing queued bitcoin transaction", e.message);
+    l.error("problem processing queued bitcoin transaction", e.message, e.stack);
   }
 }, 1000);

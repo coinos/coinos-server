@@ -336,7 +336,7 @@ setInterval(async () => {
 
           notify(user, `${total} SAT payment confirmed`);
         } else {
-          l.warn("couldn't find payment", hash);
+          l.warn("couldn't find liquid payment", hash);
         }
 
         delete queue[hash];
