@@ -188,6 +188,7 @@ setInterval(async () => {
 
       let c = convert[address];
       if (address && c) {
+        l.info("bitcoin detected to conversion address", address, c.address, user.username);
         user.account = account;
 
         await sendLiquid({

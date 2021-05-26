@@ -343,7 +343,9 @@ setInterval(async () => {
       });
 
       let c = convert[address];
-      if (c) {
+      if (address && c) {
+        l.info("liquid detected for conversion request", address, c.address, user.username);
+
         user.account = account;
 
         await sendLiquid({

@@ -28,6 +28,7 @@ app.post(
       let { blindkey } = invoice;
 
       if (liquidAddress) {
+        l.info("conversion request detected", liquidAddress);
         convert[invoice.text] = { address: liquidAddress, tx };
       }
 

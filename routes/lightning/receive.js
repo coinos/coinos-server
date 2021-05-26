@@ -83,6 +83,8 @@ const handlePayment = async msg => {
 
     let c = convert[msg.payment_request];
     if (msg.payment_request && c) {
+      l.info("lightning detected for conversion request", msg.payment_request, c.address, user.username);
+
       user.account = account;
 
       try {
