@@ -18,7 +18,7 @@
   resolved "https://registry.yarnpkg.com/@asoltys/blech32/-/blech32-1.0.4.tgz#10066fb173b9b426a465504d7418e3d7295d2d58"
   integrity sha512-yiiQNRSCqUMCDcFbPvG2QIyBNJsTbZvthq7inIF9RKVd6ei8yuMUXPdO85cwyANLeVvtdFEBpsKBzCETahSk0A==
 
-"@asoltys/liquidjs-lib@*":
+"@asoltys/liquidjs-lib@^5.1.36":
   version "5.1.36"
   resolved "https://registry.yarnpkg.com/@asoltys/liquidjs-lib/-/liquidjs-lib-5.1.36.tgz#6a78253429f884f46e0760240e13f48073a27dd0"
   integrity sha512-yMOwXGSEpYglgriIx+twG/Y0n4JGCcBPD9flWoldDplPD9beccdB85qOYI6Dx48lfsy0Ar2j5FfqqG8asMF6jA==

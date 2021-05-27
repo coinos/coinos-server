@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@asoltys/bitcoin-core": "^3.0.6",
-    "@asoltys/liquidjs-lib": "*",
+    "@asoltys/liquidjs-lib": "^5.1.36",
     "@grpc/proto-loader": "^0.5.3",
     "async-mutex": "^0.2.4",
     "axios": "^0.21.1",

@@ -2,8 +2,6 @@ const Sequelize = require("sequelize");
 const conf = config.dbOptions;
 const debug = require('debug')('test')
 
-console.log(conf);
-
 debug('DB connection: ', conf.host + ' : ' + conf.database + ' : ' + conf.user)
 
 db = new Sequelize(conf.database, conf.user, conf.password, {
