@@ -2,6 +2,8 @@ const Sequelize = require("sequelize");
 const conf = config.dbOptions;
 const debug = require('debug')('test')
 
+console.log(conf);
+
 debug('DB connection: ', conf.host + ' : ' + conf.database + ' : ' + conf.user)
 
 db = new Sequelize(conf.database, conf.user, conf.password, {
@@ -10,6 +12,7 @@ db = new Sequelize(conf.database, conf.user, conf.password, {
   logging: false,
   dialectOptions: conf.dialectOptions
 });
+
 
 debug('knex conf: ' + JSON.stringify(conf))
 knex = require('knex')({
@@ -158,3 +161,4 @@ Referral.belongsTo(User, {
 
 debug('added model relationships')
 db.Order = Order;
+

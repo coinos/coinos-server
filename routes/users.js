@@ -2,11 +2,10 @@ const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authenticator = require("otplib").authenticator;
-const randomWord = require("random-words");
 const getAccount = require("../lib/account");
 const Sequelize = require("sequelize");
 const bitcoin = require("bitcoinjs-lib");
-const liquid = require("liquidjs-lib");
+const liquid = require("@asoltys/liquidjs-lib");
 const { fromBase58, fromPrivateKey } = require("bip32");
 const { Mutex } = require("async-mutex");
 const bip32 = require("bip32");
@@ -43,17 +42,6 @@ app.get(
 
     if (user) res.send(user);
     else res.status(500).send("User not found");
-  })
-);
-
-app.get(
-  "/challenge",
-  ah(async (req, res) => {
-    const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-    challenge[ip] = randomWord();
-    l.info("setting up challenge", ip, challenge[ip]);
-    const data = await textToImage.generate(challenge[ip]);
-    res.send(data);
   })
 );
 

@@ -62,9 +62,9 @@ app.use(compression());
 server = require("http").Server(app);
 
 require("./db");
+require("./lib/passport");
 require("./lib/utils");
 require("./lib/sockets");
-require("./lib/passport");
 require("./lib/rates");
 require("./lib/notifications");
 require("./lib/register");
@@ -73,10 +73,14 @@ require("./lib/send");
 require("./routes/assets");
 require("./routes/invoices");
 require("./routes/payments");
+/*
+*/
+/*
 require("./routes/info");
 require("./routes/swaps");
 require("./routes/users");
 require("./routes/funding");
+*/
 
 if (config.lnurl) require("./routes/lnurl");
 if (config.imap) require("./lib/mail");

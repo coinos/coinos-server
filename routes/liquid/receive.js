@@ -4,8 +4,7 @@ const zmq = require("zeromq");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 const bitcoin = require("bitcoinjs-lib");
-const elements = require("elementsjs-lib");
-const { networks } = require("liquidjs-lib");
+const { Block, networks } = require("@asoltys/liquidjs-lib");
 
 const network =
   networks[
@@ -192,7 +191,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
     where: { confirmed: 0 }
   });
 
-  const block = elements.Block.fromHex(message.toString("hex"), true);
+  const block = Block.fromHex(message.toString("hex"), true);
 
   let hash, json;
 

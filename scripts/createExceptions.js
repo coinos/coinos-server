@@ -1,4 +1,4 @@
-BitcoinCore = require("bitcoin-core");
+BitcoinCore = require("@asoltys/bitcoin-core");
 fs = require("fs");
 config = require("./config");
 bc = new BitcoinCore(config.bitcoin);

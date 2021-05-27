@@ -1,5 +1,4 @@
-const BitcoinCore = require("bitcoin-core");
-const lnd = require("../lib/lnd");
+const BitcoinCore = require("@asoltys/bitcoin-core");
 const { Op } = require("sequelize");
 const { join } = require("path");
 const fs = require("fs");
@@ -93,7 +92,7 @@ ah(async () => {
       const lnapath = join(require("os").homedir(), ".lightningreg/regtest");
       lna = require("clightning-client")(lnapath);
     } else {
-      lna = lnd(config.lna);
+      throw new Error("lnd not supported");
     }
 
     app.post("/lightning/channel", require("./lightning/channel"));
