@@ -12,7 +12,7 @@ ah(async () => {
 
   const exceptions = [];
   try {
-    read(fs.createReadStream("exceptions"), data => exceptions.push(data));
+    read(fs.createReadStream("exceptions"), (data) => exceptions.push(data));
   } catch (e) {
     l.warn("couldn't read exceptions file", e.message);
   }
@@ -21,8 +21,8 @@ ah(async () => {
     await db.Invoice.findAll({
       include: {
         model: db.User,
-        as: "user"
-      }
+        as: "user",
+      },
     })
   ).map(({ address, user, unconfidential }) => {
     if (address && user) addresses[address] = user.username;
@@ -34,8 +34,8 @@ ah(async () => {
       where: { pubkey: { [Op.ne]: null } },
       include: {
         model: db.User,
-        as: "user"
-      }
+        as: "user",
+      },
     });
 
     accounts.map(({ address, user: { username } }) => {
@@ -47,35 +47,35 @@ ah(async () => {
 
   payments = (
     await db.Payment.findAll({
-      attributes: ["hash"]
+      attributes: ["hash"],
     })
-  ).map(p => p.hash);
+  ).map((p) => p.hash);
 
   setInterval(async () => {
     const unconfirmed = (
       await db.Payment.findAll({
         where: {
-          confirmed: 0
-        }
+          confirmed: 0,
+        },
       })
-    ).map(p => p.hash);
+    ).map((p) => p.hash);
 
     const transactions = await bc.listTransactions("*", 1000);
 
     transactions
       .filter(
-        tx =>
+        (tx) =>
           tx.category === "receive" &&
           tx.confirmations > 0 &&
           unconfirmed.includes(tx.txid)
       )
-      .map(tx => {
+      .map((tx) => {
         l.warn("tx unconfirmed in db", tx.txid, tx.address);
       });
 
     const unaccounted = [];
 
-    transactions.map(tx => {
+    transactions.map((tx) => {
       if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
         unaccounted.push(tx.txid);
       }
@@ -89,8 +89,7 @@ ah(async () => {
 
   if (config.lna) {
     if (config.lna.clightning) {
-      const lnapath = join(require("os").homedir(), ".lightningreg/regtest");
-      lna = require("clightning-client")(lnapath);
+      lna = require("clightning-client")(config.lna.dir);
     } else {
       throw new Error("lnd not supported");
     }
@@ -120,10 +119,14 @@ ah(async () => {
     require("./bitcoin/receive");
 
     setTimeout(async () => {
-      const address = await bc.getNewAddress();
-      const { hdkeypath } = await bc.getAddressInfo(address);
-      const parts = hdkeypath.split("/");
-      app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
+      try {
+        const address = await bc.getNewAddress();
+        const { hdkeypath } = await bc.getAddressInfo(address);
+        const parts = hdkeypath.split("/");
+        app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
+      } catch (e) {
+        console.error(e);
+      }
     }, 50);
   }
 
@@ -137,12 +140,17 @@ ah(async () => {
     require("./liquid/receive");
 
     setTimeout(async () => {
-      const address = await lq.getNewAddress();
-      const { hdkeypath } = await lq.getAddressInfo(address);
-      const parts = hdkeypath.split("/");
-      app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+      try {
+        const address = await lq.getNewAddress();
+        const { hdkeypath } = await lq.getAddressInfo(address);
+        const parts = hdkeypath.split("/");
+        app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+      } catch (e) {
+        console.error(e);
+      }
     }, 50);
   }
+
 
   app.get(
     "/payments",

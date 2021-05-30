@@ -13,7 +13,7 @@ verified
 data
 lnurl-server.sqlite3
 watcher.log
-build.json
-build.sh
-config
 mysql
+config/bitcoin
+config/liquid
+config/lightning

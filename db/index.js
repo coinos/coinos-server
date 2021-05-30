@@ -89,10 +89,10 @@ User.hasMany(Payment, {
   foreignKey: "user_id"
 });
 
-// User.belongsTo(Account, {
-//   as: "account",
-//   foreignKey: "account_id"
-// });
+User.belongsTo(Account, {
+  as: "account",
+  foreignKey: "account_id"
+});
 
 Invoice.belongsTo(Account, {
   as: "account",
