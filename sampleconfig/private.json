@@ -29,7 +29,7 @@
 
   "CLIENT_VERSION": "*****",
 
-  "MAILGUIN_KEY": "*****",
+  "MAILGUN_KEY": "*****",
 
   "IMAP_SETTINGS": {
     "user": "**",
@@ -45,10 +45,5 @@
   
   "VAPID_PUBLIC_KEY": "*****",
   "VAPID_PRIVATE_KEY": "*****",
-  
-  "facebook": {
-    "appToken": "****",
-    "specialFriend": "****"
-  }
 }
 
