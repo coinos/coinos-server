@@ -2,13 +2,13 @@
 # yarn lockfile v1
 
 
-"@asoltys/bitcoin-core@^3.0.6":
-  version "3.0.6"
-  resolved "https://registry.yarnpkg.com/@asoltys/bitcoin-core/-/bitcoin-core-3.0.6.tgz#b25bb889b1aa0542d2bd58d46b383b3a4312027c"
-  integrity sha512-5NXAujNw9V6f+UEbW9/ZOK4AueJbZ2QJMm99XNvBs5raxi3QbvtLOkmzsOms5VtS1L5VzcGXH++UqItUsdlEnA==
+"@asoltys/bitcoin-core@^3.0.7":
+  version "3.0.7"
+  resolved "https://registry.yarnpkg.com/@asoltys/bitcoin-core/-/bitcoin-core-3.0.7.tgz#88c29839927b0c7824645e659c53667d0aec69f0"
+  integrity sha512-znXEzdNACYyol44aqPmQkamY+fb3T75dpybn27YDVvPsgPDZrO+cRvdBP+fi7li2bgr0boGTApk/T9JK9TCqVQ==
   dependencies:
     "@asoltys/request" "^2.88.2"
-    json-bigint "^0.2.0"
+    json-bigint "^1.0.0"
     lodash "^4.0.0"
     semver "^5.1.0"
     standard-error "^1.1.0"
@@ -655,15 +655,10 @@ bignumber.js@9.0.0:
   resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-9.0.0.tgz#805880f84a329b5eac6e7cb6f8274b6d82bdf075"
   integrity sha512-t/OYhhJ2SD+YGBQcjY8GzzDHEk9f3nerxjtfa6tlMXfe7frs/WozhvCNoGvpM0P3bNf3Gq5ZRMlGr5f3r4/N8A==
 
-bignumber.js@9.0.1:
+bignumber.js@9.0.1, bignumber.js@^9.0.0:
   version "9.0.1"
   resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-9.0.1.tgz#8d7ba124c882bfd8e43260c67475518d0689e4e5"
   integrity sha512-IdZR9mh6ahOBv/hYGiXyVuyCetmGJhtYkqLBpTStdhEGjegpPlUawydyaF3pbIOFynJTpllEs+NP+CS9jKFLjA==
-
-bignumber.js@^4.0.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-4.1.0.tgz#db6f14067c140bd46624815a7916c92d9b6c24b1"
-  integrity sha512-eJzYkFYy9L4JzXsbymsFn3p54D+llV27oTQ+ziJG7WFRheJcNZilgVXMG0LoZtlQSKBsJdWtLFqOD0u+U0jZKA==
 
 binary-extensions@^2.0.0:
   version "2.2.0"
@@ -2447,12 +2442,12 @@ jsbn@~0.1.0:
   resolved "https://registry.yarnpkg.com/jsbn/-/jsbn-0.1.1.tgz#a5e654c2e5a2deb5f201d96cefbca80c0ef2f513"
   integrity sha1-peZUwuWi3rXyAdls77yoDA7y9RM=
 
-json-bigint@^0.2.0:
-  version "0.2.3"
-  resolved "https://registry.yarnpkg.com/json-bigint/-/json-bigint-0.2.3.tgz#118d7f6ff1d38659f19f94cf73e64a75a3f988a8"
-  integrity sha1-EY1/b/HThlnxn5TPc+ZKdaP5iKg=
+json-bigint@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/json-bigint/-/json-bigint-1.0.0.tgz#ae547823ac0cad8398667f8cd9ef4730f5b01ff1"
+  integrity sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==
   dependencies:
-    bignumber.js "^4.0.0"
+    bignumber.js "^9.0.0"
 
 json-buffer@3.0.0:
   version "3.0.0"
