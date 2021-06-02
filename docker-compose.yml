@@ -18,8 +18,6 @@ services:
       - '8085:8085'
     environment:
       NODE_ENV: development
-    volumes:
-      - /home/adam/coinos.io:/coinos
   app:
     depends_on:
       - maria
