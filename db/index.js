@@ -1,5 +1,5 @@
 const Sequelize = require("sequelize");
-const conf = config.dbOptions;
+const conf = config.db;
 const debug = require('debug')('test')
 
 debug('DB connection: ', conf.host + ' : ' + conf.database + ' : ' + conf.user)
@@ -10,7 +10,6 @@ db = new Sequelize(conf.database, conf.user, conf.password, {
   logging: false,
   dialectOptions: conf.dialectOptions
 });
-
 
 debug('knex conf: ' + JSON.stringify(conf))
 knex = require('knex')({

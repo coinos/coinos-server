@@ -1,85 +1,53 @@
-const private = require("./private.json") || {}
-const debug = require('debug')('test')
+const debug = require("debug")("test");
 
-const dbOptions = private.connection[process.env.NODE_ENV || "development"]
-let lnurl;
+const db = {
+  user: "root",
+  password: "password",
+  database: "coinos",
+  host: "maria",
+  dialect: "mariadb",
+  dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" },
+};
 
-try {
-  lnurl = require("./lnurl");
-} catch(e) {
-  debug("lnurl config not found");
-} 
-
-const btcasset = "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
-const cadasset = "e749f7326d0ba155ec1d878e23458bc3f740a38bf91bbce955945ee10d6ab523";
-const usdtasset = "4dddd1d0d0beeaee17df7722b512906cc5bc660c81225083b72b05820ecd3d91";
+const btcasset =
+  "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
 module.exports = {
-  dbOptions: dbOptions,
-  lnurl,
-  clientVersion: private.CLIENT_VERSION,
-  private: private,
-  vapid: {
-    url: "https://coinos.io/",
-    publicKey: private.VAPID_PUBLIC_KEY,
-    privateKey: private.VAPID_PRIVATE_KEY
-  },
+  db,
+  clientVersion: "3b96359d6a6ce68fe4a32f495fc9a6f78af0aa63",
   knex: {
-    client: 'mysql2',
-    connection: dbOptions
+    client: "mysql2",
+    connection: db,
   },
-  ipstack: "2e1805258268b4992ebac06e20fc1865", // optional, set default currency based on IP
-  jwt: private.jwt,
+  jwt: "secret",
   port: 3119,
-  facebook: private.facebook,
   bitcoin: {
-    masterkey: private.BITCOIN_KEY, // get from bitcoin-cli dumpwallet "walletfile"
-    username: "user",
-    password: "password",
+    masterkey:
+      "tprv8ZgxMBicQKsPdTUoagV41nang9pQUA2DKoVWLmTrWmb2PfsC8pDTHveCMyzUyMguKJCjd5uyHcqg27r7gDzz4TY3MgucpLsSXwCbjn2C3Q1",
+    host: "bitcoin",
+    username: "admin1",
+    password: "123",
     network: "regtest",
     port: 18443,
-    zmqrawblock: "tcp://127.0.0.1:18506",
-    zmqrawtx: "tcp://127.0.0.1:18507"
+    zmqrawblock: "tcp://bitcoin:18506",
+    zmqrawtx: "tcp://bitcoin:18507",
   },
   liquid: {
-    masterkey: private.LIQUID_KEY, // get from elements-cli dumpwallet "walletfile"
-    blindkey: '0e66557c1dfa0c7daa371314ffd763979d3f7c5db69380e5c15ea72b85453c2e',
-    wallet: "coinos",
-    username: "user",
-    password: "password",
+    masterkey:
+      "tprv8ZgxMBicQKsPfBjZp16yQUmZM3DWh5fb366inBXF3Xk6ANhJYqxXYL4FeQxAW5kjT3ku1A1wmS79c5y6RajKr2TkCADG8A3h4WdggbFMXX1",
+    blindkey:
+      "099e599b1d79dbc536c6f8461772d7f2f9583d7b6f3fba70394d60b599c3bd96",
+    host: "liquid",
+    username: "admin1",
+    password: "123",
     network: "regtest",
-    port: 18882,
-    zmqrawblock: "tcp://127.0.0.1:18602",
-    zmqrawtx: "tcp://127.0.0.1:18603",
-    btcasset: "b2e15d0d7a0c94e4e2ce0fe6e8691b9e451377f6e46e8045a86f7c4b5d4f0f23", // find with elements-cli dumpassetlabels
+    port: 18884,
+    zmqrawblock: "tcp://liquid:18606",
+    zmqrawtx: "tcp://liquid:18607",
+    btcasset,
   },
   lna: {
-    server: 'localhost:10001',
-    tls: '/home/user/.lnd.testa/tls.cert',
-    macaroon: '/home/user/.lnd.testa/data/chain/bitcoin/testnet/admin.macaroon',
+    clightning: true,
+    dir: "/app/config/lightning/regtest",
   },
-  maker: [ // special account with username "maker" places orders on the exchange
-    {
-      c1: btcasset,
-      c2: cadasset,
-      currency: "CAD",
-      amount: 0.001,
-      askMultiplier: 1.01,
-      bidMultiplier: 0.99,
-    },
-    {
-      c1: btcasset,
-      c2: usdtasset,
-      currency: 'USD',
-      amount: 0.001,
-      askMultiplier: 1.01,
-      bidMultiplier: 0.99,
-    }
-  ],
-  mailgun: {
-    domain: "coinos.io",
-    apiKey: private.MAILGUN_KEY
-    
-  },
-  imap: private.IMAP_SETTINGS
-}
+};

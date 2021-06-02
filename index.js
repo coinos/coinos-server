@@ -78,9 +78,6 @@ require("./routes/swaps");
 require("./routes/users");
 require("./routes/funding");
 
-if (config.lnurl) require("./routes/lnurl");
-if (config.imap) require("./lib/mail");
-
 //  Scope based Route Handling
 
 var referralsRouter = require('./routes/referrals.js');
@@ -88,6 +85,10 @@ app.use('/referrals', referralsRouter)
 
 var adminRouter = require('./routes/admin.js');
 app.use('/admin', adminRouter)
+
+if (config.imap) require("./lib/mail");
+if (config.lnurl) require("./routes/lnurl");
+if (config.mailgun) require("./routes/funding");
 
 app.use((err, req, res, next) => {
   const details = {
@@ -110,9 +111,3 @@ app.use((err, req, res, next) => {
 server.listen(config.port, () =>
   console.log(`CoinOS Server listening on port ${config.port}`)
 );
-
-process.on("SIGINT", process.exit);
-
-process.on("uncaughtException", function(exception) {
-  console.log(exception);
-});
