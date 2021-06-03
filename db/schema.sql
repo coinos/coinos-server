@@ -1,13 +1,13 @@
--- MySQL dump 10.14  Distrib 5.5.65-MariaDB, for Linux (x86_64)
+-- MySQL dump 10.19  Distrib 10.3.29-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: coinos
 -- ------------------------------------------------------
--- Server version	5.5.65-MariaDB
+-- Server version	10.3.29-MariaDB-1:10.3.29+maria~bionic
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -49,17 +49,16 @@ CREATE TABLE `accounts` (
   `ticker` varchar(255) DEFAULT NULL,
   `precision` int(11) DEFAULT NULL,
   `domain` varchar(255) DEFAULT NULL,
-  `contract` text,
-  `index` int(11) NOT NULL DEFAULT '0',
+  `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `pubkey` varchar(255) DEFAULT NULL,
+  `index` int(11) NOT NULL DEFAULT 0,
   `hide` tinyint(1) DEFAULT NULL,
   `seed` varchar(255) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   `privkey` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=14770 DEFAULT CHARSET=latin1;
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4188 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -70,10 +69,10 @@ DROP TABLE IF EXISTS `codes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `codes` (
-  `code` varchar(255) NOT NULL DEFAULT '',
-  `text` text,
+  `code` varchar(255) NOT NULL,
+  `text` text DEFAULT NULL,
   PRIMARY KEY (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -92,7 +91,7 @@ CREATE TABLE `deposits` (
   `credited` tinyint(1) DEFAULT NULL,
   `code` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4212 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4122 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -105,7 +104,7 @@ DROP TABLE IF EXISTS `invoices`;
 CREATE TABLE `invoices` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
-  `text` text,
+  `text` text DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `rate` double DEFAULT NULL,
@@ -113,19 +112,15 @@ CREATE TABLE `invoices` (
   `address` varchar(255) DEFAULT NULL,
   `received` double DEFAULT NULL,
   `amount` double DEFAULT NULL,
-  `tip` double DEFAULT NULL,
+  `tip` double NOT NULL DEFAULT 0,
   `network` varchar(255) DEFAULT NULL,
   `unconfidential` varchar(255) DEFAULT NULL,
   `uuid` varchar(255) DEFAULT NULL,
-  `memo` text,
+  `memo` text DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `part_of_unconfidential` (`unconfidential`(10)),
-  KEY `text_index` (`text`(100)),
-  KEY `unconfidential_index` (`unconfidential`(100)),
-  KEY `address_index` (`address`(100))
-) ENGINE=InnoDB AUTO_INCREMENT=13613 DEFAULT CHARSET=latin1;
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7771 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -142,7 +137,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7396 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4666 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -154,20 +149,18 @@ DROP TABLE IF EXISTS `orders`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `a1` varchar(255) DEFAULT NULL,
-  `a2` varchar(255) DEFAULT NULL,
   `v1` double DEFAULT NULL,
   `v2` double DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
-  `accepted` tinyint(1) NOT NULL DEFAULT '0',
+  `accepted` tinyint(1) NOT NULL DEFAULT 0,
+  `rate` double GENERATED ALWAYS AS (`v2` / `v1`) VIRTUAL,
+  `completedAt` datetime DEFAULT NULL,
   `a1_id` int(11) DEFAULT NULL,
   `a2_id` int(11) DEFAULT NULL,
-  `rate` double AS (v2/v1) VIRTUAL,
-  `completedAt` datetime DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=239 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=9316 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -180,7 +173,7 @@ DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
-  `hash` text,
+  `hash` text DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `rate` double DEFAULT NULL,
@@ -188,19 +181,55 @@ CREATE TABLE `payments` (
   `address` varchar(255) DEFAULT NULL,
   `received` tinyint(1) DEFAULT NULL,
   `amount` double DEFAULT NULL,
-  `tip` double NOT NULL DEFAULT '0',
+  `tip` double NOT NULL DEFAULT 0,
   `confirmed` tinyint(1) NOT NULL,
-  `fee` double NOT NULL DEFAULT '0',
+  `fee` double NOT NULL DEFAULT 0,
   `network` varchar(255) DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
   `preimage` varchar(255) DEFAULT NULL,
-  `memo` text,
-  `redeemed` tinyint(1) NOT NULL DEFAULT '0',
+  `memo` text DEFAULT NULL,
   `redeemcode` varchar(255) DEFAULT NULL,
+  `redeemed` tinyint(1) NOT NULL DEFAULT 0,
   `path` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=40254 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `referrals`
+--
+
+DROP TABLE IF EXISTS `referrals`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `referrals` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `token` varchar(255) DEFAULT NULL,
+  `expiry` date DEFAULT NULL,
+  `status` enum('pending','active','expired','cancelled') DEFAULT NULL,
+  `sponsor_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   PRIMARY KEY (`id`),
-  KEY `idx_redeemcode` (`redeemcode`)
-) ENGINE=InnoDB AUTO_INCREMENT=12982 DEFAULT CHARSET=latin1;
+  UNIQUE KEY `token` (`token`),
+  KEY `sponsor_id` (`sponsor_id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `urls`
+--
+
+DROP TABLE IF EXISTS `urls`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `urls` (
+  `hash` varchar(255) DEFAULT NULL,
+  `data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  UNIQUE KEY `urls_hash_unique` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -214,26 +243,50 @@ CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(255) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `unit` varchar(255) DEFAULT 'SAT',
-  `symbol` varchar(255) DEFAULT NULL,
+  `unit` varchar(255) DEFAULT NULL,
+  `account_id` int(11) DEFAULT NULL,
   `currency` varchar(255) DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `twofa` tinyint(1) DEFAULT NULL,
+  `authyId` varchar(255) DEFAULT NULL,
   `pin` varchar(255) DEFAULT NULL,
-  `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `otpsecret` varchar(255) DEFAULT NULL,
-  `account_id` int(11) DEFAULT NULL,
   `ip` int(10) unsigned DEFAULT NULL,
-  `subscriptions` text,
+  `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `seed` varchar(255) DEFAULT NULL,
-  `fiat` tinyint(1) NOT NULL DEFAULT '0',
-  `index` int(11) NOT NULL DEFAULT '0',
+  `linkingKeys` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `fiat` tinyint(1) NOT NULL DEFAULT 0,
+  `index` int(11) NOT NULL DEFAULT 0,
   `verified` varchar(255) DEFAULT NULL,
+  `locked` tinyint(1) DEFAULT 0,
+  `email` varchar(255) DEFAULT NULL,
+  `sms` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `ip` (`ip`),
-  KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=10009 DEFAULT CHARSET=latin1;
+  KEY `ip` (`ip`)
+) ENGINE=InnoDB AUTO_INCREMENT=788 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `waiting_list`
+--
+
+DROP TABLE IF EXISTS `waiting_list`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `waiting_list` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) DEFAULT NULL,
+  `sms` varchar(255) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `status` enum('pending','contacted','registered','cancelled') DEFAULT 'pending',
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -253,10 +306,10 @@ CREATE TABLE `withdrawals` (
   `transit` varchar(255) DEFAULT NULL,
   `account` varchar(255) DEFAULT NULL,
   `institution` varchar(255) DEFAULT NULL,
-  `notes` text,
+  `notes` text DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4115 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4113 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -268,4 +321,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-12-16 19:23:42
+-- Dump completed on 2021-06-02 20:32:20
