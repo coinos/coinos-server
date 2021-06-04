@@ -4,9 +4,12 @@ const crypto = require("crypto");
 let fetchAssets;
 (fetchAssets = async () => {
   try {
+    /*
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
     );
+    */
+    assets = require("../assets.json");
 
     app.set("assets", assets);
   } catch (e) {
