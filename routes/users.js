@@ -2,7 +2,6 @@ const axios = require("axios");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const authenticator = require("otplib").authenticator;
-const textToImage = require("text-to-image");
 const randomWord = require("random-words");
 const getAccount = require("../lib/account");
 const Sequelize = require("sequelize");
@@ -425,6 +424,10 @@ app.get(
         hd = fromBase58(config.bitcoin.masterkey, n).derivePath(
           `m/0'/0'/${i}'`
         );
+
+        // async request to node to bump its internal index but don't use result
+        bc.getNewAddress().catch(console.error);
+
         app.set("bcAddressIndex", i + 1);
       } else if (network === "liquid") {
         p = liquid.payments;
@@ -435,6 +438,9 @@ app.get(
               : config.liquid.network
           ];
         type = "p2sh";
+        
+        // async request to node to bump its internal index but don't use result
+        lq.getNewAddress().catch(console.error);
 
         i = parseInt(app.get("lqAddressIndex"));
         hd = fromBase58(config.liquid.masterkey, n).derivePath(`m/0'/0'/${i}'`);

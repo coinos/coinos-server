@@ -7,6 +7,7 @@ module.exports = ah(async (req, res) => {
   let { hex } = tx;
 
   let fee = toSats(tx.fee);
+  if (fee < 0) throw new Error("fee cannot be negative");
 
   const isChange = async address =>
     (await bc.getAddressInfo(address)).ismine &&

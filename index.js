@@ -70,7 +70,6 @@ require("./lib/notifications");
 require("./lib/register");
 require("./lib/send");
 
-require("./lib/mail");
 
 require("./routes/assets");
 require("./routes/invoices");
@@ -80,9 +79,9 @@ require("./routes/swaps");
 require("./routes/users");
 require("./routes/funding");
 
-if (config.lnurl) {
-  require("./routes/lnurl");
-}
+if (config.lnurl) require("./routes/lnurl");
+if (config.imap) require("./lib/mail");
+
 
 const sigHeaderName = "X-Hub-Signature-256";
 const sigHashAlg = "sha256";

@@ -28,7 +28,7 @@ app.post(
       let { blindkey } = invoice;
 
       if (liquidAddress) {
-        l.info("conversion request detected", liquidAddress);
+        l.info("conversion request for", liquidAddress, invoice.text);
         convert[invoice.text] = { address: liquidAddress, tx };
       }
 
@@ -53,7 +53,8 @@ app.post(
         invoice.network,
         invoice.amount,
         invoice.tip,
-        invoice.currency
+        invoice.currency,
+        `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`,
       );
 
       if (!invoice.tip) invoice.tip = 0;
