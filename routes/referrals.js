@@ -195,7 +195,7 @@ router.get(
           }
         )
 
-        return res.send({ verified: true });
+        return res.send({ verified: true, sponsor_id: found.sponsor_id, updated: found.updated_at});
       } else {
         res.status(500).send({ verified: false, message: 'Referral already ' + found[0].status })
       }
@@ -228,7 +228,7 @@ router.get(
 router.post(
   "/joinQueue",
   ah(async (req, res) => {
-    const { email, sms } = req.query;
+    const { email, sms } = req.body;
 
     debug('email: ' + email)
     debug('sms: ' + sms)
