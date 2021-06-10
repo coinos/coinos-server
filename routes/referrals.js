@@ -242,4 +242,39 @@ router.post(
   })
 );
 
+/**
+ * @api {get} /isReferred/:user_id  Check if user is referred
+ * @apiName isReferred
+ * @apiGroup Referrals
+ *
+ * @apiParam {user_id} 
+ *
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       true
+ *     }
+ * 
+ * @apiDescription returns boolean indicating if user is referred or not
+ */
+ router.get(
+  "/isReferred/:user_id",
+  ah(async (req, res) => {
+    const { user_id } = req.params;
+
+    var referred = await db.Referral.findOne({
+      where: {
+        user_id: user_id,
+        status: 'active'
+      }
+    })
+    
+    if (referred) {
+      res.send(true)
+    } else {
+      res.send(false)
+    }
+  })
+ );
+
 module.exports = router;
