@@ -19,6 +19,10 @@
 -- Table structure for table `SequelizeMeta`
 --
 
+DROP DATABASE IF EXISTS coinos;
+CREATE DATABASE coinos;
+USE coinos;
+
 DROP TABLE IF EXISTS `SequelizeMeta`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;

@@ -5,7 +5,7 @@ if ! [ -x "$(command -v docker-compose)" ]; then
   exit 1
 fi
 
-domains=(dev.coinos.io)
+domains=($DOMAIN)
 rsa_key_size=4096
 data_path="./config/certbot"
 email="adam@coinos.io" # Adding a valid address is strongly recommended

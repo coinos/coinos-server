@@ -7,10 +7,23 @@ const Op = Sequelize.Op;
 
 const { v4: uuidv4 } = require('uuid');
 
-// usage:  GET '/users'
-//
-// Returns: 
-//    { users: <list of users }
+/**
+ * @api {get} /users Retrieve user list
+ * @apiName getUsers
+ * @apiGroup Admin
+ *
+ * @apiPermission admin
+ * 
+ * @apiSuccess {token: referral_code, expiry: expiry} Token and expiry if applicable.
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "users" : [
+ *         { "username": 'John Doe', "email": 'johndoe@gmail.com', ...},
+ *         { "username": 'Jane Doe', "email": 'janedoe@gmail.com', ...}
+ *        ]
+ *     }
+ */
 router.get(
   "/users",
   auth,
@@ -29,10 +42,23 @@ router.get(
   })
 );
 
-// usage:  GET '/referrals'
-//
-// Returns: 
-//    { referrals: <list of referral tokens> }
+/**
+ * @api {get} /referrals Retrieve list of referral tokens
+ * @apiName referrals
+ * @apiGroup Admin
+ *
+ * @apiPermission admin
+ * 
+ * @apiSuccess returns list of referral tokens
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "referrals" : [
+ *         { "token": '***', "status": 'pending', sponsor: 'Adam', user: 'newUsername1', expiry: null },
+ *         { "token": '***', "status": 'pending', sponsor: 'Adam', user: 'newUsername2', expiry: null },
+ *        ]
+ *     }
+ */
 router.get(
   "/referrals",
   auth,
@@ -63,10 +89,23 @@ router.get(
   })
 );
 
-// usage:  GET '/accounts'
-//
-// Returns: 
-//    { referrals: <list of referral tokens> }
+/**
+ * @api {get} /accounts Retrieve list of accounts
+ * @apiName accounts
+ * @apiGroup Admin
+ *
+ * @apiPermission admin
+ * 
+ * @apiSuccess returns list of accounts
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "accounts" : [
+ *         { "user": 'Adam', "account_id": '123', balance: 500 ... },
+ *          ...
+ *        ]
+ *     }
+ */
 router.get(
   "/accounts",
   auth,
@@ -89,19 +128,24 @@ router.get(
   })
 );
 
-// usage:  GET '/user/transactions'
-//
-// Returns: 
-//    { users: [
-//         <user attributes>, 
-//         Invoices: 
-//           <invoice attributes>, 
-//         Payments: 
-//           <invoice attributes>, 
-//         Orders: 
-//           <invoice attributes>, 
-//       ], ...
-//    }
+/**
+ * @api {get} /user_transactions Retrieve summary of user transactions
+ * 
+ * @apiName user_transactions
+ * @apiGroup Admin
+ *
+ * @apiPermission admin
+ * 
+ * @apiSuccess returns list of invoices, payments, orders for users
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "transactions" : [
+ *         { "username": 'Adam', "email": 'adam@gmail.com', invoices: 1, orders: 0, payments: 2 },
+         ...
+ *        ]
+ *     }
+ */
 router.get(
   "/user_transactions",
   auth,
@@ -143,14 +187,24 @@ router.get(
   })
 );
 
-// usage:  GET '/user_kyc'
-//
-// Returns: 
-//    { 
-//  users: [
-//    <list of user attributes>,
-//    kyc: <list of kyc attributes for this user>
-//  ] 
+/**
+ * @api {get} /user_kyc Retrieve user kyc details
+ * 
+ * @apiName user_kyc
+ * @apiGroup Admin
+ *
+ * @apiPermission admin
+ * 
+ * @apiSuccess returns list of kyc details for each user
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "users" : [
+ *         { "username": 'Adam', "email": 'adam@gmail.com', ... kyc_data... },
+         ...
+ *        ]
+ *     }
+ */
 router.get(
   "/user_kyc",
   auth,
