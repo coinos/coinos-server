@@ -232,13 +232,30 @@ router.post(
 
     debug('email: ' + email)
     debug('sms: ' + sms)
-
+    console.log(email + ' BODY: ' + JSON.stringify(req.body))
     await db.WaitingList.create({
       email: email,
       sms: sms    
     })
 
-    res.send({success: true, message: 'Added to waiting list'})
+    res.send({success: true, message: 'Added ' + email + ' to waiting list ' + sms})
+  })
+);
+
+router.get(
+  "/joinQueue",
+  ah(async (req, res) => {
+    const {email, sms} = req.query;
+
+    debug('email: ' + email)
+    debug('sms: ' + sms)
+    console.log(email + ' BODY: ' + JSON.stringify(req.body))
+    await db.WaitingList.create({
+      email: email,
+      sms: sms    
+    })
+
+    res.send({success: true, message: 'Added ' + email + ' to waiting list ' + sms})
   })
 );
 
