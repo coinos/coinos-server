@@ -108,17 +108,18 @@ router.get(
  */
  router.get(
   "/waiting_list",
-  auth,
+  // auth,
   ah(async (req, res) => {
     var queue = await knex
       .select(
-        'referrals.email', 
-        'referrals.sms', 
-        'referrals.created_at as requested',
+        'waiting_list.email', 
+        'waiting_list.sms', 
+        'waiting_list.created_at as requested',
         'users.id as current_user_id'
       )
       .from('waiting_list')
-      .leftJoin('users', 'users.email', 'referrals.email')
+      .leftJoin('users', 'users.email', 'waiting_list.email')
+      .where('waiting_list.id', '>', 0)
 
     debug('Waiting list: ' + JSON.stringify(queue))
     return res.send({queue: queue})
