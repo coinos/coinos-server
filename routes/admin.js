@@ -150,7 +150,7 @@ router.get(
     const {nonZero} = req.query
 
     var accounts = knex
-      .select('username', 'accounts.id as account_id', 'ticker', 'balance', knex.raw('LEFT(accounts.createdAt, 10) as created_at'))
+      .select('username', 'accounts.id as account_id', 'ticker', 'balance', knex.raw('LEFT(accounts.createdAt, 10) as created'), knex.raw('LEFT(accounts.updatedAt, 10) as updated'))
       .from('accounts')
       .leftJoin('users', 'users.id', 'accounts.user_id')
 
