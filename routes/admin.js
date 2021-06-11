@@ -90,6 +90,42 @@ router.get(
 );
 
 /**
+ * @api {get} /referrals Retrieve list of referral tokens
+ * @apiName referrals
+ * @apiGroup Admin
+ *
+ * @apiPermission admin
+ * 
+ * @apiSuccess returns list of referral tokens
+ * @apiSuccessExample {json} Success-Response:
+ *     HTTP/1.1 200 OK
+ *     {
+ *       "referrals" : [
+ *         { "token": '***', "status": 'pending', sponsor: 'Adam', user: 'newUsername1', expiry: null },
+ *         { "token": '***', "status": 'pending', sponsor: 'Adam', user: 'newUsername2', expiry: null },
+ *        ]
+ *     }
+ */
+ router.get(
+  "/waiting_list",
+  auth,
+  ah(async (req, res) => {
+    var queue = await knex
+      .select(
+        'referrals.email', 
+        'referrals.sms', 
+        'referrals.created_at as requested',
+        'users.id as current_user_id'
+      )
+      .from('waiting_list')
+      .leftJoin('users', 'users.email', 'referrals.email')
+
+    debug('Waiting list: ' + JSON.stringify(queue))
+    return res.send({queue: queue})
+  })
+);
+
+/**
  * @api {get} /accounts Retrieve list of accounts
  * @apiName accounts
  * @apiGroup Admin
