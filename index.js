@@ -76,7 +76,6 @@ require("./routes/payments");
 require("./routes/info");
 require("./routes/swaps");
 require("./routes/users");
-require("./routes/funding");
 
 //  Scope based Route Handling
 
