@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var debug = require('debug')('admin')
+var debug = require('debug')('debug')
 
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op;
@@ -184,23 +184,45 @@ router.get(
  *     }
  */
 router.get(
-  "/user_transactions",
-  auth,
+  "/transactions",
+  // auth,
   ah(async (req, res) => {
+    const {type, since} = req.query
+
     var transactions = knex
       .select(
-        'username',
-        'email',
-        knex.raw('COUNT(invoices.id) as invoices'),
-        knex.raw('COUNT(payments.id) as payments'),
-        knex.raw('COUNT(orders.id) as orders')
+        'users.username',
+        'users.email',
+        // knex.raw('LEFT(created_at, 10) as created')
+        // knex.raw('LEFT(updatedAt, 10) as updated')
+        // knex.raw('COUNT(invoices.id) as invoices'),
+        // knex.raw('COUNT(payments.id) as payments'),
+        // knex.raw('COUNT(orders.id) as orders')
       )
       .from('users')
-      .leftJoin('accounts', 'users.id', 'accounts.user_id')
-      .leftJoin('invoices', 'invoices.account_id', 'accounts.id')
-      .leftJoin('payments', 'payments.account_id', 'accounts.id')
-      .leftJoin('orders', 'orders.user_id', 'users.id')
       .groupBy('users.id')
+
+      if (type) {
+        transactions = transactions
+        .select(
+          knex.raw('COUNT(' + type + '.id) as ' + type),
+          // knex.raw('LEFT(' + type + '.updatedAt, 10) as updated')
+        )
+        .leftJoin(type, 'users.id', type + '.user_id')
+        .havingRaw(type + ' > ?', [0])
+      }
+
+      if (since) {
+        transactions = transactions
+        .where(type + '.updatedAt', '>=', since)
+      }
+
+      debug(type + ' since ' + since)
+      // .leftJoin('accounts', 'users.id', 'accounts.user_id')
+      // .leftJoin('invoices', 'invoices.account_id', 'accounts.id')
+      // .leftJoin('payments', 'payments.account_id', 'accounts.id')
+      // .leftJoin('orders', 'orders.user_id', 'users.id')
+      // .groupBy('users.id')
 
     // Alternative Sequelize query syntax (returns sub-tables as hash)
     // var referrals = await db.Referral.findAll({
