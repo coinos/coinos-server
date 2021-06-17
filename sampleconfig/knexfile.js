@@ -5,6 +5,7 @@ module.exports = {
   development: {
     client: 'mysql2',
     connection: {
+      host: 'mariadb',
       database: 'coinos',
       user:     'tester',
       password: 'pass'
