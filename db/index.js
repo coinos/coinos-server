@@ -3,8 +3,9 @@ const debug = require('debug')('debug');
 
 const dbOptions = require('./../config/knexfile.js')[process.env.NODE_ENV || "development"]
 
-db = new Sequelize(dbOptions.connection.database, dbOptions.connection.user, dbOptions.connection.password, {
-  host: "localhost",
+//db = new Sequelize(dbOptions.connection.database, dbOptions.connection.user, dbOptions.connection.password, {
+db = new Sequelize('coinos', 'root', 'password', {
+  host: "mariadb",
   dialect: "mariadb",
   logging: false,
   dialectOptions: { "multipleStatements": true, "timezone": "Etc/GMT+7" }
