@@ -4,12 +4,22 @@ const debug = require('debug')('debug');
 const dbOptions = require('./../config/knexfile.js')[process.env.NODE_ENV || "development"]
 
 db = new Sequelize(dbOptions.connection.database, dbOptions.connection.user, dbOptions.connection.password, {
-  host: dbOptions.connection.host,
+  host: "localhost",
   dialect: "mariadb",
   logging: false,
   dialectOptions: { "multipleStatements": true, "timezone": "Etc/GMT+7" }
 });
 
+db.authenticate()
+.then (response => {
+  console.log('DB Connection established');
+})
+.catch (err => {
+  console.debug('Error connecting to database: ' + err.message);
+  console.log(dbOptions.connection.database + '.' + dbOptions.connection.user);
+})
+
+console.log("DB: " + JSON.stringify(dbOptions))
 debug('knex dbOptions: ' + JSON.stringify(dbOptions))
 
 knex = require('knex')(dbOptions)
