@@ -75,12 +75,12 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             await faucet.reload({ transaction });
             await faucet.save({ transaction });
           }
-
-          total += fee - covered;
         }
+
+        total += fee - covered;
       }
 
-      if (limit && total > limit)
+      if (limit && total > limit + fee)
         throw new Error("Tx amount exceeds authorized amount");
 
       if (asset !== btc || total) {
