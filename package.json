@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "nodemon index.js",
-    "generate": "sequelize-automate -c config/index.js"
+    "generate": "sequelize-automate -c config/index.js",
+    "min": "DEBUG=debug SCOPE=min nodemon index.js"
   },
   "dependencies": {
     "@asoltys/bitcoin-core": "^3.0.7",
