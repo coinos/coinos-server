@@ -74,9 +74,6 @@ if (process.env.SCOPE !== 'MIN') {
   if (config.liquid) networks.push("liquid");
   if (config.lna) networks.push("lightning");
 
-
-  require("./lib/mail");
-
   require("./lib/rates");
   require("./lib/notifications");
   if (config.imap) require("./lib/mail");
@@ -89,6 +86,7 @@ if (process.env.SCOPE !== 'MIN') {
   require("./routes/payments");
 
   require("./routes/swaps");
+
 }
 
 //  Scope based Route Handling
