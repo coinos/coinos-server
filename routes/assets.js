@@ -7,13 +7,13 @@ let fetchAssets;
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
     );
-    app.set("assets", assets);
+    var liquid_assets = require('./../assets.json')
+    app.set("assets", liquid_assets);
   } catch (e) {
-    
-    assets = require('./../assets.json')
-    if (assets) {
-      app.set("assets", assets);
-      console.debug('using static assets...');
+    var liquid_assets = require('./../assets.json')
+    if (liquid_assets) {
+      app.set("assets", liquid_assets);
+      console.debug('using static assets...' + e.message);
     } else {
       l.error("error fetching assets", e.message);
       res.status(500).send("error fetching assets");
@@ -27,11 +27,12 @@ app.get(
   "/assets",
   ah(async (req, res) => {
     if (app.get("assets")) {
+
       const assets = app.get("assets");
+
       const accounts = await db.Account.findAll({
         // group: ["asset"]
       });
-
       Object.keys(assets).map(a => {
         assets[a].registered = true;
         if (!assets[a].asset) assets[a].asset = assets[a].asset_id;
@@ -47,7 +48,6 @@ app.get(
         )
           delete assets[a];
       });
-
       accounts.map(({ asset, name, domain, ticker, precision }) => {
         if (!assets[asset])
           assets[asset] = {
@@ -60,8 +60,10 @@ app.get(
       });
 
       res.send(assets);
-    } else
+    } else {
+	    console.log('error getting blockstream assets');
       res.status(500).send("Problem fetching blockstream asset registry data");
+    }
   })
 );
 
