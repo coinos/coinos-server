@@ -4,17 +4,20 @@ const crypto = require("crypto");
 let fetchAssets;
 (fetchAssets = async () => {
   try {
-    /*
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
     );
-    */
-    assets = require("../assets.json");
-
     app.set("assets", assets);
   } catch (e) {
-    l.error("error fetching assets", e.message);
-    res.status(500).send("error fetching assets");
+    
+    assets = require('./../assets.json')
+    if (assets) {
+      app.set("assets", assets);
+      console.debug('using static assets...');
+    } else {
+      l.error("error fetching assets", e.message);
+      res.status(500).send("error fetching assets");
+    }
   }
 
   setTimeout(fetchAssets, 7200000);
@@ -26,7 +29,7 @@ app.get(
     if (app.get("assets")) {
       const assets = app.get("assets");
       const accounts = await db.Account.findAll({
-        group: ["asset"]
+        // group: ["asset"]
       });
 
       Object.keys(assets).map(a => {
@@ -93,7 +96,7 @@ app.post(
         ticker,
         version
       };
-
+      
       l.info("attempting issuance", req.user.username, contract);
 
       sha256.update(JSON.stringify(contract));
