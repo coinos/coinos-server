@@ -29,8 +29,8 @@ const attributes = {
   },
   status: {
     type: DataTypes.ENUM,
-    values: ['pending', 'active', 'expired', 'cancelled'],
-    defaultValue: 'pending'
+    values: ['available', 'used', 'expired', 'cancelled'],
+    defaultValue: 'available'
   }
 }
 
