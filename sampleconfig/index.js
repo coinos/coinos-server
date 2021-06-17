@@ -1,13 +1,6 @@
 const debug = require("debug")("test");
 
-const db = {
-  user: "root",
-  password: "password",
-  database: "coinos",
-  host: "maria",
-  dialect: "mariadb",
-  dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" },
-};
+const db = require('./knexfile.js')[process.env.NODE_ENV || 'development'] 
 
 const btcasset =
   "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -15,10 +8,6 @@ const btcasset =
 module.exports = {
   db,
   clientVersion: "3b96359d6a6ce68fe4a32f495fc9a6f78af0aa63",
-  knex: {
-    client: "mysql2",
-    connection: db,
-  },
   jwt: "secret",
   port: 3119,
   bitcoin: {
@@ -51,4 +40,8 @@ module.exports = {
     clightning: true,
     dir: "/app/config/lightning/regtest",
   },
+  mailgun: {
+    apiKey: "key-59cd7ea2286ae3553d6b50cf7ddf924e",
+    domain: "coinos.io"
+  }
 };
