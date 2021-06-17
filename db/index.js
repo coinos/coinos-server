@@ -1,26 +1,18 @@
 const Sequelize = require("sequelize");
-const conf = config.db;
-const debug = require('debug')('test')
+const debug = require('debug')('debug');
 
-debug('DB connection: ', conf.host + ' : ' + conf.database + ' : ' + conf.user)
+const dbOptions = require('./../config/knexfile.js')[process.env.NODE_ENV || "development"]
 
-db = new Sequelize(conf.database, conf.user, conf.password, {
-  host: conf.host,
-  dialect: conf.dialect,
+db = new Sequelize(dbOptions.connection.database, dbOptions.connection.user, dbOptions.connection.password, {
+  host: dbOptions.connection.host,
+  dialect: "mariadb",
   logging: false,
-  dialectOptions: conf.dialectOptions
+  dialectOptions: { "multipleStatements": true, "timezone": "Etc/GMT+7" }
 });
 
-debug('knex conf: ' + JSON.stringify(conf))
-knex = require('knex')({
-    client: 'mysql2',
-    connection: {
-      user: conf.user,
-      password: conf.password,
-      database: conf.database,
-      host: conf.host
-    }
-})
+debug('knex dbOptions: ' + JSON.stringify(dbOptions))
+
+knex = require('knex')(dbOptions)
 
 require("./models/accounts.js");
 require("./models/codes.js");
