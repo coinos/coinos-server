@@ -5,7 +5,7 @@ const getAccount = require("../lib/account");
 const { Op, col } = require("sequelize");
 const uuidv4 = require("uuid/v4");
 
-const debug = require('debug')('test')
+const debug = require('debug')('debug')
 
 const shallow = a => {
   let b = {};
