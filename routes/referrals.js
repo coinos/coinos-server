@@ -1,8 +1,8 @@
 var express = require('express');
 var router = express.Router();
-var debug = require('debug')('referral')
+var debug = require('debug')('debug')
 
-const { v4: uuidv4 } = require('uuid')
+const { v4: uuidv4 } = require('uuid');
 
 router.get('/', function(req, res, next) {
   res.send('list of referrals...');
@@ -16,7 +16,7 @@ router.get('/', function(req, res, next) {
 //   sponsor_id (= user.id)
 // Changes to DB: 
 //    adds record to referrals table:
-//      { token: <uuid>, sponsor_id: <user.id>, status: "pending" }
+//      { token: <uuid>, sponsor_id: <user.id>, status: "available" }
 
 /**
  * @api {post} /grant Grant Referral code
@@ -34,7 +34,7 @@ router.get('/', function(req, res, next) {
  *     HTTP/1.1 200 OK
  *     {
  *        "token": "*********", 
- *        "status": "pending", 
+ *        "status": "available", 
  *        "expiry": null
  *     }
  */
@@ -50,11 +50,11 @@ router.post(
     var ref = await db.Referral.create({
       sponsor_id: sponsor_id, 
       token: token, 
-      status: 'pending'
+      status: 'available'
     })
 
     debug('generated referral: ' + JSON.stringify(ref))
-    return res.send({token: token, status: 'pending', expiry: expiry})
+    return res.send({token: token, status: 'available', expiry: expiry})
   })
 );
 
@@ -74,7 +74,7 @@ router.post(
  *     HTTP/1.1 200 OK
  *     {
  *        "token": "*********", 
- *        "status": "pending", 
+ *        "status": "available", 
  *        "expiry": null
  *     }
  */
@@ -90,11 +90,11 @@ router.get(
     var ref = await db.Referral.create({
       sponsor_id: sponsor_id, 
       token: token, 
-      status: 'pending'
+      status: 'available'
     })
 
     debug('generated referral: ' + JSON.stringify(ref))
-    return res.send({token: token, status: 'pending', expiry: expiry})
+    return res.send({token: token, status: 'available', expiry: expiry})
   })
 );
 
@@ -116,7 +116,7 @@ router.get(
  *     HTTP/1.1 200 OK
  *     {
  *       "tokens": [
- *         {"token": "*********", "status": "pending", "expiry": null}
+ *         {"token": "*********", "status": "available", "expiry": null}
  *       ]
  *     }
  */
@@ -128,17 +128,27 @@ router.get(
   auth,
   ah(async (req, res) => {
     const {sponsor_id} = req.params
+    const {status} = req.query
 
-    var tokens = await db.Referral.findAll({
-      // attributes: ['token', 'created_at', 'user_id', 'status'],
-      include: [
-        { model: db.User, as: 'user', attributes: ['username']}
-      ],
-      where: { sponsor_id: sponsor_id }
-    })
+    var tokens = knex
+      .select(
+        'token',
+        'created_at',
+        knex.raw('LEFT(created_at,10) as created'),
+        'username',
+        'status'
+      )
+      .from('referrals')
+      .leftJoin('users', 'users.id', 'referrals.user_id')
+      .where('sponsor_id', 'like', sponsor_id)
 
-    debug('my tokens: ' + JSON.stringify(tokens))
-    return res.send({tokens: tokens})
+    if (status && status !== 'all') tokens = tokens.where('status', 'like', status)
+    console.log(sponsor_id + ' : ' + status)
+    const found = await tokens
+
+    debug('my tokens: ' + JSON.stringify(found))
+
+    return res.send({tokens: found})
   })
 );
 
@@ -161,7 +171,7 @@ router.get(
  *       "verified": true
  *     }
  * 
- * @apiDescription referral token is updated from 'pending' to 'active'
+ * @apiDescription referral token is updated from 'available' to 'used'
  * @apiDescription referral token is updated with existing user_id
  */
 router.get(
@@ -182,11 +192,11 @@ router.get(
 
     if (found && found.length) {
       debug('found referral: ' + JSON.stringify(found))
-      if (found[0].status === 'pending') {
+      if (found[0].status === 'available') {
 
         await db.Referral.update(
           { 
-            status: 'active',
+            status: 'used',
             user_id: user_id,
             updated_at: new Date().toISOString().substring(0,10)
           },
@@ -222,7 +232,7 @@ router.get(
  *       "message": 'Added to waiting list'
  *     }
  * 
- * @apiDescription referral token is updated from 'pending' to 'active'
+ * @apiDescription referral token is updated from 'available' to 'used'
  * @apiDescription referral token is updated with existing user_id
  */
 router.post(
@@ -282,7 +292,7 @@ router.get(
     var referred = await db.Referral.findOne({
       where: {
         user_id: user_id,
-        status: 'active'
+        status: 'used'
       }
     })
     
