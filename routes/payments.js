@@ -138,10 +138,14 @@ ah(async () => {
     require("./liquid/receive");
 
     setTimeout(async () => {
-      const address = await lq.getNewAddress();
-      const { hdkeypath } = await lq.getAddressInfo(address);
-      const parts = hdkeypath.split("/");
-      app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+      try {
+        const address = await lq.getNewAddress();
+        const { hdkeypath } = await lq.getAddressInfo(address);
+        const parts = hdkeypath.split("/");
+        app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+      } catch(e) {
+        console.log("Problem getting liquid address", e.message);
+      } 
     }, 50);
   }
 
