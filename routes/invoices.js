@@ -27,6 +27,10 @@ app.post(
       let { liquidAddress, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
+      if (invoice.amount < 0) throw new Error("amount out of range");
+      if (invoice.tip > invoice.amount || invoice.tip > 1000000 || invoice.tip < 0)
+        throw new Error("tip amount out of range");
+
       if (liquidAddress) {
         l.info("conversion request for", liquidAddress, invoice.text);
         convert[invoice.text] = { address: liquidAddress, tx };
@@ -43,7 +47,7 @@ app.post(
       if (!user) throw new Error("user not provided");
       if (!invoice.currency) invoice.currency = user.currency;
       if (!invoice.rate) invoice.rate = app.get("rates")[invoice.currency];
-      if (invoice.tip > invoice.amount || invoice.tip > 1000000) throw new Error("tip is too large")
+
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
 
@@ -54,7 +58,7 @@ app.post(
         invoice.amount,
         invoice.tip,
         invoice.currency,
-        `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`,
+        `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`
       );
 
       if (!invoice.tip) invoice.tip = 0;
