@@ -2,6 +2,9 @@ const reverse = require("buffer-reverse");
 const zmq = require("zeromq");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
+const wretch = require("wretch");
+const fetch = require("node-fetch");
+wretch().polyfills({ fetch });
 
 const bitcoin = require("bitcoinjs-lib");
 
@@ -84,7 +87,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           for (let i = 0; i < tx.ins.length; i++) {
             let { hash, index } = tx.ins[i];
             hash = reverse(hash).toString("hex");
-            console.log(hash);
             let hex = await bc.getRawTransaction(hash);
             let inputTx = bitcoin.Transaction.fromHex(hex);
             totalInputs += inputTx.outs[index].value;
@@ -104,7 +106,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             tip,
             confirmed,
             address,
-            network: "bitcoin"
+            network: "bitcoin",
+            invoice_id: invoice.id
           });
           payment = payment.get({ plain: true });
           payment.account = account.get({ plain: true });
@@ -154,13 +157,24 @@ setInterval(async () => {
             {
               model: db.User,
               as: "user"
+            },
+            {
+              model: db.Invoice,
+              as: "invoice"
             }
           ],
           lock: transaction.LOCK.UPDATE,
           transaction
         });
 
- 
+        if (p.invoice && p.invoice.webhook) {
+              l.info("calling webhook", p.invoice.webhook);
+          console.log(await wretch()
+            .url(p.invoice.webhook)
+            .post({ oh: "yeah" })
+            .json());
+        }
+
         if (p && p.address) address = p.address;
         if (p && p.user) user = p.user;
 
@@ -194,7 +208,12 @@ setInterval(async () => {
 
       let c = convert[address];
       if (address && c) {
-        l.info("bitcoin detected to conversion address", address, c.address, user.username);
+        l.info(
+          "bitcoin detected to conversion address",
+          address,
+          c.address,
+          user.username
+        );
         user.account = account;
 
         await sendLiquid({
@@ -206,6 +225,10 @@ setInterval(async () => {
       }
     }
   } catch (e) {
-    l.error("problem processing queued bitcoin transaction", e.message, e.stack);
+    l.error(
+      "problem processing queued bitcoin transaction",
+      e.message,
+      e.stack
+    );
   }
 }, 1000);

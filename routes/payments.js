@@ -17,6 +17,7 @@ ah(async () => {
     l.warn("couldn't read exceptions file", e.message);
   }
 
+  try {
   (
     await db.Invoice.findAll({
       include: {
@@ -28,6 +29,9 @@ ah(async () => {
     if (address && user) addresses[address] = user.username;
     if (unconfidential && user) addresses[unconfidential] = user.username;
   });
+  } catch(e) {
+    console.log(e);
+  } 
 
   try {
     const accounts = await db.Account.findAll({
@@ -50,6 +54,7 @@ ah(async () => {
       attributes: ["hash"],
     })
   ).map((p) => p.hash);
+
 
   setInterval(async () => {
     const unconfirmed = (
@@ -129,6 +134,7 @@ ah(async () => {
       }
     }, 50);
   }
+  /*
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
@@ -150,7 +156,6 @@ ah(async () => {
       }
     }, 50);
   }
-
 
   app.get(
     "/payments",
@@ -194,4 +199,5 @@ ah(async () => {
       }
     })
   );
+*/
 })();

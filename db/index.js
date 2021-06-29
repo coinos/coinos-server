@@ -1,28 +1,30 @@
 const Sequelize = require("sequelize");
-const debug = require('debug')('debug');
+const debug = require("debug")("debug");
 
-const dbOptions = require('./../config/knexfile.js')[process.env.NODE_ENV || "development"]
+const dbOptions = require("./../config/knexfile.js")[
+  process.env.NODE_ENV || "development"
+];
 
-db = new Sequelize(dbOptions.connection.database, dbOptions.connection.user, dbOptions.connection.password, {
-  host: dbOptions.connection.host,
-  dialect: "mariadb",
-  logging: false,
-  dialectOptions: { "multipleStatements": true, "timezone": "Etc/GMT+7" }
+db = new Sequelize(
+  dbOptions.connection.database,
+  dbOptions.connection.user,
+  dbOptions.connection.password,
+  {
+    host: dbOptions.connection.host,
+    dialect: "mariadb",
+    logging: false,
+    dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" }
+  }
+);
+
+db.authenticate().catch(err => {
+  console.debug("Error connecting to database: " + err.message);
+  console.log(dbOptions.connection.database + "." + dbOptions.connection.user);
 });
 
-db.authenticate()
-.then (response => {
-  console.log('DB Connection established');
-})
-.catch (err => {
-  console.debug('Error connecting to database: ' + err.message);
-  console.log(dbOptions.connection.database + '.' + dbOptions.connection.user);
-})
+debug("knex dbOptions: " + JSON.stringify(dbOptions));
 
-console.log("DB: " + JSON.stringify(dbOptions))
-debug('knex dbOptions: ' + JSON.stringify(dbOptions))
-
-knex = require('knex')(dbOptions)
+knex = require("knex")(dbOptions);
 
 require("./models/accounts.js");
 require("./models/codes.js");
@@ -62,7 +64,7 @@ require("./normalized/waiting_list.js");
 // require("./normalized/orders.js");
 // require("./normalized/invoices.js");
 
-const { User, Account, Payment, Invoice, Key, Order, Referral} = db;
+const { User, Account, Payment, Invoice, Key, Order, Referral } = db;
 
 // move relationships to specfic models
 User.hasMany(Account, {
@@ -125,6 +127,11 @@ Payment.belongsTo(User, {
   foreignKey: "user_id"
 });
 
+Payment.belongsTo(Invoice, {
+  as: "invoice",
+  foreignKey: "invoice_id"
+});
+
 Order.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
@@ -158,6 +165,5 @@ Referral.belongsTo(User, {
   foreignKey: "user_id"
 });
 
-debug('added model relationships')
+debug("added model relationships");
 db.Order = Order;
-

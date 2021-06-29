@@ -58,7 +58,6 @@ require("./db");
 require("./lib/utils");
 require("./lib/sockets");
 require("./lib/passport");
-  
 require("./lib/register");
 require("./lib/send");
 
@@ -69,24 +68,20 @@ require("./routes/users");
 
 // Exclude plugins for minimalist version
 if (process.env.SCOPE !== 'MIN') {
-  
   if (config.bitcoin) networks.push("bitcoin");
   if (config.liquid) networks.push("liquid");
   if (config.lna) networks.push("lightning");
 
   require("./lib/rates");
   require("./lib/notifications");
+
   if (config.imap) require("./lib/mail");
-  
   if (config.lnurl) require("./routes/lnurl");
   if (config.mailgun) require("./routes/funding");
 
-  require("./routes/funding");
   require("./routes/invoices");
   require("./routes/payments");
-
   require("./routes/swaps");
-
 }
 
 //  Scope based Route Handling

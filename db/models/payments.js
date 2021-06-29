@@ -19,6 +19,15 @@ const attributes = {
     comment: null,
     field: "account_id"
   },
+  invoice_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "invoice_id"
+  },
   user_id: {
     type: DataTypes.INTEGER(11),
     allowNull: true,

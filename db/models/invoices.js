@@ -145,6 +145,15 @@ const attributes = {
     comment: null,
     field: "amount"
   },
+  webhook: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "webhook"
+  },
   tip: {
     type: DataTypes.DOUBLE,
     allowNull: true,

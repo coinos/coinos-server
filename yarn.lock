@@ -4566,6 +4566,11 @@ wrappy@1:
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
   integrity sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8=
 
+wretch@^1.7.4:
+  version "1.7.4"
+  resolved "https://registry.yarnpkg.com/wretch/-/wretch-1.7.4.tgz#d71fc16ed01a8fd549df6cd06f205c6d13e2cf73"
+  integrity sha512-gBET7PgqgJ89GPBHujw0+arM/8YtWPqG6od8dRMTumvr3xvSlONpp2ANYqbpSL+cSoe6g97quZTgwM0jNn6riA==
+
 write-file-atomic@^3.0.0:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/write-file-atomic/-/write-file-atomic-3.0.3.tgz#56bd5c5a5c70481cd19c571bd39ab965a5de56e8"

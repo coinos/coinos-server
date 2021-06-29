@@ -55,7 +55,7 @@ app.post(
         invoice.amount,
         invoice.tip,
         invoice.currency,
-        `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`,
+        invoice.text && `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`,
       );
 
       if (!invoice.tip) invoice.tip = 0;

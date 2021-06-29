@@ -79,7 +79,7 @@ services:
       - ${LIQUID_ELECTRS_RPC_PORT}:60401
       - ${LIQUID_ELECTRS_PORT}:3002
     volumes:
-      - ./liquidregtest/liquid-config/:/config
+      - ./liquid/:/config
     restart: unless-stopped
   esplora-liquid:
     image: vulpemventures/esplora:latest
