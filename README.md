@@ -4,7 +4,7 @@ Coinos is a bitcoin wallet app that supports payments over the <a href="https://
 
 This repository contains the code for the backend API server which is implemented as a NodeJS application. The code for the frontend UI is tracked separately <a href="https://github.com/asoltys/coinos.io">here</a> (but is automatically installed & started via the Docker way outlined below). 
 
-## Install/Run (the Docker way)*
+## Install/Run (the Docker way)
 
 ### Requirements 
 
@@ -39,17 +39,6 @@ To shutdown coinos and all of its containers/services, run `docker-compose down`
 At anypoint to purge the database and start with a new one run `rm -rf mysql` and then `mkdir mysql` and then the same steps following from that point as outlined above. 
 
 To review a log of individual containers use `docker-compose app` or `docker-compose maria` etc; container names are available in `docker-compose.yml` or via `docker-compose ps` when they are running.  `docker images` will show you a list of the images installed on your system and `docker image rm [IMAGE ID]` removes them.
-
-*Known issue: coinos-server app container may currently crash in non production environment, to work around this you may edit `package.json` and edit the following line
-
-    "start" : "nodemon index.js", 
-    # change to: 
-    "start" : "SCOPE=MIN nodemon index.js",
-
-and then restart the container ie- `docker-compose restart app`
-
-Note this workaround disables most functionality including Bitcoin, Lightning, and Liquid interactions. 
-
 
 #### Volumes and local filesystem changes
 
