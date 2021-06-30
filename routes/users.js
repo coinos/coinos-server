@@ -160,7 +160,8 @@ app.post(
         return res.status(500).send("Username taken");
       } else {
         sockets[username] = sockets[user.username];
-        if (user.username !== username) l.info("changing username", user.username, username);
+        if (user.username !== username)
+          l.info("changing username", user.username, username);
         user.username = username;
 
         token = jwt.sign({ username }, config.jwt);
@@ -335,10 +336,7 @@ app.post(
         (user.password &&
           !(await bcrypt.compare(req.body.password, user.password)))
       ) {
-        l.warn(
-          "invalid username or password attempt",
-          req.body.username
-        );
+        l.warn("invalid username or password attempt", req.body.username);
         return res.status(401).end();
       }
 
@@ -438,11 +436,22 @@ app.get(
               : config.liquid.network
           ];
         type = "p2sh";
-        
+
         // async request to node to bump its internal index but don't use result
-        lq.getNewAddress().catch(console.error);
+        lq.getNewAddress().catch((e) => l.warn("Problem bumping liquid address index", e.message))
 
         i = parseInt(app.get("lqAddressIndex"));
+
+        if (!i) {
+          const { hdkeypath } = await lq.getAddressInfo(
+            await lq.getNewAddress()
+          );
+          const parts = hdkeypath.split("/");
+          i = parts[parts.length - 1].slice(0, -1);
+        }
+
+        if (!i) throw new Error("Problem generating address");
+
         hd = fromBase58(config.liquid.masterkey, n).derivePath(`m/0'/0'/${i}'`);
         app.set("lqAddressIndex", i + 1);
       } else {
