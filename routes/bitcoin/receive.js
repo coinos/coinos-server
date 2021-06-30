@@ -1,5 +1,5 @@
 const reverse = require("buffer-reverse");
-const zmq = require("zeromq");
+const zmq = require("zeromq/v5-compat");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 
