@@ -113,14 +113,12 @@ The bitcoind and elementsd nodes can be a pruned if you want to limit the amount
 
     git clone git@github.com:coinos/coinos-server.git
     cd coinos-server
-    cp -rf sampleconfig ./config
+    cp -rf sampleconfig ./config    # edit config files as necessary for your local setup
     cp .env.sample .env
     yarn
-
-    yarn min # runs the minimal version (Precludes valid connections with bitcoin / liquid / lightning networks) -->
-
-    (To run full system with 3rd party networks above, edit applicable key values in config/index.js file)
-
+    yarn start 
+    # or, alternatively
+    yarn min    # to run a stripped down development version that doesn't do payments or talk to any nodes
 
 #### Database Setup
 
