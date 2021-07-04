@@ -19,9 +19,12 @@ The reason for running two lightning nodes is so that one can create invoices wh
 
     git clone https://github.com/asoltys/coinos-server
     cd coinos-server
-    cp ./config/samples/private.json ./config/ <-- edit with connection info for servers and keys for 3rd party API's -->
+    cp -R ./sampleconfigs ./config <-- edit knexfile.js with DB connection info -->
     yarn
-    yarn start
+
+    yarn min ... (or npm run min) <-- This runs the minimal version (Precludes valid connections with bitcoin / liquid / lightning networks) -->
+
+    (To run full system with 3rd party networks above, edit applicable key values in config/index.js file)
 
 ## Database Setup
 
