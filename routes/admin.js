@@ -207,7 +207,7 @@ router.get(
 
         transactions = transactions
         .select(
-          knex.raw('COUNT(' + types[i] + '.id) as ' + types[i]),
+          knex.raw('COUNT(DISTINCT ' + types[i] + '.id) as ' + types[i]),
           knex.raw('LEFT(MAX(' + types[i] + '.updatedAt), 10) as ' + stamp)
         )
         .leftJoin(types[i], 'users.id', types[i] + '.user_id')
