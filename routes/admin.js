@@ -191,7 +191,6 @@ router.get(
 
     var transactions = knex
       .select(
-        'id',
         'users.username',
         'users.email',
         // knex.raw('LEFT(created_at, 10) as created')
