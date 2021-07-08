@@ -19,3 +19,4 @@ lnurl-server.sqlite3
 watcher.log
 build.json
 build.sh
+watcher.sh
