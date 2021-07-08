@@ -59,6 +59,8 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
     }
   );
 
+  l.info("funding tx for fee estimate", tx);
+
   tx = await node.fundRawTransaction(tx, params);
 
   let blinded = await node.blindRawTransaction(tx.hex);

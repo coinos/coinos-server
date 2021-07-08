@@ -438,7 +438,9 @@ app.get(
         type = "p2sh";
 
         // async request to node to bump its internal index but don't use result
-        lq.getNewAddress().catch((e) => l.warn("Problem bumping liquid address index", e.message))
+        lq.getNewAddress().catch(e =>
+          l.warn("Problem bumping liquid address index", e.message)
+        );
 
         i = parseInt(app.get("lqAddressIndex"));
 
