@@ -250,7 +250,7 @@ CREATE TABLE `referrals` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `token` varchar(255) DEFAULT NULL,
   `expiry` date DEFAULT NULL,
-  `status` enum('pending','active','expired','cancelled') DEFAULT NULL,
+  `status` enum('available', 'pending','active','expired','cancelled') DEFAULT NULL,
   `sponsor_id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
