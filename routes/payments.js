@@ -134,7 +134,6 @@ ah(async () => {
       }
     }, 50);
   }
-  /*
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
@@ -152,7 +151,7 @@ ah(async () => {
         const parts = hdkeypath.split("/");
         app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
       } catch (e) {
-        console.error(e);
+        console.error("Problem getting liquid address", e);
       }
     }, 50);
   }
@@ -199,5 +198,4 @@ ah(async () => {
       }
     })
   );
-*/
 })();

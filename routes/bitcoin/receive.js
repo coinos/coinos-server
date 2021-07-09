@@ -2,9 +2,6 @@ const reverse = require("buffer-reverse");
 const zmq = require("zeromq/v5-compat");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
-const wretch = require("wretch");
-const fetch = require("node-fetch");
-wretch().polyfills({ fetch });
 
 const bitcoin = require("bitcoinjs-lib");
 
@@ -117,6 +114,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           emit(user.username, "payment", payment);
           l.info("bitcoin detected", user.username, value);
           notify(user, `${value} SAT payment detected`);
+          await callWebhook(invoice, payment);
         }
       } catch (e) {
         console.log(e);
@@ -155,25 +153,17 @@ setInterval(async () => {
               as: "account"
             },
             {
-              model: db.User,
-              as: "user"
-            },
-            {
               model: db.Invoice,
               as: "invoice"
+            },
+            {
+              model: db.User,
+              as: "user"
             }
           ],
           lock: transaction.LOCK.UPDATE,
           transaction
         });
-
-        if (p.invoice && p.invoice.webhook) {
-              l.info("calling webhook", p.invoice.webhook);
-          console.log(await wretch()
-            .url(p.invoice.webhook)
-            .post({ oh: "yeah" })
-            .json());
-        }
 
         if (p && p.address) address = p.address;
         if (p && p.user) user = p.user;
@@ -199,6 +189,7 @@ setInterval(async () => {
           emit(user.username, "payment", p);
           l.info("bitcoin confirmed", user.username, p.amount, p.tip);
           notify(user, `${total} SAT payment confirmed`);
+          await callWebhook(p.invoice, p);
         } else {
           l.warn("couldn't find bitcoin payment", hash);
         }

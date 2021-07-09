@@ -101,7 +101,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                 user_id: user.id,
                 network: "liquid"
               },
-              order: [["id", "DESC"]]
+              order: [["id", "DESC"]],
             });
 
             if (!invoice) return;
@@ -175,6 +175,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             emit(user.username, "account", payment.account);
             l.info("liquid detected", address, user.username, asset, value);
             notify(user, `${value} SAT payment detected`);
+            await callWebhook(invoice, payment);
           });
         }
       } catch (e) {
@@ -187,75 +188,44 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 let queue = {};
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
-  const payments = await db.Payment.findAll({
-    where: { confirmed: 0 }
-  });
-
-  const block = Block.fromHex(message.toString("hex"), true);
-
-  let hash, json;
-
   try {
+    const payments = await db.Payment.findAll({
+      where: { confirmed: 0 }
+    });
+
+    const block = Block.fromHex(message.toString("hex"), true);
+
+    let hash, json;
+
     hash = await lq.getBlockHash(block.height);
     json = await lq.getBlock(hash, 2);
-  } catch (e) {
-    return console.log(e);
-  }
 
-  json.tx.map(async tx => {
-    if (issuances[tx.txid]) {
-      await db.transaction(async transaction => {
-        const {
-          user_id,
-          asset,
-          asset_amount,
-          asset_payment_id,
-          token,
-          token_amount,
-          token_payment_id
-        } = issuances[tx.txid];
+    json.tx.map(async tx => {
+      if (issuances[tx.txid]) {
+        await db.transaction(async transaction => {
+          const {
+            user_id,
+            asset,
+            asset_amount,
+            asset_payment_id,
+            token,
+            token_amount,
+            token_payment_id
+          } = issuances[tx.txid];
 
-        const user = await getUserById(user_id);
+          const user = await getUserById(user_id);
 
-        let account = await db.Account.findOne({
-          where: { user_id, asset },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
-        account.balance = asset_amount * SATS;
-        account.pending = 0;
-        await account.save({ transaction });
-
-        let payment = await db.Payment.findOne({
-          where: { id: asset_payment_id },
-          include: {
-            model: db.Account,
-            as: "account"
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
-
-        payment.confirmed = true;
-        await payment.save({ transaction });
-        payment = payment.get({ plain: true });
-        payment.account = account.get({ plain: true });
-
-        emit(user.username, "account", account);
-        emit(user.username, "payment", payment);
-
-        if (token) {
-          account = await db.Account.findOne({
-            where: { user_id, asset: token },
+          let account = await db.Account.findOne({
+            where: { user_id, asset },
             lock: transaction.LOCK.UPDATE,
             transaction
           });
-          account.balance = token_amount * SATS;
+          account.balance = asset_amount * SATS;
           account.pending = 0;
           await account.save({ transaction });
 
-          payment = await db.Payment.findOne({
-            where: { id: token_payment_id },
+          let payment = await db.Payment.findOne({
+            where: { id: asset_payment_id },
             include: {
               model: db.Account,
               as: "account"
@@ -266,20 +236,50 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 
           payment.confirmed = true;
           await payment.save({ transaction });
-
           payment = payment.get({ plain: true });
           payment.account = account.get({ plain: true });
 
           emit(user.username, "account", account);
           emit(user.username, "payment", payment);
-        }
-      });
-    } else if (payments.find(p => p.hash === tx.txid)) queue[tx.txid] = 1;
-  });
+
+          if (token) {
+            account = await db.Account.findOne({
+              where: { user_id, asset: token },
+              lock: transaction.LOCK.UPDATE,
+              transaction
+            });
+            account.balance = token_amount * SATS;
+            account.pending = 0;
+            await account.save({ transaction });
+
+            payment = await db.Payment.findOne({
+              where: { id: token_payment_id },
+              include: {
+                model: db.Account,
+                as: "account"
+              },
+              lock: transaction.LOCK.UPDATE,
+              transaction
+            });
+
+            payment.confirmed = true;
+            await payment.save({ transaction });
+
+            payment = payment.get({ plain: true });
+            payment.account = account.get({ plain: true });
+
+            emit(user.username, "account", account);
+            emit(user.username, "payment", payment);
+          }
+        });
+      } else if (payments.find(p => p.hash === tx.txid)) queue[tx.txid] = 1;
+    });
+  } catch (e) {
+    return console.log(e);
+  }
 });
 
 setInterval(async () => {
-  //  throw new Error("boom");
   try {
     const arr = Object.keys(queue);
 
@@ -294,6 +294,10 @@ setInterval(async () => {
             {
               model: db.Account,
               as: "account"
+            },
+            {
+              model: db.Invoice,
+              as: "invoice"
             },
             {
               model: db.User,
@@ -334,6 +338,7 @@ setInterval(async () => {
           );
 
           notify(user, `${total} SAT payment confirmed`);
+          await callWebhook(p.invoice, p);
         } else {
           l.warn("couldn't find liquid payment", hash);
         }
@@ -343,7 +348,12 @@ setInterval(async () => {
 
       let c = convert[address];
       if (address && c) {
-        l.info("liquid detected for conversion request", address, c.address, user.username);
+        l.info(
+          "liquid detected for conversion request",
+          address,
+          c.address,
+          user.username
+        );
 
         user.account = account;
 
