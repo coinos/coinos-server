@@ -57,17 +57,18 @@ server = require("http").Server(app);
 require("./db");
 require("./lib/utils");
 require("./lib/sockets");
+require("./lib/webhooks");
 require("./lib/passport");
 require("./lib/register");
 require("./lib/send");
 
 require("./routes/assets");
 require("./routes/info");
-  
+
 require("./routes/users");
 
 // Exclude plugins for minimalist version
-if (process.env.SCOPE !== 'MIN') {
+if (process.env.SCOPE !== "MIN") {
   if (config.bitcoin) networks.push("bitcoin");
   if (config.liquid) networks.push("liquid");
   if (config.lna) networks.push("lightning");
@@ -86,11 +87,11 @@ if (process.env.SCOPE !== 'MIN') {
 
 //  Scope based Route Handling
 
-var referralsRouter = require('./routes/referrals.js');
-app.use('/referrals', referralsRouter)
+var referralsRouter = require("./routes/referrals.js");
+app.use("/referrals", referralsRouter);
 
-var adminRouter = require('./routes/admin.js');
-app.use('/admin', adminRouter)
+var adminRouter = require("./routes/admin.js");
+app.use("/admin", adminRouter);
 
 app.use((err, req, res, next) => {
   const details = {
@@ -116,6 +117,6 @@ server.listen(config.port, () =>
 
 process.on("SIGINT", process.exit);
 
-process.on('uncaughtException', function (exception) {
+process.on("uncaughtException", function(exception) {
   console.log(exception);
 });
