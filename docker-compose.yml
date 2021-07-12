@@ -42,13 +42,21 @@ services:
     volumes:
       - ./config/liquid:/config
     restart: unless-stopped
-  lightning:
+  la:
     image: elementsproject/lightningd:latest
-    container_name: lightning 
+    container_name: la
     environment:
       LIGHTNINGD_NETWORK: regtest
     volumes:
       - ./config/lightning:/root/.lightning
+    restart: unless-stopped
+  lb:
+    image: elementsproject/lightningd:latest
+    container_name: lb
+    environment:
+      LIGHTNINGD_NETWORK: regtest
+    volumes:
+      - ./config/lightningb:/root/.lightning
     restart: unless-stopped
   electrs-liquid:
     image: vulpemventures/electrs-liquid:latest
