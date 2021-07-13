@@ -91,7 +91,7 @@ var referralsRouter = require("./routes/referrals.js");
 app.use("/referrals", referralsRouter);
 
 var adminRouter = require("./routes/admin.js");
-app.use("/admin", adminRouter);
+app.use("/admin", adminAuth, adminRouter);
 
 app.use((err, req, res, next) => {
   const details = {

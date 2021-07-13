@@ -10,6 +10,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  admin: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "admin"
+  },
   locked: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
