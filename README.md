@@ -25,6 +25,7 @@ This repository contains the code for the backend API server which is implemente
     cp fx.sample fx
     mkdir mysql
     cp db/schema.sql mysql/
+    cp sample.override.yml docker-compose.override.yml
     docker-compose up -d --force-recreate maria
     docker exec -i mariadb mysql -u root -ppassword < mysql/schema.sql   
     docker-compose up

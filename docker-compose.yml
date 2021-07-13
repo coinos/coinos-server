@@ -8,9 +8,7 @@ services:
     ports:
       - '8085:8085'
     environment:
-      NODE_ENV: development
-    volumes:
-      - ../coinos-ui:/coinos
+      NODE_ENV: production
   app:
     depends_on:
       - maria
