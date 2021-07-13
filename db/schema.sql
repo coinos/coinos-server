@@ -68,7 +68,7 @@ CREATE TABLE `accounts` (
   `network` varchar(255) DEFAULT NULL,
   `privkey` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4194 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4197 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -131,7 +131,7 @@ CREATE TABLE `invoices` (
   `path` varchar(255) DEFAULT NULL,
   `webhook` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7881 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=7965 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -148,7 +148,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4669 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=4671 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -164,7 +164,7 @@ CREATE TABLE `migrations` (
   `batch` int(11) DEFAULT NULL,
   `migration_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -236,7 +236,7 @@ CREATE TABLE `payments` (
   PRIMARY KEY (`id`),
   KEY `payments_invoice_id_foreign` (`invoice_id`),
   CONSTRAINT `payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=40329 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=40344 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -250,7 +250,7 @@ CREATE TABLE `referrals` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `token` varchar(255) DEFAULT NULL,
   `expiry` date DEFAULT NULL,
-  `status` enum('available', 'pending','active','expired','cancelled') DEFAULT NULL,
+  `status` enum('pending','active','expired','cancelled') DEFAULT NULL,
   `sponsor_id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -307,9 +307,10 @@ CREATE TABLE `users` (
   `locked` tinyint(1) DEFAULT 0,
   `email` varchar(255) DEFAULT NULL,
   `sms` varchar(255) DEFAULT NULL,
+  `admin` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
-) ENGINE=InnoDB AUTO_INCREMENT=794 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=797 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -365,4 +366,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-07-09 12:57:30
+-- Dump completed on 2021-07-13 14:05:34
