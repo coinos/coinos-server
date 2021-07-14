@@ -56,7 +56,6 @@ ah(async () => {
   ).map((p) => p.hash);
 
 
-  /*
   setInterval(async () => {
     const unconfirmed = (
       await db.Payment.findAll({
@@ -135,7 +134,6 @@ ah(async () => {
       }
     }, 50);
   }
-  */
 
   if (config.liquid) {
     lq = new BitcoinCore(config.liquid);
