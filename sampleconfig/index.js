@@ -31,7 +31,7 @@ module.exports = {
     username: "admin1",
     password: "123",
     network: "regtest",
-    port: 18884,
+    port: 7040,
     zmqrawblock: "tcp://liquid:18606",
     zmqrawtx: "tcp://liquid:18607",
     btcasset,
