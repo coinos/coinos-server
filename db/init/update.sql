@@ -111,9 +111,9 @@ ALTER TABLE payments modify `tip` double NOT NULL DEFAULT 0;
 ALTER TABLE orders DROP a1;
 ALTER TABLE orders DROP a2;
 
-ALTER TABLE users modify `unit` varchar(255) DEFAULT NULL;
+ALTER TABLE users MODIFY `unit` varchar(255) DEFAULT NULL;
 ALTER TABLE users ADD `authyId` varchar(255) DEFAULT NULL;
-ALTER TABLE users ADD `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL;
+ALTER TABLE users MODIFY `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL;
 ALTER TABLE users DROP symbol;
 
 
