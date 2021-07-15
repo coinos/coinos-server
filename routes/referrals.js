@@ -217,12 +217,12 @@ router.get(
 
 
 /**
- * @api {post} /joinQueue  Join waiting list (track email & sms)
+ * @api {post} /joinQueue  Join waiting list (track email & phone)
  * @apiName joinQueue
  * @apiGroup Referrals
  *
  * @apiParam {email} 
- * @apiParam {sms} 
+ * @apiParam {phone} 
  *
  * @apiSuccess verified = true
  * @apiSuccessExample {json} Success-Response:
@@ -238,34 +238,34 @@ router.get(
 router.post(
   "/joinQueue",
   ah(async (req, res) => {
-    const { email, sms } = req.body;
+    const { email, phone } = req.body;
 
     debug('email: ' + email)
-    debug('sms: ' + sms)
+    debug('phone: ' + phone)
     console.log(email + ' BODY: ' + JSON.stringify(req.body))
     await db.WaitingList.create({
       email: email,
-      sms: sms    
+      phone: phone    
     })
 
-    res.send({success: true, message: 'Added ' + email + ' to waiting list ' + sms})
+    res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
   })
 );
 
 router.get(
   "/joinQueue",
   ah(async (req, res) => {
-    const {email, sms} = req.query;
+    const {email, phone} = req.query;
 
     debug('email: ' + email)
-    debug('sms: ' + sms)
+    debug('phone: ' + phone)
     console.log(email + ' BODY: ' + JSON.stringify(req.body))
     await db.WaitingList.create({
       email: email,
-      sms: sms    
+      phone: phone    
     })
 
-    res.send({success: true, message: 'Added ' + email + ' to waiting list ' + sms})
+    res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
   })
 );
 
