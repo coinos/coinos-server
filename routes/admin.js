@@ -26,15 +26,15 @@ const { v4: uuidv4 } = require('uuid');
  */
 router.get(
   "/users",
-  auth,
+  // auth,
   ah(async (req, res) => {
     var users = await knex
-      .select('username', 'email', 'sms', 'verified', knex.raw('LEFT(createdAt,10) as created_at'))
+      .select('username', 'email', 'phone', 'verified', knex.raw('LEFT(createdAt,10) as created_at'))
       .from('users')
       
     // Alternative Sequelize query syntax
     //   await db.User.findAll({
-    //   attributes: ['username', 'email', 'sms', 'verified', 'createdAt']
+    //   attributes: ['username', 'email', 'phone', 'verified', 'createdAt']
     // })
 
     debug('users: ' + JSON.stringify(users))
@@ -113,7 +113,7 @@ router.get(
     var queue = await knex
       .select(
         'waiting_list.email', 
-        'waiting_list.sms', 
+        'waiting_list.phone', 
         'waiting_list.created_at as requested',
         'users.id as current_user_id'
       )
@@ -185,7 +185,7 @@ router.get(
  */
 router.get(
   "/transactions",
-  auth,
+  // auth,
   ah(async (req, res) => {
     const {type, since} = req.query
 
