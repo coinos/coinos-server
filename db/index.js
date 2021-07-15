@@ -42,8 +42,8 @@ require("./models/withdrawals.js");
 // require("./normalized/user_keys.js");
 // require("./normalized/user_preferences.js");
 
-require("./normalized/referrals.js");
-require("./normalized/waiting_list.js");
+require("./models/referrals.js");
+require("./models/waiting_list.js");
 
 // require("./normalized/subscriptions.js");
 // require("./normalized/user_subscriptions.js");
