@@ -190,7 +190,7 @@ const attributes = {
   email: {
     type: DataTypes.STRING(255)
   },
-  sms: {
+  phone: {
     type: DataTypes.STRING(255)
   }
 };
