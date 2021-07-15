@@ -1,54 +1,128 @@
-const { DataTypes } = require('sequelize');
+exports.up = function(knex) {
+  return knex.schema.createTable('withdrawals', function(t) {
+    t.increments('id').unsigned().primary();
 
-const attributes = {
-  id: {
-    type: DataTypes.INTEGER(11),
-    primaryKey: true,
-    autoIncrement: true,
-    allowNull: false
-  },
-  user_id: {
-    type: DataTypes.INTEGER(11),
-    references: { model: User, key: 'id' },
-    allowNull: false,
-    comment: "Referral granted to this user (updated when token used)"
-  },
-  amount: {
-    type: DataTypes.DECIMAL(10,2),
-    allowNull: false
-  },
-  institution: {
-    type: DataTypes.INTEGER(11),
-    references: { model: Institution, key: 'id' },
-    allowNull: false,
-    comment: "Reference to bank institution"
-  },
-  transit: {
-    type: DataTypes.STRING(255),
-    allowNull: false
-  },
-  account: {
-    type: DataTypes.STRING(255),
-    allowNull: false
-  },
-  notes: {
-    type: DataTypes.TEXT
-  },
-  status: {
-    type: DataTypes.ENUM,
-    values: ['pending', 'debited', 'failed'],
-    defaultValue: 'pending'
-  }
+    t.int('debit_id').notNull();
+    t.foreign('debit_id').references('debits.id');
+
+    t.int('bank_account_id').notNull();
+    t.foreign('bank_account_id').references('bank_accounts.id');
+
+    t.double('withdrawal_fee').notNull().defaultTo(0)
+
+    t.text('notes');
+
+    t.timestamps();
+  })
 }
 
-const options = {
-  tableName: "withdrawals",
-  comment: "",
-  timestamps: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  indexes: [
-  ]
+exports.down = function(knex) {
+  return knex.schema.dropTable('withdrawals');
 };
 
-db["Withdrawal"] = db.define("withdrawals_model", attributes, options);
+// Changes:
+//
+// bank info -> bank_account records
+
+// const { DataTypes } = require('sequelize');
+
+// const attributes = {
+//   id: {
+//     type: DataTypes.INTEGER(11),
+//     allowNull: false,
+//     defaultValue: null,
+//     primaryKey: true,
+//     autoIncrement: true,
+//     comment: null,
+//     field: "id"
+//   },
+//   amount: {
+//     type: DataTypes.DOUBLE,
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "amount"
+//   },
+//   user_id: {
+//     type: DataTypes.INTEGER(11),
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "user_id"
+//   },
+//   createdAt: {
+//     type: DataTypes.DATE,
+//     allowNull: false,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "createdAt"
+//   },
+//   updatedAt: {
+//     type: DataTypes.DATE,
+//     allowNull: false,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "updatedAt"
+//   },
+//   transit: {
+//     type: DataTypes.STRING(255),
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "transit"
+//   },
+//   institution: {
+//     type: DataTypes.STRING(255),
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "institution"
+//   },
+//   account: {
+//     type: DataTypes.STRING(255),
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "account"
+//   },
+//   email: {
+//     type: DataTypes.STRING(255),
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "email"
+//   },
+//   notes: {
+//     type: DataTypes.TEXT,
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "notes"
+//   },
+// };
+
+// const options = {
+//   tableName: "withdrawals",
+//   comment: "",
+//   indexes: []
+// };
+
+// db["Withdrawal"] = db.define("withdrawals_model", attributes, options);

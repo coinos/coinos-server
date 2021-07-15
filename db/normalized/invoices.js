@@ -1,41 +1,43 @@
 exports.up = function(knex) {
-  return knex.schema.createTable('accounts', function(t) {
+  return knex.schema.createTable('invoices', function(t) {
     t.increments('id').unsigned().primary();
-    t.int('user_id').notNull();
-    t.foreign('user_id').references('users.id');
 
-    t.int('uuid').notNull();
-
-    t.double('balance');
-    t.double('pending');
+    t.int('transfer_id').notNull();
+    t.foreign('transfer_id').references('transfers.id');
 
     t.enu('network', ['Bitcoin', 'Liquid', 'Lightning', 'CoinOS']).notNull();
 
-    // t.string('contract');
-    // t.string('hide');
-    // t.string('index');
+    t.string('bolt11'); // was 'text'
 
-    t.int('liquid_asset_id').notNull();
-    t.foreign('liquid_asset_id').references('liquid_assets.id');
+    // Clarify ??? - break out ?  - context ? include everything encoded in hash... 
+    t.double('amount');
+
+    // Exchanges 
+    // ( are there a couple of types of invoices ? - eg checkout / voucher / receive ... with different attributes ?)
+    t.double('rate')
+    t.string('currency')
+    t.double('tip')
+
+    t.string('path')
+    t.string('uuid')
+    t.string('memo')
+    t.string('unconfidential')
+    t.string('address')
+    t.string('received')
 
     t.timestamps();
   })
 }
 
 exports.down = function(knex) {
-  return knex.schema.dropTable('accounts');
+  return knex.schema.dropTable('invoices');
 };
 
-// Change
-//
-// move assets fields (asset, ticker, name, precision...) to separate liquid_assets reference
 
-// separate network specific fields to bitcoin_accounts / liquid_accounts / coinos_accounts tables ? or just non_custodial ?
-// eg liquid -> liquid_asset info
-//    non-custodial ? -> privkey, pubkey, path, seed ?
-//    contract, hide, index ?
-//
-
+// Variations: ?
+// wallet -> receive - fields ?
+// checkout - fields ?
+// voucher - fields ?
 
 // const { DataTypes } = require('sequelize');
 
@@ -49,6 +51,15 @@ exports.down = function(knex) {
 //     comment: null,
 //     field: "id"
 //   },
+//   account_id: {
+//     type: DataTypes.INTEGER(11),
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "account_id"
+//   },
 //   user_id: {
 //     type: DataTypes.INTEGER(11),
 //     allowNull: true,
@@ -57,6 +68,15 @@ exports.down = function(knex) {
 //     autoIncrement: false,
 //     comment: null,
 //     field: "user_id"
+//   },
+//   text: {
+//     type: DataTypes.TEXT,
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "text"
 //   },
 //   createdAt: {
 //     type: DataTypes.DATE,
@@ -85,14 +105,32 @@ exports.down = function(knex) {
 //     comment: null,
 //     field: "path"
 //   },
-//   seed: {
+//   rate: {
+//     type: DataTypes.DOUBLE,
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "rate"
+//   },
+//   uuid: {
 //     type: DataTypes.STRING(255),
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "seed"
+//     field: "uuid"
+//   },
+//   memo: {
+//     type: DataTypes.TEXT,
+//     allowNull: true,
+//     defaultValue: null,
+//     primaryKey: false,
+//     autoIncrement: false,
+//     comment: null,
+//     field: "memo"
 //   },
 //   network: {
 //     type: DataTypes.STRING(255),
@@ -103,126 +141,66 @@ exports.down = function(knex) {
 //     comment: null,
 //     field: "network"
 //   },
-//   name: {
+//   currency: {
 //     type: DataTypes.STRING(255),
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "name"
+//     field: "currency"
 //   },
-//   contract: {
-//     type: DataTypes.TEXT,
-//     get: function() {
-//       return JSON.parse(this.getDataValue("contract"));
-//     },
-//     set: function(value) {
-//       return this.setDataValue("contract", JSON.stringify(value));
-//     },
-//     allowNull: true,
-//     defaultValue: null,
-//     primaryKey: false,
-//     autoIncrement: false,
-//     comment: null,
-//     field: "contract"
-//   },
-//   domain: {
+//   unconfidential: {
 //     type: DataTypes.STRING(255),
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "domain"
+//     field: "unconfidential"
 //   },
-//   ticker: {
+//   address: {
 //     type: DataTypes.STRING(255),
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "ticker"
+//     field: "address"
 //   },
-//   asset: {
+//   received: {
 //     type: DataTypes.STRING(255),
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "asset"
+//     field: "received"
 //   },
-//   balance: {
+//   amount: {
 //     type: DataTypes.DOUBLE,
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "balance"
+//     field: "amount"
 //   },
-//   pending: {
+//   tip: {
 //     type: DataTypes.DOUBLE,
 //     allowNull: true,
 //     defaultValue: null,
 //     primaryKey: false,
 //     autoIncrement: false,
 //     comment: null,
-//     field: "pending"
-//   },
-//   hide: {
-//     type: DataTypes.BOOLEAN,
-//     allowNull: true,
-//     defaultValue: null,
-//     primaryKey: false,
-//     autoIncrement: false,
-//     comment: null,
-//     field: "hide"
-//   },
-//   index: {
-//     type: DataTypes.INTEGER(11),
-//     allowNull: false,
-//     defaultValue: 0,
-//     primaryKey: false,
-//     autoIncrement: false,
-//     comment: null,
-//     field: "index"
-//   },
-//   privkey: {
-//     type: DataTypes.STRING,
-//     allowNull: true,
-//     defaultValue: null,
-//     primaryKey: false,
-//     autoIncrement: false,
-//     comment: null,
-//     field: "privkey"
-//   },
-//   pubkey: {
-//     type: DataTypes.STRING,
-//     allowNull: true,
-//     defaultValue: null,
-//     primaryKey: false,
-//     autoIncrement: false,
-//     comment: null,
-//     field: "pubkey"
-//   },
-//   precision: {
-//     type: DataTypes.INTEGER(11),
-//     allowNull: true,
-//     defaultValue: null,
-//     primaryKey: false,
-//     autoIncrement: false,
-//     comment: null,
-//     field: "precision"
+//     field: "tip"
 //   },
 // };
 
 // const options = {
-//   tableName: "accounts",
+//   tableName: "invoices",
 //   comment: "",
 //   indexes: []
 // };
 
-// db["Account"] = db.define("accounts_model", attributes, options);
+// db["Invoice"] = db.define("invoices_model", attributes, options);
