@@ -306,7 +306,7 @@ CREATE TABLE `users` (
   `verified` varchar(255) DEFAULT NULL,
   `locked` tinyint(1) DEFAULT 0,
   `email` varchar(255) DEFAULT NULL,
-  `sms` varchar(255) DEFAULT NULL,
+  `phone` varchar(255) DEFAULT NULL,
   `admin` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`)
