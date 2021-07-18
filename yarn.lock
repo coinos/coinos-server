@@ -13,17 +13,11 @@
     semver "^5.1.0"
     standard-error "^1.1.0"
 
-"@asoltys/blech32@^1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@asoltys/blech32/-/blech32-1.0.4.tgz#10066fb173b9b426a465504d7418e3d7295d2d58"
-  integrity sha512-yiiQNRSCqUMCDcFbPvG2QIyBNJsTbZvthq7inIF9RKVd6ei8yuMUXPdO85cwyANLeVvtdFEBpsKBzCETahSk0A==
-
-"@asoltys/liquidjs-lib@^5.1.37":
-  version "5.1.37"
-  resolved "https://registry.yarnpkg.com/@asoltys/liquidjs-lib/-/liquidjs-lib-5.1.37.tgz#8428b57a2e205236d56b5972dd69716e9e1ccd8b"
-  integrity sha512-F3Lz6A9K5ZXv5RgLynpQaf6rcKKYhaeXYocfVByJZI6O5sqaJXOGV7/OPtNRR8YLkWOreYfoWX0NiFoHauhvHg==
+"@asoltys/liquidjs-lib@^5.1.38":
+  version "5.1.38"
+  resolved "https://registry.yarnpkg.com/@asoltys/liquidjs-lib/-/liquidjs-lib-5.1.38.tgz#397e91a4ada53e5973b50727e13f529adacf42f4"
+  integrity sha512-hEP5GdUy5V0NYz7wnc+GLDGNQcpIx/KIfFFK96FiScG990UdRUvgJx/33o+MEmUyyh5zzcr2V7CWNtF8moSxnw==
   dependencies:
-    "@asoltys/blech32" "^1.0.4"
     "@asoltys/secp256k1-zkp" "^2.0.4"
     axios "^0.21.1"
     bech32 "^1.1.2"
@@ -650,7 +644,7 @@ bip174@^2.0.1:
   resolved "https://registry.yarnpkg.com/bip174/-/bip174-2.0.1.tgz#39cf8ca99e50ce538fb762589832f4481d07c254"
   integrity sha512-i3X26uKJOkDTAalYAp0Er+qGMDhrbbh2o93/xiPyAN2s25KrClSpe3VXo/7mNJoqA5qfko8rLS2l3RWZgYmjKQ==
 
-bip174@vulpemventures/bip174.git:
+"bip174@github:vulpemventures/bip174":
   version "1.0.3"
   resolved "https://codeload.github.com/vulpemventures/bip174/tar.gz/b6d0ffe54e0dfa72e971b68372f89b25f7602502"
 

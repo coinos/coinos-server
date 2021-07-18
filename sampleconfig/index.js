@@ -1,6 +1,13 @@
 const debug = require("debug")("test");
 
-const db = require('./knexfile.js')[process.env.NODE_ENV || 'development'] 
+const db = {
+  user: "root",
+  password: "password",
+  database: "coinos",
+  host: "mariadb",
+  dialect: "mariadb",
+  dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" },
+};
 
 const btcasset =
   "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
@@ -8,13 +15,17 @@ const btcasset =
 module.exports = {
   db,
   clientVersion: "3b96359d6a6ce68fe4a32f495fc9a6f78af0aa63",
+  knex: {
+    client: "mysql2",
+    connection: db,
+  },
   jwt: "secret",
   port: 3119,
   bitcoin: {
     masterkey:
       "tprv8ZgxMBicQKsPdTUoagV41nang9pQUA2DKoVWLmTrWmb2PfsC8pDTHveCMyzUyMguKJCjd5uyHcqg27r7gDzz4TY3MgucpLsSXwCbjn2C3Q1",
     host: "bitcoin",
-    wallet: "coinosdev",
+    wallet: "test",
     username: "admin1",
     password: "123",
     network: "regtest",
@@ -31,17 +42,14 @@ module.exports = {
     username: "admin1",
     password: "123",
     network: "regtest",
+    wallet: "a",
     port: 7040,
-    zmqrawblock: "tcp://liquid:18606",
-    zmqrawtx: "tcp://liquid:18607",
+    zmqrawblock: "tcp://liquid:18602",
+    zmqrawtx: "tcp://liquid:18603",
     btcasset,
   },
   lna: {
     clightning: true,
     dir: "/app/config/lightning/regtest",
   },
-  mailgun: {
-    apiKey: "key-59cd7ea2286ae3553d6b50cf7ddf924e",
-    domain: "coinos.io"
-  }
 };
