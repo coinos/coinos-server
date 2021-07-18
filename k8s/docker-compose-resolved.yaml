@@ -1,0 +1,118 @@
+services:
+  app:
+    container_name: app
+    environment:
+      NODE_ENV: development
+    image: asoltys/coinos-server
+    ports:
+    - published: 3119
+      target: 3119
+    volumes:
+    - /home/adam/coinos-server:/app:rw
+  bitcoin:
+    container_name: bitcoin
+    image: asoltys/bitcoin:latest
+    ports:
+    - published: 18442
+      target: 18442
+    - published: 18443
+      target: 18443
+    restart: unless-stopped
+    volumes:
+    - /home/adam/coinos-server/config/bitcoin:/config:rw
+  electrs-liquid:
+    command:
+    - -vvvv
+    - --parent-network
+    - regtest
+    - --network
+    - liquidregtest
+    - --daemon-dir
+    - /config
+    - --daemon-rpc-addr
+    - liquid:7040
+    - --cookie
+    - admin1:123
+    - --http-addr
+    - 0.0.0.0:3002
+    - --electrum-rpc-addr
+    - 0.0.0.0:60401
+    - --cors
+    - '*'
+    container_name: electrs-liquid
+    entrypoint:
+    - /build/electrs
+    image: vulpemventures/electrs-liquid:latest
+    ports:
+    - published: 3013
+      target: 3002
+    - published: 60402
+      target: 60401
+    restart: unless-stopped
+    volumes:
+    - /home/adam/coinos-server/liquid:/config:rw
+  esplora-liquid:
+    container_name: esplora-liquid
+    environment:
+      API_URL: http://localhost:3012
+      IS_ELEMENTS: 1
+      NATIVE_ASSET_ID: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225
+    image: vulpemventures/esplora:latest
+    ports:
+    - published: 5006
+      target: 5000
+    restart: unless-stopped
+  la:
+    container_name: la
+    environment:
+      LIGHTNINGD_NETWORK: regtest
+    image: elementsproject/lightningd:latest
+    restart: unless-stopped
+    volumes:
+    - /home/adam/coinos-server/config/lightning:/root/.lightning:rw
+  lb:
+    container_name: lb
+    environment:
+      LIGHTNINGD_NETWORK: regtest
+    image: elementsproject/lightningd:latest
+    restart: unless-stopped
+    volumes:
+    - /home/adam/coinos-server/config/lightningb:/root/.lightning:rw
+  liquid:
+    container_name: liquid
+    image: asoltys/liquid:latest
+    ports:
+    - published: 7040
+      target: 7040
+    - published: 18444
+      target: 18444
+    - published: 18602
+      target: 18602
+    - published: 18603
+      target: 18603
+    restart: unless-stopped
+    volumes:
+    - /home/adam/coinos-server/config/liquid:/config:rw
+  maria:
+    container_name: mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: password
+    image: mariadb:10.6.1
+    ports:
+    - published: 3307
+      target: 3306
+    restart: always
+    volumes:
+    - /home/adam/coinos-server/mysql:/var/lib/mysql:rw
+  ui:
+    container_name: ui
+    environment:
+      NODE_ENV: development
+    image: asoltys/coinos-ui
+    ports:
+    - published: 8085
+      target: 8085
+    volumes:
+    - /home/adam/coinos-ui:/coinos:rw
+version: '3.6'
+

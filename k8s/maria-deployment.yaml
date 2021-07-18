@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    kompose.cmd: kompose convert
+    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
     kompose.version: 1.22.0 (955b78124)
   creationTimestamp: null
   labels:
@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       annotations:
-        kompose.cmd: kompose convert
+        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
         kompose.version: 1.22.0 (955b78124)
       creationTimestamp: null
       labels:
@@ -27,6 +27,7 @@ spec:
       containers:
         - env:
             - name: MARIADB_ROOT_PASSWORD
+              value: password
           image: mariadb:10.6.1
           name: mariadb
           ports:
