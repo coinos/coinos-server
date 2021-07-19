@@ -28,6 +28,9 @@ This repository contains the code for the backend API server which is implemente
     cp sample.override.yml docker-compose.override.yml
     docker-compose up -d --force-recreate maria
     docker exec -i mariadb mysql -u root -ppassword < mysql/schema.sql   
+    docker exec -i mariadb mysql -u root -ppassword -e "CREATE USER 'tester' IDENTIFIED BY 'pass';"
+    docker exec -i mariadb mysql -u root -ppassword -e "GRANT ALL PRIVILEGES ON *.* TO 'tester'@'%' IDENTIFIED BY 'pass';"
+    docker exec -i mariadb mysql -u root -ppassword -e "FLUSH PRIVILEGES;"    
     docker-compose up
 
 Note the last step will take some time on first run as it will download the aforementioned docker images.
