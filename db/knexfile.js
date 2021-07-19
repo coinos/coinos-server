@@ -1,1 +1,1 @@
-../config/knexfile.js
+./../config/knexfile.js
