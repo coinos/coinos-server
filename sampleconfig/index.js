@@ -25,7 +25,7 @@ module.exports = {
     masterkey:
       "tprv8ZgxMBicQKsPdTUoagV41nang9pQUA2DKoVWLmTrWmb2PfsC8pDTHveCMyzUyMguKJCjd5uyHcqg27r7gDzz4TY3MgucpLsSXwCbjn2C3Q1",
     host: "bitcoin",
-    wallet: "test",
+    wallet: "coinosdev",
     username: "admin1",
     password: "123",
     network: "regtest",
