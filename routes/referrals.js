@@ -29,7 +29,9 @@ router.get('/', function(req, res, next) {
  * @apiParam {sponsor_id} user_id of member generating referral code.
  * @apiParam {expiry} optional expiry date for token.
  *
- * @apiSuccess {token: referral_code, expiry: expiry} Token and expiry if applicable.
+ * @apiSuccess {String} token referral token
+ * @apiSuccess {Date} expiry optional expiry
+ *
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
  *     {
@@ -69,7 +71,9 @@ router.post(
  * @apiParam {sponsor_id} user_id of member generating referral code.
  * @apiParam {expiry} optional expiry date for token.
  *
- * @apiSuccess {token: referral_code, status: status, expiry: expiry} Token and expiry if applicable.
+ * @apiSuccess {String} token referral token
+ * @apiSuccess {Status} status referral status
+ * @apiSuccess {Date} expiry optional expiry
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
  *     {
@@ -221,8 +225,8 @@ router.get(
  * @apiName joinQueue
  * @apiGroup Referrals
  *
- * @apiParam {email} 
- * @apiParam {phone} 
+ * @apiParam {email} email address
+ * @apiParam {phone} phone number
  *
  * @apiSuccess verified = true
  * @apiSuccessExample {json} Success-Response:
@@ -274,7 +278,7 @@ router.get(
  * @apiName isReferred
  * @apiGroup Referrals
  *
- * @apiParam {user_id} 
+ * @apiParam {user_id} user id
  *
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
