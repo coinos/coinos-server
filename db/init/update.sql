@@ -1,4 +1,5 @@
 
+DROP TABLE IF EXISTS `waiting_list`;
 CREATE TABLE `waiting_list` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `email` varchar(255) DEFAULT NULL,
@@ -13,11 +14,12 @@ CREATE TABLE `waiting_list` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=latin1;
 
+DROP TABLE IF EXISTS `referrals`;
 CREATE TABLE `referrals` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `token` varchar(255) DEFAULT NULL,
   `expiry` date DEFAULT NULL,
-  `status` enum('pending','active','expired','cancelled') DEFAULT NULL,
+  `status` enum('available', 'used', 'expired', 'cancelled') DEFAULT NULL,
   `sponsor_id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -100,6 +102,8 @@ CREATE TABLE `urls` (
 --- New field changes...
 ---
 
+UPDATE accounts set createdAt = '2020-01-01' where createdAt < '2020-01-01';
+UPDATE accounts set updatedAt = '2020-01-01' where createdAt < '2020-01-01';
 ALTER TABLE accounts modify `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL;
 
 ALTER TABLE invoices modify `tip` double NOT NULL DEFAULT 0;
