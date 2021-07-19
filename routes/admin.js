@@ -14,7 +14,7 @@ const { v4: uuidv4 } = require('uuid');
  *
  * @apiPermission admin
  * 
- * @apiSuccess {token: referral_code, expiry: expiry} Token and expiry if applicable.
+ * @apiSuccess {Object} users List of users 
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
  *     {
