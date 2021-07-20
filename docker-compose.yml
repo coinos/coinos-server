@@ -1,12 +1,15 @@
 version: '3.6'
 services:
-  ui:
-    container_name: ui
-    image: asoltys/coinos-ui
-    ports:
-      - '8085:8085'
+  nginx:
+    container_name: nginx
+    image: nginx
+    ports: 
+      - 80:80
+    volumes:
+      - ./config/nginx:/etc/nginx/templates
+      - ../coinos-ui/dist:/coinos
     environment:
-      NODE_ENV: production
+      NGINX_HOST: wow.coinos.io
   app:
     container_name: app
     image: asoltys/coinos-server
