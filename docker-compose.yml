@@ -1,8 +1,8 @@
 version: '3.6'
 services:
-  nginx:
-    container_name: nginx
-    image: nginx
+  ui:
+    container_name: ui
+    image: asoltys/coinos-ui
     ports: 
       - 80:80
     volumes:
