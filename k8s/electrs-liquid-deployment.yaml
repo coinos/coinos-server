@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+    kompose.cmd: kompose convert
     kompose.version: 1.22.0 (955b78124)
   creationTimestamp: null
   labels:
@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       annotations:
-        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+        kompose.cmd: kompose convert
         kompose.version: 1.22.0 (955b78124)
       creationTimestamp: null
       labels:
@@ -48,8 +48,8 @@ spec:
           image: vulpemventures/electrs-liquid:latest
           name: electrs-liquid
           ports:
-            - containerPort: 3002
             - containerPort: 60401
+            - containerPort: 3002
           resources: {}
           volumeMounts:
             - mountPath: /config

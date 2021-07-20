@@ -1,6 +1,8 @@
 version: '3.6'
 services:
   ui:
+    depends_on:
+      - app
     container_name: ui
     image: asoltys/coinos-ui
     ports:
@@ -8,6 +10,8 @@ services:
     environment:
       NODE_ENV: production
   app:
+    depends_on:
+      - maria
     container_name: app
     image: asoltys/coinos-server
     ports:
@@ -75,6 +79,8 @@ services:
       - 0.0.0.0:60401
       - --cors
       - "*"
+    depends_on:
+      - liquid
     ports:
       - ${LIQUID_ELECTRS_RPC_PORT}:60401
       - ${LIQUID_ELECTRS_PORT}:3002

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+    kompose.cmd: kompose convert
     kompose.version: 1.22.0 (955b78124)
   creationTimestamp: null
   labels:
@@ -13,12 +13,11 @@ spec:
   selector:
     matchLabels:
       io.kompose.service: ui
-  strategy:
-    type: Recreate
+  strategy: {}
   template:
     metadata:
       annotations:
-        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+        kompose.cmd: kompose convert
         kompose.version: 1.22.0 (955b78124)
       creationTimestamp: null
       labels:
@@ -27,18 +26,11 @@ spec:
       containers:
         - env:
             - name: NODE_ENV
-              value: development
+              value: production
           image: asoltys/coinos-ui
           name: ui
           ports:
             - containerPort: 8085
           resources: {}
-          volumeMounts:
-            - mountPath: /coinos
-              name: ui-claim0
       restartPolicy: Always
-      volumes:
-        - name: ui-claim0
-          persistentVolumeClaim:
-            claimName: ui-claim0
 status: {}

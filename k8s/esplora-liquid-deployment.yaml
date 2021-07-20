@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+    kompose.cmd: kompose convert
     kompose.version: 1.22.0 (955b78124)
   creationTimestamp: null
   labels:
@@ -17,7 +17,7 @@ spec:
   template:
     metadata:
       annotations:
-        kompose.cmd: kompose convert -f docker-compose-resolved.yaml
+        kompose.cmd: kompose convert
         kompose.version: 1.22.0 (955b78124)
       creationTimestamp: null
       labels:
@@ -26,7 +26,6 @@ spec:
       containers:
         - env:
             - name: API_URL
-              value: http://localhost:3012
             - name: IS_ELEMENTS
               value: "1"
             - name: NATIVE_ASSET_ID
