@@ -36,7 +36,7 @@ const options = {
   indexes: [
     {
       unique: true,
-      fields: ['email', 'sms']
+      fields: ['email', 'phone']
     }
   ]
 };
