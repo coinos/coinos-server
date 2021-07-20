@@ -298,10 +298,10 @@ router.get(
       .where('user_id', 'like', user_id)
       .where('status', 'like', 'used')
     
-    if (referred) {
-      res.send(true)
+    if (referred && referred.length) {
+      res.send({referred: true})
     } else {
-      res.send(false)
+      res.send({referred: false})
     }
   })
  );
