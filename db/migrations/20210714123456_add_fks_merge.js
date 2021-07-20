@@ -37,11 +37,4 @@ exports.up = function(knex) {
 }
 
 exports.down = function(knex) {
-  return Promise.all([
-    knex.schema.table("users", function(t) {
-      t.dropColumn("email");
-      t.dropColumn("phone");
-      t.dropColumn("admin");
-    })
-  ])
 }
