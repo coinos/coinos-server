@@ -4,7 +4,7 @@ services:
     depends_on:
       - app
     container_name: ui
-    image: asoltys/coinos-ui
+    image: asoltys/coinos-ui:dev
     ports:
       - '8085:8085'
     environment:

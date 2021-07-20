@@ -7,9 +7,8 @@ services:
       - 80:80
     volumes:
       - ./config/nginx:/etc/nginx/templates
-      - ../coinos-ui/dist:/coinos
     environment:
-      NGINX_HOST: wow.coinos.io
+      HOST: ${HOST}
   app:
     container_name: app
     image: asoltys/coinos-server
