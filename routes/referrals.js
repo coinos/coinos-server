@@ -1,5 +1,4 @@
 var express = require('express');
-// const { default: knex } = require('knex');
 var router = express.Router();
 var debug = require('debug')('debug')
 
@@ -50,12 +49,6 @@ router.post(
     var token = uuidv4()
     debug('generated token: ' + token + ' sponsored by ' + sponsor_id)
 
-    // var ref = await db.Referral.create({
-    //   sponsor_id: sponsor_id, 
-    //   token: token, 
-    //   status: 'available'
-    // })
-
     var ref = await knex.table('referrals')
       .insert({
           sponsor_id: sponsor_id, 
@@ -100,15 +93,6 @@ router.get(
     var token = uuidv4()
     debug('Generated token: ' + token + ' sponsored by ' + sponsor_id)
 
-    var users = await knex
-      .select('username')
-      .from('users')
-
-    debug('got: ' + JSON.stringify(users))
-
-    debug('KNEX: ' + typeof(knex))
-    console.log(knex.constructor)
-
     var ref = await knex.table('referrals')
       .insert({
           sponsor_id: sponsor_id, 
@@ -116,12 +100,6 @@ router.get(
           status: 'available'
         }
       )
-
-    // var ref = await db.Referral.create({
-    //   sponsor_id: sponsor_id, 
-    //   token: token, 
-    //   status: 'available'
-    // })
 
     debug('generated referral: ' + JSON.stringify(ref))
     return res.send({token: token, status: 'available', expiry: expiry})
@@ -173,7 +151,6 @@ router.get(
       .where('sponsor_id', 'like', sponsor_id)
 
     if (status && status !== 'all') tokens = tokens.where('status', 'like', status)
-    console.log(sponsor_id + ' : ' + status)
     const found = await tokens
 
     debug('my tokens: ' + JSON.stringify(found))
@@ -218,14 +195,6 @@ router.get(
       .where('token', 'like', token)
       .whereNull('user_id')
 
-    // const found = await db.Referral.findAll({
-    //   attributes: ['status'],
-    //   where: {
-    //     token: token,
-    //     user_id: null
-    //   }
-    // })
-
     if (found && found.length) {
       debug('found referral: ' + JSON.stringify(found))
       if (found[0].status === 'available') {
@@ -237,17 +206,6 @@ router.get(
           user_id: user_id,
           updated_at: new Date().toISOString().substring(0,10)
         })
-
-        // await db.Referral.update(
-        //   { 
-        //     status: 'used',
-        //     user_id: user_id,
-        //     updated_at: new Date().toISOString().substring(0,10)
-        //   },
-        //   {
-        //     where: { token: token }
-        //   }
-        // )
 
         return res.send({ verified: true, sponsor_id: found.sponsor_id, updated: found.updated_at});
       } else {
@@ -286,17 +244,12 @@ router.post(
 
     debug('email: ' + email)
     debug('phone: ' + phone)
-    console.log(email + ' BODY: ' + JSON.stringify(req.body))
     
     await knex.table('waiting_list')
       .insert({
         email: email,
         phone: phone
       })
-      // await db.WaitingList.create({
-      //   email: email,
-      //   phone: phone    
-      // })
 
     res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
   })
@@ -309,18 +262,12 @@ router.get(
 
     debug('email: ' + email)
     debug('phone: ' + phone)
-    console.log(email + ' BODY: ' + JSON.stringify(req.body))
 
     await knex('waiting_list')
       .insert({
         email: email,
         phone: phone
       })
-
-    // await db.WaitingList.create({
-    //   email: email,
-    //   phone: phone    
-    // })
 
     res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
   })
@@ -350,13 +297,6 @@ router.get(
       .select('referrals.id')
       .where('user_id', 'like', user_id)
       .where('status', 'like', 'used')
-
-    // var referred = await db.Referral.findOne({
-    //   where: {
-    //     user_id: user_id,
-    //     status: 'used'
-    //   }
-    // })
     
     if (referred) {
       res.send(true)
