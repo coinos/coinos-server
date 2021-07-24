@@ -36,7 +36,7 @@ After successful creation of all docker containers coinos will be available at h
 
 To shutdown coinos and all of its containers/services, run `docker-compose down` again.  
 
-At anypoint to purge the database and start with a new one run `rm -rf mysql` and then `mkdir mysql` and then the same steps following from that point as outlined above. 
+At anypoint to purge the database and start with a new one run `rm -rf mysql` and then `mkdir mysql` and then the same steps following from that point as outlined above.   Or run `purge-except-git.sh` from `./scripts`
 
 To review a log of individual containers use `docker-compose app` or `docker-compose maria` etc; container names are available in `docker-compose.yml` or via `docker-compose ps` when they are running.  `docker images` will show you a list of the images installed on your system and `docker image rm [IMAGE ID]` removes them.
 
