@@ -7,7 +7,7 @@ module.exports = {
       host: 'mariadb',
       database: 'coinos',
       user:     'root',
-      password: 'password'
+      password: 'SetASecurePasswordHere'
     },
     migrations: {
       tableName: 'migrations',

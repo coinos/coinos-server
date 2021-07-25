@@ -25,7 +25,7 @@ This repository contains the code for the backend API server which is implemente
     cp fx.sample fx
     cp sample.override.yml docker-compose.override.yml
     docker-compose up -d --force-recreate maria
-    docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
+    docker exec -i mariadb mysql -u root -pSetASecurePasswordHere < db/schema.sql   
     docker-compose up
 
 Note the last step will take some time on first run as it will download the aforementioned docker images.

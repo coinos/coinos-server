@@ -2,7 +2,7 @@ const debug = require("debug")("test");
 
 const db = {
   user: "root",
-  password: "password",
+  password: "SetASecurePasswordHere",
   database: "coinos",
   host: "mariadb",
   dialect: "mariadb",
