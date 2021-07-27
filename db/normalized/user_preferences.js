@@ -8,8 +8,10 @@ exports.up = function(knex) {
     t.enum('default_currency', ['CAD', 'USD']).notNull().defaultTo('CAD');
     t.enum('default_fiat', ['CAD', 'USD']).notNull().defaultTo('CAD');
     t.set('show_currencies', ['CAD', 'USD']).notNull().defaultTo('CAD');
-
+    t.longtext(`subscriptions`).collate('utf8mb4').nullable(); // CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL")
     t.timestamps();
+    
+    // knex.raw("ALTER TABLE users MODIFY `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL")
   })
 }
 

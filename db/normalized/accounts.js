@@ -11,7 +11,10 @@ exports.up = function(knex) {
 
     t.enu('network', ['Bitcoin', 'Liquid', 'Lightning', 'CoinOS']).notNull();
 
-    // t.string('contract');
+    t.longtext('contract').collate('utf8mb4').nullable(); // custodial ?
+
+    // knex.raw("ALTER TABLE accounts MODIFY `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL")
+    
     // t.string('hide');
     // t.string('index');
 
