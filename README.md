@@ -23,11 +23,9 @@ This repository contains the code for the backend API server which is implemente
     cp -rf sampleconfig ./config
     cp .env.sample .env
     cp fx.sample fx
-    mkdir mysql
-    cp db/schema.sql mysql/
     cp sample.override.yml docker-compose.override.yml
     docker-compose up -d --force-recreate maria
-    docker exec -i mariadb mysql -u root -ppassword < mysql/schema.sql   
+    docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
     docker-compose up
 
 Note the last step will take some time on first run as it will download the aforementioned docker images.
@@ -36,7 +34,7 @@ After successful creation of all docker containers coinos will be available at h
 
 To shutdown coinos and all of its containers/services, run `docker-compose down` again.  
 
-At anypoint to purge the database and start with a new one run `rm -rf mysql` and then `mkdir mysql` and then the same steps following from that point as outlined above. 
+At anypoint to purge the database and start with a new one run `rm -rf mysql` and then `mkdir mysql` and then the same steps following from that point as outlined above.   Or run `purge-except-git.sh` from `./scripts`
 
 To review a log of individual containers use `docker-compose app` or `docker-compose maria` etc; container names are available in `docker-compose.yml` or via `docker-compose ps` when they are running.  `docker images` will show you a list of the images installed on your system and `docker image rm [IMAGE ID]` removes them.
 
