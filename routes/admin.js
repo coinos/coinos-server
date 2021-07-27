@@ -28,17 +28,31 @@ router.get(
   "/users",
   // auth,
   ah(async (req, res) => {
-    var users = await knex
+    var {search, starts_with, contains} = req.query
+    var users = knex
       .select('username', 'email', 'phone', 'verified', knex.raw('LEFT(createdAt,10) as created_at'))
       .from('users')
       
+    if (starts_with) {
+      search = search + '%'
+    } else if (contains) {
+      search = '%' + search + '%'
+    }
+
+    if (search) {
+      users = users
+        .where('username', 'like', search)
+        .orWhere('email', 'like', search)
+    }
+    debug('search ? ' + search)
     // Alternative Sequelize query syntax
     //   await db.User.findAll({
     //   attributes: ['username', 'email', 'phone', 'verified', 'createdAt']
     // })
 
-    debug('users: ' + JSON.stringify(users))
-    return res.send({users: users})
+    const found = await users
+    debug('users: ' + JSON.stringify(found))
+    return res.send({users: found})
   })
 );
 
@@ -110,7 +124,9 @@ router.get(
   "/waiting_list",
   // auth,
   ah(async (req, res) => {
-    var queue = await knex
+    var {search, starts_with, contains} = req.query
+
+    var queue = knex
       .select(
         'waiting_list.email', 
         'waiting_list.phone', 
@@ -121,8 +137,22 @@ router.get(
       .leftJoin('users', 'users.email', 'waiting_list.email')
       .where('waiting_list.id', '>', 0)
 
-    debug('Waiting list: ' + JSON.stringify(queue))
-    return res.send({queue: queue})
+    if (starts_with) {
+      search = search + '%'
+    } else if (contains) {
+      search = '%' + search + '%'
+    }
+
+    if (search) {
+      queue = queue
+        .where('waiting_list.email', 'like', search)
+        .orWhere('users.username', 'like', search)
+    }
+    debug('search ? ' + search)
+    const found = await queue
+
+    debug('Waiting list: ' + JSON.stringify(found))
+    return res.send({queue: found})
   })
 );
 
@@ -147,7 +177,7 @@ router.get(
   "/accounts",
   auth,
   ah(async (req, res) => {
-    const {nonZero} = req.query
+    var {nonZero, search, starts_with, contains} = req.query
 
     var accounts = knex
       .select('username', 'accounts.id as account_id', 'ticker', 'balance', knex.raw('LEFT(accounts.createdAt, 10) as created'), knex.raw('LEFT(accounts.updatedAt, 10) as updated'))
@@ -158,7 +188,20 @@ router.get(
       accounts = accounts
         .where('balance', '>', 0)
     }
-    var found = await accounts
+
+    if (starts_with) {
+      search = search + '%'
+    } else if (contains) {
+      search = '%' + search + '%'
+    }
+
+    if (search) {
+      accounts = accounts
+        .where('users.email', 'like', search)
+        .orWhere('users.username', 'like', search)
+    }
+    debug('search ? ' + search)
+    const found = await accounts
 
     debug('accounts: ' + JSON.stringify(found))
     return res.send({accounts: found})
