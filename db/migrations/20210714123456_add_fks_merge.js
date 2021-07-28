@@ -6,6 +6,7 @@ exports.up = function(knex) {
     knex.schema.alterTable("invoices", function(t) {
       t.foreign('user_id').references('users.id')
       t.foreign('account_id').references('accounts.id')
+      t.index('updatedAt')
     }),
 
     // alter table payments add foreign key (user_id) references users (id);
@@ -13,6 +14,7 @@ exports.up = function(knex) {
     knex.schema.alterTable("payments", function(t) {
       t.foreign('user_id').references('users.id')
       t.foreign('account_id').references('accounts.id')
+      t.index('updatedAt')
     }),
 
     // alter table orders add foreign key (user_id) references users (id);
@@ -22,16 +24,19 @@ exports.up = function(knex) {
       t.foreign('user_id').references('users.id')
       t.foreign('a1_id').references('accounts.id')
       t.foreign('a2_id').references('accounts.id')
+      t.index('updatedAt')
     }),
 
     // alter table deposits add foreign key (user_id) references users (id)
     knex.schema.alterTable("deposits", function(t) {
       t.foreign('user_id').references('users.id')
+      t.index('updatedAt')
     }),
 
     // alter table withdrawals add foreign key (user_id) references users (id)
     knex.schema.alterTable("withdrawals", function(t) {
       t.foreign('user_id').references('users.id')
+      t.index('updatedAt')
     }),
   ])
 }
