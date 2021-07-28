@@ -7,6 +7,11 @@ exports.up = function(knex) {
     knex.raw("alter table orders drop rate"),
     knex.raw("alter table orders add rate double"),
     knex.raw("update orders set rate = v1/v2"),
+
+    knex.raw('update accounts left join users on accounts.user_id = users.id set user_id = null where length(username) > 32')
+    knex.raw('update accounts left join users on accounts.user_id = users.id set user_id = null where users.id is null')
+    knex.raw('delete from accounts where users.id is null'),
+    knex.raw('delete from users where length(username) > 32')
   ])
 }
 
