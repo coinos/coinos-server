@@ -1,5 +1,6 @@
 const axios = require("axios");
 const crypto = require("crypto");
+const fs = require("fs");
 
 let fetchAssets;
 (fetchAssets = async () => {
@@ -7,13 +8,13 @@ let fetchAssets;
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
     );
-    var liquid_assets = require('./../assets.json')
+    var liquid_assets = require("./../assets.json");
     app.set("assets", liquid_assets);
   } catch (e) {
-    var liquid_assets = require('./../assets.json')
+    var liquid_assets = require("./../assets.json");
     if (liquid_assets) {
       app.set("assets", liquid_assets);
-      console.debug('using static assets...' + e.message);
+      console.debug("using static assets..." + e.message);
     } else {
       l.error("error fetching assets", e.message);
       res.status(500).send("error fetching assets");
@@ -27,7 +28,6 @@ app.get(
   "/assets",
   ah(async (req, res) => {
     if (app.get("assets")) {
-
       const assets = app.get("assets");
 
       const accounts = await db.Account.findAll({
@@ -61,7 +61,7 @@ app.get(
 
       res.send(assets);
     } else {
-	    console.log('error getting blockstream assets');
+      console.log("error getting blockstream assets");
       res.status(500).send("Problem fetching blockstream asset registry data");
     }
   })
@@ -74,20 +74,30 @@ app.post(
     try {
       const sha256 = crypto.createHash("sha256");
       const { id: user_id } = req.user;
-      const token_address = await lq.getNewAddress("", "legacy");
-      const asset_address = await lq.getNewAddress("", "legacy");
       const blind = false;
-      const info = await lq.getAddressInfo(asset_address);
-      const { pubkey: issuer_pubkey } = info;
 
       const {
+        address,
         domain,
         name,
         asset_amount,
+        filename,
         token_amount,
         precision,
+        pubkey,
         ticker
       } = req.body;
+
+      const asset_address = address
+        ? address
+        : await lq.getNewAddress("", "legacy");
+
+      const token_address =
+        token_amount && (await lq.getNewAddress("", "legacy"));
+
+      const issuer_pubkey = pubkey
+        ? pubkey
+        : (await lq.getAddressInfo(asset_address)).pubkey;
       const version = 0;
 
       const contract = {
@@ -98,7 +108,9 @@ app.post(
         ticker,
         version
       };
-      
+
+      if (filename) contract.filename = filename;
+
       l.info("attempting issuance", req.user.username, contract);
 
       sha256.update(JSON.stringify(contract));
@@ -108,7 +120,7 @@ app.post(
         .reverse()
         .join("");
       const rawtx = await lq.createRawTransaction([], { data: "00" });
-      const funded = await lq.fundRawTransaction(rawtx, { feeRate: 0.000003 });
+      const funded = await lq.fundRawTransaction(rawtx, { feeRate: 0.000002 });
       const params = {
         asset_amount,
         asset_address,
@@ -136,131 +148,128 @@ app.post(
       const brt = await lq.blindRawTransaction(hex, true, [], false);
       const srt = await lq.signRawTransactionWithWallet(brt);
       const allowed = (await lq.testMempoolAccept([srt.hex]))[0].allowed;
-      if (allowed) {
-        const txid = await lq.sendRawTransaction(srt.hex);
+      fs.writeFileSync('tx', srt.hex);
+      if (!allowed) throw new Error();
+      const txid = await lq.sendRawTransaction(srt.hex);
 
-        await db.transaction(async transaction => {
-          let account = await db.Account.findOne({
-            where: {
-              user_id,
-              asset: config.liquid.btcasset,
-              pubkey: null
-            },
-            include: {
-              model: db.User,
-              as: "user"
-            },
-            lock: transaction.LOCK.UPDATE,
-            transaction
-          });
+      await db.transaction(async transaction => {
+        let account = await db.Account.findOne({
+          where: {
+            user_id,
+            asset: config.liquid.btcasset,
+            pubkey: null
+          },
+          include: {
+            model: db.User,
+            as: "user"
+          },
+          transaction
+        });
 
-          let { user } = account;
+        let { user } = account;
 
-          if (Math.round(funded.fee * SATS) > account.balance) {
-            l.error(
-              "amount exceeds balance",
-              asset_amount,
-              funded.fee,
-              account.balance
-            );
-            throw new Error(
-              `Insufficient funds to pay fee of ${funded.fee} BTC`
-            );
-          }
-
-          await account.decrement(
-            { balance: Math.round(funded.fee * SATS) },
-            { transaction }
+        if (Math.round(funded.fee * SATS) > account.balance) {
+          l.error(
+            "amount exceeds balance",
+            asset_amount,
+            funded.fee,
+            account.balance
           );
-          await account.reload({ transaction });
-          emit(user.username, "account", account);
+          throw new Error(`Insufficient funds to pay fee of ${funded.fee} BTC`);
+        }
 
+        await account.decrement(
+          { balance: Math.round(funded.fee * SATS) },
+          { transaction }
+        );
+        await account.reload({ transaction });
+        emit(user.username, "account", account);
+
+        account = await db.Account.create(
+          {
+            asset,
+            contract,
+            domain,
+            user_id,
+            ticker,
+            precision,
+            name,
+            balance: 0,
+            network: "liquid",
+            pending: params.asset_amount * SATS
+          },
+          { transaction }
+        );
+
+        emit(user.username, "account", account);
+        l.info(
+          "issued asset",
+          user.username,
+          params.asset_amount,
+          ticker,
+          name
+        );
+
+        const asset_payment = await db.Payment.create(
+          {
+            account_id: account.id,
+            user_id,
+            hash: txid,
+            amount: params.asset_amount * SATS,
+            received: true,
+            confirmed: false,
+            address: asset_address,
+            network: "liquid"
+          },
+          { transaction }
+        );
+        emit(user.username, "payment", asset_payment);
+
+        issuances[txid] = {
+          user_id,
+          asset,
+          asset_amount: params.asset_amount,
+          asset_payment_id: asset_payment.id
+        };
+
+        if (token_amount) {
           account = await db.Account.create(
             {
-              asset,
-              contract,
-              domain,
+              asset: token,
               user_id,
-              ticker,
-              precision,
-              name,
+              domain,
+              ticker: `${ticker}REISSUANCETOKEN`,
+              precision: 8,
+              name: `${name} Reissuance Token`,
               balance: 0,
-              network: "liquid",
-              pending: params.asset_amount * SATS
+              pending: token_amount * SATS
             },
             { transaction }
           );
-
           emit(user.username, "account", account);
-          l.info(
-            "issued asset",
-            user.username,
-            params.asset_amount,
-            ticker,
-            name
-          );
 
-          const asset_payment = await db.Payment.create(
+          const token_payment = await db.Payment.create(
             {
               account_id: account.id,
               user_id,
               hash: txid,
-              amount: params.asset_amount * SATS,
+              amount: token_amount * SATS,
               received: true,
               confirmed: false,
-              address: asset_address,
+              address: token_address,
               network: "liquid"
             },
             { transaction }
           );
-          emit(user.username, "payment", asset_payment);
+          emit(user.username, "payment", token_payment);
 
-          issuances[txid] = {
-            user_id,
-            asset,
-            asset_amount: params.asset_amount,
-            asset_payment_id: asset_payment.id
-          };
+          issuances[txid].token = token;
+          issuances[txid].token_amount = token_amount;
+          issuances[txid].token_payment_id = token_payment.id;
+        }
+      });
 
-          if (token_amount) {
-            account = await db.Account.create(
-              {
-                asset: token,
-                user_id,
-                domain,
-                ticker: `${ticker}REISSUANCETOKEN`,
-                precision: 8,
-                name: `${name} Reissuance Token`,
-                balance: 0,
-                pending: token_amount * SATS
-              },
-              { transaction }
-            );
-            emit(user.username, "account", account);
-
-            const token_payment = await db.Payment.create(
-              {
-                account_id: account.id,
-                user_id,
-                hash: txid,
-                amount: token_amount * SATS,
-                received: true,
-                confirmed: false,
-                address: token_address,
-                network: "liquid"
-              },
-              { transaction }
-            );
-            emit(user.username, "payment", token_payment);
-
-            issuances[txid].token = token;
-            issuances[txid].token_amount = token_amount;
-            issuances[txid].token_payment_id = token_payment.id;
-          }
-        });
-
-        res.send(issuances[txid]);
-      }
+      res.send(issuances[txid]);
     } catch (e) {
       l.error("asset issuance failed", e.message);
       res.status(500).send(e.message);
