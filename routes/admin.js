@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var debug = require('debug')('debug')
 
+const parseInput = require('../scripts/apiParse')
+
 const Sequelize = require('sequelize')
 const Op = Sequelize.Op;
 
@@ -41,8 +43,10 @@ router.get(
 
     if (search) {
       users = users
-        .where('username', 'like', search)
-        .orWhere('email', 'like', search)
+        .where(function() {
+          this.where('username', 'like', search)
+          this.orWhere('email', 'like', search)
+        })
     }
     debug('search ? ' + search)
     // Alternative Sequelize query syntax
@@ -145,8 +149,10 @@ router.get(
 
     if (search) {
       queue = queue
-        .where('waiting_list.email', 'like', search)
-        .orWhere('users.username', 'like', search)
+        .where(function() {
+          this.where('waiting_list.email', 'like', search)
+          this.orWhere('users.username', 'like', search)
+        })
     }
     debug('search ? ' + search)
     const found = await queue
@@ -197,8 +203,10 @@ router.get(
 
     if (search) {
       accounts = accounts
-        .where('users.email', 'like', search)
-        .orWhere('users.username', 'like', search)
+        .where(function() {
+          this.where('users.email', 'like', search)
+          this.orWhere('users.username', 'like', search)
+        })
     }
     debug('search ? ' + search)
     const found = await accounts
@@ -230,7 +238,7 @@ router.get(
   "/transactions",
   // auth,
   ah(async (req, res) => {
-    const {type, since} = req.query
+    var {type, since, search, starts_with, contains} = req.query
 
     var transactions = knex
       .select(
@@ -263,12 +271,28 @@ router.get(
         }
       }
       if (since) transactions = transactions.havingRaw('invoices + payments + deposits + orders > ?', [0])
-      
+
+      if (starts_with) {
+        search = search + '%'
+      } else if (contains) {
+        search = '%' + search + '%'
+      }
+  
+      if (search) {
+        transactions = transactions
+          .where(function() {
+            this.where('users.email', 'like', search)
+            this.orWhere('users.username', 'like', search)
+          })
+    }
+
       transactions = transactions
         .groupBy('users.id')
 
-    var found = await transactions
-    debug('transactions: ' + JSON.stringify(found))
+      debug('search ? ' + search)
+      const found = await transactions
+
+        debug('transactions: ' + JSON.stringify(found))
     return res.send({transactions: found})
   })
 );
@@ -295,7 +319,7 @@ router.get(
   "/orders",
   auth,
   ah(async (req, res) => {
-    const {type, since} = req.query
+    var {type, since, search, starts_with, contains} = req.query
 
     var orders = knex
       .select(
@@ -319,6 +343,21 @@ router.get(
         .where('orders.updatedAt', '>=', since)
       }
 
+      if (starts_with) {
+        search = search + '%'
+      } else if (contains) {
+        search = '%' + search + '%'
+      }
+  
+      if (search) {
+        orders = orders
+          .where( function () {
+            this.where('u1.email', 'like', search)
+            this.orWhere('u1.username', 'like', search)
+            this.orWhere('u2.username', 'like', search)
+            this.orWhere('u2.email', 'like', search)  
+          })
+      }
       debug('orders since ' + since)
 
     var found = await orders
@@ -349,7 +388,7 @@ router.get(
   "/invoices",
   auth,
   ah(async (req, res) => {
-    const {type, since} = req.query
+    var {type, since, search, starts_with, contains} = req.query
 
     var invoices = knex
       .select(
@@ -370,6 +409,20 @@ router.get(
       }
 
       debug('invoices since ' + since)
+
+      if (starts_with) {
+        search = search + '%'
+      } else if (contains) {
+        search = '%' + search + '%'
+      }
+  
+      if (search) {
+        invoices = invoices
+          .where(function() {
+            this.where('users.email', 'like', search)
+            this.orWhere('users.username', 'like', search)
+          })
+      }
 
     var found = await invoices
     debug('invoices: ' + JSON.stringify(found))
@@ -400,7 +453,7 @@ router.get(
   "/deposits",
   auth,
   ah(async (req, res) => {
-    const {type, since} = req.query
+    var {type, since, search, starts_with, contains} = req.query
 
     var deposits = knex
       .select(
@@ -413,12 +466,28 @@ router.get(
       .from('deposits')
       .leftJoin('users', 'deposits.user_id', 'users.id')
 
-      if (since) {
-        deposits = deposits
-        .where('deposits.updatedAt', '>=', since)
-      }
+    debug('dtype: ' + deposits.constructor + ' : ' + typeof(deposits))
 
-      debug('deposits since ' + since)
+    if (since) {
+      deposits = deposits
+      .where('deposits.updatedAt', '>=', since)
+    }
+
+    debug('deposits since ' + since)
+
+    if (starts_with) {
+      search = search + '%'
+    } else if (contains) {
+      search = '%' + search + '%'
+    }
+
+    if (search) {
+      deposits = deposits
+        .where(function() {
+          this.where('users.email', 'like', search)
+          this.orWhere('users.username', 'like', search)
+        })
+    }
 
     var found = await deposits
     debug('deposits: ' + JSON.stringify(found))
@@ -448,7 +517,7 @@ router.get(
   "/withdrawals",
   auth,
   ah(async (req, res) => {
-    const {type, since} = req.query
+    var {type, since, search, starts_with, contains} = req.query
 
     var withdrawals = knex
       .select(
@@ -467,6 +536,21 @@ router.get(
       }
 
       debug('withdrawals since ' + since)
+
+
+      if (starts_with) {
+        search = search + '%'
+      } else if (contains) {
+        search = '%' + search + '%'
+      }
+  
+      if (search) {
+        withdrawals = withdrawals
+          .where(function() {
+            this.where('users.email', 'like', search)
+            this.orWhere('users.username', 'like', search)
+          })
+      }
 
     var found = await withdrawals
     debug('withdrawals: ' + JSON.stringify(found))
@@ -496,7 +580,7 @@ router.get(
   "/payments",
   auth,
   ah(async (req, res) => {
-    const {type, since} = req.query
+    var {type, since, search, starts_with, contains} = req.query
 
     var payments = knex
       .select(
@@ -518,6 +602,20 @@ router.get(
 
       debug('payments since ' + since)
 
+
+    if (starts_with) {
+      search = search + '%'
+    } else if (contains) {
+      search = '%' + search + '%'
+    }
+
+    if (search) {
+      payments = payments
+        .where(function() {
+          this.where('users.email', 'like', search)
+          this.orWhere('users.username', 'like', search)
+        })
+    }
     var found = await payments
     debug('payments: ' + JSON.stringify(found))
     return res.send({payments: found})
@@ -543,13 +641,53 @@ router.get(
  *     }
  */
 router.get(
-  "/user_kyc",
+  "/kyc_required",
   auth,
   ah(async (req, res) => {
+    var {since, search, starts_with, contains} = req.query
     
-    var kyc = { details: 'Not yet defined' }
-    debug('kyc: ' + JSON.stringify(kyc))
-    return res.send({users: kyc})
+    var kyc = knex
+    .select(
+      knex.raw("CONCAT( FORMAT(Max(amount)/1000000, 1), ' M') as max"),
+      'username',
+      'users.email',
+      'users.verified as kyc_verified',
+      'payments.currency',
+      'payments.network',
+      // knex.raw('LEFT(hash,20) as hash'),
+      // knex.raw('Left(payments.updatedAt,16) as transferred')
+    )
+    .from('payments')
+    .leftJoin('accounts', 'payments.account_id', 'accounts.id')
+    .leftJoin('users', 'payments.user_id', 'users.id')   // should really point to accounts
+    .groupBy('users.id')
+    .groupBy('payments.currency')
+    .groupBy('payments.network')
+
+    if (since) {
+      kyc = kyc
+      .where('payments.updatedAt', '>=', since)
+    }
+
+    debug('payments since ' + since)
+
+    if (starts_with) {
+      search = search + '%'
+    } else if (contains) {
+      search = '%' + search + '%'
+    }
+
+    if (search) {
+      kyc = kyc
+        .where(function() {
+          this.where('users.email', 'like', search)
+          this.orWhere('users.username', 'like', search)
+        })
+    }
+    var found = await kyc.having('max', '>=', 2.1)
+
+    debug('payments: ' + JSON.stringify(found))
+    return res.send({kyc_transactions: found})
   })
 );
 
