@@ -11,6 +11,7 @@ exports.up = function(knex) {
 
     t.boolean('email_verified').notNull().default(false)
     t.boolean('phone_verified').notNull().default(false)
+    t.boolean('kyc_verified').notNull().default(false)
 
     t.timestamps();
   })
