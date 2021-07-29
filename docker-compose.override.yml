@@ -1,0 +1,11 @@
+version: '3.6'
+services:
+  ui:
+    container_name: ui
+    image: asoltys/coinos-ui
+    ports: 
+      - 80:80
+    volumes:
+      - ./config/nginx:/etc/nginx/templates
+    environment:
+      HOST: ${HOST}
