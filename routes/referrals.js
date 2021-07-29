@@ -244,6 +244,7 @@ router.post(
 
     debug('email: ' + email)
     debug('phone: ' + phone)
+    debug('user_id: ' + user_id)
     
     await knex.table('waiting_list')
       .insert({
@@ -259,15 +260,17 @@ router.post(
 router.get(
   "/joinQueue",
   ah(async (req, res) => {
-    const {email, phone} = req.query;
+    const {email, phone, user_id} = req.query;
 
     debug('email: ' + email)
     debug('phone: ' + phone)
+    debug('user: ' + user_id)
 
     await knex('waiting_list')
       .insert({
         email: email,
-        phone: phone
+        phone: phone,
+        user_id: user_id
       })
 
     res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
