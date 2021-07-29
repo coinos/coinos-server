@@ -15,4 +15,3 @@ lnurl-server.sqlite3
 watcher.log
 config
 mysql
-docker-compose.override.yml
