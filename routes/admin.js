@@ -646,14 +646,16 @@ router.get(
   ah(async (req, res) => {
     var {since, search, starts_with, contains} = req.query
     
+    var threshold = '0.2'
+    
     var kyc = knex
     .select(
       knex.raw("CONCAT( FORMAT(Max(amount)/1000000, 1), ' M') as max"),
       'username',
       'users.email',
       'users.verified as kyc_verified',
-      'payments.currency',
-      'payments.network',
+      // 'payments.currency',
+      // 'payments.network',
       // knex.raw('LEFT(hash,20) as hash'),
       // knex.raw('Left(payments.updatedAt,16) as transferred')
     )
@@ -661,8 +663,8 @@ router.get(
     .leftJoin('accounts', 'payments.account_id', 'accounts.id')
     .leftJoin('users', 'payments.user_id', 'users.id')   // should really point to accounts
     .groupBy('users.id')
-    .groupBy('payments.currency')
-    .groupBy('payments.network')
+    // .groupBy('payments.currency')
+    // .groupBy('payments.network')
 
     if (since) {
       kyc = kyc
@@ -684,7 +686,7 @@ router.get(
           this.orWhere('users.username', 'like', search)
         })
     }
-    var found = await kyc.having('max', '>=', 2.1)
+    var found = await kyc.having('max', '>=', threshold)
 
     debug('payments: ' + JSON.stringify(found))
     return res.send({kyc_transactions: found})
