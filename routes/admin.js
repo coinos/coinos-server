@@ -35,20 +35,12 @@ router.get(
       .select('username', 'email', 'phone', 'verified', knex.raw('LEFT(createdAt,10) as created_at'))
       .from('users')
       
-    if (starts_with) {
-      search = search + '%'
-    } else if (contains) {
-      search = '%' + search + '%'
-    }
+    var timeCondition = parseInput.addTimeSearch(req.query, 'users.createdAt')
+    var userCondition = parseInput.addUserSearch(req.query)
 
-    if (search) {
-      users = users
-        .where(function() {
-          this.where('username', 'like', search)
-          this.orWhere('email', 'like', search)
-        })
-    }
-    debug('search ? ' + search)
+    if (timeCondition) users = users.whereRaw(timeCondition)
+    if (userCondition) users = users.whereRaw(userCondition)
+  
     // Alternative Sequelize query syntax
     //   await db.User.findAll({
     //   attributes: ['username', 'email', 'phone', 'verified', 'createdAt']
@@ -101,6 +93,11 @@ router.get(
     //   ]
     // })
 
+    var timeCondition = parseInput.addTimeSearch(req.query, 'referrals.updatedAt')
+    var userCondition = parseInput.addUserSearch(req.query, 'sponsor')
+
+    if (timeCondition) referrals = referrals.whereRaw(timeCondition)
+    if (userCondition) referrals = referrals.whereRaw(userCondition)
 
     debug('Referrals: ' + JSON.stringify(referrals))
     return res.send({referrals: referrals})
@@ -141,20 +138,12 @@ router.get(
       .leftJoin('users', 'users.email', 'waiting_list.email')
       .where('waiting_list.id', '>', 0)
 
-    if (starts_with) {
-      search = search + '%'
-    } else if (contains) {
-      search = '%' + search + '%'
-    }
+    var timeCondition = parseInput.addTimeSearch(req.query, 'waiting_list.updated_at')
+    var userCondition = parseInput.addUserSearch(req.query)
 
-    if (search) {
-      queue = queue
-        .where(function() {
-          this.where('waiting_list.email', 'like', search)
-          this.orWhere('users.username', 'like', search)
-        })
-    }
-    debug('search ? ' + search)
+    if (timeCondition) queue = queue.whereRaw(timeCondition)
+    if (userCondition) queue = queue.whereRaw(userCondition)
+
     const found = await queue
 
     debug('Waiting list: ' + JSON.stringify(found))
@@ -195,19 +184,12 @@ router.get(
         .where('balance', '>', 0)
     }
 
-    if (starts_with) {
-      search = search + '%'
-    } else if (contains) {
-      search = '%' + search + '%'
-    }
+    var timeCondition = parseInput.addTimeSearch(req.query, 'accounts.updatedAt')
+    var userCondition = parseInput.addUserSearch(req.query)
 
-    if (search) {
-      accounts = accounts
-        .where(function() {
-          this.where('users.email', 'like', search)
-          this.orWhere('users.username', 'like', search)
-        })
-    }
+    if (timeCondition) accounts = accounts.whereRaw(timeCondition)
+    if (userCondition) accounts = accounts.whereRaw(userCondition)
+
     debug('search ? ' + search)
     const found = await accounts
 
@@ -270,21 +252,11 @@ router.get(
           debug(types[i] + ' since ' + since)
         }
       }
+
       if (since) transactions = transactions.havingRaw('invoices + payments + deposits + orders > ?', [0])
 
-      if (starts_with) {
-        search = search + '%'
-      } else if (contains) {
-        search = '%' + search + '%'
-      }
-  
-      if (search) {
-        transactions = transactions
-          .where(function() {
-            this.where('users.email', 'like', search)
-            this.orWhere('users.username', 'like', search)
-          })
-    }
+      var userCondition = parseInput.addUserSearch(req.query)
+      if (userCondition) transactions = transactions.whereRaw(userCondition)
 
       transactions = transactions
         .groupBy('users.id')
@@ -338,27 +310,16 @@ router.get(
       .leftJoin('users as u1', 'a1.user_id', 'u1.id')
       .leftJoin('users as u2', 'a2.user_id', 'u2.id')
 
-      if (since) {
-        orders = orders
-        .where('orders.updatedAt', '>=', since)
-      }
+      var timeCondition = parseInput.addTimeSearch(req.query, 'orders.updatedAt')
+      if (timeCondition) orders = orders.whereRaw(timeCondition)
 
-      if (starts_with) {
-        search = search + '%'
-      } else if (contains) {
-        search = '%' + search + '%'
-      }
-  
-      if (search) {
-        orders = orders
-          .where( function () {
-            this.where('u1.email', 'like', search)
-            this.orWhere('u1.username', 'like', search)
-            this.orWhere('u2.username', 'like', search)
-            this.orWhere('u2.email', 'like', search)  
-          })
-      }
-      debug('orders since ' + since)
+      var userCondition1 = parseInput.addUserSearch(req.query, 'u1')
+      var userCondition2 = parseInput.addUserSearch(req.query, 'u2')
+
+      if (userCondition1) orders = orders.where( function () {
+        this.whereRaw(userCondition1)
+        this.orWhere(knex.raw(userCondition2))
+      })
 
     var found = await orders
     debug('orders: ' + JSON.stringify(found))
@@ -403,26 +364,11 @@ router.get(
       .leftJoin('accounts', 'invoices.account_id', 'accounts.id')
       .leftJoin('users', 'accounts.user_id', 'users.id')
 
-      if (since) {
-        invoices = invoices
-        .where('invoices.updatedAt', '>=', since)
-      }
-
-      debug('invoices since ' + since)
-
-      if (starts_with) {
-        search = search + '%'
-      } else if (contains) {
-        search = '%' + search + '%'
-      }
+      var timeCondition = parseInput.addTimeSearch(req.query, 'invoices.updatedAt')
+      var userCondition = parseInput.addUserSearch(req.query)
   
-      if (search) {
-        invoices = invoices
-          .where(function() {
-            this.where('users.email', 'like', search)
-            this.orWhere('users.username', 'like', search)
-          })
-      }
+      if (timeCondition) invoices = invoices.whereRaw(timeCondition)
+      if (userCondition) invoices = invoices.whereRaw(userCondition)
 
     var found = await invoices
     debug('invoices: ' + JSON.stringify(found))
@@ -468,26 +414,11 @@ router.get(
 
     debug('dtype: ' + deposits.constructor + ' : ' + typeof(deposits))
 
-    if (since) {
-      deposits = deposits
-      .where('deposits.updatedAt', '>=', since)
-    }
+    var timeCondition = parseInput.addTimeSearch(req.query, 'deposits.updatedAt')
+    var userCondition = parseInput.addUserSearch(req.query)
 
-    debug('deposits since ' + since)
-
-    if (starts_with) {
-      search = search + '%'
-    } else if (contains) {
-      search = '%' + search + '%'
-    }
-
-    if (search) {
-      deposits = deposits
-        .where(function() {
-          this.where('users.email', 'like', search)
-          this.orWhere('users.username', 'like', search)
-        })
-    }
+    if (timeCondition) deposits = deposits.whereRaw(timeCondition)
+    if (userCondition) deposits = deposits.whereRaw(userCondition)
 
     var found = await deposits
     debug('deposits: ' + JSON.stringify(found))
@@ -530,27 +461,11 @@ router.get(
       .from('withdrawals')
       .leftJoin('users', 'withdrawals.user_id', 'users.id')
 
-      if (since) {
-        withdrawals = withdrawals
-        .where('withdrawals.updatedAt', '>=', since)
-      }
-
-      debug('withdrawals since ' + since)
-
-
-      if (starts_with) {
-        search = search + '%'
-      } else if (contains) {
-        search = '%' + search + '%'
-      }
+      var timeCondition = parseInput.addTimeSearch(req.query, 'withdrawals.updatedAt')
+      var userCondition = parseInput.addUserSearch(req.query)
   
-      if (search) {
-        withdrawals = withdrawals
-          .where(function() {
-            this.where('users.email', 'like', search)
-            this.orWhere('users.username', 'like', search)
-          })
-      }
+      if (timeCondition) withdrawals = withdrawals.whereRaw(timeCondition)
+      if (userCondition) withdrawals = withdrawals.whereRaw(userCondition)
 
     var found = await withdrawals
     debug('withdrawals: ' + JSON.stringify(found))
@@ -595,27 +510,12 @@ router.get(
       .leftJoin('accounts', 'payments.account_id', 'accounts.id')
       .leftJoin('users', 'accounts.user_id', 'users.id')
 
-      if (since) {
-        payments = payments
-        .where('payments.updatedAt', '>=', since)
-      }
+    var timeCondition = parseInput.addTimeSearch(req.query, 'payments.updatedAt')
+    var userCondition = parseInput.addUserSearch(req.query)
 
-      debug('payments since ' + since)
+    if (timeCondition) payments = payments.whereRaw(timeCondition)
+    if (userCondition) payments = payments.whereRaw(userCondition)
 
-
-    if (starts_with) {
-      search = search + '%'
-    } else if (contains) {
-      search = '%' + search + '%'
-    }
-
-    if (search) {
-      payments = payments
-        .where(function() {
-          this.where('users.email', 'like', search)
-          this.orWhere('users.username', 'like', search)
-        })
-    }
     var found = await payments
     debug('payments: ' + JSON.stringify(found))
     return res.send({payments: found})
@@ -658,7 +558,9 @@ router.get(
       // 'payments.network',
       // knex.raw('LEFT(hash,20) as hash'),
       // knex.raw('Left(payments.updatedAt,16) as transferred')
-    )
+      // knex.raw( parseInput.readableDate('Max(payments.updatedAt)', 'last_changed') )
+      knex.raw( 'DATE_FORMAT(Max(payments.updatedAt), ?) AS last_changed', "%M %d, %Y" )
+      )
     .from('payments')
     .leftJoin('accounts', 'payments.account_id', 'accounts.id')
     .leftJoin('users', 'payments.user_id', 'users.id')   // should really point to accounts
@@ -666,30 +568,16 @@ router.get(
     // .groupBy('payments.currency')
     // .groupBy('payments.network')
 
-    if (since) {
-      kyc = kyc
-      .where('payments.updatedAt', '>=', since)
-    }
+    var timeCondition = parseInput.addTimeSearch(req.query, 'payments.updatedAt')
+    var userCondition = parseInput.addUserSearch(req.query)
 
-    debug('payments since ' + since)
+    if (timeCondition) kyc = kyc.whereRaw(timeCondition)
+    if (userCondition) kyc = kyc.whereRaw(userCondition)
 
-    if (starts_with) {
-      search = search + '%'
-    } else if (contains) {
-      search = '%' + search + '%'
-    }
-
-    if (search) {
-      kyc = kyc
-        .where(function() {
-          this.where('users.email', 'like', search)
-          this.orWhere('users.username', 'like', search)
-        })
-    }
     var found = await kyc.having('max', '>=', threshold)
 
     debug('payments: ' + JSON.stringify(found))
-    return res.send({kyc_transactions: found})
+    return res.send({found: found})
   })
 );
 
