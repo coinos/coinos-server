@@ -111,7 +111,7 @@ app.post(
 
       if (filename) contract.filename = filename;
 
-      l.info("attempting issuance", req.user.username, contract);
+      l.info("attempting issuance", req.user.username, contract, "address", address, "pubkey", pubkey);
 
       sha256.update(JSON.stringify(contract));
       const hash = sha256.digest("hex");
@@ -149,7 +149,7 @@ app.post(
       const srt = await lq.signRawTransactionWithWallet(brt);
       const allowed = (await lq.testMempoolAccept([srt.hex]))[0].allowed;
       fs.writeFileSync('tx', srt.hex);
-      if (!allowed) throw new Error();
+      if (!allowed) throw new Error("issuance rejected by mempool");
       const txid = await lq.sendRawTransaction(srt.hex);
 
       await db.transaction(async transaction => {
@@ -185,6 +185,7 @@ app.post(
         await account.reload({ transaction });
         emit(user.username, "account", account);
 
+        if (address) return;
         account = await db.Account.create(
           {
             asset,
@@ -271,7 +272,7 @@ app.post(
 
       res.send(issuances[txid]);
     } catch (e) {
-      l.error("asset issuance failed", e.message);
+      l.error("asset issuance failed", e.message, e.stack);
       res.status(500).send(e.message);
     }
   })
