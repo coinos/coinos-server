@@ -4,6 +4,7 @@ services:
     container_name: app
     image: asoltys/coinos-server
     ports:
+      - '3118:3118'
       - '3119:3119'
     environment:
       NODE_ENV: development

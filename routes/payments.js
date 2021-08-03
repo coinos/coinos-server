@@ -142,6 +142,7 @@ ah(async () => {
     app.get("/liquid/generate", auth, require("./liquid/generate"));
     app.post("/liquid/fee", auth, require("./liquid/fee"));
     app.post("/liquid/send", auth, require("./liquid/send"));
+    app.post("/taxi", auth, require("./liquid/taxi"));
     require("./liquid/receive");
 
     setTimeout(async () => {
