@@ -270,7 +270,7 @@ app.post(
         }
       });
 
-      res.send(issuances[txid]);
+      res.send(issuances[txid] ? issuances[txid] : { asset });
     } catch (e) {
       l.error("asset issuance failed", e.message, e.stack);
       res.status(500).send(e.message);
