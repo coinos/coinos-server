@@ -3,11 +3,6 @@ const buildTx = require("../../lib/buildliquidtx");
 liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let tx, fee;
   let node = lq;
-  /*
-  if (asset === config.liquid.btcasset) {
-    node = rare;
-  } 
-  */
 
   if (user.account.pubkey) {
     let psbt = await buildTx({
@@ -64,6 +59,8 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
     }
   );
 
+  l.info("funding tx for fee estimate", tx);
+
   tx = await node.fundRawTransaction(tx, params);
 
   let blinded = await node.blindRawTransaction(tx.hex);
@@ -81,7 +78,7 @@ module.exports = ah(async (req, res) => {
     let tx = await liquidTx({ ...req.body, user: req.user })
     res.send(tx);
   } catch (e) {
-    l.error("error estimating liquid fee", e.message, e.stack);
+    l.error("error estimating liquid fee", e.message);
     return res.status(500).send(e.message);
   }
 });

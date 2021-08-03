@@ -101,7 +101,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                 user_id: user.id,
                 network: "liquid"
               },
-              order: [["id", "DESC"]],
+              order: [["id", "DESC"]]
             });
 
             if (!invoice) return;
@@ -286,9 +286,9 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      let account, address, user, total;
+      let account, address, user, total, p;
       await db.transaction(async transaction => {
-        let p = await db.Payment.findOne({
+        p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
@@ -347,7 +347,7 @@ setInterval(async () => {
       });
 
       let c = convert[address];
-      if (address && c) {
+      if (address && c && p.account.asset === network.assetHash) {
         l.info(
           "liquid detected for conversion request",
           address,

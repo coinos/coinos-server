@@ -1,4 +1,3 @@
-const bitcoin = require("bitcoinjs-lib");
 const btc = config.liquid.btcasset;
 
 module.exports = ah(async (req, res) => {
@@ -32,10 +31,10 @@ module.exports = ah(async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  let params;
+  let account, params;
   try {
     await db.transaction(async transaction => {
-      let account = await db.Account.findOne({
+      account = await db.Account.findOne({
         where: {
           id: user.account_id
         },
@@ -62,38 +61,38 @@ module.exports = ah(async (req, res) => {
 
       await account.decrement({ balance: total }, { transaction });
       await account.reload({ transaction });
-
-      params = {
-        amount: -amount,
-        fee,
-        memo,
-        account_id: account.id,
-        user_id: user.id,
-        rate: app.get("rates")[user.currency],
-        currency: user.currency,
-        address,
-        confirmed: true,
-        received: false,
-        network: "bitcoin"
-      };
-
-      if (config.bitcoin.walletpass)
-        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-
-      hex = (await bc.signRawTransactionWithWallet(hex)).hex;
-      params.hash = await bc.sendRawTransaction(hex);
-
-      let payment = await db.Payment.create(params, { transaction });
-
-      payment = payment.get({ plain: true });
-      payment.account = account.get({ plain: true });
-
-      emit(user.username, "payment", payment);
-      res.send(payment);
-
-      payments.push(params.hash);
-      l.info("sent bitcoin", user.username, total);
     });
+
+    params = {
+      amount: -amount,
+      fee,
+      memo,
+      account_id: account.id,
+      user_id: user.id,
+      rate: app.get("rates")[user.currency],
+      currency: user.currency,
+      address,
+      confirmed: true,
+      received: false,
+      network: "bitcoin"
+    };
+
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+    hex = (await bc.signRawTransactionWithWallet(hex)).hex;
+    params.hash = await bc.sendRawTransaction(hex);
+
+    let payment = await db.Payment.create(params);
+
+    payment = payment.get({ plain: true });
+    payment.account = account.get({ plain: true });
+
+    emit(user.username, "payment", payment);
+    res.send(payment);
+
+    payments.push(params.hash);
+    l.info("sent bitcoin", user.username, total);
   } catch (e) {
     l.error("error sending bitcoin", e.message);
     return res.status(500).send(e.message);
