@@ -14,11 +14,19 @@ docker exec -it bitcoin bash
 bitcoin-cli -regtest -datadir=/config -rpcwallet=coinosdev getnewaddress
 
 # mine a block to the new address 
-bitcoin-cli -regtest -datadir=/config generatetoaddress 101 theaddressgneratedabove
+bitcoin-cli -regtest -datadir=/config generatetoaddress 101 theaddressgeneratedabove
 
 # verify you got the reward: 
 bitcoin-cli -regtest -datadir=/config -conf=./bitcoin.conf -rpcwallet=coinosdev getbalance
 > 50.00000000
+
+# send 10 bitcoin to your account on the server
+# get the address to send to from ./receive, select 'Bitcoin'
+bitcoin-cli -regtest -datadir=/config -rpcwallet=coinosdev sendtoaddress [account-address] 10
+
+# confirm the transaction
+# (do the mining command again)
+bitcoin-cli -regtest -datadir=/config generatetoaddress 101 theaddressgeneratedabove
 ```
 
 ![](./img/50-bitcoin-server-balance.gif)

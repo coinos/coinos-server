@@ -1,5 +1,6 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
+const { Transaction } = require("liquidjs-lib");
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   if (amount > 10000000) throw new Error("Amount too large");
@@ -48,7 +49,8 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   const assets = Object.keys(totals);
   const payments = [];
 
-  return db.transaction(async transaction => {
+  let main, signed;
+  await db.transaction(async transaction => {
     for (let i = 0; i < assets.length; i++) {
       let asset = assets[i];
       let amount = totals[asset];
@@ -75,12 +77,12 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             await faucet.reload({ transaction });
             await faucet.save({ transaction });
           }
-
-          total += fee - covered;
         }
+
+        total += fee - covered;
       }
 
-      if (limit && total > limit)
+      if (limit && total > limit + fee)
         throw new Error("Tx amount exceeds authorized amount");
 
       if (asset !== btc || total) {
@@ -132,16 +134,11 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
       }
     }
 
-    if (config.liquid.walletpass)
-      await lq.walletPassphrase(config.liquid.walletpass, 300);
+    signed = await lq.signRawTransactionWithWallet(
+      await lq.blindRawTransaction(tx.hex)
+    );
+    let txid = Transaction.fromHex(signed.hex).getId();
 
-    let blinded = await lq.blindRawTransaction(tx.hex);
-    let signed = await lq.signRawTransactionWithWallet(blinded);
-    let txid = await lq.sendRawTransaction(signed.hex);
-
-    l.info("sent liquid tx", txid, address);
-
-    let main;
     for (let i = 0; i < assets.length; i++) {
       p = payments[i];
       if (p) {
@@ -157,15 +154,22 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
 
     emit(user.username, "account", main.account);
     emit(user.username, "payment", main);
-    return main;
   });
+
+  if (config.liquid.walletpass)
+    await lq.walletPassphrase(config.liquid.walletpass, 300);
+
+  let txid = await lq.sendRawTransaction(signed.hex);
+  l.info("sent liquid tx", txid, address);
+
+  return main;
 };
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
 
   try {
-    res.send(await sendLiquid({...req.body, user }));
+    res.send(await sendLiquid({ ...req.body, user }));
   } catch (e) {
     l.error("problem sending liquid", user.username, e.message);
     return res.status(500).send(e);

@@ -1,20 +1,18 @@
 const handlePayment = async msg => {
+  if (!msg.settled) return;
   let account, total, user;
+
+  const invoice = await db.Invoice.findOne({
+    where: {
+      text: msg.payment_request
+    }
+  });
+
+  if (!invoice)
+    return l.warn("received lightning with no invoice", msg.payment_request);
+
   try {
     await db.transaction(async transaction => {
-      if (!msg.settled) return;
-
-      const invoice = await db.Invoice.findOne({
-        where: {
-          text: msg.payment_request
-        }
-      });
-
-      if (!invoice)
-        return l.warn(
-          "received lightning with no invoice",
-          msg.payment_request
-        );
 
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
       const amount = parseInt(msg.amt_paid_sat) - tip;
@@ -85,7 +83,12 @@ const handlePayment = async msg => {
 
     let c = convert[msg.payment_request];
     if (msg.payment_request && c) {
-      l.info("lightning detected for conversion request", msg.payment_request, c.address, user.username);
+      l.info(
+        "lightning detected for conversion request",
+        msg.payment_request,
+        c.address,
+        user.username
+      );
 
       user.account = account;
 

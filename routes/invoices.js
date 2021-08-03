@@ -27,6 +27,10 @@ app.post(
       let { liquidAddress, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
+      if (invoice.amount < 0) throw new Error("amount out of range");
+      if (invoice.tip > invoice.amount || invoice.tip > 1000000 || invoice.tip < 0)
+        throw new Error("tip amount out of range");
+
       if (liquidAddress) {
         l.info("conversion request for", liquidAddress, invoice.text);
         convert[invoice.text] = { address: liquidAddress, tx };

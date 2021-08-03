@@ -151,9 +151,9 @@ ah(async () => {
         const { hdkeypath } = await lq.getAddressInfo(address);
         const parts = hdkeypath.split("/");
         app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
-      } catch (e) {
-        console.error("Problem getting liquid address", e);
-      }
+      } catch(e) {
+        l.warn("Problem getting liquid address index", e.message);
+      } 
     }, 50);
   }
 
