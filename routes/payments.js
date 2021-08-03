@@ -96,7 +96,7 @@ ah(async () => {
     if (config.lna.clightning) {
       lna = require("clightning-client")(config.lna.dir);
     } else {
-      throw new Error("lnd not supported");
+      lna = lnd(config.lna);
     }
 
     app.post("/lightning/channel", require("./lightning/channel"));
