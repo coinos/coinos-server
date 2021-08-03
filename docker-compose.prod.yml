@@ -1,0 +1,44 @@
+version: '3.6'
+services:
+  ui:
+    container_name: ui
+    image: asoltys/coinos-ui:prod
+    volumes:
+      - ./config/nginx:/etc/nginx/templates
+    environment:
+      HOST: ${HOST}
+    network_mode: host
+  app:
+    container_name: app
+    image: asoltys/coinos-server
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./:/app
+    network_mode: host
+  la:
+    image: elementsproject/lightningd:latest
+    container_name: la
+    volumes:
+      - ./config/lightning:/root/.lightning
+    restart: unless-stopped
+    network_mode: host
+  lb:
+    image: elementsproject/lightningd:latest
+    container_name: lb
+    volumes:
+      - ./config/lightningb:/root/.lightning
+    restart: unless-stopped
+    network_mode: host
+  maria:
+    container_name: mariadb
+    image: mariadb:10.6.1
+    restart: always
+    command:
+      - --bind-address=0.0.0.0
+      - --port=3307
+    environment:
+      MARIADB_ROOT_PASSWORD: ${ROOT_PASSWORD}
+    volumes:
+      - ./mysql:/var/lib/mysql
+    network_mode: host
