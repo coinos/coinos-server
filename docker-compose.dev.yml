@@ -10,4 +10,4 @@ services:
     environment:
       NODE_ENV: development
     volumes:
-      - ../coinos-ui:/coinos
+      - ../coinos-ui:/coinos-ui
