@@ -34,9 +34,9 @@ app.get("/balances", ah(async (req, res, next) => {
       lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
       lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
     } else {
-      lninfo = await lna.getInfo({});
-      lnchannel = parseInt((await lna.channelBalance({})).balance);
-      lnwallet = parseInt((await lna.walletBalance({})).total_balance);
+      lninfo = await lnp.getInfo({});
+      lnchannel = parseInt((await lnp.channelBalance({})).balance);
+      lnwallet = parseInt((await lnp.walletBalance({})).total_balance);
     } 
   }
 

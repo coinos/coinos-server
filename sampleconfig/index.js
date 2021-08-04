@@ -25,7 +25,7 @@ module.exports = {
     masterkey:
       "tprv8ZgxMBicQKsPdTUoagV41nang9pQUA2DKoVWLmTrWmb2PfsC8pDTHveCMyzUyMguKJCjd5uyHcqg27r7gDzz4TY3MgucpLsSXwCbjn2C3Q1",
     host: "bitcoin",
-    wallet: "coinosdev",
+    wallet: "coinos",
     username: "admin1",
     password: "123",
     network: "regtest",
@@ -42,10 +42,10 @@ module.exports = {
     username: "admin1",
     password: "123",
     network: "regtest",
-    wallet: "a",
+    wallet: "coinos",
     port: 7040,
-    zmqrawblock: "tcp://liquid:18602",
-    zmqrawtx: "tcp://liquid:18603",
+    zmqrawblock: "tcp://liquid:18606",
+    zmqrawtx: "tcp://liquid:18607",
     btcasset,
   },
   lna: {

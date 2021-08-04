@@ -7,7 +7,7 @@ module.exports = ah(async (req, res) => {
   l.info("connecting to peer", req.user.username, pubkey, host);
   let result;
   try {
-    result = await lna.connectPeer({
+    result = await lnp.connectPeer({
       addr: { pubkey, host },
       perm: true
     });
@@ -21,7 +21,7 @@ module.exports = ah(async (req, res) => {
   const { callback, k1 } = params;
   let remoteid;
   try {
-    remoteid = (await lna.getInfo({})).identity_pubkey;
+    remoteid = (await lnp.getInfo({})).identity_pubkey;
   } catch(e) {
     l.error("problem getting lightning node info", e.message);
     return res.status(500).send(e.message);
