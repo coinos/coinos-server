@@ -2,7 +2,6 @@ const BitcoinCore = require("@asoltys/bitcoin-core");
 const { Op } = require("sequelize");
 const { join } = require("path");
 const fs = require("fs");
-const lnd = require("../lib/lnd");
 const read = require("../lib/read");
 
 ah(async () => {
@@ -96,6 +95,7 @@ ah(async () => {
     if (config.lna.clightning) {
       lna = require("clightning-client")(config.lna.dir);
     } else {
+      lnd = require("../lib/lnd");
       lna = lnd.default;
       lnp = [
         "addInvoice",
