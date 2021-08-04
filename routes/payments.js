@@ -2,6 +2,7 @@ const BitcoinCore = require("@asoltys/bitcoin-core");
 const { Op } = require("sequelize");
 const { join } = require("path");
 const fs = require("fs");
+const lnd = require("../lib/lnd");
 const read = require("../lib/read");
 
 ah(async () => {
@@ -12,34 +13,34 @@ ah(async () => {
 
   const exceptions = [];
   try {
-    read(fs.createReadStream("exceptions"), (data) => exceptions.push(data));
+    read(fs.createReadStream("exceptions"), data => exceptions.push(data));
   } catch (e) {
     l.warn("couldn't read exceptions file", e.message);
   }
 
   try {
-  (
-    await db.Invoice.findAll({
-      include: {
-        model: db.User,
-        as: "user",
-      },
-    })
-  ).map(({ address, user, unconfidential }) => {
-    if (address && user) addresses[address] = user.username;
-    if (unconfidential && user) addresses[unconfidential] = user.username;
-  });
-  } catch(e) {
+    (
+      await db.Invoice.findAll({
+        include: {
+          model: db.User,
+          as: "user"
+        }
+      })
+    ).map(({ address, user, unconfidential }) => {
+      if (address && user) addresses[address] = user.username;
+      if (unconfidential && user) addresses[unconfidential] = user.username;
+    });
+  } catch (e) {
     console.log(e);
-  } 
+  }
 
   try {
     const accounts = await db.Account.findAll({
       where: { pubkey: { [Op.ne]: null } },
       include: {
         model: db.User,
-        as: "user",
-      },
+        as: "user"
+      }
     });
 
     accounts.map(({ address, user: { username } }) => {
@@ -51,36 +52,35 @@ ah(async () => {
 
   payments = (
     await db.Payment.findAll({
-      attributes: ["hash"],
+      attributes: ["hash"]
     })
-  ).map((p) => p.hash);
-
+  ).map(p => p.hash);
 
   setInterval(async () => {
     const unconfirmed = (
       await db.Payment.findAll({
         where: {
-          confirmed: 0,
-        },
+          confirmed: 0
+        }
       })
-    ).map((p) => p.hash);
+    ).map(p => p.hash);
 
     const transactions = await bc.listTransactions("*", 1000);
 
     transactions
       .filter(
-        (tx) =>
+        tx =>
           tx.category === "receive" &&
           tx.confirmations > 0 &&
           unconfirmed.includes(tx.txid)
       )
-      .map((tx) => {
+      .map(tx => {
         l.warn("tx unconfirmed in db", tx.txid, tx.address);
       });
 
     const unaccounted = [];
 
-    transactions.map((tx) => {
+    transactions.map(tx => {
       if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
         unaccounted.push(tx.txid);
       }
@@ -96,7 +96,22 @@ ah(async () => {
     if (config.lna.clightning) {
       lna = require("clightning-client")(config.lna.dir);
     } else {
-      lna = lnd(config.lna);
+      lna = lnd.default;
+      lnp = [
+        "addInvoice",
+        "channelBalance",
+        "connectPeer",
+        "decodePayReq",
+        "getInfo",
+        "listInvoices",
+        "listPayments",
+        "sendPaymentSync",
+        "walletBalance"
+      ].reduce(
+        (a, b) =>
+          (a[b] = args => new Promise(r => lna[b](args, (e, v) => r(v)))) && a,
+        {}
+      );
     }
 
     app.post("/lightning/channel", require("./lightning/channel"));
@@ -151,9 +166,9 @@ ah(async () => {
         const { hdkeypath } = await lq.getAddressInfo(address);
         const parts = hdkeypath.split("/");
         app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
-      } catch(e) {
+      } catch (e) {
         l.warn("Problem getting liquid address index", e.message);
-      } 
+      }
     }, 50);
   }
 

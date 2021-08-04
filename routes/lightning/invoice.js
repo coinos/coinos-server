@@ -1,3 +1,4 @@
+
 module.exports = ah(async (req, res) => {
   let { amount, memo, tip } = req.body;
   if (!tip) tip = 0;
@@ -14,11 +15,11 @@ module.exports = ah(async (req, res) => {
       );
       res.send(invoice.bolt11);
     } else {
-      const invoice = await lna.addInvoice({ value, memo });
+      const invoice = await lnp.addInvoice({ value, memo });
       res.send(invoice.payment_request);
     }
   } catch (e) {
-    l.error("problem creating invoice", e.message);
+    l.error("problem creating invoice", e.message, e.stack);
     res.status(500).send(e.message);
   }
 });

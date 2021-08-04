@@ -90,7 +90,7 @@ app.post(
       amount: value,
       params: { callback, k1 }
     } = req.body;
-    const invoice = await lna.addInvoice({ value });
+    const invoice = await lnp.addInvoice({ value });
     const { payment_request: pr } = invoice;
     const url = `${callback}?k1=${k1}&pr=${pr}`;
 
@@ -284,7 +284,7 @@ lnurlServer.bindToHook(
 
       if (recipient) {
         setTimeout(async () => {
-          let { invoices } = await lna.listInvoices({
+          let { invoices } = await lnp.listInvoices({
             pending_only: true
           });
 
@@ -352,7 +352,7 @@ lnurlServer.bindToHook(
       }
 
       try {
-        let decoded = await lna.decodePayReq({ pay_req: pr });
+        let decoded = await lnp.decodePayReq({ pay_req: pr });
         let amount = decoded.num_satoshis;
 
         await db.transaction(async transaction => {
@@ -385,7 +385,7 @@ lnurlServer.bindToHook(
 
           setTimeout(async () => {
             try {
-              let { payments } = await lna.listPayments({
+              let { payments } = await lnp.listPayments({
                 include_incomplete: false,
                 max_payments: 5,
                 reversed: true

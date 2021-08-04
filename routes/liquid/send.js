@@ -1,6 +1,6 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
-const { Transaction } = require("liquidjs-lib");
+const { Transaction } = require("@asoltys/liquidjs-lib");
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   if (amount > 10000000) throw new Error("Amount too large");
