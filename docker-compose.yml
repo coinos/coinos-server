@@ -36,7 +36,7 @@ services:
       - ./config/liquid:/config
     restart: unless-stopped
   lnd:
-    image: lnd
+    image: lightninglabs/lnd:v0.13.1-beta
     container_name: lnd
     volumes:
       - ./config/lnd:/root/.lnd
