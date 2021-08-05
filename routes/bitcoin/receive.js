@@ -114,7 +114,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           emit(user.username, "payment", payment);
           l.info("bitcoin detected", user.username, value);
           notify(user, `${value} SAT payment detected`);
-          await callWebhook(invoice, payment);
+          callWebhook(invoice, payment);
         }
       } catch (e) {
         console.log(e);
@@ -189,7 +189,7 @@ setInterval(async () => {
           emit(user.username, "payment", p);
           l.info("bitcoin confirmed", user.username, p.amount, p.tip);
           notify(user, `${total} SAT payment confirmed`);
-          await callWebhook(p.invoice, p);
+          callWebhook(p.invoice, p);
         } else {
           l.warn("couldn't find bitcoin payment", hash);
         }

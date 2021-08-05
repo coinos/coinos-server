@@ -111,7 +111,15 @@ app.post(
 
       if (filename) contract.filename = filename;
 
-      l.info("attempting issuance", req.user.username, contract, "address", address, "pubkey", pubkey);
+      l.info(
+        "attempting issuance",
+        req.user.username,
+        contract,
+        "address",
+        address,
+        "pubkey",
+        pubkey
+      );
 
       sha256.update(JSON.stringify(contract));
       const hash = sha256.digest("hex");
@@ -127,6 +135,7 @@ app.post(
         blind,
         contract_hash
       };
+
 
       params.asset_amount = asset_amount / (SATS / 10 ** precision);
 
