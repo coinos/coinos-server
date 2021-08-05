@@ -175,7 +175,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             emit(user.username, "account", payment.account);
             l.info("liquid detected", address, user.username, asset, value);
             notify(user, `${value} SAT payment detected`);
-            await callWebhook(invoice, payment);
+            callWebhook(invoice, payment);
           });
         }
       } catch (e) {
