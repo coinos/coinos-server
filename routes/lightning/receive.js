@@ -50,7 +50,8 @@ const handlePayment = async msg => {
           received: true,
           confirmed: true,
           network: "lightning",
-          tip
+          tip,
+          invoice_id: invoice.id
         },
         { transaction }
       );

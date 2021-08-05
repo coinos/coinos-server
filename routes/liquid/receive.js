@@ -162,7 +162,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                 tip,
                 confirmed,
                 address,
-                network: "liquid"
+                network: "liquid",
+                invoice_id: invoice.id
               },
               { transaction }
             );
@@ -338,7 +339,7 @@ setInterval(async () => {
           );
 
           notify(user, `${total} SAT payment confirmed`);
-          await callWebhook(p.invoice, p);
+          callWebhook(p.invoice, p);
         } else {
           l.warn("couldn't find liquid payment", hash);
         }
