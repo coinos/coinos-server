@@ -7,7 +7,7 @@ const bitcoin = require("bitcoinjs-lib");
 
 const zmqRawBlock = new zmq.Subscriber();
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);
-zmqRawBlock.subscribe("rawtx");
+zmqRawBlock.subscribe("rawblock");
 
 const zmqRawTx = new zmq.Subscriber();
 zmqRawTx.connect(config.bitcoin.zmqrawtx);
@@ -18,7 +18,7 @@ const network =
     config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network
   ];
 
-let queue = {};
+const queue = {};
 
 (async () => {
   for await (const [topic, message] of zmqRawTx) {
@@ -127,7 +127,9 @@ let queue = {};
       })
     );
   }
+})();
 
+(async () => {
   for await (const [topic, message] of zmqRawBlock) {
     const payments = await db.Payment.findAll({
       where: { confirmed: false },
