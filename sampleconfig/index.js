@@ -21,6 +21,7 @@ module.exports = {
   },
   jwt: "secret",
   port: 3119,
+  taxi: "864234bccdd230ecb6db05ebdf5061c3af42fefb9f186b3326e6454fdd3a9475",
   bitcoin: {
     masterkey:
       "tprv8ZgxMBicQKsPdTUoagV41nang9pQUA2DKoVWLmTrWmb2PfsC8pDTHveCMyzUyMguKJCjd5uyHcqg27r7gDzz4TY3MgucpLsSXwCbjn2C3Q1",
