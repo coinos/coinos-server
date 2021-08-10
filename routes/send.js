@@ -12,15 +12,15 @@ module.exports = ah(async (req, res, next) => {
     return res.status(500).send("Amount must be greater than zero");
 
   try {
-    await db.transaction(async transaction => {
+    await db.transaction(async (transaction) => {
       let account = await db.Account.findOne({
         where: {
           user_id: user.id,
           asset,
-          pubkey: null
+          pubkey: null,
         },
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       if (account.balance < amount) {
@@ -41,7 +41,7 @@ module.exports = ah(async (req, res, next) => {
         currency: user.currency,
         confirmed: true,
         hash: username ? `Payment to ${username}` : "Internal Transfer",
-        network: "COINOS"
+        network: "COINOS",
       };
 
       if (!username) {
@@ -68,17 +68,21 @@ module.exports = ah(async (req, res, next) => {
             where: { username },
             include: {
               model: db.Account,
-              as: "account"
-            }
+              as: "account",
+            },
           },
           { transaction }
         );
+
+        let invoice = await db.Invoice.findOne({
+          where: { amount, user_id: recipient.id },
+        });
 
         let a2;
         let acc = {
           user_id: recipient.id,
           asset,
-          pubkey: null
+          pubkey: null,
         };
 
         if (recipient.account.asset === asset && !recipient.account.pubkey)
@@ -87,7 +91,7 @@ module.exports = ah(async (req, res, next) => {
           a2 = await db.Account.findOne({
             where: acc,
             lock: transaction.LOCK.UPDATE,
-            transaction
+            transaction,
           });
         }
 
@@ -107,12 +111,12 @@ module.exports = ah(async (req, res, next) => {
           } else {
             const existing = await db.Account.findOne({
               where: {
-                asset
+                asset,
               },
               order: [["id", "ASC"]],
               limit: 1,
               lock: transaction.LOCK.UPDATE,
-              transaction
+              transaction,
             });
 
             if (existing) {
@@ -128,22 +132,24 @@ module.exports = ah(async (req, res, next) => {
         }
 
         let spread = user.username === "coinos" ? 1.02 : 1;
-        amount = Math.round(amount/spread);
-        let p2 = await db.Payment.create(
-          {
-            amount,
-            account_id: a2.id,
-            user_id: recipient.id,
-            rate: app.get("rates")[recipient.currency] * spread,
-            currency: recipient.currency,
-            confirmed: true,
-            hash: "Payment from " + user.username,
-            memo,
-            network: "COINOS",
-            received: true
-          },
-          { transaction }
-        );
+        amount = Math.round(amount / spread);
+
+        params = {
+          amount,
+          account_id: a2.id,
+          user_id: recipient.id,
+          rate: app.get("rates")[recipient.currency] * spread,
+          currency: recipient.currency,
+          confirmed: true,
+          hash: "Payment from " + user.username,
+          memo,
+          network: "COINOS",
+          received: true,
+        };
+
+        if (invoice) params.invoice_id = invoice.id;
+
+        let p2 = await db.Payment.create(params, { transaction });
 
         p2 = p2.get({ plain: true });
         p2.account = a2.get({ plain: true });
@@ -152,6 +158,7 @@ module.exports = ah(async (req, res, next) => {
 
         l.info("received internal", recipient.username, amount);
         notify(recipient, `Received ${amount} ${a2.ticker} sats`);
+        callWebhook(invoice, p2);
       }
       res.send(payment);
     });
