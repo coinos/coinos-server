@@ -18,6 +18,8 @@ const network =
     config.bitcoin.network === "mainnet" ? "bitcoin" : config.bitcoin.network
   ];
 
+const queue = {};
+
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
   let tx = bitcoin.Transaction.fromHex(message);
@@ -27,7 +29,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   if (payments.includes(hash)) return;
 
   Promise.all(
-    tx.outs.map(async o => {
+    tx.outs.map(async (o) => {
       try {
         const { value } = o;
 
@@ -46,20 +48,20 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
           let user = await db.User.findOne({
             where: {
-              username: addresses[address]
-            }
+              username: addresses[address],
+            },
           });
 
           const invoice = await db.Invoice.findOne({
             where: {
               user_id: user.id,
-              network: "bitcoin"
+              network: "bitcoin",
             },
             order: [["id", "DESC"]],
             include: {
               model: db.Account,
-              as: "account"
-            }
+              as: "account",
+            },
           });
 
           if (!invoice) return;
@@ -104,7 +106,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             confirmed,
             address,
             network: "bitcoin",
-            invoice_id: invoice.id
+            invoice_id: invoice.id,
           });
           payment = payment.get({ plain: true });
           payment.account = account.get({ plain: true });
@@ -123,19 +125,17 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   );
 });
 
-let queue = {};
-
 zmqRawBlock.on("message", async (topic, message, sequence) => {
-  const payments = await db.Payment.findAll({
-    where: { confirmed: false }
-  });
+    const payments = await db.Payment.findAll({
+      where: { confirmed: false },
+    });
 
-  let block = bitcoin.Block.fromHex(message.toString("hex"));
-  block.transactions.map(tx => {
-    let hash = reverse(tx.getHash()).toString("hex");
-    if (payments.find(p => p.hash === hash)) queue[hash] = 1;
+    let block = bitcoin.Block.fromHex(message.toString("hex"));
+    block.transactions.map((tx) => {
+      let hash = reverse(tx.getHash()).toString("hex");
+      if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
+    });
   });
-});
 
 setInterval(async () => {
   try {
@@ -144,25 +144,25 @@ setInterval(async () => {
       const hash = arr[i];
 
       let account, address, user, total;
-      await db.transaction(async transaction => {
+      await db.transaction(async (transaction) => {
         let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
               model: db.Account,
-              as: "account"
+              as: "account",
             },
             {
               model: db.Invoice,
-              as: "invoice"
+              as: "invoice",
             },
             {
               model: db.User,
-              as: "user"
-            }
+              as: "user",
+            },
           ],
           lock: transaction.LOCK.UPDATE,
-          transaction
+          transaction,
         });
 
         if (p && p.address) address = p.address;
@@ -211,7 +211,7 @@ setInterval(async () => {
           address: c.address,
           amount: total - 100,
           user,
-          limit: total
+          limit: total,
         });
       }
     }

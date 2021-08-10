@@ -1,21 +1,18 @@
-const handlePayment = async msg => {
+const handlePayment = async (msg) => {
+  if (!msg.settled) return;
   let account, total, user;
+
+  const invoice = await db.Invoice.findOne({
+    where: {
+      text: msg.payment_request,
+    },
+  });
+
+  if (!invoice)
+    return l.warn("received lightning with no invoice", msg.payment_request);
+
   try {
-    await db.transaction(async transaction => {
-      if (!msg.settled) return;
-
-      const invoice = await db.Invoice.findOne({
-        where: {
-          text: msg.payment_request
-        }
-      });
-
-      if (!invoice)
-        return l.warn(
-          "received lightning with no invoice",
-          msg.payment_request
-        );
-
+    await db.transaction(async (transaction) => {
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
       const amount = parseInt(msg.amt_paid_sat) - tip;
       if (amount > 10000000 || amount < 0)
@@ -25,14 +22,14 @@ const handlePayment = async msg => {
         where: {
           user_id,
           asset: config.liquid.btcasset,
-          pubkey: null
+          pubkey: null,
         },
         include: {
           model: db.User,
-          as: "user"
+          as: "user",
         },
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       ({ user } = account);
@@ -52,7 +49,8 @@ const handlePayment = async msg => {
           received: true,
           confirmed: true,
           network: "lightning",
-          tip
+          tip,
+          invoice_id: invoice.id,
         },
         { transaction }
       );
@@ -85,7 +83,12 @@ const handlePayment = async msg => {
 
     let c = convert[msg.payment_request];
     if (msg.payment_request && c) {
-      l.info("lightning detected for conversion request", msg.payment_request, c.address, user.username);
+      l.info(
+        "lightning detected for conversion request",
+        msg.payment_request,
+        c.address,
+        user.username
+      );
 
       user.account = account;
 
@@ -94,7 +97,7 @@ const handlePayment = async msg => {
           address: c.address,
           amount: total - 100,
           user,
-          limit: total
+          limit: total,
         });
       } catch (e) {
         l.error("problem sending liquid payment", e.message, e.stack);
@@ -106,14 +109,14 @@ const handlePayment = async msg => {
 };
 
 if (config.lna.clightning) {
-  const poll = async ln => {
-    const wait = async i => {
+  const poll = async (ln) => {
+    const wait = async (i) => {
       const {
         bolt11: payment_request,
         pay_index,
         status,
         msatoshi_received,
-        payment_preimage: r_preimage
+        payment_preimage: r_preimage,
       } = await ln.waitanyinvoice(i);
 
       let settled = status === "paid";
@@ -123,13 +126,13 @@ if (config.lna.clightning) {
         payment_request,
         settled,
         amt_paid_sat,
-        r_preimage
+        r_preimage,
       });
       wait(pay_index);
     };
 
     const { invoices } = await ln.listinvoices();
-    wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
+    wait(Math.max(...invoices.map((i) => i.pay_index).filter((n) => n)));
   };
 
   poll(lna);

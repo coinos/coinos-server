@@ -96,6 +96,7 @@ ah(async () => {
     if (config.lna.clightning) {
       lna = require("clightning-client")(config.lna.dir);
     } else {
+      lnd = require("../lib/lnd");
       lna = lnd.default;
       lnp = [
         "addInvoice",

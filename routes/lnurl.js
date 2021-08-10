@@ -129,16 +129,6 @@ app.get(
     maxSendable = maxSendable || 1000000000;
     if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
 
-    let invoices = await db.Invoice.findAll({
-      where: {
-        amount
-      },
-      order: [["id", "DESC"]],
-      limit: 1
-    });
-
-    if (invoices.length) await invoices[0].destroy();
-
     try {
       const result = await lnurlServer.generateNewUrl("payRequest", {
         minSendable,
