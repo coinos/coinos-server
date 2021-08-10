@@ -1,15 +1,15 @@
 const reverse = require("buffer-reverse");
-const zmq = require("zeromq");
+const zmq = require("zeromq/v5-compat");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 
 const bitcoin = require("bitcoinjs-lib");
 
-const zmqRawBlock = new zmq.Subscriber();
+const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);
 zmqRawBlock.subscribe("rawblock");
 
-const zmqRawTx = new zmq.Subscriber();
+const zmqRawTx = zmq.socket("sub");
 zmqRawTx.connect(config.bitcoin.zmqrawtx);
 zmqRawTx.subscribe("rawtx");
 
@@ -20,117 +20,112 @@ const network =
 
 const queue = {};
 
-(async () => {
-  for await (const [topic, message] of zmqRawTx) {
-    const hex = message.toString("hex");
-    let tx = bitcoin.Transaction.fromHex(message);
+zmqRawTx.on("message", async (topic, message, sequence) => {
+  const hex = message.toString("hex");
+  let tx = bitcoin.Transaction.fromHex(message);
 
-    let hash = reverse(tx.getHash()).toString("hex");
+  let hash = reverse(tx.getHash()).toString("hex");
 
-    if (payments.includes(hash)) return;
+  if (payments.includes(hash)) return;
 
-    Promise.all(
-      tx.outs.map(async (o) => {
+  Promise.all(
+    tx.outs.map(async (o) => {
+      try {
+        const { value } = o;
+
+        let address;
         try {
-          const { value } = o;
-
-          let address;
-          try {
-            address = bitcoin.address.fromOutputScript(o.script, network);
-          } catch (e) {
-            return;
-          }
-
-          if (
-            Object.keys(addresses).includes(address) &&
-            !change.includes(address)
-          ) {
-            payments.push(hash);
-
-            let user = await db.User.findOne({
-              where: {
-                username: addresses[address],
-              },
-            });
-
-            const invoice = await db.Invoice.findOne({
-              where: {
-                user_id: user.id,
-                network: "bitcoin",
-              },
-              order: [["id", "DESC"]],
-              include: {
-                model: db.Account,
-                as: "account",
-              },
-            });
-
-            if (!invoice) return;
-
-            const currency = invoice ? invoice.currency : user.currency;
-            const rate = invoice
-              ? invoice.rate
-              : app.get("rates")[user.currency];
-            const tip = invoice ? invoice.tip : 0;
-            const memo = invoice ? invoice.memo : "";
-
-            let confirmed = false;
-
-            let { account } = invoice;
-
-            account.pending += value;
-            await account.save();
-
-            if (config.bitcoin.walletpass)
-              await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-
-            let totalOutputs = tx.outs.reduce((a, b) => a + b.value, 0);
-            let totalInputs = 0;
-            for (let i = 0; i < tx.ins.length; i++) {
-              let { hash, index } = tx.ins[i];
-              hash = reverse(hash).toString("hex");
-              let hex = await bc.getRawTransaction(hash);
-              let inputTx = bitcoin.Transaction.fromHex(hex);
-              totalInputs += inputTx.outs[index].value;
-            }
-            let fee = totalInputs - totalOutputs;
-
-            let payment = await db.Payment.create({
-              account_id: account.id,
-              user_id: user.id,
-              hash,
-              fee,
-              memo,
-              amount: value - tip,
-              currency,
-              rate,
-              received: true,
-              tip,
-              confirmed,
-              address,
-              network: "bitcoin",
-              invoice_id: invoice.id,
-            });
-            payment = payment.get({ plain: true });
-            payment.account = account.get({ plain: true });
-
-            emit(user.username, "account", account);
-
-            emit(user.username, "payment", payment);
-            l.info("bitcoin detected", user.username, value);
-            notify(user, `${value} SAT payment detected`);
-            callWebhook(invoice, payment);
-          }
+          address = bitcoin.address.fromOutputScript(o.script, network);
         } catch (e) {
-          console.log(e);
+          return;
         }
-      })
-    );
-  }
-})();
 
-(async () => {
-  for await (const [topic, message] of zmqRawBlock) {
+        if (
+          Object.keys(addresses).includes(address) &&
+          !change.includes(address)
+        ) {
+          payments.push(hash);
+
+          let user = await db.User.findOne({
+            where: {
+              username: addresses[address],
+            },
+          });
+
+          const invoice = await db.Invoice.findOne({
+            where: {
+              user_id: user.id,
+              network: "bitcoin",
+            },
+            order: [["id", "DESC"]],
+            include: {
+              model: db.Account,
+              as: "account",
+            },
+          });
+
+          if (!invoice) return;
+
+          const currency = invoice ? invoice.currency : user.currency;
+          const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
+          const tip = invoice ? invoice.tip : 0;
+          const memo = invoice ? invoice.memo : "";
+
+          let confirmed = false;
+
+          let { account } = invoice;
+
+          account.pending += value;
+          await account.save();
+
+          if (config.bitcoin.walletpass)
+            await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+          let totalOutputs = tx.outs.reduce((a, b) => a + b.value, 0);
+          let totalInputs = 0;
+          for (let i = 0; i < tx.ins.length; i++) {
+            let { hash, index } = tx.ins[i];
+            hash = reverse(hash).toString("hex");
+            let hex = await bc.getRawTransaction(hash);
+            let inputTx = bitcoin.Transaction.fromHex(hex);
+            totalInputs += inputTx.outs[index].value;
+          }
+          let fee = totalInputs - totalOutputs;
+
+          let payment = await db.Payment.create({
+            account_id: account.id,
+            user_id: user.id,
+            hash,
+            fee,
+            memo,
+            amount: value - tip,
+            currency,
+            rate,
+            received: true,
+            tip,
+            confirmed,
+            address,
+            network: "bitcoin",
+            invoice_id: invoice.id,
+          });
+          payment = payment.get({ plain: true });
+          payment.account = account.get({ plain: true });
+
+          emit(user.username, "account", account);
+
+          emit(user.username, "payment", payment);
+          l.info("bitcoin detected", user.username, value);
+          notify(user, `${value} SAT payment detected`);
+          callWebhook(invoice, payment);
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    })
+  );
+});
+
+zmqRawBlock.on("message", async (topic, message, sequence) => {
     const payments = await db.Payment.findAll({
       where: { confirmed: false },
     });
@@ -140,8 +135,7 @@ const queue = {};
       let hash = reverse(tx.getHash()).toString("hex");
       if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
     });
-  }
-})();
+  });
 
 setInterval(async () => {
   try {

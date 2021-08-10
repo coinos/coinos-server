@@ -157,7 +157,7 @@ app.post(
       const brt = await lq.blindRawTransaction(hex, true, [], false);
       const srt = await lq.signRawTransactionWithWallet(brt);
       const allowed = (await lq.testMempoolAccept([srt.hex]))[0].allowed;
-      if (!allowed) throw new Error("issuance rejected by mempool");
+      if (!allowed) throw new Error("issuance rejected by mempool", srt.hex);
       const txid = await lq.sendRawTransaction(srt.hex);
 
       await db.transaction(async transaction => {

@@ -1,6 +1,6 @@
 const axios = require("axios");
 const reverse = require("buffer-reverse");
-const zmq = require("zeromq");
+const zmq = require("zeromq/v5-compat");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 const bitcoin = require("bitcoinjs-lib");
@@ -57,180 +57,204 @@ const getAccount = async (params, transaction) => {
   return db.Account.create(params, { transaction });
 };
 
-const zmqRawBlock = new zmq.Subscriber();
+const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.liquid.zmqrawblock);
 zmqRawBlock.subscribe("rawblock");
 
-const zmqRawTx = new zmq.Subscriber();
+const zmqRawTx = zmq.socket("sub");
 zmqRawTx.connect(config.liquid.zmqrawtx);
 zmqRawTx.subscribe("rawtx");
 
 const queue = {};
 
-(async () => {
-  for await (const [topic, message] of zmqRawTx) {
-    const hex = message.toString("hex");
+zmqRawTx.on("message", async (topic, message, sequence) => {
+  const hex = message.toString("hex");
 
-    let unblinded, tx, blinded;
-    try {
-      unblinded = await lq.unblindRawTransaction(hex);
-      tx = await lq.decodeRawTransaction(unblinded.hex);
-      blinded = await lq.decodeRawTransaction(hex);
-    } catch (e) {
-      return console.log(e);
-    }
-
-    if (payments.includes(blinded.txid)) return;
-
-    Promise.all(
-      tx.vout.map(async (o) => {
-        try {
-          if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
-
-          const { asset } = o;
-          const value = toSats(o.value);
-          const address = o.scriptPubKey.addresses[0];
-
-          if (
-            Object.keys(addresses).includes(address) &&
-            !change.includes(address)
-          ) {
-            await db.transaction(async (transaction) => {
-              let user = await getUser(addresses[address], transaction);
-
-              let invoice = await db.Invoice.findOne({
-                where: {
-                  unconfidential: address,
-                  user_id: user.id,
-                  network: "liquid",
-                },
-                order: [["id", "DESC"]],
-              });
-
-              if (!invoice) return;
-
-              let confirmed = 0;
-
-              let account = await db.Account.findOne({
-                where: {
-                  id: invoice.account_id,
-                },
-                lock: transaction.LOCK.UPDATE,
-                transaction,
-              });
-
-              if (
-                account.asset === asset &&
-                (!account.pubkey || account.network === "liquid")
-              ) {
-                await account.increment({ pending: value }, { transaction });
-                await account.reload({ transaction });
-              } else {
-                account = await getAccount(
-                  {
-                    seed: account.seed,
-                    path: account.path,
-                    user_id: user.id,
-                    asset,
-                    pubkey: account.pubkey,
-                    pending: value,
-                    index: 0,
-                  },
-                  transaction
-                );
-              }
-
-              if (config.liquid.walletpass)
-                await lq.walletPassphrase(config.liquid.walletpass, 300);
-
-              await user.save({ transaction });
-
-              const currency = invoice ? invoice.currency : user.currency;
-              const rate = invoice
-                ? invoice.rate
-                : app.get("rates")[user.currency];
-              const tip = invoice ? invoice.tip : 0;
-              const memo = invoice ? invoice.memo : "";
-
-              let payment = await db.Payment.create(
-                {
-                  account_id: account.id,
-                  user_id: user.id,
-                  hash: blinded.txid,
-                  amount: value - tip,
-                  currency,
-                  memo,
-                  rate,
-                  received: true,
-                  tip,
-                  confirmed,
-                  address,
-                  network: "liquid",
-                  invoice_id: invoice.id,
-                },
-                { transaction }
-              );
-
-              payments.push(blinded.txid);
-              payment = payment.get({ plain: true });
-              payment.account = account.get({ plain: true });
-
-              emit(user.username, "payment", payment);
-              emit(user.username, "account", payment.account);
-              l.info("liquid detected", address, user.username, asset, value);
-              notify(user, `${value} SAT payment detected`);
-              callWebhook(invoice, payment);
-            });
-          }
-        } catch (e) {
-          l.error("Problem processing transaction", e.message, e.stack);
-        }
-      })
-    );
+  let unblinded, tx, blinded;
+  try {
+    unblinded = await lq.unblindRawTransaction(hex);
+    tx = await lq.decodeRawTransaction(unblinded.hex);
+    blinded = await lq.decodeRawTransaction(hex);
+  } catch (e) {
+    return console.log(e);
   }
-})();
 
-(async () => {
-  for await (const [topic, message] of zmqRawBlock) {
-    console.log(message);
-    try {
-      const payments = await db.Payment.findAll({
-        where: { confirmed: 0 },
-      });
+  if (payments.includes(blinded.txid)) return;
 
-      const block = Block.fromHex(message.toString("hex"), true);
+  Promise.all(
+    tx.vout.map(async (o) => {
+      try {
+        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
-      let hash, json;
+        const { asset } = o;
+        const value = toSats(o.value);
+        const address = o.scriptPubKey.addresses[0];
 
-      hash = await lq.getBlockHash(block.height);
-      json = await lq.getBlock(hash, 2);
-
-      json.tx.map(async (tx) => {
-        if (issuances[tx.txid]) {
+        if (
+          Object.keys(addresses).includes(address) &&
+          !change.includes(address)
+        ) {
           await db.transaction(async (transaction) => {
-            const {
-              user_id,
-              asset,
-              asset_amount,
-              asset_payment_id,
-              token,
-              token_amount,
-              token_payment_id,
-            } = issuances[tx.txid];
+            let user = await getUser(addresses[address], transaction);
 
-            const user = await getUserById(user_id);
+            let invoice = await db.Invoice.findOne({
+              where: {
+                unconfidential: address,
+                user_id: user.id,
+                network: "liquid",
+              },
+              order: [["id", "DESC"]],
+            });
+
+            if (!invoice) return;
+
+            let confirmed = 0;
 
             let account = await db.Account.findOne({
-              where: { user_id, asset },
+              where: {
+                id: invoice.account_id,
+              },
               lock: transaction.LOCK.UPDATE,
               transaction,
             });
-            account.balance = asset_amount * SATS;
+
+            if (
+              account.asset === asset &&
+              (!account.pubkey || account.network === "liquid")
+            ) {
+              await account.increment({ pending: value }, { transaction });
+              await account.reload({ transaction });
+            } else {
+              account = await getAccount(
+                {
+                  seed: account.seed,
+                  path: account.path,
+                  user_id: user.id,
+                  asset,
+                  pubkey: account.pubkey,
+                  pending: value,
+                  index: 0,
+                },
+                transaction
+              );
+            }
+
+            if (config.liquid.walletpass)
+              await lq.walletPassphrase(config.liquid.walletpass, 300);
+
+            await user.save({ transaction });
+
+            const currency = invoice ? invoice.currency : user.currency;
+            const rate = invoice
+              ? invoice.rate
+              : app.get("rates")[user.currency];
+            const tip = invoice ? invoice.tip : 0;
+            const memo = invoice ? invoice.memo : "";
+
+            let payment = await db.Payment.create(
+              {
+                account_id: account.id,
+                user_id: user.id,
+                hash: blinded.txid,
+                amount: value - tip,
+                currency,
+                memo,
+                rate,
+                received: true,
+                tip,
+                confirmed,
+                address,
+                network: "liquid",
+                invoice_id: invoice.id,
+              },
+              { transaction }
+            );
+
+            payments.push(blinded.txid);
+            payment = payment.get({ plain: true });
+            payment.account = account.get({ plain: true });
+
+            emit(user.username, "payment", payment);
+            emit(user.username, "account", payment.account);
+            l.info("liquid detected", address, user.username, asset, value);
+            notify(user, `${value} SAT payment detected`);
+            callWebhook(invoice, payment);
+          });
+        }
+      } catch (e) {
+        l.error("Problem processing transaction", e.message, e.stack);
+      }
+    })
+  );
+});
+
+zmqRawBlock.on("message", async (topic, message, sequence) => {
+  try {
+    const payments = await db.Payment.findAll({
+      where: { confirmed: 0 },
+    });
+
+    const block = Block.fromHex(message.toString("hex"), true);
+
+    let hash, json;
+
+    hash = await lq.getBlockHash(block.height);
+    json = await lq.getBlock(hash, 2);
+
+    json.tx.map(async (tx) => {
+      if (issuances[tx.txid]) {
+        await db.transaction(async (transaction) => {
+          const {
+            user_id,
+            asset,
+            asset_amount,
+            asset_payment_id,
+            token,
+            token_amount,
+            token_payment_id,
+          } = issuances[tx.txid];
+
+          const user = await getUserById(user_id);
+
+          let account = await db.Account.findOne({
+            where: { user_id, asset },
+            lock: transaction.LOCK.UPDATE,
+            transaction,
+          });
+          account.balance = asset_amount * SATS;
+          account.pending = 0;
+          await account.save({ transaction });
+
+          let payment = await db.Payment.findOne({
+            where: { id: asset_payment_id },
+            include: {
+              model: db.Account,
+              as: "account",
+            },
+            lock: transaction.LOCK.UPDATE,
+            transaction,
+          });
+
+          payment.confirmed = true;
+          await payment.save({ transaction });
+          payment = payment.get({ plain: true });
+          payment.account = account.get({ plain: true });
+
+          emit(user.username, "account", account);
+          emit(user.username, "payment", payment);
+
+          if (token) {
+            account = await db.Account.findOne({
+              where: { user_id, asset: token },
+              lock: transaction.LOCK.UPDATE,
+              transaction,
+            });
+            account.balance = token_amount * SATS;
             account.pending = 0;
             await account.save({ transaction });
 
-            let payment = await db.Payment.findOne({
-              where: { id: asset_payment_id },
+            payment = await db.Payment.findOne({
+              where: { id: token_payment_id },
               include: {
                 model: db.Account,
                 as: "account",
@@ -241,49 +265,20 @@ const queue = {};
 
             payment.confirmed = true;
             await payment.save({ transaction });
+
             payment = payment.get({ plain: true });
             payment.account = account.get({ plain: true });
 
             emit(user.username, "account", account);
             emit(user.username, "payment", payment);
-
-            if (token) {
-              account = await db.Account.findOne({
-                where: { user_id, asset: token },
-                lock: transaction.LOCK.UPDATE,
-                transaction,
-              });
-              account.balance = token_amount * SATS;
-              account.pending = 0;
-              await account.save({ transaction });
-
-              payment = await db.Payment.findOne({
-                where: { id: token_payment_id },
-                include: {
-                  model: db.Account,
-                  as: "account",
-                },
-                lock: transaction.LOCK.UPDATE,
-                transaction,
-              });
-
-              payment.confirmed = true;
-              await payment.save({ transaction });
-
-              payment = payment.get({ plain: true });
-              payment.account = account.get({ plain: true });
-
-              emit(user.username, "account", account);
-              emit(user.username, "payment", payment);
-            }
-          });
-        } else if (payments.find((p) => p.hash === tx.txid)) queue[tx.txid] = 1;
-      });
-    } catch (e) {
-      return console.log(e);
-    }
+          }
+        });
+      } else if (payments.find((p) => p.hash === tx.txid)) queue[tx.txid] = 1;
+    });
+  } catch (e) {
+    return console.log(e);
   }
-})();
+});
 
 setInterval(async () => {
   try {
@@ -374,4 +369,4 @@ setInterval(async () => {
   } catch (e) {
     l.error("problem processing queued liquid transaction", e.message, e.stack);
   }
-}, 1000);
+});
