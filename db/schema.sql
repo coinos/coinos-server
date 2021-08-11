@@ -19,8 +19,7 @@
 -- Current Database: `coinos`
 --
 
-/*!40000 DROP DATABASE IF EXISTS `coinos`*/;
-
+DROP DATABASE `coinos`;
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `coinos` /*!40100 DEFAULT CHARACTER SET latin1 */;
 
 USE `coinos`;
