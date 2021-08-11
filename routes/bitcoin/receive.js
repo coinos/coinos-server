@@ -126,16 +126,16 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 });
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
-    const payments = await db.Payment.findAll({
-      where: { confirmed: false },
-    });
-
-    let block = bitcoin.Block.fromHex(message.toString("hex"));
-    block.transactions.map((tx) => {
-      let hash = reverse(tx.getHash()).toString("hex");
-      if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
-    });
+  const payments = await db.Payment.findAll({
+    where: { confirmed: false },
   });
+
+  let block = bitcoin.Block.fromHex(message.toString("hex"));
+  block.transactions.map((tx) => {
+    let hash = reverse(tx.getHash()).toString("hex");
+    if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
+  });
+});
 
 setInterval(async () => {
   try {
