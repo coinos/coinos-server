@@ -12,7 +12,7 @@ const url = prod
   ? "https://blockstream.info/liquid/api"
   : "http://electrs-liquid:3002";
 const electrs = wretch().url(url);
-const network = networks.regtest;
+const network = prod ? networks.liquid : networks.regtest;
 
 const key = ECPair.fromPrivateKey(Buffer.from(config.taxi, "hex"));
 
