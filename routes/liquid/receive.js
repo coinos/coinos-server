@@ -309,7 +309,8 @@ setInterval(async () => {
           transaction,
         });
 
-        ({ account, address, user } = p);
+        if (p && p.address) address = p.address;
+        if (p && p.user) user = p.user;
 
         if (p && p.account) {
           total = p.amount + p.tip;
