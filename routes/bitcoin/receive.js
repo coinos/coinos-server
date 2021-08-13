@@ -54,6 +54,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
           const invoice = await db.Invoice.findOne({
             where: {
+              address,
               user_id: user.id,
               network: "bitcoin",
             },
