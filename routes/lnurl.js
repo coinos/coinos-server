@@ -115,6 +115,41 @@ app.post(
 );
 
 app.get(
+  "/lnurlp/:username",
+  ah(async (req, res, next) => {
+    const { username } = req.params;
+    let user = await db.User.findOne({
+      where: {
+        username
+      }
+    });
+
+    let { amount, minSendable, maxSendable } = req.query;
+    minSendable = minSendable || 1000;
+    maxSendable = maxSendable || 1000000000;
+    if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
+
+    try {
+      let result = await lnurlServer.generateNewUrl("payRequest", {
+        minSendable,
+        maxSendable,
+        metadata: JSON.stringify([["text/plain", `paying ${user.username}`]])
+      });
+
+      recipients[result.secret] = user;
+      l.info("recipient", user.username, result.secret);
+
+      result = await axios.get(result.url);
+
+      res.send(result.data);
+    } catch (e) {
+      l.error("problem generating payment url", e.message);
+      res.status(500).send(e.message);
+    }
+  })
+);
+
+app.get(
   "/pay/:username",
   ah(async (req, res, next) => {
     const { username } = req.params;
