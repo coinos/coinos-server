@@ -14,7 +14,7 @@ exports.up = function(knex) {
       t.string('expiry').nullable();
       t.enum('status', ['available', 'used', 'expired', 'cancelled']).notNull().defaultTo('available');
   
-      t.timestamps();
+      t.timestamps(true, true);
     })
   ])
 };
