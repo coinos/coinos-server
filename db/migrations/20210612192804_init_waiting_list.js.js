@@ -14,7 +14,7 @@ exports.up = function(knex) {
         t.foreign('user_id').references('users.id');
         t.text('notes').nullable();
 
-        t.timestamps();
+        t.timestamps(true, true);
       })
     ])
 }
