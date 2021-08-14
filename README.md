@@ -23,8 +23,8 @@ This repository contains the code for the backend API server which is implemente
     cp -rf sampleconfig ./config
     cp .env.sample .env
     cp fx.sample fx
-    cp sample.override.yml docker-compose.override.yml
     docker-compose up -d --force-recreate maria
+    docker exec -i mariadb mysql -u root -ppassword -e "CREATE DATABASE coinos;"
     docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
     docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
 
