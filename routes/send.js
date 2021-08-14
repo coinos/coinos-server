@@ -2,7 +2,15 @@ const axios = require("axios");
 const uuidv4 = require("uuid/v4");
 
 module.exports = ah(async (req, res, next) => {
-  let { amount, asset, memo, username } = req.body;
+  let {
+    amount,
+    address,
+    payreq,
+    unconfidential,
+    asset,
+    memo,
+    username,
+  } = req.body;
   let { user } = req;
   amount = parseInt(amount);
 
@@ -74,9 +82,12 @@ module.exports = ah(async (req, res, next) => {
           { transaction }
         );
 
-        let invoice = await db.Invoice.findOne({
-          where: { amount, user_id: recipient.id },
-        });
+        let text = address || payreq;
+        params = {
+          where: { user_id: recipient.id },
+        };
+        if (text) params.where.text = text;
+        let invoice = await db.Invoice.findOne(params);
 
         let a2;
         let acc = {
