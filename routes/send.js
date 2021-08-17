@@ -85,6 +85,7 @@ module.exports = ah(async (req, res, next) => {
         let text = address || payreq;
         params = {
           where: { user_id: recipient.id },
+          order: [["id", "DESC"]],
         };
         if (text) params.where.text = text;
         let invoice = await db.Invoice.findOne(params);
