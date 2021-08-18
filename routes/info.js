@@ -1,6 +1,15 @@
 const sequelize = require("sequelize");
 const { Op } = sequelize;
 
+/**
+ * @api {get} /info Request server information
+ * @apiName GetInfo
+ * @apiGroup Info
+ *
+ * @apiSuccess {Object} fx Exchange rates relative to USD - fx.CUR is the value of one CUR in USD.
+ * @apiSuccess {String[]} networks Array of supported networks; possible values are "bitcoin", "liquid" and "lightning".
+ * @apiSuccess {String} clientVersion the current git commit of the ui
+ */
 app.get("/info", ah(async (req, res, next) => {
   const { clientVersion } = config;
 

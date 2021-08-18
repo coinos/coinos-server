@@ -375,6 +375,43 @@ define({ "api": [
     "groupTitle": "Admin"
   },
   {
+    "type": "get",
+    "url": "/info",
+    "title": "Request server information",
+    "name": "GetInfo",
+    "group": "Info",
+    "success": {
+      "fields": {
+        "Success 200": [
+          {
+            "group": "Success 200",
+            "type": "Object",
+            "optional": false,
+            "field": "fx",
+            "description": "<p>Exchange rates relative to USD - fx.CUR is the value of one CUR in USD.</p>"
+          },
+          {
+            "group": "Success 200",
+            "type": "String[]",
+            "optional": false,
+            "field": "networks",
+            "description": "<p>Array of supported networks; possible values are &quot;bitcoin&quot;, &quot;liquid&quot; and &quot;lightning&quot;.</p>"
+          },
+          {
+            "group": "Success 200",
+            "type": "String",
+            "optional": false,
+            "field": "clientVersion",
+            "description": "<p>the current git commit of the ui</p>"
+          }
+        ]
+      }
+    },
+    "version": "0.0.0",
+    "filename": "routes/info.js",
+    "groupTitle": "Info"
+  },
+  {
     "type": "post",
     "url": "/grant",
     "title": "Grant Referral code",
