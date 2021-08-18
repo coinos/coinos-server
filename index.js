@@ -93,6 +93,8 @@ app.use("/referrals", referralsRouter);
 var adminRouter = require("./routes/admin.js");
 app.use("/admin", adminAuth, adminRouter);
 
+require("./startup");
+
 app.use((err, req, res, next) => {
   const details = {
     path: req.path,
