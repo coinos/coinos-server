@@ -19,7 +19,7 @@
 -- Current Database: `coinos`
 --
 
-DROP DATABASE `coinos`;
+DROP DATABASE IF EXISTS `coinos`;
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `coinos` /*!40100 DEFAULT CHARACTER SET latin1 */;
 
 USE `coinos`;
@@ -391,3 +391,13 @@ CREATE TABLE `withdrawals` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2021-08-12 16:26:08
+
+INSERT INTO migrations (name, batch) VALUES ('20210612181508_init_referrals.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210612192804_init_waiting_list.js.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210612203333_schema_diff_merges.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210625232223_add_invoice_id_to_payments.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210628221727_add_webhook_to_invoices.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210713174217_add_admin_to_users.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210714123455_data_fixes_merge.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210714123456_add_fks_merge.js', 1);
+INSERT INTO migrations (name, batch) VALUES ('20210814193811_fix_db_conflicts.js', 1);
