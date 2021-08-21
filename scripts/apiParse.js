@@ -4,7 +4,7 @@ const addUserSearch = function (input, table) {
   debug('add User Search')
   var {search, starts_with, contains} = input
 
-  if (!table) { table = 'Users' }
+  if (!table) { table = 'users' }
   // if (since) cmd = cmd.havingRaw('invoices + payments + deposits + orders > ?', [0])
 
   if (search) {
@@ -29,7 +29,6 @@ const addTimeSearch = function (input, field) {
   
   var {since} = input
   if (since) {
-  
     condition = field + " >= '" + since + "'"
     debug('condition: ' + condition)
 
