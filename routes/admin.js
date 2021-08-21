@@ -73,7 +73,7 @@ router.get(
   "/referrals",
   auth,
   ah(async (req, res) => {
-    var referrals = await knex
+    var referrals = knex
       .select(
         'token', 
         'users.username as user', 
@@ -93,20 +93,25 @@ router.get(
     //   ]
     // })
 
-    var timeCondition = parseInput.addTimeSearch(req.query, 'referrals.updatedAt')
+    var timeCondition = parseInput.addTimeSearch(req.query, 'referrals.updated_at')
     var userCondition = parseInput.addUserSearch(req.query, 'sponsor')
 
-    if (timeCondition) referrals = referrals.whereRaw(timeCondition)
-    if (userCondition) referrals = referrals.whereRaw(userCondition)
+    if (userCondition) {
+      referrals = referrals.whereRaw(userCondition)
+    }
+    if (timeCondition) {
+      referrals = referrals.whereRaw(timeCondition)
+    }
 
-    debug('Referrals: ' + JSON.stringify(referrals))
-    return res.send({referrals: referrals})
+    var found = await referrals
+    debug('Referrals: ' + JSON.stringify(found))
+    return res.send({referrals: found})
   })
 );
 
 /**
- * @api {get} /referrals Retrieve list of referral tokens
- * @apiName referrals
+ * @api {get} /waiting_list Retrieve waiting_list
+ * @apiName waiting_list
  * @apiGroup Admin
  *
  * @apiPermission admin
@@ -115,9 +120,9 @@ router.get(
  * @apiSuccessExample {json} Success-Response:
  *     HTTP/1.1 200 OK
  *     {
- *       "referrals" : [
- *         { "token": '***', "status": 'pending', sponsor: 'Adam', user: 'newUsername1', expiry: null },
- *         { "token": '***', "status": 'pending', sponsor: 'Adam', user: 'newUsername2', expiry: null },
+ *       "waiting_list" : [
+ *         { email: "johndoe@hotmail.ca", phone: '604 123-4567 },
+ *         { email: "janedoe@hotmail.ca", phone: '604 246-8910 },
  *        ]
  *     }
  */
