@@ -68,7 +68,6 @@ module.exports = ah(async (req, res, next) => {
 
       emit(user.username, "payment", payment);
       emit(user.username, "account", account);
-      emit(user.username, "user", user);
 
       if (username) {
         let recipient = await db.User.findOne(
@@ -85,6 +84,7 @@ module.exports = ah(async (req, res, next) => {
         let text = address || payreq;
         params = {
           where: { user_id: recipient.id },
+          order: [["id", "DESC"]],
         };
         if (text) params.where.text = text;
         let invoice = await db.Invoice.findOne(params);
@@ -164,8 +164,8 @@ module.exports = ah(async (req, res, next) => {
 
         p2 = p2.get({ plain: true });
         p2.account = a2.get({ plain: true });
-        emit(recipient.username, "account", p2.account);
         emit(recipient.username, "payment", p2);
+        emit(recipient.username, "account", p2.account);
 
         l.info("received internal", recipient.username, amount);
         notify(recipient, `Received ${amount} ${a2.ticker} sats`);
