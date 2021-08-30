@@ -158,7 +158,28 @@ module.exports = ah(async (req, res, next) => {
           received: true,
         };
 
-        if (invoice) params.invoice_id = invoice.id;
+        if (invoice) {
+          params.invoice_id = invoice.id;
+
+          let c = convert[invoice.text];
+          if (c) {
+            l.info(
+              "internal payment detected for conversion",
+              invoice.text,
+              c.address,
+              recipient.username
+            );
+
+            recipient.account = a2;
+
+            sendLiquid({
+              address: c.address,
+              amount: amount - 100,
+              user: recipient,
+              limit: amount,
+            }).catch(console.log);
+          }
+        }
 
         let p2 = await db.Payment.create(params, { transaction });
 

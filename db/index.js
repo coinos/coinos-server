@@ -13,11 +13,11 @@ db = new Sequelize(
     host: dbOptions.connection.host,
     dialect: "mariadb",
     logging: false,
-    dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" }
+    dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" },
   }
 );
 
-db.authenticate().catch(err => {
+db.authenticate().catch((err) => {
   console.debug("Error connecting to database: " + err.message);
   console.log(dbOptions.connection.database + "." + dbOptions.connection.user);
 });
@@ -69,100 +69,100 @@ const { User, Account, Payment, Invoice, Key, Order, Referral } = db;
 // move relationships to specfic models
 User.hasMany(Account, {
   as: "accounts",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 User.hasMany(Invoice, {
   as: "invoices",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 User.hasMany(Key, {
   as: "keys",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 User.hasMany(Order, {
   as: "orders",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 User.hasMany(Payment, {
   as: "payments",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 User.belongsTo(Account, {
   as: "account",
-  foreignKey: "account_id"
+  foreignKey: "account_id",
 });
 
 Invoice.belongsTo(Account, {
   as: "account",
-  foreignKey: "account_id"
+  foreignKey: "account_id",
 });
 
 Account.belongsTo(User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 Invoice.belongsTo(User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 Key.belongsTo(User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 Payment.belongsTo(Account, {
   as: "account",
-  foreignKey: "account_id"
+  foreignKey: "account_id",
 });
 
 Payment.belongsTo(User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 Payment.belongsTo(Invoice, {
   as: "invoice",
-  foreignKey: "invoice_id"
+  foreignKey: "invoice_id",
 });
 
 Order.belongsTo(User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 Order.belongsTo(Account, {
   as: "acc1",
-  foreignKey: "a1_id"
+  foreignKey: "a1_id",
 });
 
 Order.belongsTo(Account, {
   as: "acc2",
-  foreignKey: "a2_id"
+  foreignKey: "a2_id",
 });
 
 User.hasMany(Referral, {
   as: "referral_codes",
-  foreignKey: "sponsor_id"
+  foreignKey: "sponsor_id",
 });
 User.hasMany(Referral, {
   as: "sponsors",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 Referral.belongsTo(User, {
   as: "sponsor",
-  foreignKey: "sponsor_id"
+  foreignKey: "sponsor_id",
 });
 Referral.belongsTo(User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
 });
 
 debug("added model relationships");
