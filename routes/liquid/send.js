@@ -3,7 +3,6 @@ const lcad = config.liquid.cadasset;
 const { Transaction } = require("@asoltys/liquidjs-lib");
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
-  if (amount > 10000000) throw new Error("Amount too large");
   l.info("sending liquid", amount, address);
   if (!tx) {
     ({ tx } = await liquidTx({

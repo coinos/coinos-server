@@ -333,10 +333,12 @@ app.post(
     return res.status(500).send("Faucet feature temporarily disabled");
 
     const { user } = req;
-    const { asset, amount } = req.body;
+    let { asset, amount } = req.body;
     amount = parseInt(amount);
 
     try {
+      if (amount <= 0) throw new Error("Amount to load cannot be negative");
+
       await db.transaction(async transaction => {
         let account = await getAccount(
           config.liquid.btcasset,
@@ -344,7 +346,6 @@ app.post(
           transaction
         );
 
-        if (amount < 0) throw new Error("Amount to load cannot be negative");
         if (account.asset !== config.liquid.btcasset)
           throw new Error(
             "Faucet has to be funded with bitcoin. Try sending from another wallet."
