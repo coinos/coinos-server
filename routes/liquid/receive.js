@@ -23,7 +23,7 @@ const getAccount = async (params, transaction) => {
     return account;
   }
 
-  let { asset, pubkey } = params;
+  let { asset } = params;
   let name = asset.substr(0, 6);
   let domain = "";
   let ticker = asset.substr(0, 3).toUpperCase();
@@ -37,7 +37,6 @@ const getAccount = async (params, transaction) => {
     const existing = await db.Account.findOne({
       where: {
         asset,
-        pubkey,
       },
       order: [["id", "ASC"]],
       limit: 1,
