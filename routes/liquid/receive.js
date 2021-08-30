@@ -357,7 +357,7 @@ setInterval(async () => {
           user.username
         );
 
-        user.account = account;
+        user.account = p.account;
 
         await sendLiquid({
           address: c.address,
@@ -370,4 +370,4 @@ setInterval(async () => {
   } catch (e) {
     l.error("problem processing queued liquid transaction", e.message, e.stack);
   }
-});
+}, 1000);
