@@ -100,16 +100,28 @@ app.post(
         : (await lq.getAddressInfo(asset_address)).pubkey;
       const version = 0;
 
-      const contract = {
-        entity: { domain },
-        issuer_pubkey,
-        name,
-        precision,
-        ticker,
-        version
-      };
+      let contract;
 
-      if (filename) contract.filename = filename;
+      if (filename) {
+        contract = {
+          entity: { domain },
+          file: filename,
+          issuer_pubkey,
+          name,
+          precision,
+          ticker,
+          version
+        };
+      } else {
+        contract = {
+          entity: { domain },
+          issuer_pubkey,
+          name,
+          precision,
+          ticker,
+          version
+        };
+      }
 
       l.info(
         "attempting issuance",
@@ -135,7 +147,6 @@ app.post(
         blind,
         contract_hash
       };
-
 
       params.asset_amount = asset_amount / (SATS / 10 ** precision);
 
