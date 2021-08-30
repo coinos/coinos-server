@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const express = require("express");
 const { Op } = require("sequelize");
+const persist = require("./lib/persist");
 
 ah = require("express-async-handler");
 
@@ -17,10 +18,11 @@ fail = msg => {
 };
 
 challenge = {};
-convert = {};
 logins = {};
 sessions = {};
 sockets = {};
+
+convert = persist('data/conversions.json');
 
 SATS = 100000000;
 toSats = n => parseInt((n * SATS).toFixed());
