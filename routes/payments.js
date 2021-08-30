@@ -55,7 +55,7 @@ ah(async () => {
     })
   ).map(p => p.hash);
 
-  setInterval(async () => {
+  const sanity = async () => {
     const unconfirmed = (
       await db.Payment.findAll({
         where: {
@@ -64,7 +64,10 @@ ah(async () => {
       })
     ).map(p => p.hash);
 
-    const transactions = await bc.listTransactions("*", 1000);
+    const transactions = [
+      ...(await bc.listTransactions("*", 1000)),
+      ...(await lq.listTransactions("*", 1000))
+    ];
 
     transactions
       .filter(
@@ -87,7 +90,10 @@ ah(async () => {
 
     if (unaccounted.length)
       l.warn("wallet transactions missing from database", unaccounted);
-  }, 720000);
+  };
+
+  sanity();
+  setInterval(sanity, 720000);
 
   app.post("/send", auth, require("./send"));
 
