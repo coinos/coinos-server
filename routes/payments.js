@@ -3,6 +3,7 @@ const { Op } = require("sequelize");
 const { join } = require("path");
 const fs = require("fs");
 const read = require("../lib/read");
+const { differenceInDays } = require("date-fns");
 
 ah(async () => {
   seen = [];
@@ -56,6 +57,74 @@ ah(async () => {
   ).map(p => p.hash);
 
   const sanity = async () => {
+    let { invoices } = await lnp.listInvoices({
+      reversed: true,
+      num_max_invoices: 1000
+    });
+
+    let recent = invoices
+      .filter(
+        i =>
+          i.settled &&
+          differenceInDays(new Date(), new Date(i.settle_date * 1000)) < 2
+      )
+      .map(i => ({
+        amount: parseInt(i.amt_paid_sat),
+        preimage: i.r_preimage.toString("hex"),
+        pr: i.payment_request.toString("hex")
+      }));
+
+    const twoDaysAgo = new Date(new Date().setDate(new Date().getDate() - 2));
+    let settled = (
+      await db.Payment.findAll({
+        where: { network: "lightning", createdAt: { [Op.gt]: twoDaysAgo } },
+        attributes: ["preimage"]
+      })
+    ).map(p => p.preimage);
+
+    let missed = recent.filter(i => !settled.includes(i.preimage));
+    for (let i = 0; i < missed.length; i++) {
+      let { amount, preimage, pr: text } = missed[i];
+      let invoice = await db.Invoice.findOne({
+        where: { text },
+        include: {
+          model: db.User,
+          as: "user"
+        },
+      });
+
+      if (invoice && invoice.user_id) {
+        let account = await db.Account.findOne({
+          where: {
+            user_id: invoice.user_id,
+            asset: config.liquid.btcasset,
+            pubkey: null
+          }
+        });
+
+        if (account) {
+          let payment = await db.Payment.create({
+            account_id: account.id,
+            user_id: invoice.user_id,
+            hash: text,
+            amount,
+            currency: invoice.currency,
+            preimage,
+            rate: invoice.rate,
+            received: true,
+            confirmed: true,
+            network: "lightning",
+            tip: invoice.tip,
+            invoice_id: invoice.id
+          });
+
+          await account.increment({ balance: amount });
+
+          l.info("rectified account", account.id, amount);
+        }
+      }
+    }
+
     const unconfirmed = (
       await db.Payment.findAll({
         where: {
@@ -92,7 +161,7 @@ ah(async () => {
       l.warn("wallet transactions missing from database", unaccounted);
   };
 
-  sanity();
+  setTimeout(sanity, 5000);
   setInterval(sanity, 720000);
 
   app.post("/send", auth, require("./send"));
