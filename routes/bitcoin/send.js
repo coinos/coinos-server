@@ -1,4 +1,5 @@
-const btc = config.liquid.btcasset;
+const decrementAccount = require('./util/decrementacc');
+const addPayment = require('./util/addPayment');
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
@@ -31,67 +32,17 @@ module.exports = ah(async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  let account, params;
+  let account;
   try {
-    await db.transaction(async transaction => {
-      account = await db.Account.findOne({
-        where: {
-          id: user.account_id
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
-
-      if (account.asset !== btc) {
-        account = await db.Account.findOne({
-          where: {
-            user_id: user.id,
-            asset: btc,
-            pubkey: null
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
-      }
-
-      if (total > account.balance) {
-        l.error("amount exceeds balance", amount, fee, account.balance);
-        throw new Error("Insufficient funds");
-      }
-
-      await account.decrement({ balance: total }, { transaction });
-      await account.reload({ transaction });
-    });
-
-    params = {
-      amount: -amount,
-      fee,
-      memo,
-      account_id: account.id,
-      user_id: user.id,
-      rate: app.get("rates")[user.currency],
-      currency: user.currency,
-      address,
-      confirmed: true,
-      received: false,
-      network: "bitcoin"
-    };
+    account = await decrementAccount(user, amount);
 
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
     hex = (await bc.signRawTransactionWithWallet(hex)).hex;
-    params.hash = await bc.sendRawTransaction(hex);
+    const txid = await bc.sendRawTransaction(hex);
 
-    let payment = await db.Payment.create(params);
-
-    payment = payment.get({ plain: true });
-    payment.account = account.get({ plain: true });
-
-    emit(user.username, "payment", payment);
-    res.send(payment);
-
-    payments.push(params.hash);
+    res.send(await addPayment(account, user, address, amount, memo, txid, fee));
     l.info("sent bitcoin", user.username, total);
   } catch (e) {
     l.error("error sending bitcoin", e.message);

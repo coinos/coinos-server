@@ -142,6 +142,7 @@ ah(async () => {
     app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
     app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
     app.post("/bitcoin/send", auth, require("./bitcoin/send"));
+    app.post("/bitcoin/withdraw", auth, require("./bitcoin/withdraw"));
     require("./bitcoin/receive");
 
     setTimeout(async () => {
