@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@asoltys/bitcoin-core": "^3.0.7",
-    "@asoltys/liquidjs-lib": "^5.1.38",
     "async-mutex": "^0.2.4",
     "axios": "^0.21.1",
     "bcrypt": "^5.0.0",
@@ -35,6 +34,7 @@
     "jsonwebtoken": "^8.5.1",
     "knex": "^0.95.6",
     "lightning": "^3.5.0",
+    "liquidjs-lib": "https://github.com/asoltys/liquidjs-lib#4a0bb0c4b38d327ec247d49e89219798fb0b28e2",
     "lnurl": "^0.16.1",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",

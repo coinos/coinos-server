@@ -1,6 +1,6 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
-const { Transaction } = require("@asoltys/liquidjs-lib");
+const { Transaction } = require("liquidjs-lib");
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   try {

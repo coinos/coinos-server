@@ -4,7 +4,7 @@ const zmq = require("zeromq/v5-compat");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 const bitcoin = require("bitcoinjs-lib");
-const { Block, networks } = require("@asoltys/liquidjs-lib");
+const { Block, networks } = require("liquidjs-lib");
 
 const network =
   networks[
@@ -197,7 +197,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
 
     let hash, json;
 
-    hash = await lq.getBlockHash(block.height);
+    hash = await lq.getBlockHash(block.blockHeight);
     json = await lq.getBlock(hash, 2);
 
     json.tx.map(async (tx) => {

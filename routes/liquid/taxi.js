@@ -4,7 +4,7 @@ const {
   Psbt,
   payments,
   networks
-} = require("@asoltys/liquidjs-lib");
+} = require("liquidjs-lib");
 const wretch = require("wretch");
 const fetch = require("node-fetch");
 wretch().polyfills({ fetch });
