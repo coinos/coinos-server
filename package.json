@@ -11,7 +11,7 @@
   "dependencies": {
     "@asoltys/bitcoin-core": "^3.0.7",
     "async-mutex": "^0.2.4",
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "bcrypt": "^5.0.0",
     "bip32": "^2.0.5",
     "bip39": "^3.0.2",
