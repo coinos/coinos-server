@@ -76,6 +76,8 @@ app.post(
       const { id: user_id } = req.user;
       const blind = false;
 
+      if (!user_id) throw new Error("unauthorized");
+
       const {
         address,
         domain,

@@ -162,6 +162,9 @@ ah(async () => {
 
     if (unaccounted.length)
       l.warn("wallet transactions missing from database", unaccounted);
+
+    // let s = fs.createWriteStream("exceptions", { flags: "a" });
+    // unaccounted.map(tx => s.write(tx + "\n"));
   };
 
   setTimeout(sanity, 5000);

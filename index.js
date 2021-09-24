@@ -9,7 +9,6 @@ const persist = require("./lib/persist");
 
 ah = require("express-async-handler");
 
-l = require("pino")();
 config = require("./config");
 networks = [];
 prod = process.env.NODE_ENV === "production";
@@ -22,7 +21,7 @@ logins = {};
 sessions = {};
 sockets = {};
 
-convert = persist('data/conversions.json');
+convert = persist("data/conversions.json");
 
 SATS = 100000000;
 toSats = n => parseInt((n * SATS).toFixed());
@@ -57,6 +56,7 @@ app.use(compression());
 server = require("http").Server(app);
 
 require("./db");
+require("./lib/logging");
 require("./lib/utils");
 require("./lib/sockets");
 require("./lib/webhooks");
@@ -124,4 +124,3 @@ process.on("SIGINT", process.exit);
 process.on("uncaughtException", function(exception) {
   console.log(exception);
 });
-
