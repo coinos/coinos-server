@@ -117,6 +117,7 @@ app.post(
 app.get(
   "/lnurlp/:username",
   ah(async (req, res, next) => {
+    throw new Error("LNURL payments temporarily disabled due to a server issue. Sep. 2, 2021. Join our Telegram channel https://t.me/coinoswallet for updates");
     const { username } = req.params;
     let user = await db.User.findOne({
       where: {
@@ -152,6 +153,7 @@ app.get(
 app.get(
   "/pay/:username",
   ah(async (req, res, next) => {
+    throw new Error("LNURL payments temporarily disabled due to a server issue. Sep. 2, 2021. Join our Telegram channel https://t.me/coinoswallet for updates");
     const { username } = req.params;
     let user = await db.User.findOne({
       where: {
@@ -185,6 +187,7 @@ app.post(
   "/pay",
   auth,
   ah(async (req, res, next) => {
+    throw new Error("LNURL payments temporarily disabled due to a server issue. Sep. 2, 2021. Join our Telegram channel https://t.me/coinoswallet for updates");
     const { user } = req;
     const {
       amount,
@@ -194,7 +197,6 @@ app.post(
 
     let url = `${callback}${callback.includes("?") ? "&" : "?"}amount=${amount *
       1000}${comment ? "&comment=" + comment : ""}`;
-    console.log(url);
 
     try {
       const parts = callback.split("/");

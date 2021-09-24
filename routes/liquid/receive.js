@@ -358,7 +358,7 @@ setInterval(async () => {
 
         user.account = p.account;
 
-        await sendLiquid({
+        sendLiquid({
           address: c.address,
           amount: total - 100,
           user,

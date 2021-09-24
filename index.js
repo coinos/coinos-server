@@ -116,7 +116,7 @@ app.use((err, req, res, next) => {
 });
 
 server.listen(config.port, () =>
-  console.log(`CoinOS Server listening on port ${config.port}`)
+  l.info(`CoinOS Server listening on port ${config.port}`)
 );
 
 process.on("SIGINT", process.exit);

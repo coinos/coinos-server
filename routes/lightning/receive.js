@@ -93,7 +93,7 @@ const handlePayment = async (msg) => {
       user.account = account;
 
       try {
-        await sendLiquid({
+        sendLiquid({
           address: c.address,
           amount: total - 100,
           user,

@@ -71,7 +71,8 @@ ah(async () => {
       .map(i => ({
         amount: parseInt(i.amt_paid_sat),
         preimage: i.r_preimage.toString("hex"),
-        pr: i.payment_request.toString("hex")
+        pr: i.payment_request.toString("hex"),
+        createdAt: new Date(i.settle_date * 1000)
       }));
 
     const twoDaysAgo = new Date(new Date().setDate(new Date().getDate() - 2));
@@ -84,13 +85,13 @@ ah(async () => {
 
     let missed = recent.filter(i => !settled.includes(i.preimage));
     for (let i = 0; i < missed.length; i++) {
-      let { amount, preimage, pr: text } = missed[i];
+      let { amount, preimage, pr: text, createdAt } = missed[i];
       let invoice = await db.Invoice.findOne({
         where: { text },
         include: {
           model: db.User,
           as: "user"
-        },
+        }
       });
 
       if (invoice && invoice.user_id) {
@@ -115,7 +116,9 @@ ah(async () => {
             confirmed: true,
             network: "lightning",
             tip: invoice.tip,
-            invoice_id: invoice.id
+            invoice_id: invoice.id,
+            createdAt,
+            updatedAt: createdAt
           });
 
           await account.increment({ balance: amount });

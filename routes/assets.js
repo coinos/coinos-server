@@ -204,7 +204,6 @@ app.post(
         await account.reload({ transaction });
         emit(user.username, "account", account);
 
-        if (address) return;
         account = await db.Account.create(
           {
             asset,
@@ -216,7 +215,7 @@ app.post(
             name,
             balance: 0,
             network: "liquid",
-            pending: params.asset_amount * SATS
+            pending: address ? 0 : params.asset_amount * SATS
           },
           { transaction }
         );
@@ -227,30 +226,33 @@ app.post(
           user.username,
           params.asset_amount,
           ticker,
-          name
+          name,
+          account.id
         );
 
-        const asset_payment = await db.Payment.create(
-          {
-            account_id: account.id,
+        if (!address) {
+          const asset_payment = await db.Payment.create(
+            {
+              account_id: account.id,
+              user_id,
+              hash: txid,
+              amount: params.asset_amount * SATS,
+              received: true,
+              confirmed: false,
+              address: asset_address,
+              network: "liquid"
+            },
+            { transaction }
+          );
+          emit(user.username, "payment", asset_payment);
+
+          issuances[txid] = {
             user_id,
-            hash: txid,
-            amount: params.asset_amount * SATS,
-            received: true,
-            confirmed: false,
-            address: asset_address,
-            network: "liquid"
-          },
-          { transaction }
-        );
-        emit(user.username, "payment", asset_payment);
-
-        issuances[txid] = {
-          user_id,
-          asset,
-          asset_amount: params.asset_amount,
-          asset_payment_id: asset_payment.id
-        };
+            asset,
+            asset_amount: params.asset_amount,
+            asset_payment_id: asset_payment.id
+          };
+        }
 
         if (token_amount) {
           account = await db.Account.create(
@@ -262,30 +264,32 @@ app.post(
               precision: 8,
               name: `${name} Reissuance Token`,
               balance: 0,
-              pending: token_amount * SATS
+              pending: address ? 0 : token_amount * SATS
             },
             { transaction }
           );
           emit(user.username, "account", account);
 
-          const token_payment = await db.Payment.create(
-            {
-              account_id: account.id,
-              user_id,
-              hash: txid,
-              amount: token_amount * SATS,
-              received: true,
-              confirmed: false,
-              address: token_address,
-              network: "liquid"
-            },
-            { transaction }
-          );
-          emit(user.username, "payment", token_payment);
+          if (!address) {
+            const token_payment = await db.Payment.create(
+              {
+                account_id: account.id,
+                user_id,
+                hash: txid,
+                amount: token_amount * SATS,
+                received: true,
+                confirmed: false,
+                address: token_address,
+                network: "liquid"
+              },
+              { transaction }
+            );
+            emit(user.username, "payment", token_payment);
 
-          issuances[txid].token = token;
-          issuances[txid].token_amount = token_amount;
-          issuances[txid].token_payment_id = token_payment.id;
+            issuances[txid].token = token;
+            issuances[txid].token_amount = token_amount;
+            issuances[txid].token_payment_id = token_payment.id;
+          }
         }
       });
 
@@ -308,6 +312,8 @@ app.post(
         asset
       }
     });
+
+    l.info("registering", asset, account.contract);
 
     try {
       const { data: result } = await axios.post(

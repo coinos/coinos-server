@@ -76,6 +76,16 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
           let { account } = invoice;
 
+          if (account.asset !== config.liquid.btcasset) {
+            account = await db.Account.findOne({
+              where: {
+                user_id: user.id,
+                asset: config.liquid.btcasset,
+                pubkey: null
+              } 
+            }); 
+          } 
+
           account.pending += value;
           await account.save();
 
@@ -208,7 +218,7 @@ setInterval(async () => {
         );
         user.account = account;
 
-        await sendLiquid({
+        sendLiquid({
           address: c.address,
           amount: total - 100,
           user,
