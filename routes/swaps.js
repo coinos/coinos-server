@@ -103,7 +103,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           }
         ]
       },
-      { transaction }
+      transaction
     );
 
     for (let i = 0; i < orders.length; i++) {
@@ -559,7 +559,7 @@ if (config.maker) {
                 order: [["rate", "ASC"]],
                 limit: 1
               },
-              { transaction }
+              transaction
             );
 
             if (bestAsk)

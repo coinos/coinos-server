@@ -53,7 +53,7 @@ module.exports = ah(async (req, res, next) => {
       };
 
       if (!username) {
-        throw new Error("Vouchers temporarily disabled");
+        // throw new Error("Vouchers temporarily disabled");
         l.info("creating redeemable payment");
         params.redeemcode = uuidv4();
         params.hash = `${req.get("origin")}/redeem/${params.redeemcode}`;
