@@ -75,7 +75,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
     tx = await lq.decodeRawTransaction(unblinded.hex);
     blinded = await lq.decodeRawTransaction(hex);
   } catch (e) {
-    return console.log(e);
+    return l.error("problem decoding liquid tx", e.message);
   }
 
   if (payments.includes(blinded.txid)) return;

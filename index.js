@@ -107,7 +107,7 @@ app.use((err, req, res, next) => {
 
   if (req.user) details.username = req.user.username;
 
-  l.error("Error: ", details);
+  l.error("uncaught error: ", JSON.stringify(details));
   res.status(500);
   res.set({
     "Cache-Control": "no-cache"

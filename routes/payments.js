@@ -57,6 +57,7 @@ ah(async () => {
   ).map(p => p.hash);
 
   const sanity = async () => {
+    try {
     let { invoices } = await lnp.listInvoices({
       reversed: true,
       num_max_invoices: 1000
@@ -163,8 +164,11 @@ ah(async () => {
     if (unaccounted.length)
       l.warn("wallet transactions missing from database", unaccounted);
 
-    // let s = fs.createWriteStream("exceptions", { flags: "a" });
-    // unaccounted.map(tx => s.write(tx + "\n"));
+    //let s = fs.createWriteStream("exceptions", { flags: "a" });
+    //unaccounted.map(tx => s.write(tx + "\n"));
+    } catch(e) {
+      l.error("sanity check failed", e.message);
+    } 
   };
 
   setTimeout(sanity, 5000);
