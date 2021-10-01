@@ -4,10 +4,10 @@ const jwt = require("jsonwebtoken");
 const qs = require("query-string");
 const persist = require("../lib/persist");
 
-logins = persist('data/logins.json');
-recipients = persist('data/recipients.json');
-payments = persist('data/payments.json');
-withdrawals = persist('data/withdrawals.json');
+logins = persist("data/logins.json");
+recipients = persist("data/recipients.json");
+payments = persist("data/payments.json");
+withdrawals = persist("data/withdrawals.json");
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
@@ -117,20 +117,21 @@ app.post(
 app.get(
   "/lnurlp/:username",
   ah(async (req, res, next) => {
-    throw new Error("LNURL payments temporarily disabled due to a server issue. Sep. 2, 2021. Join our Telegram channel https://t.me/coinoswallet for updates");
-    const { username } = req.params;
-    let user = await db.User.findOne({
-      where: {
-        username
-      }
-    });
-
-    let { amount, minSendable, maxSendable } = req.query;
-    minSendable = minSendable || 1000;
-    maxSendable = maxSendable || 1000000000;
-    if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
-
     try {
+      const { username } = req.params;
+      let user = await db.User.findOne({
+        where: {
+          username
+        }
+      });
+
+      if (!user) throw new Error("user not found");
+
+      let { amount, minSendable, maxSendable } = req.query;
+      minSendable = minSendable || 1000;
+      maxSendable = maxSendable || 1000000000;
+      if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
+
       let result = await lnurlServer.generateNewUrl("payRequest", {
         minSendable,
         maxSendable,
@@ -153,7 +154,6 @@ app.get(
 app.get(
   "/pay/:username",
   ah(async (req, res, next) => {
-    throw new Error("LNURL payments temporarily disabled due to a server issue. Sep. 2, 2021. Join our Telegram channel https://t.me/coinoswallet for updates");
     const { username } = req.params;
     let user = await db.User.findOne({
       where: {
@@ -187,7 +187,6 @@ app.post(
   "/pay",
   auth,
   ah(async (req, res, next) => {
-    throw new Error("LNURL payments temporarily disabled due to a server issue. Sep. 2, 2021. Join our Telegram channel https://t.me/coinoswallet for updates");
     const { user } = req;
     const {
       amount,
@@ -284,175 +283,201 @@ app.get(
 lnurlServer.bindToHook(
   "middleware:signedLnurl:afterCheckSignature",
   async (req, res, next) => {
-    let user;
-    const { amount: msats, key, tag, pr, k1 } = req.query;
+    try {
+      let user;
+      const { amount: msats, key, tag, pr, k1 } = req.query;
 
-    if (msats) {
-      amount = Math.round(msats / 1000);
-      const parts = req.originalUrl.split("/");
-      const secret = parts[parts.length - 1].split("?")[0];
-      user = payments[secret];
+      if (msats) {
+        amount = Math.round(msats / 1000);
+        const parts = req.originalUrl.split("/");
+        const secret = parts[parts.length - 1].split("?")[0];
+        user = payments[secret];
 
-      if (user) {
-        let account = await db.Account.findOne({
-          where: {
-            user_id: user.id,
-            asset: config.liquid.btcasset,
-            pubkey: null
-          }
-        });
-
-        if (account.balance < amount) {
-          throw new Error("Insufficient funds");
-        }
-      }
-
-      const recipient = recipients[secret];
-
-      if (recipient) {
-        setTimeout(async () => {
-          let { invoices } = await lnp.listInvoices({
-            pending_only: true
-          });
-
-          if (invoices.length) {
-            let invoice = await db.Invoice.create({
-              user_id: recipient.id,
-              text: invoices[invoices.length - 1].payment_request,
-              rate: app.get("rates")[recipient.currency],
-              currency: recipient.currency,
-              amount,
-              tip: 0,
-              network: "lightning"
-            });
-            l.info("invoice created", invoice.text, invoice.amount);
-          }
-        }, 100);
-      }
-    }
-
-    if (tag === "login") {
-      let username = logins[k1];
-
-      if (!username) {
-        const keyObj = await db.Key.findOne({
-          where: { hex: key },
-          include: [
-            {
-              model: db.User,
-              as: "user"
-            }
-          ]
-        });
-
-        if (keyObj) ({ user } = keyObj);
-
-        if (!user) {
-          let ip =
-            req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-
-          let username = `satoshi-${key.substr(0, 12)}`;
-          let existing = await db.User.findOne({ where: { username } });
-          if (existing) user = existing;
-          else {
-            user = await register(
-              {
-                username,
-                password: key
-              },
-              ip
-            );
-          }
-        }
-
-        ({ username } = user);
-      }
-
-      logins[key] = { k1, username };
-    }
-
-    if (pr) {
-      user = withdrawals[k1];
-      if (!user) {
-        if (next) next(new Error("withdrawal not found"));
-        return;
-      }
-
-      try {
-        let decoded = await lnp.decodePayReq({ pay_req: pr });
-        let amount = decoded.num_satoshis;
-
-        await db.transaction(async transaction => {
+        if (user) {
           let account = await db.Account.findOne({
             where: {
               user_id: user.id,
-              asset: config.liquid.btcasset
-            },
-            lock: transaction.LOCK.UPDATE,
-            transaction
+              asset: config.liquid.btcasset,
+              pubkey: null
+            }
           });
 
           if (account.balance < amount) {
             throw new Error("Insufficient funds");
           }
+        }
 
-          let payment = await db.Payment.create(
-            {
-              amount: -amount,
-              account_id: account.id,
-              user_id: user.id,
-              hash: pr,
-              rate: app.get("rates")[user.currency],
-              currency: user.currency,
-              confirmed: true,
-              network: "lightning"
-            },
-            { transaction }
-          );
+        const recipient = recipients[secret];
+        l.info("lnurl recipient", recipient.username);
 
+        if (recipient) {
           setTimeout(async () => {
             try {
-              let { payments } = await lnp.listPayments({
-                include_incomplete: false,
-                max_payments: 5,
+              let result = await lnp.listInvoices({
+                num_max_invoices: 5,
                 reversed: true
               });
+              let { invoices } = result;
 
-              let p = payments.find(p => p.payment_request === pr);
-              if (p) {
-                l.info("found payment", pr);
-                payment.fee = p.fee;
-                await account.decrement({ balance: p.fee }, { transaction });
-                await account.reload({ transaction });
-                await payment.save();
-                payment = payment.get({ plain: true });
-                payment.account = account.get({ plain: true });
-                emit(user.username, "account", account);
-                emit(user.username, "payment", payment);
-              } else {
-                l.warn("payment not found, fee not set", pr);
+              if (invoices.length) {
+                let existing = [];
+                existing = await db.Invoice.findAll({
+                  attributes: ["text"],
+                  where: {
+                    text: invoices.map(i => i.payment_request)
+                  }
+                });
+
+                let candidates = invoices.filter(
+                  i => !existing.map(e => e.text).includes(i.payment_request)
+                );
+
+                if (candidates.length) {
+                  let invoice = await db.Invoice.create({
+                    user_id: recipient.id,
+                    text: candidates[candidates.length - 1].payment_request,
+                    rate: app.get("rates")[recipient.currency],
+                    currency: recipient.currency,
+                    amount,
+                    tip: 0,
+                    network: "lightning"
+                  });
+
+                  l.info("invoice created", invoice.text, invoice.amount);
+                }
               }
             } catch (e) {
-              l.error("problem trying to get ln withdrawal payment", e);
+              l.error("problem finding lnurl invoice", e.message);
             }
-          }, 1000);
-
-          await account.decrement({ balance: amount }, { transaction });
-          await account.reload({ transaction });
-
-          let p = payment.get({ plain: true });
-          p.account = account.get({ plain: true });
-
-          emit(user.username, "account", p.account);
-          emit(user.username, "payment", p);
-        });
-      } catch (e) {
-        l.error("failed to process withdrawal", e.message);
-        return next(e);
+          }, 2000);
+        }
       }
-    }
 
-    if (next) next(req, res);
+      if (tag === "login") {
+        let username = logins[k1];
+
+        if (!username) {
+          const keyObj = await db.Key.findOne({
+            where: { hex: key },
+            include: [
+              {
+                model: db.User,
+                as: "user"
+              }
+            ]
+          });
+
+          if (keyObj) ({ user } = keyObj);
+
+          if (!user) {
+            let ip =
+              req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+
+            let username = `satoshi-${key.substr(0, 12)}`;
+            let existing = await db.User.findOne({ where: { username } });
+            if (existing) user = existing;
+            else {
+              user = await register(
+                {
+                  username,
+                  password: key
+                },
+                ip
+              );
+            }
+          }
+
+          ({ username } = user);
+        }
+
+        logins[key] = { k1, username };
+      }
+
+      if (pr) {
+        user = withdrawals[k1];
+        if (!user) {
+          if (next) next(new Error("withdrawal not found"));
+          return;
+        }
+
+        try {
+          let decoded = await lnp.decodePayReq({ pay_req: pr });
+          let amount = decoded.num_satoshis;
+
+          await db.transaction(async transaction => {
+            let account = await db.Account.findOne({
+              where: {
+                user_id: user.id,
+                asset: config.liquid.btcasset
+              },
+              lock: transaction.LOCK.UPDATE,
+              transaction
+            });
+
+            if (account.balance < amount) {
+              throw new Error("Insufficient funds");
+            }
+
+            let payment = await db.Payment.create(
+              {
+                amount: -amount,
+                account_id: account.id,
+                user_id: user.id,
+                hash: pr,
+                rate: app.get("rates")[user.currency],
+                currency: user.currency,
+                confirmed: true,
+                network: "lightning"
+              },
+              { transaction }
+            );
+
+            setTimeout(async () => {
+              try {
+                let { payments } = await lnp.listPayments({
+                  include_incomplete: false,
+                  max_payments: 5,
+                  reversed: true
+                });
+
+                let p = payments.find(p => p.payment_request === pr);
+                if (p) {
+                  l.info("found payment", pr);
+                  payment.fee = p.fee;
+                  await account.decrement({ balance: p.fee }, { transaction });
+                  await account.reload({ transaction });
+                  await payment.save();
+                  payment = payment.get({ plain: true });
+                  payment.account = account.get({ plain: true });
+                  emit(user.username, "account", account);
+                  emit(user.username, "payment", payment);
+                } else {
+                  l.warn("payment not found, fee not set", pr);
+                }
+              } catch (e) {
+                l.error("problem trying to get ln withdrawal payment", e);
+              }
+            }, 1000);
+
+            await account.decrement({ balance: amount }, { transaction });
+            await account.reload({ transaction });
+
+            let p = payment.get({ plain: true });
+            p.account = account.get({ plain: true });
+
+            emit(user.username, "account", p.account);
+            emit(user.username, "payment", p);
+          });
+        } catch (e) {
+          l.error("failed to process withdrawal", e.message);
+          return next(e);
+        }
+      }
+
+      if (next) next(req, res);
+    } catch (e) {
+      l.error("unhandled lnurl error", e.message);
+    }
   }
 );
 
