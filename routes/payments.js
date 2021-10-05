@@ -58,117 +58,117 @@ ah(async () => {
 
   const sanity = async () => {
     try {
-    let { invoices } = await lnp.listInvoices({
-      reversed: true,
-      num_max_invoices: 1000
-    });
-
-    let recent = invoices
-      .filter(
-        i =>
-          i.settled &&
-          differenceInDays(new Date(), new Date(i.settle_date * 1000)) < 2
-      )
-      .map(i => ({
-        amount: parseInt(i.amt_paid_sat),
-        preimage: i.r_preimage.toString("hex"),
-        pr: i.payment_request.toString("hex"),
-        createdAt: new Date(i.settle_date * 1000)
-      }));
-
-    const twoDaysAgo = new Date(new Date().setDate(new Date().getDate() - 2));
-    let settled = (
-      await db.Payment.findAll({
-        where: { network: "lightning", createdAt: { [Op.gt]: twoDaysAgo } },
-        attributes: ["preimage"]
-      })
-    ).map(p => p.preimage);
-
-    let missed = recent.filter(i => !settled.includes(i.preimage));
-    for (let i = 0; i < missed.length; i++) {
-      let { amount, preimage, pr: text, createdAt } = missed[i];
-      let invoice = await db.Invoice.findOne({
-        where: { text },
-        include: {
-          model: db.User,
-          as: "user"
-        }
+      let { invoices } = await lnp.listInvoices({
+        reversed: true,
+        num_max_invoices: 1000
       });
 
-      if (invoice && invoice.user_id) {
-        let account = await db.Account.findOne({
-          where: {
-            user_id: invoice.user_id,
-            asset: config.liquid.btcasset,
-            pubkey: null
+      let recent = invoices
+        .filter(
+          i =>
+            i.settled &&
+            differenceInDays(new Date(), new Date(i.settle_date * 1000)) < 2
+        )
+        .map(i => ({
+          amount: parseInt(i.amt_paid_sat),
+          preimage: i.r_preimage.toString("hex"),
+          pr: i.payment_request.toString("hex"),
+          createdAt: new Date(i.settle_date * 1000)
+        }));
+
+      const twoDaysAgo = new Date(new Date().setDate(new Date().getDate() - 2));
+      let settled = (
+        await db.Payment.findAll({
+          where: { network: "lightning", createdAt: { [Op.gt]: twoDaysAgo } },
+          attributes: ["preimage"]
+        })
+      ).map(p => p.preimage);
+
+      let missed = recent.filter(i => !settled.includes(i.preimage));
+      for (let i = 0; i < missed.length; i++) {
+        let { amount, preimage, pr: text, createdAt } = missed[i];
+        let invoice = await db.Invoice.findOne({
+          where: { text },
+          include: {
+            model: db.User,
+            as: "user"
           }
         });
 
-        if (account) {
-          let payment = await db.Payment.create({
-            account_id: account.id,
-            user_id: invoice.user_id,
-            hash: text,
-            amount,
-            currency: invoice.currency,
-            preimage,
-            rate: invoice.rate,
-            received: true,
-            confirmed: true,
-            network: "lightning",
-            tip: invoice.tip,
-            invoice_id: invoice.id,
-            createdAt,
-            updatedAt: createdAt
+        if (invoice && invoice.user_id) {
+          let account = await db.Account.findOne({
+            where: {
+              user_id: invoice.user_id,
+              asset: config.liquid.btcasset,
+              pubkey: null
+            }
           });
 
-          await account.increment({ balance: amount });
+          if (account) {
+            let payment = await db.Payment.create({
+              account_id: account.id,
+              user_id: invoice.user_id,
+              hash: text,
+              amount,
+              currency: invoice.currency,
+              preimage,
+              rate: invoice.rate,
+              received: true,
+              confirmed: true,
+              network: "lightning",
+              tip: invoice.tip,
+              invoice_id: invoice.id,
+              createdAt,
+              updatedAt: createdAt
+            });
 
-          l.info("rectified account", account.id, amount);
+            await account.increment({ balance: amount });
+
+            l.info("rectified account", account.id, amount);
+          }
         }
       }
-    }
 
-    const unconfirmed = (
-      await db.Payment.findAll({
-        where: {
-          confirmed: 0
+      const unconfirmed = (
+        await db.Payment.findAll({
+          where: {
+            confirmed: 0
+          }
+        })
+      ).map(p => p.hash);
+
+      const transactions = [
+        ...(await bc.listTransactions("*", 1000)),
+        ...(await lq.listTransactions("*", 1000))
+      ];
+
+      transactions
+        .filter(
+          tx =>
+            tx.category === "receive" &&
+            tx.confirmations > 0 &&
+            unconfirmed.includes(tx.txid)
+        )
+        .map(tx => {
+          l.warn("tx unconfirmed in db", tx.txid, tx.address);
+        });
+
+      const unaccounted = [];
+
+      transactions.map(tx => {
+        if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
+          unaccounted.push(tx.txid);
         }
-      })
-    ).map(p => p.hash);
-
-    const transactions = [
-      ...(await bc.listTransactions("*", 1000)),
-      ...(await lq.listTransactions("*", 1000))
-    ];
-
-    transactions
-      .filter(
-        tx =>
-          tx.category === "receive" &&
-          tx.confirmations > 0 &&
-          unconfirmed.includes(tx.txid)
-      )
-      .map(tx => {
-        l.warn("tx unconfirmed in db", tx.txid, tx.address);
       });
 
-    const unaccounted = [];
+      if (unaccounted.length)
+        l.warn("wallet transactions missing from database", unaccounted);
 
-    transactions.map(tx => {
-      if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
-        unaccounted.push(tx.txid);
-      }
-    });
-
-    if (unaccounted.length)
-      l.warn("wallet transactions missing from database", unaccounted);
-
-    //let s = fs.createWriteStream("exceptions", { flags: "a" });
-    //unaccounted.map(tx => s.write(tx + "\n"));
-    } catch(e) {
+      let s = fs.createWriteStream("exceptions", { flags: "a" });
+      unaccounted.map(tx => s.write(tx + "\n"));
+    } catch (e) {
       l.error("sanity check failed", e.message);
-    } 
+    }
   };
 
   setTimeout(sanity, 5000);
