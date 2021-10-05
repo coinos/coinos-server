@@ -24,7 +24,7 @@ sockets = {};
 convert = persist("data/conversions.json");
 
 SATS = 100000000;
-toSats = n => parseInt((n * SATS).toFixed());
+toSats = n => Math.round(n * SATS);
 
 app = express();
 app.enable("trust proxy");

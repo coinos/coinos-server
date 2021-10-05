@@ -10,6 +10,7 @@ ah(async () => {
   addresses = {};
   change = [];
   issuances = {};
+  unaccounted = [];
 
   const exceptions = [];
   try {
@@ -19,8 +20,15 @@ ah(async () => {
   }
 
   try {
+    const twoDays = new Date(new Date().setDate(new Date().getDate() - 2));
+
     (
       await db.Invoice.findAll({
+        where: {
+          createdAt: {
+            [Op.gt]: twoDays
+          }
+        },
         include: {
           model: db.User,
           as: "user"
@@ -129,45 +137,138 @@ ah(async () => {
         }
       }
 
-      const unconfirmed = (
-        await db.Payment.findAll({
-          where: {
-            confirmed: 0
+      const unconfirmed = await db.Payment.findAll({
+        where: {
+          confirmed: 0
+        },
+        include: [
+          {
+            model: db.Account,
+            as: "account"
+          },
+          {
+            model: db.User,
+            as: "user"
           }
-        })
-      ).map(p => p.hash);
+        ]
+      });
+
+      let hashes = unconfirmed.map(p => p.hash);
 
       const transactions = [
-        ...(await bc.listTransactions("*", 1000)),
-        ...(await lq.listTransactions("*", 1000))
-      ];
+        ...(await bc.listTransactions("*", 50)),
+        ...(await lq.listTransactions("*", 50))
+      ].filter(tx => ['send', 'receive'].includes(tx.category));
 
-      transactions
-        .filter(
-          tx =>
-            tx.category === "receive" &&
-            tx.confirmations > 0 &&
-            unconfirmed.includes(tx.txid)
-        )
-        .map(tx => {
-          l.warn("tx unconfirmed in db", tx.txid, tx.address);
+      missed = transactions.filter(
+        tx =>
+          tx.category === "receive" &&
+          tx.confirmations > 0 &&
+          hashes.includes(tx.txid)
+      );
+
+      for (let i = 0; i < missed.length; i++) {
+        let p = unconfirmed.find(p => p.hash === missed[i].txid);
+        p.confirmed = 1;
+
+        await db.transaction(async transaction => {
+          await p.save({ transaction });
+
+          await p.account.increment({ balance: p.amount }, { transaction });
+          await p.account.decrement({ pending: p.amount }, { transaction });
         });
 
-      const unaccounted = [];
+        emit(p.user.username, "account", p.account);
+        emit(p.user.username, "payment", p);
+
+        l.info("confirmed tx", p.hash, p.address);
+      }
+
+      unaccounted = [];
 
       transactions.map(tx => {
         if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
-          unaccounted.push(tx.txid);
+          unaccounted.push(tx);
         }
       });
 
       if (unaccounted.length)
-        l.warn("wallet transactions missing from database", unaccounted);
+        l.warn(
+          "wallet transactions missing from database",
+          unaccounted.map(tx => tx.txid)
+        );
 
-      let s = fs.createWriteStream("exceptions", { flags: "a" });
-      unaccounted.map(tx => s.write(tx + "\n"));
+      let receipts = unaccounted
+        .filter(tx => tx.category === "receive")
+        .map(tx => tx.address);
+
+      invoices = await db.Invoice.findAll({
+        where: {
+          [Op.or]: {
+            address: receipts,
+            unconfidential: receipts
+          }
+        },
+        include: [
+          {
+            model: db.Account,
+            as: "account"
+          },
+          {
+            model: db.User,
+            as: "user"
+          }
+        ]
+      });
+
+      for (let i = 0; i < invoices.length; i++) {
+        let {
+          address,
+          unconfidential,
+          account,
+          account_id,
+          currency,
+          id: invoice_id,
+          network,
+          rate,
+          tip,
+          user,
+          user_id
+        } = invoices[i];
+
+        let { amount, txid: hash } = unaccounted.find(
+          tx => tx.address === address || tx.address === unconfidential
+        );
+
+        amount = toSats(amount);
+
+        await db.transaction(async transaction => {
+          let p = await db.Payment.create(
+            {
+              account_id,
+              address: address || unconfidential,
+              amount,
+              confirmed: false,
+              currency,
+              hash,
+              invoice_id,
+              network,
+              rate,
+              received: true,
+              tip,
+              user_id
+            },
+            { transaction }
+          );
+
+          await account.increment({ pending: amount }, { transaction });
+
+          emit(user.username, "account", account);
+          emit(user.username, "payment", p);
+        });
+      }
     } catch (e) {
-      l.error("sanity check failed", e.message);
+      l.error("sanity check failed", e.message, e.stack);
     }
   };
 
@@ -175,6 +276,16 @@ ah(async () => {
   setInterval(sanity, 720000);
 
   app.post("/send", auth, require("./send"));
+  app.get(
+    "/except",
+    adminAuth,
+    ah((req, res) => {
+      let s = fs.createWriteStream("exceptions", { flags: "a" });
+      unaccounted.map(tx => s.write(tx.txid + "\n"));
+      l.info("updated exceptions");
+      res.send("wonderful");
+    })
+  );
 
   if (config.lna) {
     if (config.lna.clightning) {
