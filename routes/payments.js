@@ -181,7 +181,7 @@ ah(async () => {
         emit(p.user.username, "account", p.account);
         emit(p.user.username, "payment", p);
 
-        l.info("confirmed tx", p.hash, p.address);
+        l.info("confirmed tx", p.user_id, p.hash, p.address);
       }
 
       unaccounted = [];
