@@ -199,7 +199,7 @@ ah(async () => {
         );
 
       let receipts = unaccounted
-        .filter(tx => tx.category === "receive")
+        .filter(tx => tx.category === "receive" && tx.asset === config.liquid.btcasset)
         .map(tx => tx.address);
 
       invoices = await db.Invoice.findAll({
@@ -243,6 +243,7 @@ ah(async () => {
         amount = toSats(amount);
 
         await db.transaction(async transaction => {
+          payments.push(hash);
           let p = await db.Payment.create(
             {
               account_id,
