@@ -43,9 +43,10 @@ module.exports = ah(async (req, res) => {
         res.send(payment);
       });
     } else {
-      res.send(result);
+      res.send(hash);
     }
   } catch (e) {
+    l.error("problem broadcasting liquid transaction", e);
     res.status(500).send(e.message);
   }
 });
