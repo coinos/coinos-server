@@ -758,3 +758,15 @@ app.get(
     res.send(false);
   })
 );
+
+app.get(
+  "/invoices",
+  auth,
+  ah(async function(req, res) {
+    let invoices = await db.Invoice.findAll({
+      where: { user_id: req.user.id }
+    });
+  res.send(invoices);
+  })
+
+);
