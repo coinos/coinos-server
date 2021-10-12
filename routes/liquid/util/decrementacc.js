@@ -17,11 +17,8 @@ module.exports = async (user, transaction, limit, fee, assets, amount, address, 
             });
 
             if (faucet) {
-                // TODO: is faucet ok with 0 fee in withdraw?
                 covered = faucet.balance;
                 if (covered > fee) covered = fee;
-                // covered = fee;
-                // if (covered > faucet.balance) covered = faucet.balance;
                 await faucet.decrement({balance: covered}, {transaction});
                 await faucet.reload({transaction});
                 await faucet.save({transaction});

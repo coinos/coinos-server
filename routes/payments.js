@@ -128,6 +128,7 @@ ah(async () => {
     app.post("/lightning/invoice", require("./lightning/invoice"));
     app.post("/lightning/query", auth, require("./lightning/query"));
     app.post("/lightning/send", auth, require("./lightning/send"));
+    app.post("/lightning/withdraw", auth, require("./lightning/withdraw"));
     require("./lightning/receive");
   }
 
