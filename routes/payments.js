@@ -42,7 +42,6 @@ if (config.lna) {
   app.post("/lightning/invoice", require("./lightning/invoice"));
   app.post("/lightning/query", auth, require("./lightning/query"));
   app.post("/lightning/send", auth, require("./lightning/send"));
-  app.post("/lightning/withdraw", auth, require("./lightning/withdraw"));
   require("./lightning/receive");
 }
 
@@ -53,7 +52,6 @@ if (config.bitcoin) {
   app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
   app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
   app.post("/bitcoin/send", auth, require("./bitcoin/send"));
-  app.post("/bitcoin/withdraw", auth, require("./bitcoin/withdraw"));
   require("./bitcoin/receive");
 
   setTimeout(async () => {
@@ -75,7 +73,6 @@ if (config.liquid) {
   app.get("/liquid/generate", auth, require("./liquid/generate"));
   app.post("/liquid/fee", auth, require("./liquid/fee"));
   app.post("/liquid/send", auth, require("./liquid/send"));
-  app.post("/liquid/withdraw", auth, require("./liquid/withdraw"));
   app.post("/taxi", auth, require("./liquid/taxi"));
   require("./liquid/receive");
 

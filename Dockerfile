@@ -4,10 +4,12 @@ ARG NODE_ENV=production
 ENV NODE_ENV $NODE_ENV
 
 RUN apk add git
+RUN apk add --update npm
+RUN npm i -g pnpm
 
 COPY . /app
 WORKDIR /app
 
-RUN yarn install
+RUN pnpm i
 
-CMD ["yarn", "start"]
+CMD ["pnpm", "start"]
