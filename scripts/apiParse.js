@@ -1,7 +1,4 @@
-var debug = require('debug')('debug')
-
 const addUserSearch = function (input, table) {
-  debug('add User Search')
   var {search, starts_with, contains} = input
 
   if (!table) { table = 'users' }
@@ -16,7 +13,6 @@ const addUserSearch = function (input, table) {
 
     var condition = "(" + table + ".email like '" + search + "' OR " + table + ".username like '" + search + "')"
 
-    debug('condition: ' + condition)
     return condition
   } else {
     return ''
@@ -24,13 +20,11 @@ const addUserSearch = function (input, table) {
 }
 
 const addTimeSearch = function (input, field) {
-  debug('add time Search')
   if (!field) { field = 'updatedAt' }
   
   var {since} = input
   if (since) {
     condition = field + " >= '" + since + "'"
-    debug('condition: ' + condition)
 
     return condition
   } else {

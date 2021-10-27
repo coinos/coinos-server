@@ -766,7 +766,6 @@ app.get(
     let invoices = await db.Invoice.findAll({
       where: { user_id: req.user.id }
     });
-  res.send(invoices);
+    res.send(invoices);
   })
-
 );

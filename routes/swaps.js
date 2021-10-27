@@ -3,9 +3,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const getAccount = require("../lib/account");
 const { Op, col } = require("sequelize");
-const uuidv4 = require("uuid/v4");
-
-const debug = require('debug')('debug')
+const { v4: uuidv4 } = require("uuid");
 
 const shallow = a => {
   let b = {};

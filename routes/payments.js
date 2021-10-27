@@ -1,414 +1,135 @@
-const BitcoinCore = require("@asoltys/bitcoin-core");
-const { Op } = require("sequelize");
-const { join } = require("path");
 const fs = require("fs");
-const read = require("../lib/read");
-const { differenceInDays } = require("date-fns");
+const BitcoinCore = require("@asoltys/bitcoin-core");
+const { join } = require("path");
 
-ah(async () => {
-  seen = [];
-  addresses = {};
-  change = [];
-  issuances = {};
-  unaccounted = [];
+app.post("/send", auth, require("./send"));
+app.get(
+  "/except",
+  adminAuth,
+  ah((req, res) => {
+    let s = fs.createWriteStream("exceptions", { flags: "a" });
+    unaccounted.map(tx => s.write(tx.txid + "\n"));
+    l.info("updated exceptions");
+    res.send("updated exceptions");
+  })
+);
 
-  const exceptions = [];
-  try {
-    read(fs.createReadStream("exceptions"), data => exceptions.push(data));
-  } catch (e) {
-    l.warn("couldn't read exceptions file", e.message);
+if (config.lna) {
+  if (config.lna.clightning) {
+    lna = require("clightning-client")(config.lna.dir);
+  } else {
+    const lnd = require("../lib/lnd");
+    lna = lnd.default;
+    lnp = [
+      "addInvoice",
+      "channelBalance",
+      "connectPeer",
+      "decodePayReq",
+      "getInfo",
+      "listInvoices",
+      "listPayments",
+      "sendPaymentSync",
+      "walletBalance"
+    ].reduce(
+      (a, b) =>
+        (a[b] = args => new Promise(r => lna[b](args, (e, v) => r(v)))) && a,
+      {}
+    );
   }
 
-  try {
-    const twoDays = new Date(new Date().setDate(new Date().getDate() - 2));
+  app.post("/lightning/channel", require("./lightning/channel"));
+  app.post("/lightning/channelRequest", require("./lightning/channelRequest"));
+  app.post("/lightning/invoice", require("./lightning/invoice"));
+  app.post("/lightning/query", auth, require("./lightning/query"));
+  app.post("/lightning/send", auth, require("./lightning/send"));
+  app.post("/lightning/withdraw", auth, require("./lightning/withdraw"));
+  require("./lightning/receive");
+}
 
-    (
-      await db.Invoice.findAll({
-        where: {
-          createdAt: {
-            [Op.gt]: twoDays
-          }
-        },
-        include: {
-          model: db.User,
-          as: "user"
-        }
-      })
-    ).map(({ address, user, unconfidential }) => {
-      if (address && user) addresses[address] = user.username;
-      if (unconfidential && user) addresses[unconfidential] = user.username;
-    });
-  } catch (e) {
-    console.log(e);
-  }
+if (config.bitcoin) {
+  bc = new BitcoinCore(config.bitcoin);
+  app.post("/bitcoin/broadcast", optionalAuth, require("./bitcoin/broadcast"));
+  app.get("/bitcoin/generate", auth, require("./bitcoin/generate"));
+  app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
+  app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
+  app.post("/bitcoin/send", auth, require("./bitcoin/send"));
+  app.post("/bitcoin/withdraw", auth, require("./bitcoin/withdraw"));
+  require("./bitcoin/receive");
 
-  try {
-    const accounts = await db.Account.findAll({
-      where: { pubkey: { [Op.ne]: null } },
-      include: {
-        model: db.User,
-        as: "user"
-      }
-    });
-
-    accounts.map(({ address, user: { username } }) => {
-      addresses[address] = username;
-    });
-  } catch (e) {
-    console.log(e);
-  }
-
-  payments = (
-    await db.Payment.findAll({
-      attributes: ["hash"]
-    })
-  ).map(p => p.hash);
-
-  const sanity = async () => {
+  setTimeout(async () => {
     try {
-      let { invoices } = await lnp.listInvoices({
-        reversed: true,
-        num_max_invoices: 1000
-      });
-
-      let recent = invoices
-        .filter(
-          i =>
-            i.settled &&
-            differenceInDays(new Date(), new Date(i.settle_date * 1000)) < 2
-        )
-        .map(i => ({
-          amount: parseInt(i.amt_paid_sat),
-          preimage: i.r_preimage.toString("hex"),
-          pr: i.payment_request.toString("hex"),
-          createdAt: new Date(i.settle_date * 1000)
-        }));
-
-      const twoDaysAgo = new Date(new Date().setDate(new Date().getDate() - 2));
-      let settled = (
-        await db.Payment.findAll({
-          where: { network: "lightning", createdAt: { [Op.gt]: twoDaysAgo } },
-          attributes: ["preimage"]
-        })
-      ).map(p => p.preimage);
-
-      let missed = recent.filter(i => !settled.includes(i.preimage));
-      for (let i = 0; i < missed.length; i++) {
-        let { amount, preimage, pr: text, createdAt } = missed[i];
-        let invoice = await db.Invoice.findOne({
-          where: { text },
-          include: {
-            model: db.User,
-            as: "user"
-          }
-        });
-
-        if (invoice && invoice.user_id) {
-          let account = await db.Account.findOne({
-            where: {
-              user_id: invoice.user_id,
-              asset: config.liquid.btcasset,
-              pubkey: null
-            }
-          });
-
-          if (account) {
-            let payment = await db.Payment.create({
-              account_id: account.id,
-              user_id: invoice.user_id,
-              hash: text,
-              amount,
-              currency: invoice.currency,
-              preimage,
-              rate: invoice.rate,
-              received: true,
-              confirmed: true,
-              network: "lightning",
-              tip: invoice.tip,
-              invoice_id: invoice.id,
-              createdAt,
-              updatedAt: createdAt
-            });
-
-            await account.increment({ balance: amount });
-
-            l.info("rectified account", account.id, amount);
-          }
-        }
-      }
-
-      const unconfirmed = await db.Payment.findAll({
-        where: {
-          confirmed: 0
-        },
-        include: [
-          {
-            model: db.Account,
-            as: "account"
-          },
-          {
-            model: db.User,
-            as: "user"
-          }
-        ]
-      });
-
-      let hashes = unconfirmed.map(p => p.hash);
-
-      const transactions = [
-        ...(await bc.listTransactions("*", 50)),
-        ...(await lq.listTransactions("*", 50))
-      ].filter(tx => ['send', 'receive'].includes(tx.category));
-
-      missed = transactions.filter(
-        tx =>
-          tx.category === "receive" &&
-          tx.confirmations > 0 &&
-          hashes.includes(tx.txid)
-      );
-
-      for (let i = 0; i < missed.length; i++) {
-        let p = unconfirmed.find(p => p.hash === missed[i].txid);
-        p.confirmed = 1;
-
-        await db.transaction(async transaction => {
-          await p.save({ transaction });
-
-          await p.account.increment({ balance: p.amount }, { transaction });
-          await p.account.decrement({ pending: p.amount }, { transaction });
-        });
-
-        emit(p.user.username, "account", p.account);
-        emit(p.user.username, "payment", p);
-
-        l.info("confirmed tx", p.user_id, p.hash, p.address);
-      }
-
-      unaccounted = [];
-
-      transactions.map(tx => {
-        if (!payments.includes(tx.txid) && !exceptions.includes(tx.txid)) {
-          unaccounted.push(tx);
-        }
-      });
-
-      if (unaccounted.length)
-        l.warn(
-          "wallet transactions missing from database",
-          unaccounted.map(tx => tx.txid)
-        );
-
-      let receipts = unaccounted
-        .filter(tx => tx.category === "receive" && tx.asset === config.liquid.btcasset)
-        .map(tx => tx.address);
-
-      invoices = await db.Invoice.findAll({
-        where: {
-          [Op.or]: {
-            address: receipts,
-            unconfidential: receipts
-          }
-        },
-        include: [
-          {
-            model: db.Account,
-            as: "account"
-          },
-          {
-            model: db.User,
-            as: "user"
-          }
-        ]
-      });
-
-      for (let i = 0; i < invoices.length; i++) {
-        let {
-          address,
-          unconfidential,
-          account,
-          account_id,
-          currency,
-          id: invoice_id,
-          network,
-          rate,
-          tip,
-          user,
-          user_id
-        } = invoices[i];
-
-        let { amount, txid: hash } = unaccounted.find(
-          tx => tx.address === address || tx.address === unconfidential
-        );
-
-        amount = toSats(amount);
-
-        await db.transaction(async transaction => {
-          payments.push(hash);
-          let p = await db.Payment.create(
-            {
-              account_id,
-              address: address || unconfidential,
-              amount,
-              confirmed: false,
-              currency,
-              hash,
-              invoice_id,
-              network,
-              rate,
-              received: true,
-              tip,
-              user_id
-            },
-            { transaction }
-          );
-
-          await account.increment({ pending: amount }, { transaction });
-
-          emit(user.username, "account", account);
-          emit(user.username, "payment", p);
-        });
-      }
+      const address = await bc.getNewAddress();
+      const { hdkeypath } = await bc.getAddressInfo(address);
+      const parts = hdkeypath.split("/");
+      app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
     } catch (e) {
-      l.error("sanity check failed", e.message, e.stack);
+      console.error(e);
     }
-  };
+  }, 50);
+}
 
-  setTimeout(sanity, 5000);
-  setInterval(sanity, 720000);
+if (config.liquid) {
+  lq = new BitcoinCore(config.liquid);
+  rare = new BitcoinCore(config.rare);
+  app.post("/liquid/broadcast", optionalAuth, require("./liquid/broadcast"));
+  app.get("/liquid/generate", auth, require("./liquid/generate"));
+  app.post("/liquid/fee", auth, require("./liquid/fee"));
+  app.post("/liquid/send", auth, require("./liquid/send"));
+  app.post("/liquid/withdraw", auth, require("./liquid/withdraw"));
+  app.post("/taxi", auth, require("./liquid/taxi"));
+  require("./liquid/receive");
 
-  app.post("/send", auth, require("./send"));
-  app.get(
-    "/except",
-    adminAuth,
-    ah((req, res) => {
-      let s = fs.createWriteStream("exceptions", { flags: "a" });
-      unaccounted.map(tx => s.write(tx.txid + "\n"));
-      l.info("updated exceptions");
-      res.send("wonderful");
-    })
-  );
-
-  if (config.lna) {
-    if (config.lna.clightning) {
-      lna = require("clightning-client")(config.lna.dir);
-    } else {
-      const lnd = require("../lib/lnd");
-      lna = lnd.default;
-      lnp = [
-        "addInvoice",
-        "channelBalance",
-        "connectPeer",
-        "decodePayReq",
-        "getInfo",
-        "listInvoices",
-        "listPayments",
-        "sendPaymentSync",
-        "walletBalance"
-      ].reduce(
-        (a, b) =>
-          (a[b] = args => new Promise(r => lna[b](args, (e, v) => r(v)))) && a,
-        {}
-      );
+  setTimeout(async () => {
+    try {
+      const address = await lq.getNewAddress();
+      const { hdkeypath } = await lq.getAddressInfo(address);
+      const parts = hdkeypath.split("/");
+      app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+    } catch (e) {
+      l.warn("Problem getting liquid address index", e.message);
     }
+  }, 50);
+}
 
-    app.post("/lightning/channel", require("./lightning/channel"));
-    app.post(
-      "/lightning/channelRequest",
-      require("./lightning/channelRequest")
-    );
-    app.post("/lightning/invoice", require("./lightning/invoice"));
-    app.post("/lightning/query", auth, require("./lightning/query"));
-    app.post("/lightning/send", auth, require("./lightning/send"));
-    require("./lightning/receive");
-  }
-
-  if (config.bitcoin) {
-    bc = new BitcoinCore(config.bitcoin);
-    app.post(
-      "/bitcoin/broadcast",
-      optionalAuth,
-      require("./bitcoin/broadcast")
-    );
-    app.get("/bitcoin/generate", auth, require("./bitcoin/generate"));
-    app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
-    app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
-    app.post("/bitcoin/send", auth, require("./bitcoin/send"));
-    require("./bitcoin/receive");
-
-    setTimeout(async () => {
-      try {
-        const address = await bc.getNewAddress();
-        const { hdkeypath } = await bc.getAddressInfo(address);
-        const parts = hdkeypath.split("/");
-        app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
-      } catch (e) {
-        console.error(e);
+app.get(
+  "/payments",
+  auth,
+  ah(async (req, res) => {
+    let payments = await req.user.getPayments({
+      where: {
+        account_id: req.user.account_id
+      },
+      order: [["id", "DESC"]],
+      include: {
+        model: db.Account,
+        as: "account"
       }
-    }, 50);
-  }
+    });
 
-  if (config.liquid) {
-    lq = new BitcoinCore(config.liquid);
-    rare = new BitcoinCore(config.rare);
-    app.post("/liquid/broadcast", optionalAuth, require("./liquid/broadcast"));
-    app.get("/liquid/generate", auth, require("./liquid/generate"));
-    app.post("/liquid/fee", auth, require("./liquid/fee"));
-    app.post("/liquid/send", auth, require("./liquid/send"));
-    app.post("/taxi", auth, require("./liquid/taxi"));
-    require("./liquid/receive");
+    res.send(payments);
+  })
+);
 
-    setTimeout(async () => {
-      try {
-        const address = await lq.getNewAddress();
-        const { hdkeypath } = await lq.getAddressInfo(address);
-        const parts = hdkeypath.split("/");
-        app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
-      } catch (e) {
-        l.warn("Problem getting liquid address index", e.message);
-      }
-    }, 50);
-  }
-
-  app.get(
-    "/payments",
-    auth,
-    ah(async (req, res) => {
-      let payments = await req.user.getPayments({
+app.get(
+  "/payment/:redeemcode",
+  ah(async (req, res) => {
+    try {
+      const { redeemcode } = req.params;
+      let payment = await db.Payment.findOne({
         where: {
-          account_id: req.user.account_id
+          redeemcode
         },
-        order: [["id", "DESC"]],
         include: {
           model: db.Account,
           as: "account"
         }
       });
 
-      res.send(payments);
-    })
-  );
+      if (!payment) fail("invalid code");
 
-  app.get(
-    "/payment/:redeemcode",
-    ah(async (req, res) => {
-      try {
-        const { redeemcode } = req.params;
-        let payment = await db.Payment.findOne({
-          where: {
-            redeemcode
-          },
-          include: {
-            model: db.Account,
-            as: "account"
-          }
-        });
-
-        if (!payment) fail("invalid code");
-
-        res.send(payment);
-      } catch (e) {
-        res.status(500).send(e.message);
-      }
-    })
-  );
-})();
+      res.send(payment);
+    } catch (e) {
+      res.status(500).send(e.message);
+    }
+  })
+);

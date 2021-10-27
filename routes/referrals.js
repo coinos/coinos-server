@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var debug = require('debug')('debug')
 
 const { v4: uuidv4 } = require('uuid');
 
@@ -45,9 +44,7 @@ router.post(
   auth,
   ah(async (req, res) => {
     const {sponsor_id, expiry} = req.body
-    debug('grant token..')
     var token = uuidv4()
-    debug('generated token: ' + token + ' sponsored by ' + sponsor_id)
 
     var ref = await knex.table('referrals')
       .insert({
@@ -57,7 +54,6 @@ router.post(
         }
       )
 
-    debug('generated referral: ' + JSON.stringify(ref))
     return res.send({token: token, status: 'available', expiry: expiry})
   })
 );
@@ -89,9 +85,7 @@ router.get(
   auth,
   ah(async (req, res) => {
     const {sponsor_id, expiry} = req.query
-    debug('grant token..')
     var token = uuidv4()
-    debug('Generated token: ' + token + ' sponsored by ' + sponsor_id)
 
     var ref = await knex.table('referrals')
       .insert({
@@ -101,7 +95,6 @@ router.get(
         }
       )
 
-    debug('generated referral: ' + JSON.stringify(ref))
     return res.send({token: token, status: 'available', expiry: expiry})
   })
 );
@@ -153,8 +146,6 @@ router.get(
     if (status && status !== 'all') tokens = tokens.where('status', 'like', status)
     const found = await tokens
 
-    debug('my tokens: ' + JSON.stringify(found))
-
     return res.send({tokens: found})
   })
 );
@@ -187,8 +178,6 @@ router.get(
   ah(async (req, res) => {
     const { user_id, token } = req.params;
 
-    debug('verify token: ' + token)
-    
     const found = await knex
       .select('status')
       .from('referrals')
@@ -196,7 +185,6 @@ router.get(
       .whereNull('user_id')
 
     if (found && found.length) {
-      debug('found referral: ' + JSON.stringify(found))
       if (found[0].status === 'available') {
 
         await knex('referrals')
@@ -242,10 +230,6 @@ router.post(
   ah(async (req, res) => {
     const { email, phone, user_id } = req.body;
 
-    debug('email: ' + email)
-    debug('phone: ' + phone)
-    debug('user_id: ' + user_id)
-    
     await knex.table('waiting_list')
       .insert({
         email: email,
@@ -261,10 +245,6 @@ router.get(
   "/joinQueue",
   ah(async (req, res) => {
     const {email, phone, user_id} = req.query;
-
-    debug('email: ' + email)
-    debug('phone: ' + phone)
-    debug('user: ' + user_id)
 
     await knex('waiting_list')
       .insert({

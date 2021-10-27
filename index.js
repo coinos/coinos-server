@@ -16,10 +16,16 @@ fail = msg => {
   throw new Error(msg);
 };
 
+addresses = {};
 challenge = {};
+change = [];
+exceptions = [];
+issuances = {};
 logins = {};
+seen = [];
 sessions = {};
 sockets = {};
+unaccounted = [];
 
 convert = persist("data/conversions.json");
 
@@ -63,6 +69,7 @@ require("./lib/webhooks");
 require("./lib/passport");
 require("./lib/register");
 require("./lib/send");
+require("./lib/sync");
 
 require("./routes/assets");
 require("./routes/info");

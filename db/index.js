@@ -1,5 +1,4 @@
 const Sequelize = require("sequelize");
-const debug = require("debug")("debug");
 
 const dbOptions = require("./../config/knexfile.js")[
   process.env.NODE_ENV || "development"
@@ -21,8 +20,6 @@ db.authenticate().catch((err) => {
   console.debug("Error connecting to database: " + err.message);
   console.log(dbOptions.connection.database + "." + dbOptions.connection.user);
 });
-
-debug("knex dbOptions: " + JSON.stringify(dbOptions));
 
 knex = require("knex")(dbOptions);
 
@@ -165,5 +162,4 @@ Referral.belongsTo(User, {
   foreignKey: "user_id",
 });
 
-debug("added model relationships");
 db.Order = Order;

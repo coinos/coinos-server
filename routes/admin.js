@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var debug = require('debug')('debug')
 
 const parseInput = require('../scripts/apiParse')
 
@@ -47,7 +46,6 @@ router.get(
     // })
 
     const found = await users
-    debug('users: ' + JSON.stringify(found))
     return res.send({users: found})
   })
 );
@@ -104,7 +102,6 @@ router.get(
     }
 
     var found = await referrals
-    debug('Referrals: ' + JSON.stringify(found))
     return res.send({referrals: found})
   })
 );
@@ -151,7 +148,6 @@ router.get(
 
     const found = await queue
 
-    debug('Waiting list: ' + JSON.stringify(found))
     return res.send({queue: found})
   })
 );
@@ -195,10 +191,8 @@ router.get(
     if (timeCondition) accounts = accounts.whereRaw(timeCondition)
     if (userCondition) accounts = accounts.whereRaw(userCondition)
 
-    debug('search ? ' + search)
     const found = await accounts
 
-    debug('accounts: ' + JSON.stringify(found))
     return res.send({accounts: found})
   })
 );
@@ -254,7 +248,6 @@ router.get(
         if (since) {
           transactions = transactions
             .havingRaw('(' + stamp + ' >= ? OR ' + stamp + ' IS NULL)', [since])
-          debug(types[i] + ' since ' + since)
         }
       }
 
@@ -266,10 +259,8 @@ router.get(
       transactions = transactions
         .groupBy('users.id')
 
-      debug('search ? ' + search)
       const found = await transactions
 
-        debug('transactions: ' + JSON.stringify(found))
     return res.send({transactions: found})
   })
 );
@@ -327,7 +318,6 @@ router.get(
       })
 
     var found = await orders
-    debug('orders: ' + JSON.stringify(found))
     return res.send({orders: found})
   })
 );
@@ -376,7 +366,6 @@ router.get(
       if (userCondition) invoices = invoices.whereRaw(userCondition)
 
     var found = await invoices
-    debug('invoices: ' + JSON.stringify(found))
     return res.send({invoices: found})
   })
 );
@@ -417,8 +406,6 @@ router.get(
       .from('deposits')
       .leftJoin('users', 'deposits.user_id', 'users.id')
 
-    debug('dtype: ' + deposits.constructor + ' : ' + typeof(deposits))
-
     var timeCondition = parseInput.addTimeSearch(req.query, 'deposits.updatedAt')
     var userCondition = parseInput.addUserSearch(req.query)
 
@@ -426,7 +413,6 @@ router.get(
     if (userCondition) deposits = deposits.whereRaw(userCondition)
 
     var found = await deposits
-    debug('deposits: ' + JSON.stringify(found))
     return res.send({deposits: found})
   })
 );
@@ -473,7 +459,6 @@ router.get(
       if (userCondition) withdrawals = withdrawals.whereRaw(userCondition)
 
     var found = await withdrawals
-    debug('withdrawals: ' + JSON.stringify(found))
     return res.send({withdrawals: found})
   })
 );
@@ -522,7 +507,6 @@ router.get(
     if (userCondition) payments = payments.whereRaw(userCondition)
 
     var found = await payments
-    debug('payments: ' + JSON.stringify(found))
     return res.send({payments: found})
   })
 );
@@ -581,7 +565,6 @@ router.get(
 
     var found = await kyc.having('max', '>=', threshold)
 
-    debug('payments: ' + JSON.stringify(found))
     return res.send({found: found})
   })
 );

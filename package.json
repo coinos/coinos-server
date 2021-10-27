@@ -54,7 +54,7 @@
     "query-string": "^6.13.1",
     "sequelize": "^5.21.3",
     "sqlite3": "^5.0.2",
-    "uuid": "^3.3.2",
+    "uuid": "8",
     "web-push": "^3.4.4",
     "wretch": "^1.7.4",
     "ws": "^7.4.6",
