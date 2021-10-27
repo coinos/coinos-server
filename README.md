@@ -20,11 +20,11 @@ This repository contains the code for the backend API server which is implemente
     cp -rf sampleconfig ./config
     cp .env.sample .env
     cp fx.sample fx
-    docker run -it -v $(pwd):/app asoltys/coinos-server --entrypoint yarn
+    docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
     docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
     docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
     docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
-    docker exec -it lnd lncli unlock
+    docker exec -it lnd lncli create
 
 Note the last step will take some time on first run as it will download the aforementioned docker images.
 
