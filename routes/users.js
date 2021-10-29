@@ -437,9 +437,10 @@ app.get(
             await lq.getNewAddress()
           );
           const parts = hdkeypath.split("/");
-          i = parts[parts.length - 1].slice(0, -1);
+          i = parseInt(parts[parts.length - 1].slice(0, -1));
         }
 
+        l.info("liquid address index", i);
         if (!i) throw new Error("Problem generating address");
 
         hd = fromBase58(config.liquid.masterkey, n).derivePath(`m/0'/0'/${i}'`);
