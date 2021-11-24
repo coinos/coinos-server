@@ -2,7 +2,7 @@
 
 Coinos is a bitcoin wallet app that supports payments over the <a href="https://bitcoin.org">bitcoin</a>, <a href="https://blockstream.com/liquid/">liquid</a> and <a href="http://lightning.network/">lightning</a> networks. Try it out at <a href="https://coinos.io/">coinos.io</a>.
 
-This repository contains the code for the backend API server which is implemented as a NodeJS application. The code for the frontend UI is tracked separately <a href="https://github.com/asoltys/coinos.io">here</a> (but is automatically installed & started via the Docker way outlined below). 
+This repository contains the code for the backend API server which is implemented as a NodeJS application. The code for the frontend UI is tracked separately <a href="https://github.com/asoltys/coinos.io">here</a> and needs to be installed in the same parent directory as the server in order to run the app locally. 
 
 ## Install/Run (the Docker way)
 
@@ -21,6 +21,7 @@ This repository contains the code for the backend API server which is implemente
     cp .env.sample .env
     cp fx.sample fx
     docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
+    docker network create net
     docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
     docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
     docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
