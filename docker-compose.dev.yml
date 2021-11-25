@@ -11,6 +11,32 @@ services:
       NODE_ENV: development
     volumes:
       - ../coinos-ui:/coinos-ui
+  electrsb:
+    image: ghcr.io/vulpemventures/electrs
+    container_name: electrsb
+    entrypoint:
+      - /build/electrs
+    command:
+      - -vvvv
+      - --network
+      - regtest
+      - --daemon-dir
+      - /config
+      - --daemon-rpc-addr
+      - bitcoin:18443
+      - --cookie
+      - admin1:123
+      - --http-addr
+      - 0.0.0.0:3095
+      - --electrum-rpc-addr
+      - 0.0.0.0:60400
+      - --cors
+      - "*"
+    volumes:
+      - ./config/bitcoin/:/config
+    restart: unless-stopped
+    ports:
+      - 3095:3095
   electrs-liquid:
     image: asoltys/electrs-liquid:latest
     container_name: electrs
