@@ -1,10 +1,12 @@
-const axios = require("axios");
 const reverse = require("buffer-reverse");
 const zmq = require("zeromq/v5-compat");
 const { Op } = require("sequelize");
 const { fromBase58 } = require("bip32");
 const bitcoin = require("bitcoinjs-lib");
-const { Block, networks } = require("liquidjs-lib");
+const { Block, networks, Transaction } = require("liquidjs-lib");
+const wretch = require("wretch");
+const fetch = require("node-fetch");
+wretch().polyfills({ fetch });
 
 const network =
   networks[
@@ -15,7 +17,7 @@ const getAccount = async (params, transaction) => {
   let account = await db.Account.findOne({
     where: params,
     lock: transaction.LOCK.UPDATE,
-    transaction,
+    transaction
   });
 
   if (account) {
@@ -36,12 +38,12 @@ const getAccount = async (params, transaction) => {
   } else {
     const existing = await db.Account.findOne({
       where: {
-        asset,
+        asset
       },
       order: [["id", "ASC"]],
       limit: 1,
       lock: transaction.LOCK.UPDATE,
-      transaction,
+      transaction
     });
 
     if (existing) {
@@ -65,12 +67,18 @@ zmqRawTx.connect(config.liquid.zmqrawtx);
 zmqRawTx.subscribe("rawtx");
 
 const queue = {};
+const seen = [];
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
 
-  let unblinded, tx, blinded;
+  let unblinded, tx, blinded, txid;
   try {
+    txid = Transaction.fromHex(hex).getId();
+    if (seen.includes(txid) || payments.includes(txid)) return;
+    seen.push(txid);
+    if (seen.length > 5000) seen.shift();
+
     unblinded = await lq.unblindRawTransaction(hex);
     tx = await lq.decodeRawTransaction(unblinded.hex);
     blinded = await lq.decodeRawTransaction(hex);
@@ -78,10 +86,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
     return l.error("problem decoding liquid tx", e.message);
   }
 
-  if (payments.includes(blinded.txid)) return;
-
   Promise.all(
-    tx.vout.map(async (o) => {
+    tx.vout.map(async o => {
       try {
         if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
@@ -93,16 +99,16 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           Object.keys(addresses).includes(address) &&
           !change.includes(address)
         ) {
-          await db.transaction(async (transaction) => {
+          await db.transaction(async transaction => {
             let user = await getUser(addresses[address], transaction);
 
             let invoice = await db.Invoice.findOne({
               where: {
                 unconfidential: address,
                 user_id: user.id,
-                network: "liquid",
+                network: "liquid"
               },
-              order: [["id", "DESC"]],
+              order: [["id", "DESC"]]
             });
 
             if (!invoice) return;
@@ -111,10 +117,10 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             let account = await db.Account.findOne({
               where: {
-                id: invoice.account_id,
+                id: invoice.account_id
               },
               lock: transaction.LOCK.UPDATE,
-              transaction,
+              transaction
             });
 
             if (
@@ -132,7 +138,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                   asset,
                   pubkey: account.pubkey,
                   pending: value,
-                  index: 0,
+                  index: 0
                 },
                 transaction
               );
@@ -164,12 +170,12 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                 confirmed,
                 address,
                 network: "liquid",
-                invoice_id: invoice.id,
+                invoice_id: invoice.id
               },
               { transaction }
             );
 
-            payments.push(blinded.txid);
+            payments.push(txid);
             payment = payment.get({ plain: true });
             payment.account = account.get({ plain: true });
 
@@ -190,7 +196,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   try {
     const payments = await db.Payment.findAll({
-      where: { confirmed: 0 },
+      where: { confirmed: 0 }
     });
 
     const block = Block.fromHex(message.toString("hex"), true);
@@ -200,9 +206,9 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
     hash = await lq.getBlockHash(block.blockHeight);
     json = await lq.getBlock(hash, 2);
 
-    json.tx.map(async (tx) => {
+    json.tx.map(async tx => {
       if (issuances[tx.txid]) {
-        await db.transaction(async (transaction) => {
+        await db.transaction(async transaction => {
           const {
             user_id,
             asset,
@@ -210,7 +216,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             asset_payment_id,
             token,
             token_amount,
-            token_payment_id,
+            token_payment_id
           } = issuances[tx.txid];
 
           const user = await getUserById(user_id);
@@ -218,7 +224,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           let account = await db.Account.findOne({
             where: { user_id, asset },
             lock: transaction.LOCK.UPDATE,
-            transaction,
+            transaction
           });
           account.balance = asset_amount * SATS;
           account.pending = 0;
@@ -228,10 +234,10 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             where: { id: asset_payment_id },
             include: {
               model: db.Account,
-              as: "account",
+              as: "account"
             },
             lock: transaction.LOCK.UPDATE,
-            transaction,
+            transaction
           });
 
           payment.confirmed = true;
@@ -246,7 +252,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             account = await db.Account.findOne({
               where: { user_id, asset: token },
               lock: transaction.LOCK.UPDATE,
-              transaction,
+              transaction
             });
             account.balance = token_amount * SATS;
             account.pending = 0;
@@ -256,10 +262,10 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
               where: { id: token_payment_id },
               include: {
                 model: db.Account,
-                as: "account",
+                as: "account"
               },
               lock: transaction.LOCK.UPDATE,
-              transaction,
+              transaction
             });
 
             payment.confirmed = true;
@@ -272,7 +278,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             emit(user.username, "payment", payment);
           }
         });
-      } else if (payments.find((p) => p.hash === tx.txid)) queue[tx.txid] = 1;
+      } else if (payments.find(p => p.hash === tx.txid)) queue[tx.txid] = 1;
     });
   } catch (e) {
     return console.log(e);
@@ -287,25 +293,25 @@ setInterval(async () => {
       const hash = arr[i];
 
       let account, address, user, total, p;
-      await db.transaction(async (transaction) => {
+      await db.transaction(async transaction => {
         p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
               model: db.Account,
-              as: "account",
+              as: "account"
             },
             {
               model: db.Invoice,
-              as: "invoice",
+              as: "invoice"
             },
             {
               model: db.User,
-              as: "user",
-            },
+              as: "user"
+            }
           ],
           lock: transaction.LOCK.UPDATE,
-          transaction,
+          transaction
         });
 
         if (p && p.address) address = p.address;
@@ -362,7 +368,7 @@ setInterval(async () => {
           address: c.address,
           amount: total - 100,
           user,
-          limit: total,
+          limit: total
         });
       }
     }
