@@ -308,9 +308,9 @@ lnurlServer.bindToHook(
         }
 
         const recipient = recipients[secret];
-        l.info("lnurl recipient", recipient.username);
 
         if (recipient) {
+          l.info("lnurl recipient", recipient.username);
           setTimeout(async () => {
             try {
               let result = await lnp.listInvoices({

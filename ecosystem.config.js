@@ -6,9 +6,11 @@ module.exports = {
       script: "index.js",
       env: {
         COMMON_VARIABLE: "true",
+        DEBUG: "lnurl*",
       },
       env_production: {
         NODE_ENV: "production",
+        DEBUG: "lnurl*",
       },
     },
   ],
