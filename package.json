@@ -35,7 +35,7 @@
     "knex": "^0.95.6",
     "lightning": "^3.5.0",
     "liquidjs-lib": "https://github.com/asoltys/liquidjs-lib#4a0bb0c4b38d327ec247d49e89219798fb0b28e2",
-    "lnurl": "^0.16.1",
+    "lnurl": "0.19",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",
     "mariadb": "^2.4.0",
