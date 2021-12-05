@@ -3,6 +3,7 @@ const lnurl = require("lnurl");
 const jwt = require("jsonwebtoken");
 const qs = require("query-string");
 const persist = require("../lib/persist");
+const bolt11 = require("bolt11");
 
 logins = persist("data/logins.json");
 recipients = persist("data/recipients.json");
@@ -280,6 +281,29 @@ app.get(
   })
 );
 
+lnurlServer.on('payRequest:action:processed', async function(event) {
+	const { secret, params, result } = event;
+	const { id, invoice } = result;
+  const recipient = recipients[secret];
+  let payreq = bolt11.decode(invoice);
+
+  try {
+    let i = await db.Invoice.create({
+      user_id: recipient.id,
+      text: invoice,
+      rate: app.get("rates")[recipient.currency],
+      currency: recipient.currency,
+      amount: payreq.satoshis,
+      tip: 0,
+      network: "lightning"
+    });
+
+    l.info("invoice created", i.text, i.amount);
+  } catch (e) {
+    l.error("problem finding lnurl invoice", e.message);
+  }
+});
+
 lnurlServer.bindToHook(
   "middleware:signedLnurl:afterCheckSignature",
   async (req, res, next) => {
@@ -305,51 +329,6 @@ lnurlServer.bindToHook(
           if (account.balance < amount) {
             throw new Error("Insufficient funds");
           }
-        }
-
-        const recipient = recipients[secret];
-
-        if (recipient) {
-          l.info("lnurl recipient", recipient.username);
-          setTimeout(async () => {
-            try {
-              let result = await lnp.listInvoices({
-                num_max_invoices: 5,
-                reversed: true
-              });
-              let { invoices } = result;
-
-              if (invoices.length) {
-                let existing = [];
-                existing = await db.Invoice.findAll({
-                  attributes: ["text"],
-                  where: {
-                    text: invoices.map(i => i.payment_request)
-                  }
-                });
-
-                let candidates = invoices.filter(
-                  i => !existing.map(e => e.text).includes(i.payment_request)
-                );
-
-                if (candidates.length) {
-                  let invoice = await db.Invoice.create({
-                    user_id: recipient.id,
-                    text: candidates[candidates.length - 1].payment_request,
-                    rate: app.get("rates")[recipient.currency],
-                    currency: recipient.currency,
-                    amount,
-                    tip: 0,
-                    network: "lightning"
-                  });
-
-                  l.info("invoice created", invoice.text, invoice.amount);
-                }
-              }
-            } catch (e) {
-              l.error("problem finding lnurl invoice", e.message);
-            }
-          }, 2000);
         }
       }
 
