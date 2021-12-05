@@ -19,6 +19,7 @@ const network =
   ];
 
 const queue = {};
+const seen = [];
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
@@ -26,10 +27,12 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
   let hash = reverse(tx.getHash()).toString("hex");
 
-  if (payments.includes(hash)) return;
+  if (seen.includes(hash)) return;
+  seen.push(hash);
+  if (seen.length > 5000) seen.shift();
 
   Promise.all(
-    tx.outs.map(async (o) => {
+    tx.outs.map(async o => {
       try {
         const { value } = o;
 
@@ -44,25 +47,23 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           Object.keys(addresses).includes(address) &&
           !change.includes(address)
         ) {
-          payments.push(hash);
-
           let user = await db.User.findOne({
             where: {
-              username: addresses[address],
-            },
+              username: addresses[address]
+            }
           });
 
           const invoice = await db.Invoice.findOne({
             where: {
               address,
               user_id: user.id,
-              network: "bitcoin",
+              network: "bitcoin"
             },
             order: [["id", "DESC"]],
             include: {
               model: db.Account,
-              as: "account",
-            },
+              as: "account"
+            }
           });
 
           if (!invoice) return;
@@ -82,9 +83,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                 user_id: user.id,
                 asset: config.liquid.btcasset,
                 pubkey: null
-              } 
-            }); 
-          } 
+              }
+            });
+          }
 
           account.pending += value;
           await account.save();
@@ -117,7 +118,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             confirmed,
             address,
             network: "bitcoin",
-            invoice_id: invoice.id,
+            invoice_id: invoice.id
           });
           payment = payment.get({ plain: true });
           payment.account = account.get({ plain: true });
@@ -138,13 +139,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
   const payments = await db.Payment.findAll({
-    where: { confirmed: false },
+    where: { confirmed: false }
   });
 
   let block = bitcoin.Block.fromHex(message.toString("hex"));
-  block.transactions.map((tx) => {
+  block.transactions.map(tx => {
     let hash = reverse(tx.getHash()).toString("hex");
-    if (payments.find((p) => p.hash === hash)) queue[hash] = 1;
+    if (payments.find(p => p.hash === hash)) queue[hash] = 1;
   });
 });
 
@@ -155,25 +156,25 @@ setInterval(async () => {
       const hash = arr[i];
 
       let account, address, user, total;
-      await db.transaction(async (transaction) => {
+      await db.transaction(async transaction => {
         let p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
               model: db.Account,
-              as: "account",
+              as: "account"
             },
             {
               model: db.Invoice,
-              as: "invoice",
+              as: "invoice"
             },
             {
               model: db.User,
-              as: "user",
-            },
+              as: "user"
+            }
           ],
           lock: transaction.LOCK.UPDATE,
-          transaction,
+          transaction
         });
 
         if (p && p.address) address = p.address;
@@ -222,7 +223,7 @@ setInterval(async () => {
           address: c.address,
           amount: total - 100,
           user,
-          limit: total,
+          limit: total
         });
       }
     }

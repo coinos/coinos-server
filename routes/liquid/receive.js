@@ -75,7 +75,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   let unblinded, tx, blinded, txid;
   try {
     txid = Transaction.fromHex(hex).getId();
-    if (seen.includes(txid) || payments.includes(txid)) return;
+    if (seen.includes(txid)) return;
     seen.push(txid);
     if (seen.length > 5000) seen.shift();
 
@@ -175,7 +175,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
               { transaction }
             );
 
-            payments.push(txid);
             payment = payment.get({ plain: true });
             payment.account = account.get({ plain: true });
 

@@ -6,7 +6,7 @@ const persist = require("../lib/persist");
 
 logins = persist("data/logins.json");
 recipients = persist("data/recipients.json");
-payments = persist("data/payments.json");
+lnurlPayments = persist("data/payments.json");
 withdrawals = persist("data/withdrawals.json");
 
 lnurlServer = lnurl.createServer(config.lnurl);
@@ -200,7 +200,7 @@ app.post(
     try {
       const parts = callback.split("/");
       const secret = parts[parts.length - 1];
-      payments[secret] = user;
+      lnurlPayments[secret] = user;
 
       if (recipients[secret]) {
         url = `${req.protocol}://${req.get("host")}/api/send`;
@@ -291,7 +291,7 @@ lnurlServer.bindToHook(
         amount = Math.round(msats / 1000);
         const parts = req.originalUrl.split("/");
         const secret = parts[parts.length - 1].split("?")[0];
-        user = payments[secret];
+        user = lnurlPayments[secret];
 
         if (user) {
           let account = await db.Account.findOne({
