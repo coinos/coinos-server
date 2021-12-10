@@ -102,28 +102,18 @@ app.post(
         : (await lq.getAddressInfo(asset_address)).pubkey;
       const version = 0;
 
-      let contract;
-
-      if (filename) {
-        contract = {
-          entity: { domain },
-          file: filename,
-          issuer_pubkey,
-          name,
-          precision,
-          ticker,
-          version
-        };
-      } else {
-        contract = {
+      let contract = {
           entity: { domain },
           issuer_pubkey,
           name,
           precision,
-          ticker,
           version
-        };
       }
+
+      if (filename) contract.file = filename;
+      if (ticker) contract.ticker = ticker;
+
+      contract = Object.keys(contract).sort().reduce((r, k) => (r[k] = contract[k], r), {});
 
       l.info(
         "attempting issuance",
