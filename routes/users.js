@@ -770,3 +770,23 @@ app.get(
     res.send(invoices);
   })
 );
+
+app.post(
+  "/signMessage",
+  auth,
+  ah(async function(req, res) {
+    let { address, message } = req.body;
+
+    let invoices = await db.Invoice.findAll({
+      where: { user_id: req.user.id }
+    });
+
+    if (invoices.find(i => i.address === address)) {
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+      return res.send(await bc.signMessage(address, message));
+    } 
+
+    res.status(500).send("Address not found for user");
+  })
+);
