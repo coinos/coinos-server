@@ -59,7 +59,7 @@ if (config.bitcoin) {
       const address = await bc.getNewAddress();
       const { hdkeypath } = await bc.getAddressInfo(address);
       const parts = hdkeypath.split("/");
-      app.set("bcAddressIndex", parts[parts.length - 1].slice(0, -1));
+      app.set("bcAddressIndex", parts[parts.length - 1].replace("'", ""));
     } catch (e) {
       console.error(e);
     }

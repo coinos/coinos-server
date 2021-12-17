@@ -28,6 +28,14 @@ const twofa = ah((req, res, next) => {
 });
 
 app.get(
+  "/me",
+  auth,
+  ah(async (req, res) => {
+    res.send(req.user);
+  })
+);
+
+app.get(
   "/users/:username",
   ah(async (req, res) => {
     const { username } = req.params;
@@ -785,7 +793,7 @@ app.post(
       if (config.bitcoin.walletpass)
         await bc.walletPassphrase(config.bitcoin.walletpass, 300);
       return res.send(await bc.signMessage(address, message));
-    } 
+    }
 
     res.status(500).send("Address not found for user");
   })
