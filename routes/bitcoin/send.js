@@ -8,7 +8,7 @@ module.exports = ah(async (req, res) => {
   let fee = toSats(tx.fee);
   if (fee < 0) throw new Error("fee cannot be negative");
 
-  const isChange = async address =>
+  const isChange = async ({ address }) =>
     (await bc.getAddressInfo(address)).ismine &&
     !Object.keys(addresses).includes(address);
 
@@ -21,10 +21,8 @@ module.exports = ah(async (req, res) => {
     let o = tx.vout[i];
     total += toSats(o.value);
 
-    if (o.scriptPubKey.addresses) {
-      if (await isChange(o.scriptPubKey.addresses[0])) {
-        change += toSats(o.value);
-      }
+    if (await isChange(o.scriptPubKey)) {
+      change += toSats(o.value);
     }
   }
 
