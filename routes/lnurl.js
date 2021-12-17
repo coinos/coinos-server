@@ -251,6 +251,13 @@ app.get(
 );
 
 app.get(
+  "/encode",
+  ah(async (req, res, next) => {
+    res.send(lnurl.encode(req.query.text));
+  })
+);
+
+app.get(
   "/decode",
   ah(async (req, res, next) => {
     const { text } = req.query;
@@ -281,9 +288,9 @@ app.get(
   })
 );
 
-lnurlServer.on('payRequest:action:processed', async function(event) {
-	const { secret, params, result } = event;
-	const { id, invoice } = result;
+lnurlServer.on("payRequest:action:processed", async function(event) {
+  const { secret, params, result } = event;
+  const { id, invoice } = result;
   const recipient = recipients[secret];
   let payreq = bolt11.decode(invoice);
 
