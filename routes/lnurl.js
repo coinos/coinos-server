@@ -253,7 +253,9 @@ app.get(
 app.get(
   "/encode",
   ah(async (req, res, next) => {
-    res.send(lnurl.encode(req.query.text));
+    let { domain, name } = req.query;
+    let url = `https://${domain}/.well-known/lnurlp/${name}`;
+    res.send(lnurl.encode(url));
   })
 );
 
