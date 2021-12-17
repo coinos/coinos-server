@@ -26,6 +26,7 @@ module.exports = ah(async (req, res, next) => {
         account = await db.Account.findOne({
           where: {
             id: user.account.id,
+            pubkey:null,
           },
           lock: transaction.LOCK.UPDATE,
           transaction
