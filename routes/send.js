@@ -9,7 +9,7 @@ module.exports = ah(async (req, res, next) => {
     unconfidential,
     asset,
     memo,
-    username,
+    username
   } = req.body;
   let { user } = req;
   amount = parseInt(amount);
@@ -20,16 +20,26 @@ module.exports = ah(async (req, res, next) => {
     return res.status(500).send("Amount must be greater than zero");
 
   try {
-    await db.transaction(async (transaction) => {
-      let account = await db.Account.findOne({
-        where: {
-          user_id: user.id,
-          asset,
-          pubkey: null,
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction,
-      });
+    await db.transaction(async transaction => {
+      let account;
+      if (user.account.asset === asset)
+        account = await db.Account.findOne({
+          where: {
+            id: user.account.id,
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
+      else
+        account = await db.Account.findOne({
+          where: {
+            user_id: user.id,
+            asset,
+            pubkey: null
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction
+        });
 
       if (account.balance < amount) {
         throw new Error("Insufficient funds");
@@ -49,7 +59,7 @@ module.exports = ah(async (req, res, next) => {
         currency: user.currency,
         confirmed: true,
         hash: username ? `Payment to ${username}` : "Internal Transfer",
-        network: "COINOS",
+        network: "COINOS"
       };
 
       if (!username) {
@@ -75,8 +85,8 @@ module.exports = ah(async (req, res, next) => {
             where: { username },
             include: {
               model: db.Account,
-              as: "account",
-            },
+              as: "account"
+            }
           },
           { transaction }
         );
@@ -84,7 +94,7 @@ module.exports = ah(async (req, res, next) => {
         let text = address || payreq;
         params = {
           where: { user_id: recipient.id },
-          order: [["id", "DESC"]],
+          order: [["id", "DESC"]]
         };
         if (text) params.where.text = text;
         let invoice = await db.Invoice.findOne(params);
@@ -93,7 +103,7 @@ module.exports = ah(async (req, res, next) => {
         let acc = {
           user_id: recipient.id,
           asset,
-          pubkey: null,
+          pubkey: null
         };
 
         if (recipient.account.asset === asset && !recipient.account.pubkey)
@@ -102,7 +112,7 @@ module.exports = ah(async (req, res, next) => {
           a2 = await db.Account.findOne({
             where: acc,
             lock: transaction.LOCK.UPDATE,
-            transaction,
+            transaction
           });
         }
 
@@ -122,12 +132,12 @@ module.exports = ah(async (req, res, next) => {
           } else {
             const existing = await db.Account.findOne({
               where: {
-                asset,
+                asset
               },
               order: [["id", "ASC"]],
               limit: 1,
               lock: transaction.LOCK.UPDATE,
-              transaction,
+              transaction
             });
 
             if (existing) {
@@ -155,7 +165,7 @@ module.exports = ah(async (req, res, next) => {
           hash: "Payment from " + user.username,
           memo,
           network: "COINOS",
-          received: true,
+          received: true
         };
 
         if (invoice) {
@@ -176,7 +186,7 @@ module.exports = ah(async (req, res, next) => {
               address: c.address,
               amount: amount - 100,
               user: recipient,
-              limit: amount,
+              limit: amount
             }).catch(console.log);
           }
         }
@@ -198,7 +208,7 @@ module.exports = ah(async (req, res, next) => {
     l.error(
       "problem sending internal payment",
       user.username,
-      user.balance,
+      account.balance,
       e.message
     );
     return res.status(500).send(e.message);
