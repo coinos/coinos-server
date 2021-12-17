@@ -459,12 +459,12 @@ app.get(
     let { network, type } = req.query;
     let address, confidentialAddress;
 
-    type = {
+    let paymentType = {
       bech32: "p2wpkh",
       "p2sh-segwit": "p2sh",
       legacy: "p2pkh"
     }[type];
-    if (!type) type = "p2wpkh";
+    if (!paymentType) paymentType = "p2wpkh";
 
     let hd, i, p, n;
     const mutex = new Mutex();
@@ -473,6 +473,11 @@ app.get(
       if (network === "bitcoin") {
         if (!config.bitcoin)
           return res.status(500).send("Bitcoin not configured");
+
+        address = await bc.getNewAddress("", type);
+        app.set("bcAddressIndex", i + 1);
+        return res.send({ address });
+
         p = bitcoin.payments;
         n = prod ? bitcoin.networks["bitcoin"] : bitcoin.networks["regtest"];
 
@@ -483,6 +488,7 @@ app.get(
 
         // async request to node to bump its internal index but don't use result
         bc.getNewAddress().catch(console.error);
+        res.send({ address, confidentialAddress });
 
         app.set("bcAddressIndex", i + 1);
       } else if (network === "liquid") {
@@ -493,7 +499,7 @@ app.get(
               ? "liquid"
               : config.liquid.network
           ];
-        type = "p2sh";
+        paymentType = "p2sh";
 
         // async request to node to bump its internal index but don't use result
         lq.getNewAddress().catch(e =>
@@ -522,8 +528,8 @@ app.get(
       release();
     }
 
-    if (type !== "p2sh") {
-      ({ address } = p[type]({
+    if (paymentType !== "p2sh") {
+      ({ address } = p[paymentType]({
         pubkey: hd.publicKey,
         network: n
       }));
@@ -540,7 +546,7 @@ app.get(
           n
         );
 
-        ({ address, confidentialAddress } = p[type]({
+        ({ address, confidentialAddress } = p[paymentType]({
           redeem: p2wpkh,
           network: n,
           blindkey: blindkey.publicKey
@@ -551,7 +557,7 @@ app.get(
           blindkey.privateKey.toString("hex")
         );
       } else {
-        ({ address } = p[type]({
+        ({ address } = p[paymentType]({
           redeem: p.p2wpkh({
             pubkey: hd.publicKey,
             network: n
