@@ -9,6 +9,7 @@ services:
       - '8085:8085'
     environment:
       NODE_ENV: development
+      NODE_OPTIONS: --openssl-legacy-provider
     volumes:
       - ../coinos-ui:/coinos-ui
   electrsb:
