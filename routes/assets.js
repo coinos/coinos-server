@@ -174,6 +174,7 @@ app.post(
             model: db.User,
             as: "user"
           },
+          order: [["balance", "DESC"]],
           transaction
         });
 

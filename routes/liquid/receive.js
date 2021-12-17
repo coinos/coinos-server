@@ -104,14 +104,28 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             let invoice = await db.Invoice.findOne({
               where: {
-                unconfidential: address,
+                [Op.or]: {
+                  unconfidential: address,
+                  address
+                },
                 user_id: user.id,
                 network: "liquid"
               },
-              order: [["id", "DESC"]]
+              order: [["id", "DESC"]],
+              transaction
             });
 
             if (!invoice) return;
+
+            let payment = await db.Payment.findOne({
+              where: {
+                invoice_id: invoice.id,
+              },
+              order: [["id", "DESC"]],
+              transaction
+            });
+
+            if (payment) return;
 
             let confirmed = 0;
 
@@ -156,7 +170,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             const tip = invoice ? invoice.tip : 0;
             const memo = invoice ? invoice.memo : "";
 
-            let payment = await db.Payment.create(
+            payment = await db.Payment.create(
               {
                 account_id: account.id,
                 user_id: user.id,
