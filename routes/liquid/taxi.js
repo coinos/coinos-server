@@ -1,19 +1,26 @@
 const {
   address: Address,
-  ECPair,
   Psbt,
   payments,
   networks
 } = require("liquidjs-lib");
+
+const { ECPairFactory} = require('ecpair');
+const tinysecp = require('tiny-secp256k1');
+
 const wretch = require("wretch");
 const fetch = require("node-fetch");
+
 wretch().polyfills({ fetch });
+
 const url = prod
   ? "https://blockstream.info/liquid/api"
   : "http://electrs-liquid:3002";
+
 const electrs = wretch().url(url);
 const network = prod ? networks.liquid : networks.regtest;
 
+const ECPair = ECPairFactory(tinysecp);
 const key = ECPair.fromPrivateKey(Buffer.from(config.taxi, "hex"));
 
 module.exports = ah(async (req, res) => {
