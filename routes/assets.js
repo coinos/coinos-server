@@ -8,8 +8,7 @@ let fetchAssets;
     const { data: assets } = await axios.get(
       "https://assets.blockstream.info/"
     );
-    var liquid_assets = require("./../assets.json");
-    app.set("assets", liquid_assets);
+    app.set("assets", assets);
   } catch (e) {
     var liquid_assets = require("./../assets.json");
     if (liquid_assets) {

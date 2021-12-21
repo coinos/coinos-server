@@ -22,16 +22,17 @@ module.exports = ah(async (req, res, next) => {
   try {
     await db.transaction(async transaction => {
       let account;
-      if (user.account.asset === asset)
+      if (user.account.asset === asset) {
         account = await db.Account.findOne({
           where: {
             id: user.account.id,
-            pubkey:null,
+            pubkey: null
           },
           lock: transaction.LOCK.UPDATE,
           transaction
         });
-      else
+      }
+      else {
         account = await db.Account.findOne({
           where: {
             user_id: user.id,
@@ -41,6 +42,7 @@ module.exports = ah(async (req, res, next) => {
           lock: transaction.LOCK.UPDATE,
           transaction
         });
+      }
 
       if (account.balance < amount) {
         throw new Error("Insufficient funds");
@@ -206,12 +208,7 @@ module.exports = ah(async (req, res, next) => {
       res.send(payment);
     });
   } catch (e) {
-    l.error(
-      "problem sending internal payment",
-      user.username,
-      account.balance,
-      e.message
-    );
+    l.error("problem sending internal payment", user.username, e.message);
     return res.status(500).send(e.message);
   }
 });

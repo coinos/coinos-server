@@ -11,7 +11,7 @@ services:
       NODE_ENV: development
       NODE_OPTIONS: --openssl-legacy-provider
     volumes:
-      - ../coinos-ui:/coinos-ui
+      - ../coinos-ui:/app
   electrsb:
     image: ghcr.io/vulpemventures/electrs
     container_name: electrsb
