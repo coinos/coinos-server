@@ -22,7 +22,7 @@ This repository contains the code for the backend API server which is implemente
     cp fx.sample fx
     docker network create net
     sudo base64 config/lnd/tls.cert | tr -d '\n' > cert
-    sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n' > macaroon
+    sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n'
     docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
     docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
     docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
@@ -36,9 +36,12 @@ This repository contains the code for the backend API server which is implemente
 
 ### Wallet not found issues
     If your app logs complain that the wallet was not found, do the following:
-    docker exec bitcoin bash
-    bitcoin-cli -datadir=config/ createwallet
-    bitcoin-cli -datadir=config/ unlock
+    docker-compose exec bitcoin bash
+    bitcoin-cli -datadir=config/ createwallet coinos
+    exit
+    docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
+
+
 
 
 
