@@ -20,11 +20,31 @@ This repository contains the code for the backend API server which is implemente
     cp -rf sampleconfig ./config
     cp .env.sample .env
     cp fx.sample fx
+    docker network create net
+    sudo base64 config/lnd/tls.cert | tr -d '\n' > cert
+    sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n'
     docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
     docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
     docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
     docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
     docker exec -it lnd lncli create
+    docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
+
+### Config changes
+    navigate to config/index.js.
+    for the lna dictionary, update the values for cert and macaroon. These values can be found in the macaroon and cert files created in the previous section in the root folder of the coinos project.
+
+### Wallet not found issues
+    If your app logs complain that the wallet was not found, do the following:
+    docker-compose exec bitcoin bash
+    bitcoin-cli -datadir=config/ createwallet coinos
+    exit
+    docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
+
+
+
+
+
 
 Note the last step will take some time on first run as it will download the aforementioned docker images.
 
