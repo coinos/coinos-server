@@ -26,7 +26,7 @@ services:
       - ./config/bitcoin:/config
     restart: unless-stopped
   liquid:
-    image: asoltys/liquid:latest
+    image: ghcr.io/vulpemventures/elements:0.18.1.12
     container_name: liquid
     ports:
       - ${LIQUID_NODE_PORT}:7040
@@ -34,7 +34,7 @@ services:
       - ${LIQUID_BLOCK_PORT}:18606
       - ${LIQUID_TX_PORT}:18607
     volumes:
-      - ./config/liquid:/config
+      - ./config/liquid:/home/elements/.elements
     restart: unless-stopped
   lnd:
     image: lightninglabs/lnd:v0.14.1-beta
