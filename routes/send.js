@@ -66,7 +66,7 @@ module.exports = ah(async (req, res, next) => {
       };
 
       if (!username) {
-        // throw new Error("Vouchers temporarily disabled");
+        throw new Error("Vouchers temporarily disabled");
         l.info("creating redeemable payment");
         params.redeemcode = uuidv4();
         params.hash = `${req.get("origin")}/redeem/${params.redeemcode}`;
@@ -94,12 +94,12 @@ module.exports = ah(async (req, res, next) => {
           { transaction }
         );
 
-        let text = address || payreq;
         params = {
           where: { user_id: recipient.id },
           order: [["id", "DESC"]]
         };
-        if (text) params.where.text = text;
+        if (address) params.where.address = address;
+        else if (payreq) params.where.text = payreq;
         let invoice = await db.Invoice.findOne(params);
 
         let a2;

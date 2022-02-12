@@ -201,7 +201,7 @@ app.post(
     try {
       const parts = callback.split("/");
       const secret = parts[parts.length - 1];
-      lnurlPayments[secret] = user;
+      lnurlPayments[secret] = user.id;
 
       if (recipients[secret]) {
         url = `${req.protocol}://${req.get("host")}/api/send`;
@@ -324,12 +324,12 @@ lnurlServer.bindToHook(
         amount = Math.round(msats / 1000);
         const parts = req.originalUrl.split("/");
         const secret = parts[parts.length - 1].split("?")[0];
-        user = lnurlPayments[secret];
+        let user_id = lnurlPayments[secret];
 
-        if (user) {
+        if (user_id) {
           let account = await db.Account.findOne({
             where: {
-              user_id: user.id,
+              user_id,
               asset: config.liquid.btcasset,
               pubkey: null
             }
