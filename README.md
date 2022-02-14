@@ -21,7 +21,7 @@ This repository contains the code for the backend API server which is implemente
     cp .env.sample .env
     cp fx.sample fx
     docker network create net
-    sudo base64 config/lnd/tls.cert | tr -d '\n' > cert
+    sudo base64 config/lnd/tls.cert | tr -d '\n'
     sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n'
     docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
     docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
