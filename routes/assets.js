@@ -102,17 +102,19 @@ app.post(
       const version = 0;
 
       let contract = {
-          entity: { domain },
-          issuer_pubkey,
-          name,
-          precision,
-          version
-      }
+        entity: { domain },
+        issuer_pubkey,
+        name,
+        precision,
+        version
+      };
 
       if (filename) contract.file = filename;
       if (ticker) contract.ticker = ticker;
 
-      contract = Object.keys(contract).sort().reduce((r, k) => (r[k] = contract[k], r), {});
+      contract = Object.keys(contract)
+        .sort()
+        .reduce((r, k) => ((r[k] = contract[k]), r), {});
 
       l.info(
         "attempting issuance",
@@ -228,7 +230,7 @@ app.post(
               account_id: account.id,
               user_id,
               hash: txid,
-              amount: params.asset_amount * SATS,
+              amount: Math.round(params.asset_amount * SATS),
               received: true,
               confirmed: false,
               address: asset_address,
@@ -256,7 +258,7 @@ app.post(
               precision: 8,
               name: `${name} Reissuance Token`,
               balance: 0,
-              pending: address ? 0 : token_amount * SATS
+              pending: address ? 0 : Math.round(token_amount * SATS)
             },
             { transaction }
           );
@@ -268,7 +270,7 @@ app.post(
                 account_id: account.id,
                 user_id,
                 hash: txid,
-                amount: token_amount * SATS,
+                amount: Math.round(token_amount * SATS),
                 received: true,
                 confirmed: false,
                 address: token_address,
