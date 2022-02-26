@@ -92,7 +92,8 @@ app.get(
   "/payments",
   auth,
   ah(async (req, res) => {
-    let payments = await req.user.getPayments({
+    if (!req.user.account_id) return res.send([]);
+    let payments = await db.Payment.findAll({
       where: {
         account_id: req.user.account_id
       },

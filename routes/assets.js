@@ -207,7 +207,7 @@ app.post(
             name,
             balance: 0,
             network: "liquid",
-            pending: address ? 0 : params.asset_amount * SATS
+            pending: address ? 0 : Math.round(params.asset_amount * SATS)
           },
           { transaction }
         );

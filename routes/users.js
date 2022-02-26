@@ -623,7 +623,7 @@ app.post(
         res.end();
       });
     } catch (e) {
-      l.error(e.message);
+      l.error("problem updating account", e.message);
       return res.status(500).send("There was a problem updating the account");
     }
   })
@@ -638,14 +638,16 @@ app.post(
 
     try {
       const account = await db.Account.findOne({
-        where: { id, user_id: user.id }
+        where: { id }
       });
+
+      if (account.user_id !== user.id)
+        return res.status(500).send("Failed to open wallet");
 
       user.account_id = account.id;
       await user.save();
       let payments = await db.Payment.findAll({
         where: {
-          user_id: user.id,
           account_id: id
         },
         order: [["id", "DESC"]],
@@ -663,7 +665,7 @@ app.post(
 
       res.send(user);
     } catch (e) {
-      l.error(e.message);
+      l.error("problem switching account", e.message);
       return res.status(500).send("There was a problem switching accounts");
     }
   })

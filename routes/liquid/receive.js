@@ -239,7 +239,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             lock: transaction.LOCK.UPDATE,
             transaction
           });
-          account.balance = asset_amount * SATS;
+          account.balance = Math.round(asset_amount * SATS);
           account.pending = 0;
           await account.save({ transaction });
 
