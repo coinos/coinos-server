@@ -23,7 +23,7 @@ cp .env.sample .env
 cp fx.sample fx
 docker network create net
 docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
 docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
 ```
