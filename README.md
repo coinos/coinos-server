@@ -53,7 +53,7 @@ docker-compose down --remove-orphans
 ``` 
 and start it back up again with the same command from before: 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
 And finally, generate some BTC to play with! 
@@ -239,11 +239,20 @@ Use this botl11 address and paste in the UI to check
 ---
 #### Check if all three nodes are connected
 
-    curl https://attackme.coinos.io/api/info
+    curl http://localhost:8085/api/info
 
-    look for nodes array at the end
+(look for nodes array at the end)
+
+
+### license
+
+This code is [licensed].  Coinos is free for personal use.  Anyone can fork as long as it stays AGPLv3.  
+
+To purchase a commercial license or to inquire about customized, managed instances - please reach out to us at [contact@coinos.io]
 
 
 [Config changes]:(#config-changes)
 [config/lnd/lnd.conf]:./sampleconfig/lnd/lnd.conf
 [pwd file]:./sampleconfig/lnd/pwd
+[licensed]:./LICENSE.md
+[contact@coinos.io]:mailto:contact@coinos.io
