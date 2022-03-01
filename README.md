@@ -56,6 +56,12 @@ and start it back up again with the same command from before:
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
 ```
 
+And finally, generate some BTC to play with! 
+
+```bash
+docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
+```
+
 For reviewing output, you may run `docker-compose logs` or run the docker-compose up command above but without the `-d `flag
 
 ### Config changes
