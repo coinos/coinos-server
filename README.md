@@ -15,42 +15,78 @@ This repository contains the code for the backend API server which is implemente
 
 ### Getting Started
 
-    git clone https://github.com/coinos/coinos-server
-    cd coinos-server
-    cp -rf sampleconfig ./config
-    cp .env.sample .env
-    cp fx.sample fx
-    docker network create net
-    sudo base64 config/lnd/tls.cert | tr -d '\n'
-    sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n'
-    docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
-    docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
-    docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
-    docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
-    docker exec -it lnd lncli create
-    docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
+```bash
+git clone https://github.com/coinos/coinos-server
+cd coinos-server
+cp -rf sampleconfig ./config
+cp .env.sample .env
+cp fx.sample fx
+docker network create net
+docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
+docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
+```
+
+then run this and keep reference to the result for the forthcoming [Config changes] 
+
+```bash
+sudo base64 config/lnd/tls.cert | tr -d '\n'
+```
+then run this and type a password when prompted, and then 'n' to create new wallet: 
+
+```bash 
+docker exec -it lnd lncli create
+```
+(optionally write down the seed as backup in case you lose the wallet and/or password)
+
+then uncomment line 12 of [config/lnd/lnd.conf] and update the [pwd file] with the new wallet password you just set.
+
+then run this and keep reference to the result again:
+```bash
+sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n'
+```
+
+then run:
+```bash
+docker-compose down --remove-orphans
+``` 
+and start it back up again with the same command from before: 
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
+```
+
+For reviewing output, you may run `docker-compose logs` or run the docker-compose up command above but without the `-d `flag
 
 ### Config changes
-    navigate to config/index.js.
-    for the lna dictionary, update the values for cert and macaroon. These values can be found in the macaroon and cert files created in the previous section in the root folder of the coinos project.
+
+Navigate to `./config/index.js`
+Under `lna`, update the values for `cert` and `macaroon` with the output from the respective commands you ran in the section above.
 
 ### Wallet not found issues
-    If your app logs complain that the wallet was not found, do the following:
-    docker-compose exec bitcoin bash
-    bitcoin-cli -datadir=config/ createwallet coinos
-    exit
-    docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
+If your app logs complain that the wallet was not found, do the following:
+```bash
+docker-compose exec bitcoin bash
+bitcoin-cli -datadir=config/ createwallet coinos
+exit
+docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
+```
+### Spinning down coinos & services
+
+from the root of this repo, run: 
+
+```bash
+docker-compose down --remove-orphans
+```
+
+---
 
 
-
-
-
-
-Note the last step will take some time on first run as it will download the aforementioned docker images.
+Note the initial `docker-compose up` step will take some time on first run as it will download all of the necessary images.
 
 After successful creation of all docker containers coinos will be available at http://localhost:8085 
 
-To shutdown coinos and all of its containers/services, run `docker-compose down` again.  
+To shutdown coinos and all of its containers/services, run `docker-compose down --remove-orphans` again.  
 
 At anypoint to purge the database and start with a new one run `rm -rf mysql` and then `mkdir mysql` and then the same steps following from that point as outlined above.   Or run `purge-except-git.sh` from `./scripts`
 
@@ -131,3 +167,77 @@ The bitcoind and elementsd nodes can be a pruned if you want to limit the amount
 I've only tested with <a href="https://mariadb.org/">Maria</a>. Here's a [schema](https://github.com/asoltys/coinos-server/blob/master/db/schema.sql) to get you started.
 
     cat db/schema.sql | mysql -u root -p
+
+---
+### Miscellaneous Commands
+
+#### Funding the regtest chain
+
+##### Bitcoin
+
+generate some blocks
+
+    docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 1 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
+
+get balance
+
+    docker exec -it bitcoin bitcoin-cli -datadir=config/ getbalance
+
+---
+##### Liquid
+
+The Liquid network gives you a starting balance of Bitcoin specified in the `config/liquid/elements.conf` file as `initialfreecoins`. 
+
+generate some blocks
+
+    docker exec -it liquid elements-cli -datadir=/home/elements/.elements generatetoaddress 1 $(docker exec -it liquid elements-cli -datadir=/home/elements/.elements getnewaddress)
+
+get balance
+
+    docker exec -it liquid elements-cli -datadir=/home/elements/.elements getbalance
+
+---
+##### Lightning
+
+get node id of clighting node
+
+    docker exec -it cl lightning-cli getinfo
+
+connect to clightning node
+
+    docker exec -it lnd lncli --network=regtest --chain=bitcoin connect 029ba19ec5f65f82b1952fd535a86ff136ccc67ff7f91e19c3fcbc83a5224adaee@cl:9735
+
+open a channel
+
+    docker exec -it lnd lncli --network=regtest --chain=bitcoin openchannel 029ba19ec5f65f82b1952fd535a86ff136ccc67ff7f91e19c3fcbc83a5224adaee 10000000
+
+generate 10 btc blocks
+
+    docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
+
+---
+#### Test clightning payment
+
+payment request from clightning
+
+    docker exec -it cl lightning-cli invoice 100000 "test payment" "test desc"
+
+get full payment request code from field bolt11
+
+    something like this
+    
+    lnbcrt1u1p3qhle9pp5mzn7aezr59tmlmp5mg9x2sa45j8fec5ygmwx6mg2x29qpnnw3j9qdq0w3jhxapqv3jhxccxqyjw5qcqp2sp54tuk3ns3gd66w50hflkzwks0d9z9eelsa8284283zhkug9kevzqq9qyyssqjsprhd38eywg6kp8w7gmwf48hnx0mpd28465v9f595xfrec0dg2jnqdumrmeh9srw32u5t9g6tdy6tdpu47emhkfnu72fnzevvwd0acqxmurkx
+
+Use this botl11 address and paste in the UI to check 
+
+---
+#### Check if all three nodes are connected
+
+    curl https://attackme.coinos.io/api/info
+
+    look for nodes array at the end
+
+
+[Config changes]:(#config-changes)
+[config/lnd/lnd.conf]:./sampleconfig/lnd/lnd.conf
+[pwd file]:./sampleconfig/lnd/pwd
