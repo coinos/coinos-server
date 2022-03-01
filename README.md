@@ -168,14 +168,12 @@ I've only tested with <a href="https://mariadb.org/">Maria</a>. Here's a [schema
 
     cat db/schema.sql | mysql -u root -p
 
-
-# Miscellaneous Commands
-
-## Funding the regtest with bitcoin
-
 ---
-Bitcoin
----
+### Miscellaneous Commands
+
+#### Funding the regtest chain
+
+##### Bitcoin
 
 generate some blocks
 
@@ -186,8 +184,7 @@ get balance
     docker exec -it bitcoin bitcoin-cli -datadir=config/ getbalance
 
 ---
-Liquid
----
+##### Liquid
 
 The Liquid network gives you a starting balance of Bitcoin specified in the `config/liquid/elements.conf` file as `initialfreecoins`. 
 
@@ -200,8 +197,7 @@ get balance
     docker exec -it liquid elements-cli -datadir=/home/elements/.elements getbalance
 
 ---
-Lightning
----
+##### Lightning
 
 get node id of clighting node
 
@@ -220,8 +216,7 @@ generate 10 btc blocks
     docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
 
 ---
-Test clightning payment
----
+#### Test clightning payment
 
 payment request from clightning
 
@@ -236,14 +231,13 @@ get full payment request code from field bolt11
 Use this botl11 address and paste in the UI to check 
 
 ---
-Check if all three nodes are connected
----
+#### Check if all three nodes are connected
 
     curl https://attackme.coinos.io/api/info
 
     look for nodes array at the end
 
----
+
 [Config changes]:(#config-changes)
 [config/lnd/lnd.conf]:./sampleconfig/lnd/lnd.conf
 [pwd file]:./sampleconfig/lnd/pwd
