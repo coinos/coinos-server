@@ -42,7 +42,7 @@ docker exec -it lnd lncli create
 
 then uncomment line 12 of [config/lnd/lnd.conf] and update the [pwd file] with the new wallet password you just set.
 
-then run this and copy/paste the result to another blank file or note: 
+then run this and keep reference to the result again:
 ```bash
 sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n'
 ```
@@ -55,6 +55,8 @@ and start it back up again with the same command from before:
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d --remove-orphans
 ```
+
+For reviewing output, you may run `docker-compose logs` or run the docker-compose up command above but without the `-d `flag
 
 ### Config changes
 
@@ -168,5 +170,5 @@ I've only tested with <a href="https://mariadb.org/">Maria</a>. Here's a [schema
 
 
 [Config changes]:(#config-changes)
-[config/lnd/lnd.conf]:./config/lnd/lnd.conf
-[pwd file]:./config/lnd/pwd
+[config/lnd/lnd.conf]:./sampleconfig/lnd/lnd.conf
+[pwd file]:./sampleconfig/lnd/pwd
