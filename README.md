@@ -64,6 +64,14 @@ docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 10 $(dock
 
 For reviewing output, you may run `docker-compose logs` or run the docker-compose up command above but without the `-d `flag
 
+### Setup pre-commit git hooks
+    
+   We have a pre-commit git hook for running prettier on all files to keep the formatting consistent.
+    
+   `git config core.hooksPath "./git_hooks"` - This will set the git config path to use this directory for hooks.
+    
+   `chmod +x ./git_hooks/pre-commit` - This will give the hook the necessary permissions to run.
+
 ### Config changes
 
 Navigate to `./config/index.js`
