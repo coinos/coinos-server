@@ -208,6 +208,7 @@ module.exports = ah(async (req, res, next) => {
       res.send(payment);
     });
   } catch (e) {
+    console.log(e);
     l.error("problem sending internal payment", user.username, e.message);
     return res.status(500).send(e.message);
   }
