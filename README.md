@@ -56,11 +56,13 @@ and start it back up again with the same command from before:
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 ```
 
-And finally, generate some BTC to play with! 
+and finally, create a Bitcoin wallet: 
 
-```bash
-docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
 ```
+docker exec -it bitcoin bitcoin-cli -regtest -rpcuser=admin1 -rpcpassword=123 createwallet coinos
+```
+
+then [generate some BTC] to fund the server. 
 
 For reviewing output, you may run `docker-compose logs` or run the docker-compose up command above but without the `-d `flag
 
@@ -264,3 +266,4 @@ To purchase a commercial license or to inquire about customized, managed instanc
 [pwd file]:./sampleconfig/lnd/pwd
 [licensed]:./LICENSE.md
 [contact@coinos.io]:mailto:contact@coinos.io
+[generate some BTC]:./doc/fund-server-bitcoin-cli.md
