@@ -145,7 +145,7 @@ then edit `package.json` start script to:
 
 restart with `docker-compose restart app`
 
-then open your browser (Chrome in this example) to the URL`chrome://inspect` then click "Configure" and add the IP address + debugger port to the list of targets ex- `192.168.115.72:92229`
+then open your browser (Chrome in this example) to the URL`chrome://inspect` then click "Configure" and add the IP address + debugger port to the list of targets ex- `192.168.115.72:9229`
 
 an inspect link will then display under 'Remote Target'!
 
