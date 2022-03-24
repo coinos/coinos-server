@@ -15,10 +15,13 @@ This repository contains the code for the backend API server which is implemente
 
 ### Getting Started
 
+The following steps will churn out a quasi staging build; this configuration will run regtest and not a mainnet server.  
+
 ```bash
 git clone https://github.com/coinos/coinos-server
 cd coinos-server
 cp -rf sampleconfig ./config
+cp config/nginx/default.conf.template config/nginx/default.conf
 cp .env.sample .env
 cp fx.sample fx
 docker network create net

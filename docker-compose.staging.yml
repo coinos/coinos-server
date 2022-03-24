@@ -15,8 +15,9 @@ services:
     environment:
       NODE_ENV: development
     volumes:
-      - ./:/app
-
+      - ./config:/app/config
+    command: node index
+    
   ui:
     profiles:
        - donotstart

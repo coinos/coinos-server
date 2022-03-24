@@ -10,7 +10,9 @@ Also build the UI for staging:
 ```
 docker build -t coinos-ui-staging:0.1.0 -f Dockerfile.stage .
 
-docker run --rm --mount type=bind,source="$(pwd)",destination=/app --user $UID:$GID coinos-ui-staging:0.1.0 pnpm stage
+#spit out the build: 
+docker run --rm -v $(pwd)/dist:/dist coinos-ui-staging:0.1.0 bash -c 'cd app; pnpm stage; cp -rf dist/* /dist'
+
 ```
 
 
