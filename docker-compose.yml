@@ -14,7 +14,7 @@ services:
     environment:
       NODE_ENV: development
     volumes:
-      - ./logs:/logs
+      - ./logs:/app/logs
   bitcoin:
     image: asoltys/bitcoin:latest
     container_name: bitcoin
