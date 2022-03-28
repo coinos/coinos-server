@@ -1,4 +1,4 @@
-const debug = require("debug")("test");
+//const debug = require("debug")("test");
 
 const db = {
   user: "root",
