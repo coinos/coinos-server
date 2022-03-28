@@ -1,6 +1,5 @@
 server {
   listen 80;
-  server_name .${NGINX_HOST};
   server_tokens off;
 
     location @rewrites {
