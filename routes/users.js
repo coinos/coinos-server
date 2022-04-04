@@ -358,7 +358,7 @@ app.post(
       user = pick(user, ...whitelist);
       res.send({ user, token });
     } catch (e) {
-      l.error("login error", e.message);
+      l.error("login error", e.message, req.connection.remoteAddress);
       res.status(401).end();
     }
   })
@@ -420,7 +420,7 @@ app.post(
       user = pick(user, ...whitelist);
       res.send({ user, token });
     } catch (e) {
-      l.error("login error", e.message);
+      l.error("login error", e.message, req.connection.remoteAddress);
       res.status(401).end();
     }
   })
