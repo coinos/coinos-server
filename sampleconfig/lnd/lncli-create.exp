@@ -1,0 +1,25 @@
+#!/usr/bin/expect -f
+set force_conservative 0  
+if {$force_conservative} {
+        set send_slow {1 .1}
+        proc send {ignore arg} {
+                sleep .1
+                exp_send -s -- $arg
+        }
+}
+set timeout -1
+spawn lncli create
+match_max 100000
+expect -exact "Input wallet password: "
+send -- "password\r"
+
+expect -exact "Confirm password: "
+send -- "password\r"
+
+expect "*Do you have an existing cipher*"
+send -- "n\r"
+
+expect "*a"
+send -- "\r"
+
+expect eof
