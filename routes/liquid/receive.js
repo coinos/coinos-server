@@ -151,7 +151,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
                   user_id: user.id,
                   asset,
                   pubkey: account.pubkey,
-                  pending: value,
+                  //pending: value,
                   index: 0
                 },
                 transaction
