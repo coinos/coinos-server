@@ -93,7 +93,9 @@ app.post(
     } = req.body;
     const invoice = await lnp.addInvoice({ value });
     const { payment_request: pr } = invoice;
-    const url = `${callback}?k1=${k1}&pr=${pr}`;
+    const url = new URL(callback);
+    url.searchParams.set('k1', k1);
+    url.searchParams.set('pr', pr);
 
     await db.Invoice.create({
       user_id: user.id,
@@ -106,7 +108,7 @@ app.post(
     });
 
     try {
-      result = (await axios.get(url)).data;
+      result = (await axios.get(url.toString())).data;
       res.send(result);
     } catch (e) {
       l.error("failed to withdraw", e.message);
