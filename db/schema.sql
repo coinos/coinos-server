@@ -139,7 +139,7 @@ CREATE TABLE `invoices` (
   KEY `address_index` (`address`(100)),
   KEY `invoices_user_id_foreign` (`user_id`),
   KEY `invoices_account_id_foreign` (`account_id`),
-  CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
+  CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE,
   CONSTRAINT `invoices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=46708 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
