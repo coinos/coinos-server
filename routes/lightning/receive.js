@@ -1,4 +1,5 @@
 const handlePayment = async (msg) => {
+  l.info("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
   if (!msg.settled) return;
   let account, total, user;
 
@@ -15,7 +16,7 @@ const handlePayment = async (msg) => {
     await db.transaction(async (transaction) => {
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
       const amount = parseInt(msg.amt_paid_sat) - tip;
-      if (amount > 10000000 || amount < 0)
+      if (amount < 0)
         throw new Error("amount out of range");
 
       account = await db.Account.findOne({
