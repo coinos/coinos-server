@@ -54,7 +54,7 @@ module.exports = ah(async (req, res) => {
 
       if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, account.balance);
-        throw new Error("Insufficient funds");
+        throw new Error("low balance");
       }
 
       await account.decrement({ balance: total }, { transaction });
@@ -92,6 +92,7 @@ module.exports = ah(async (req, res) => {
     payments.push(params.hash);
     l.info("sent bitcoin", user.username, total);
   } catch (e) {
+    if (e.message.includes("Insufficient")) e.message = "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
     l.error("error sending bitcoin", e.message);
     return res.status(500).send(e.message);
   }

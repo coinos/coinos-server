@@ -68,15 +68,6 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
           if (!invoice) return;
 
-          let payment = await db.Payment.findOne({
-            where: {
-              invoice_id: invoice.id
-            },
-            order: [["id", "DESC"]],
-          });
-
-          if (payment) return;
-
           const currency = invoice ? invoice.currency : user.currency;
           const rate = invoice ? invoice.rate : app.get("rates")[user.currency];
           const tip = invoice ? invoice.tip : 0;
@@ -113,7 +104,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           }
           let fee = totalInputs - totalOutputs;
 
-          payment = await db.Payment.create({
+          let payment = await db.Payment.create({
             account_id: account.id,
             user_id: user.id,
             hash,
