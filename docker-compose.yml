@@ -16,6 +16,9 @@ services:
     volumes:
       - ./:/app
       - ./logs:/logs
+    networks:
+      default:
+        ipv4_address: 172.18.0.2
   bitcoin:
     image: asoltys/bitcoin:latest
     container_name: bitcoin
@@ -25,8 +28,11 @@ services:
     volumes:
       - ./config/bitcoin:/config
     restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.18.0.3
   liquid:
-    image: ghcr.io/vulpemventures/elements:0.18.1.12
+    image: ghcr.io/vulpemventures/elements
     container_name: liquid
     ports:
       - ${LIQUID_NODE_PORT}:7040
@@ -36,6 +42,9 @@ services:
     volumes:
       - ./config/liquid:/home/elements/.elements
     restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.18.0.4
   lnd:
     image: lightninglabs/lnd:v0.14.1-beta
     container_name: lnd
@@ -43,6 +52,9 @@ services:
       - ./config/lnd:/root/.lnd
       - ./config/bitcoin:/root/.bitcoin
     restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.18.0.5
   maria:
     container_name: mariadb
     image: mariadb:10.6.1
@@ -53,6 +65,9 @@ services:
       - ./mysql:/var/lib/mysql
     ports:
       - 3307:3306
+    networks:
+      default:
+        ipv4_address: 172.18.0.6
 networks: 
   default: 
     external: 
