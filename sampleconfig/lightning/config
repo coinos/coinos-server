@@ -5,3 +5,4 @@ bitcoin-rpcport=18443
 bitcoin-rpcuser=admin1
 bitcoin-rpcpassword=123
 network=regtest
+addr=172.18.0.11:9735
