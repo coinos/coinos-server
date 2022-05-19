@@ -365,7 +365,7 @@ app.post(
 );
 
 app.post(
-  "/taboggan",
+  "/doggin",
   ah(async (req, res) => {
     try {
       const { params, sig, key } = req.body;
