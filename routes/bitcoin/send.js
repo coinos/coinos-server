@@ -124,7 +124,7 @@ module.exports = ah(async (req, res) => {
       hex = (await bc.signRawTransactionWithWallet(hex)).hex;
       params.hash = await bc.sendRawTransaction(hex);
 
-      let payment = await db.Payment.create(params);
+      let payment = await db.Payment.create(params, { transaction });
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });

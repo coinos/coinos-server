@@ -163,7 +163,7 @@ Referral.belongsTo(User, {
 });
 
 Payment.belongsTo(Payment, {
-  as: "fee",
+  as: "fee_payment",
   foreignKey: "fee_payment_id"
 });
 
