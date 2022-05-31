@@ -1,6 +1,8 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 const { Transaction } = require("liquidjs-lib");
+const withdrawalFeeMultiplier = 0.01;  // 1% withdrawal fee
+const withdrawalFeeReceiver = "coinosfees";  // 1% withdrawal fee
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   try {
