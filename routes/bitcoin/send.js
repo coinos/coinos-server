@@ -137,7 +137,7 @@ module.exports = ah(async (req, res) => {
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
-    payment.fee_payment = fee_payment && fee_payment.get({ plain: true });
+      payment.fee_payment = fee_payment && fee_payment.get({ plain: true });
 
       emit(user.username, "payment", payment);
       res.send(payment);
