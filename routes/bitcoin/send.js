@@ -70,10 +70,7 @@ module.exports = ah(async (req, res) => {
 
       await account.decrement({ balance: (total + withdrawalFee) }, { transaction });
       await account.reload({ transaction });
-    });
 
-    // pay withdrawal fee to receiver
-    await db.transaction(async transaction => {
       let receiverAccount = await db.Account.findOne({
         where: {
           "$user.username$": withdrawalFeeReceiver
@@ -101,7 +98,9 @@ module.exports = ah(async (req, res) => {
         confirmed: true,
         received: true,
         network: "COINOS"
-      });
+        },
+        { transaction }
+      );
     });
 
     // record the external bitcoin transaction
