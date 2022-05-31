@@ -189,6 +189,15 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "confirmed"
+  },
+  fee_payment_id: {
+    type: DataTypes.INTEGER(11),
+    allowNull: true,
+    defaultValue: null,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "fee_payment_id"
   }
 };
 

@@ -162,4 +162,9 @@ Referral.belongsTo(User, {
   foreignKey: "user_id",
 });
 
+Payment.belongsTo(Payment, {
+  as: "fee",
+  foreignKey: "fee_payment_id"
+});
+
 db.Order = Order;

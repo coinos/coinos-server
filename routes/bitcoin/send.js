@@ -36,11 +36,10 @@ module.exports = ah(async (req, res) => {
   // (i.e. the total bitcoin that leaves this server)
   let withdrawalFee = amount * withdrawalFeeMultiplier;
 
-  let account, params;
   try {
     // withdraw bitcoin
     await db.transaction(async transaction => {
-      account = await db.Account.findOne({
+      let account = await db.Account.findOne({
         where: {
           id: user.account_id
         },
@@ -87,7 +86,7 @@ module.exports = ah(async (req, res) => {
 
       await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
       await receiverAccount.reload({ transaction });
-      await db.Payment.create({
+      let fee_payment = await db.Payment.create({
         amount: withdrawalFee,
         fee: 0,
         memo: "Bitcoin withdrawal fee",
@@ -101,40 +100,41 @@ module.exports = ah(async (req, res) => {
         },
         { transaction }
       );
+
+      // record the external bitcoin transaction
+      // no need to record the withdrawal fee - since that is internal only
+      let params = {
+        amount: -amount,
+        fee,
+        memo,
+        account_id: account.id,
+        user_id: user.id,
+        rate: app.get("rates")[user.currency],
+        currency: user.currency,
+        address,
+        confirmed: true,
+        received: false,
+        network: "bitcoin",
+        fee_payment_id: fee_payment.id
+      };
+
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+      hex = (await bc.signRawTransactionWithWallet(hex)).hex;
+      params.hash = await bc.sendRawTransaction(hex);
+
+      let payment = await db.Payment.create(params);
+
+      payment = payment.get({ plain: true });
+      payment.account = account.get({ plain: true });
+
+      emit(user.username, "payment", payment);
+      res.send(payment);
+
+      payments.push(params.hash);
+      l.info("sent bitcoin", user.username, total);
     });
-
-    // record the external bitcoin transaction
-    // no need to record the withdrawal fee - since that is internal only
-    params = {
-      amount: -amount,
-      fee,
-      memo,
-      account_id: account.id,
-      user_id: user.id,
-      rate: app.get("rates")[user.currency],
-      currency: user.currency,
-      address,
-      confirmed: true,
-      received: false,
-      network: "bitcoin"
-    };
-
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-
-    hex = (await bc.signRawTransactionWithWallet(hex)).hex;
-    params.hash = await bc.sendRawTransaction(hex);
-
-    let payment = await db.Payment.create(params);
-
-    payment = payment.get({ plain: true });
-    payment.account = account.get({ plain: true });
-
-    emit(user.username, "payment", payment);
-    res.send(payment);
-
-    payments.push(params.hash);
-    l.info("sent bitcoin", user.username, total);
   } catch (e) {
     if (e.message.includes("Insufficient")) e.message = "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
     l.error("error sending bitcoin", e.message);
