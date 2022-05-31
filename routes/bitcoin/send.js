@@ -19,9 +19,6 @@ module.exports = ah(async (req, res) => {
   let total = 0;
   let change = 0;
 
-  console.log("tx.vout is ");
-  console.log(tx.vout);
-
   for (let i = 0; i < tx.vout.length; i++) {
     let o = tx.vout[i];
     total += toSats(o.value);
@@ -63,9 +60,6 @@ module.exports = ah(async (req, res) => {
         });
       }
 
-      console.log("Account balance is " + account.balance);
-      console.log("Total is " + total);
-
       if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, account.balance);
         throw new Error("low balance");
@@ -82,14 +76,32 @@ module.exports = ah(async (req, res) => {
     await db.transaction(async transaction => {
       let receiverAccount = await db.Account.findOne({
         where: {
-          username: withdrawalFeeReceiver
+          "$user.username$": withdrawalFeeReceiver
         },
+        include: [
+          {
+            model: db.User,
+            as: "user"
+          },
+        ],
         lock: transaction.LOCK.UPDATE,
         transaction
       });
 
-      await account.increment({ balance: withdrawalFee }, { transaction });
-      await account.reload({ transaction });
+      await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
+      await receiverAccount.reload({ transaction });
+      await db.Payment.create({
+        amount: withdrawalFee,
+        fee: 0,
+        memo: "Bitcoin withdrawal fee",
+        account_id: receiverAccount.id,
+        user_id: receiverAccount.user_id,
+        rate: app.get("rates")[receiverAccount.user.currency],
+        currency: receiverAccount.user.currency,
+        confirmed: true,
+        received: true,
+        network: "COINOS"
+      });
     });
 
     // record the external bitcoin transaction
