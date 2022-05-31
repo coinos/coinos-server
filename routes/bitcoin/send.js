@@ -26,11 +26,9 @@ module.exports = ah(async (req, res) => {
     let o = tx.vout[i];
     total += toSats(o.value);
 
-    console.log(o.scriptPubKey.addresses[0]);
-
-    // if (await isChange("bcrt1q3y0af2vezj4w66zw397hmrglf4pk38pet3wr8g")) {
-    //   change += toSats(o.value);
-    // }
+    if (await isChange(o.scriptPubKey)) {
+      change += toSats(o.value);
+    }
   }
 
   total = total - change + fee;
