@@ -20,13 +20,13 @@ services:
       default:
         ipv4_address: 172.18.0.2
   bitcoin:
-    image: asoltys/bitcoin:latest
+    image: ghcr.io/vulpemventures/bitcoin
     container_name: bitcoin
     ports:
       - ${BITCOIN_PEER_PORT}:18442
       - ${BITCOIN_NODE_PORT}:18443
     volumes:
-      - ./config/bitcoin:/config
+      - ./config/bitcoin:/home/bitcoin/.bitcoin
     restart: unless-stopped
     networks:
       default:

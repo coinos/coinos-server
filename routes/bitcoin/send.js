@@ -1,4 +1,6 @@
 const btc = config.liquid.btcasset;
+const withdrawalFeeMultiplier = 0.01;  // 1% withdrawal fee
+const withdrawalFeeReceiver = "coinosfees";  // account that receives the fees
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
@@ -29,10 +31,15 @@ module.exports = ah(async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  let account, params;
+  // get withdrawal fee
+  // 'total' refers to the total before the withdrawal fee
+  // (i.e. the total bitcoin that leaves this server)
+  let withdrawalFee = amount * withdrawalFeeMultiplier;
+
   try {
+    // withdraw bitcoin
     await db.transaction(async transaction => {
-      account = await db.Account.findOne({
+      let account = await db.Account.findOne({
         where: {
           id: user.account_id
         },
@@ -55,45 +62,83 @@ module.exports = ah(async (req, res) => {
       if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, account.balance);
         throw new Error("low balance");
+      } else if (total + withdrawalFee > account.balance) {
+        l.error("total (after withdrawal fee) exceeds balance", amount, fee, account.balance);
+        throw new Error("low balance (after withdrawal fee)");
       }
 
-      await account.decrement({ balance: total }, { transaction });
+      await account.decrement({ balance: (total + withdrawalFee) }, { transaction });
       await account.reload({ transaction });
+
+      let receiverAccount = await db.Account.findOne({
+        where: {
+          "$user.username$": withdrawalFeeReceiver
+        },
+        include: [
+          {
+            model: db.User,
+            as: "user"
+          },
+        ],
+        lock: transaction.LOCK.UPDATE,
+        transaction
+      });
+
+      await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
+      await receiverAccount.reload({ transaction });
+      let fee_payment = await db.Payment.create({
+        amount: withdrawalFee,
+        fee: 0,
+        memo: "Bitcoin withdrawal fee",
+        account_id: receiverAccount.id,
+        user_id: receiverAccount.user_id,
+        rate: app.get("rates")[receiverAccount.user.currency],
+        currency: receiverAccount.user.currency,
+        confirmed: true,
+        received: true,
+        network: "COINOS"
+        },
+        { transaction }
+      );
+
+      // record the external bitcoin transaction
+      // no need to record the withdrawal fee - since that is internal only
+      let params = {
+        amount: -amount,
+        fee,
+        memo,
+        account_id: account.id,
+        user_id: user.id,
+        rate: app.get("rates")[user.currency],
+        currency: user.currency,
+        address,
+        confirmed: true,
+        received: false,
+        network: "bitcoin",
+        fee_payment_id: fee_payment.id
+      };
+
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+      hex = (await bc.signRawTransactionWithWallet(hex)).hex;
+      params.hash = await bc.sendRawTransaction(hex);
+
+      let payment = await db.Payment.create(params, { transaction });
+
+      payment = payment.get({ plain: true });
+      payment.account = account.get({ plain: true });
+
+      emit(user.username, "payment", payment);
+      res.send(payment);
+
+      payments.push(params.hash);
+      l.info("sent bitcoin", user.username, total);
     });
-
-    params = {
-      amount: -amount,
-      fee,
-      memo,
-      account_id: account.id,
-      user_id: user.id,
-      rate: app.get("rates")[user.currency],
-      currency: user.currency,
-      address,
-      confirmed: true,
-      received: false,
-      network: "bitcoin"
-    };
-
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-
-    hex = (await bc.signRawTransactionWithWallet(hex)).hex;
-    params.hash = await bc.sendRawTransaction(hex);
-
-    let payment = await db.Payment.create(params);
-
-    payment = payment.get({ plain: true });
-    payment.account = account.get({ plain: true });
-
-    emit(user.username, "payment", payment);
-    res.send(payment);
-
-    payments.push(params.hash);
-    l.info("sent bitcoin", user.username, total);
   } catch (e) {
     if (e.message.includes("Insufficient")) e.message = "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
     l.error("error sending bitcoin", e.message);
+    console.log(e);
     return res.status(500).send(e.message);
   }
 });
