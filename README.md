@@ -25,7 +25,7 @@ docker network create net
 docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
-docker exec -it liquid elements-cli -conf=/config/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
+docker exec -it liquid elements-cli -conf=/home/elements/.elements/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
 ```
 
 then run this and keep reference to the result for the forthcoming [Config changes] 
