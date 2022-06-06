@@ -102,7 +102,6 @@ module.exports = ah(async (req, res) => {
       );
 
       // record the external bitcoin transaction
-      // no need to record the withdrawal fee - since that is internal only
       let params = {
         amount: -amount,
         fee,
