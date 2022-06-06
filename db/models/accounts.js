@@ -124,6 +124,15 @@ const attributes = {
     comment: null,
     field: "balance"
   },
+  fee_credits: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: 0.0,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: "Credits that can be used towards paying withdrawal fees",
+    field: "fee_credits"
+  },
   pending: {
     type: DataTypes.DOUBLE,
     allowNull: true,

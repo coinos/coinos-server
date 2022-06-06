@@ -87,7 +87,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
         // get withdrawal fee
         // 'total' refers to the total before the withdrawal fee
         // (i.e. the total liquid bitcoin that leaves this server)
-        var withdrawalFee = amount * withdrawalFeeMultiplier;
+        var withdrawalFee = Math.floor(amount * withdrawalFeeMultiplier);
 
         if (limit && total > limit + fee)
           throw new Error("Tx amount exceeds authorized amount");
@@ -131,6 +131,14 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             );
           }
 
+          // use user's credits to reduce fee, if available
+          console.log(account.fee_credits);
+          let withdrawalFeeDeduction = Math.min(account.fee_credits, withdrawalFee);
+          if (withdrawalFeeDeduction) {
+            await account.decrement({ fee_credits: withdrawalFeeDeduction }, { transaction });
+            await account.reload({ transaction });
+          }
+
           await account.decrement({ balance: (total + withdrawalFee)}, { transaction });
           await account.reload({ transaction });
 
@@ -148,22 +156,26 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             transaction
           });
 
-          await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
-          await receiverAccount.reload({ transaction });
-          let fee_payment = {
-            amount: withdrawalFee,
-            fee: 0,
-            memo: "Liquid withdrawal fee",
-            account_id: receiverAccount.id,
-            user_id: receiverAccount.user_id,
-            rate: app.get("rates")[receiverAccount.user.currency],
-            currency: receiverAccount.user.currency,
-            confirmed: true,
-            received: true,
-            network: "COINOS"
-          };
-          fee_payment.account = receiverAccount;
-          payments.push(fee_payment);
+          let fee_payment_id = null;
+          if (withdrawalFee) {
+            await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
+            await receiverAccount.reload({ transaction });
+            let fee_payment = {
+              amount: withdrawalFee,
+              fee: 0,
+              memo: "Liquid withdrawal fee",
+              account_id: receiverAccount.id,
+              user_id: receiverAccount.user_id,
+              rate: app.get("rates")[receiverAccount.user.currency],
+              currency: receiverAccount.user.currency,
+              confirmed: true,
+              received: true,
+              network: "COINOS"
+            };
+            fee_payment.account = receiverAccount;
+            payments.push(fee_payment);
+            fee_payment_id = fee_payment.id;
+          }
 
           let payment = {
             amount: -amount,
@@ -177,7 +189,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             confirmed: true,
             received: false,
             network: "liquid",
-            fee_payment_id: fee_payment.id
+            fee_payment_id: fee_payment_id
           };
 
           payment.account = account;

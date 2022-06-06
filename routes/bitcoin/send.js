@@ -34,7 +34,7 @@ module.exports = ah(async (req, res) => {
   // get withdrawal fee
   // 'total' refers to the total before the withdrawal fee
   // (i.e. the total bitcoin that leaves this server)
-  let withdrawalFee = amount * withdrawalFeeMultiplier;
+  let withdrawalFee = Math.floor(amount * withdrawalFeeMultiplier);
 
   try {
     // withdraw bitcoin
@@ -67,6 +67,14 @@ module.exports = ah(async (req, res) => {
         throw new Error("low balance (after withdrawal fee)");
       }
 
+      // use user's credits to reduce fee, if available
+      console.log(account.fee_credits);
+      let withdrawalFeeDeduction = Math.min(account.fee_credits, withdrawalFee);
+      if (withdrawalFeeDeduction) {
+        await account.decrement({ fee_credits: withdrawalFeeDeduction }, { transaction });
+        await account.reload({ transaction });
+      }
+
       await account.decrement({ balance: (total + withdrawalFee) }, { transaction });
       await account.reload({ transaction });
 
@@ -84,22 +92,24 @@ module.exports = ah(async (req, res) => {
         transaction
       });
 
-      await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
-      await receiverAccount.reload({ transaction });
-      let fee_payment = await db.Payment.create({
-        amount: withdrawalFee,
-        fee: 0,
-        memo: "Bitcoin withdrawal fee",
-        account_id: receiverAccount.id,
-        user_id: receiverAccount.user_id,
-        rate: app.get("rates")[receiverAccount.user.currency],
-        currency: receiverAccount.user.currency,
-        confirmed: true,
-        received: true,
-        network: "COINOS"
-        },
-        { transaction }
-      );
+      let fee_payment_id = null;
+      if (withdrawalFee) {
+        await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
+        await receiverAccount.reload({ transaction });
+        let fee_payment = await db.Payment.create({
+          amount: withdrawalFee,
+          fee: 0,
+          memo: "Bitcoin withdrawal fee",
+          account_id: receiverAccount.id,
+          user_id: receiverAccount.user_id,
+          rate: app.get("rates")[receiverAccount.user.currency],
+          currency: receiverAccount.user.currency,
+          confirmed: true,
+          received: true,
+          network: "COINOS"
+        }, { transaction });
+        fee_payment_id = fee_payment.id;
+      }
 
       // record the external bitcoin transaction
       let params = {
@@ -114,7 +124,7 @@ module.exports = ah(async (req, res) => {
         confirmed: true,
         received: false,
         network: "bitcoin",
-        fee_payment_id: fee_payment.id
+        fee_payment_id: fee_payment_id
       };
 
       if (config.bitcoin.walletpass)
