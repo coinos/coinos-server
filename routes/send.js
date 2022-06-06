@@ -61,7 +61,7 @@ module.exports = ah(async (req, res, next) => {
         rate: app.get("rates")[user.currency],
         currency: user.currency,
         confirmed: true,
-        hash: username ? `Payment to ${username}` : "Internal Transfer",
+        hash: `#${uuidv4().substr(0, 6)} ${(username ? `Payment to ${username}` : "Internal Transfer")}`,
         network: "COINOS"
       };
 
@@ -165,7 +165,7 @@ module.exports = ah(async (req, res, next) => {
           rate: app.get("rates")[recipient.currency] * spread,
           currency: recipient.currency,
           confirmed: true,
-          hash: "Payment from " + user.username,
+          hash: `#${uuidv4().substr(0,6)} Payment from ${user.username}`,
           memo,
           network: "COINOS",
           received: true
