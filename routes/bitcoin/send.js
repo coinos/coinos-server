@@ -68,11 +68,11 @@ module.exports = ah(async (req, res) => {
       }
 
       // use user's credits to reduce fee, if available
-      console.log(account.fee_credits);
       let withdrawalFeeDeduction = Math.min(account.fee_credits, withdrawalFee);
       if (withdrawalFeeDeduction) {
         await account.decrement({ fee_credits: withdrawalFeeDeduction }, { transaction });
         await account.reload({ transaction });
+        withdrawalFee -= withdrawalFeeDeduction;
       }
 
       await account.decrement({ balance: (total + withdrawalFee) }, { transaction });

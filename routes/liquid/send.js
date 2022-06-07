@@ -137,6 +137,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
           if (withdrawalFeeDeduction) {
             await account.decrement({ fee_credits: withdrawalFeeDeduction }, { transaction });
             await account.reload({ transaction });
+            withdrawalFee -= withdrawalFeeDeduction;
           }
 
           await account.decrement({ balance: (total + withdrawalFee)}, { transaction });
