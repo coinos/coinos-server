@@ -131,7 +131,8 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             let account = await db.Account.findOne({
               where: {
-                id: invoice.account_id
+                id: invoice.account_id,
+                asset
               },
               lock: transaction.LOCK.UPDATE,
               transaction
