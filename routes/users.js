@@ -302,9 +302,7 @@ app.post(
   })
 );
 
-app.post(
-  "/login",
-  ah(async (req, res) => {
+let login = ah(async (req, res) => {
     try {
       const { params, sig, key } = req.body;
 
@@ -362,69 +360,10 @@ app.post(
       res.status(401).end();
     }
   })
-);
 
-app.post(
-  "/doggin",
-  ah(async (req, res) => {
-    try {
-      const { params, sig, key } = req.body;
-
-      if (sig) {
-        const { callback } = params;
-
-        try {
-          const url = `${callback}&sig=${sig}&key=${key}`;
-          const response = await axios.get(url);
-          res.send(response.data);
-        } catch (e) {
-          l.error("problem calling lnurl login", e.message);
-          res.status(500).send(e.message);
-        }
-
-        return;
-      }
-
-      let twofa = req.body.token;
-
-      let user = await getUser(req.body.username);
-
-      if (
-        !user ||
-        (user.password &&
-          !(await bcrypt.compare(req.body.password, user.password)))
-      ) {
-        l.warn("invalid username or password attempt", req.body.username);
-        return res.status(401).end();
-      }
-
-      if (
-        user.twofa &&
-        (typeof twofa === "undefined" ||
-          !authenticator.check(twofa, user.otpsecret))
-      ) {
-        return res.status(401).send("2fa required");
-      }
-
-      l.info(
-        "login",
-        req.body.username,
-        req.headers["x-forwarded-for"] || req.connection.remoteAddress
-      );
-
-      let payload = { username: user.username };
-      let token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-      user.accounts = await user.getAccounts();
-      user.keys = await user.getKeys();
-      user = pick(user, ...whitelist);
-      res.send({ user, token });
-    } catch (e) {
-      l.error("login error", e.message, req.connection.remoteAddress);
-      res.status(401).end();
-    }
-  })
-);
+app.post("/login", login);
+app.post("/taboggan", login);
+app.post("/doggin", login);
 
 app.post(
   "/logout",
