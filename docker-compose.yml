@@ -18,7 +18,7 @@ services:
       - ./logs:/logs
     networks:
       default:
-        ipv4_address: 172.18.0.2
+        ipv4_address: 172.18.0.22
   bitcoin:
     image: ghcr.io/vulpemventures/bitcoin
     container_name: bitcoin
@@ -30,7 +30,7 @@ services:
     restart: unless-stopped
     networks:
       default:
-        ipv4_address: 172.18.0.3
+        ipv4_address: 172.18.0.23
   liquid:
     image: ghcr.io/vulpemventures/elements
     container_name: liquid
@@ -44,7 +44,7 @@ services:
     restart: unless-stopped
     networks:
       default:
-        ipv4_address: 172.18.0.4
+        ipv4_address: 172.18.0.24
   lnd:
     image: lightninglabs/lnd:v0.14.1-beta
     container_name: lnd
@@ -54,7 +54,7 @@ services:
     restart: unless-stopped
     networks:
       default:
-        ipv4_address: 172.18.0.5
+        ipv4_address: 172.18.0.25
   maria:
     container_name: mariadb
     image: mariadb:10.6.1
@@ -67,7 +67,7 @@ services:
       - 3307:3306
     networks:
       default:
-        ipv4_address: 172.18.0.6
+        ipv4_address: 172.18.0.26
 networks: 
   default: 
     external: 

@@ -14,7 +14,7 @@ services:
       - ../coinos-ui:/app
     networks:
       default:
-        ipv4_address: 172.18.0.7
+        ipv4_address: 172.18.0.27
   electrsb:
     image: ghcr.io/vulpemventures/electrs
     container_name: electrsb
@@ -43,7 +43,7 @@ services:
       - 3095:3095
     networks:
       default:
-        ipv4_address: 172.18.0.8
+        ipv4_address: 172.18.0.28
   electrs-liquid:
     image: ghcr.io/vulpemventures/electrs-liquid
     container_name: electrs
@@ -52,6 +52,7 @@ services:
     entrypoint:
       - /build/electrs
     command:
+      - --jsonrpc-import
       - -vvvv
       - --parent-network
       - regtest
@@ -77,7 +78,7 @@ services:
     restart: unless-stopped
     networks:
       default:
-        ipv4_address: 172.18.0.9
+        ipv4_address: 172.18.0.29
   esplora-liquid:
     image: vulpemventures/esplora:latest
     container_name: esplora-liquid
@@ -92,7 +93,7 @@ services:
     restart: unless-stopped
     networks:
       default:
-        ipv4_address: 172.18.0.10
+        ipv4_address: 172.18.0.30
   clightning:
     image: asoltys/lightning
     container_name: cl
@@ -103,7 +104,7 @@ services:
     restart: unless-stopped
     networks:
       default:
-        ipv4_address: 172.18.0.11
+        ipv4_address: 172.18.0.31
 networks: 
   default: 
     external: 
