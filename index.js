@@ -104,6 +104,16 @@ app.use("/admin", adminAuth, adminRouter);
 
 require("./startup");
 
+app.post("/email", async (req, res) => {
+  try {
+    let file = persist("data/emails.json");
+    file.emails = [...file.emails, req.body];
+    res.send({ ok: true });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
 app.use((err, req, res, next) => {
   const details = {
     path: req.path,
