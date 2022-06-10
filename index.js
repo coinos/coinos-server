@@ -109,6 +109,27 @@ app.post("/email", async (req, res) => {
     let file = persist("data/emails.json");
     file.emails = [...file.emails, req.body];
     res.send({ ok: true });
+
+    try {
+    // Require:
+    var postmark = require("postmark");
+
+    // Send an email:
+    var client = new postmark.ServerClient(
+      config.postmark
+    );
+
+    client.sendEmail({
+      From: "adam@coinos.io",
+      To: "adam@coinos.io",
+      Subject: "Email Signup",
+      HtmlBody: JSON.stringify(req.body),
+      TextBody: JSON.stringify(req.body),
+      MessageStream: "outbound"
+    });
+    } catch(e) {
+      console.log("problem sending email", e);
+    } 
   } catch (e) {
     console.log(e);
   }

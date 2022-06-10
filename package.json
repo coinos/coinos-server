@@ -52,6 +52,7 @@
     "pino": "^6.13.2",
     "pino-pretty": "^7.0.0",
     "pm2": "^5.2.0",
+    "postmark": "^3.0.11",
     "query-string": "^6.13.1",
     "sequelize": "^5.21.3",
     "sqlite3": "^5.0.2",
