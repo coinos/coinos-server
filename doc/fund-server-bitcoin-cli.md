@@ -14,7 +14,7 @@ bitcoin-cli -regtest -rpcuser=admin1 -rpcpassword=123 getnewaddress
 > bcrt1qzneawwyxe0fts5p8a6tsp4gu2mfnqzs92235hm # (example)
 
 # mine a block to the new address 
-bitcoin-cli -regtest -datadir=/config generatetoaddress 101  theaddressgeneratedabove
+bitcoin-cli -regtest -datadir=/home/bitcoin/.bitcoin generatetoaddress 101  theaddressgeneratedabove
 
 # verify you got the reward by doing: 
 bitcoin-cli -regtest -rpcuser=admin1 -rpcpassword=123 getbalance

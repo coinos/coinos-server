@@ -13,6 +13,9 @@ const network =
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
+// used to calculate how many credits to give
+const withdrawalFeeMultiplier = 0.01;
+
 const getAccount = async (params, transaction) => {
   let account = await db.Account.findOne({
     where: params,
@@ -341,6 +344,7 @@ setInterval(async () => {
             { pending: Math.min(p.account.pending, total) },
             { transaction }
           );
+          await account.increment({ fee_credits: Math.floor(total * withdrawalFeeMultiplier) }, { transaction });
           await p.account.reload({ transaction });
 
           await p.save({ transaction });
