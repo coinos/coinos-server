@@ -1,8 +1,7 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 const { Transaction } = require("liquidjs-lib");
-const withdrawalFeeMultiplier = 0.01;  // 1% withdrawal fee
-const withdrawalFeeReceiver = "coinosfees";  // 1% withdrawal fee
+import { computeConversionFee, conversionFeeReceiver } from './conversionFee.js';
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   try {
@@ -84,10 +83,10 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
           total += fee - covered;
         }
 
-        // get withdrawal fee
-        // 'total' refers to the total before the withdrawal fee
+        // get conversion fee
+        // 'total' refers to the total before the conversion fee
         // (i.e. the total liquid bitcoin that leaves this server)
-        var withdrawalFee = Math.floor(amount * withdrawalFeeMultiplier);
+        var conversionFee = computeConversionFee(amount);
 
         if (limit && total > limit + fee)
           throw new Error("Tx amount exceeds authorized amount");
@@ -117,15 +116,15 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
                 account.ticker === "BTC" ? "SAT" : account.ticker
               }, have ${account.balance}`
             );
-          } else if (total + withdrawalFee > account.balance) {
-            l.warn("amount plus withdrawal fee exceeds balance", {
+          } else if (total + conversionFee > account.balance) {
+            l.warn("amount plus conversion fee exceeds balance", {
               total,
               fee,
-              withdrawalFee,
+              conversionFee,
               balance: account.balance
             });
             throw new Error(
-              `Insufficient funds, need ${total + withdrawalFee} ${
+              `Insufficient funds, need ${total + conversionFee} ${
                 account.ticker === "BTC" ? "SAT" : account.ticker
               }, have ${account.balance}`
             );
@@ -133,19 +132,19 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
 
           // use user's credits to reduce fee, if available
           console.log(account.fee_credits);
-          let withdrawalFeeDeduction = Math.min(account.fee_credits, withdrawalFee);
-          if (withdrawalFeeDeduction) {
-            await account.decrement({ fee_credits: withdrawalFeeDeduction }, { transaction });
+          let conversionFeeDeduction = Math.min(account.fee_credits, conversionFee);
+          if (conversionFeeDeduction) {
+            await account.decrement({ fee_credits: conversionFeeDeduction }, { transaction });
             await account.reload({ transaction });
-            withdrawalFee -= withdrawalFeeDeduction;
+            conversionFee -= conversionFeeDeduction;
           }
 
-          await account.decrement({ balance: (total + withdrawalFee)}, { transaction });
+          await account.decrement({ balance: (total + conversionFee)}, { transaction });
           await account.reload({ transaction });
 
           let receiverAccount = await db.Account.findOne({
             where: {
-              "$user.username$": withdrawalFeeReceiver
+              "$user.username$": conversionFeeReceiver
             },
             include: [
               {
@@ -158,13 +157,13 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
           });
 
           let fee_payment_id = null;
-          if (withdrawalFee) {
-            await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
+          if (conversionFee) {
+            await receiverAccount.increment({ balance: conversionFee }, { transaction });
             await receiverAccount.reload({ transaction });
             let fee_payment = {
-              amount: withdrawalFee,
+              amount: conversionFee,
               fee: 0,
-              memo: "Liquid withdrawal fee",
+              memo: "Liquid conversion fee",
               account_id: receiverAccount.id,
               user_id: receiverAccount.user_id,
               rate: app.get("rates")[receiverAccount.user.currency],

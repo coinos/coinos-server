@@ -13,8 +13,7 @@ const network =
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
-// used to calculate how many credits to give
-const withdrawalFeeMultiplier = 0.01;
+import { computeConversionFee } from './conversionFee.js';
 
 const getAccount = async (params, transaction) => {
   let account = await db.Account.findOne({
@@ -344,7 +343,7 @@ setInterval(async () => {
             { pending: Math.min(p.account.pending, total) },
             { transaction }
           );
-          await p.account.increment({ fee_credits: Math.floor(total * withdrawalFeeMultiplier) }, { transaction });
+          await p.account.increment({ fee_credits: computeConversionFee(total) }, { transaction });
           await p.account.reload({ transaction });
 
           await p.save({ transaction });

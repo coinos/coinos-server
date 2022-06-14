@@ -1,6 +1,5 @@
 const btc = config.liquid.btcasset;
-const withdrawalFeeMultiplier = 0.01;  // 1% withdrawal fee
-const withdrawalFeeReceiver = "coinosfees";  // account that receives the fees
+import { computeConversionFee, conversionFeeReceiver } from './conversionFee.js';
 
 module.exports = ah(async (req, res) => {
   let { user } = req;
@@ -31,10 +30,10 @@ module.exports = ah(async (req, res) => {
   total = total - change + fee;
   let amount = total - fee;
 
-  // get withdrawal fee
-  // 'total' refers to the total before the withdrawal fee
+  // get conversion fee
+  // 'total' refers to the total before the conversion fee
   // (i.e. the total bitcoin that leaves this server)
-  let withdrawalFee = Math.floor(amount * withdrawalFeeMultiplier);
+  let conversionFee = computeConversionFee(amount);
 
   try {
     // withdraw bitcoin
@@ -62,25 +61,25 @@ module.exports = ah(async (req, res) => {
       if (total > account.balance) {
         l.error("amount exceeds balance", amount, fee, account.balance);
         throw new Error("low balance");
-      } else if (total + withdrawalFee > account.balance) {
-        l.error("total (after withdrawal fee) exceeds balance", amount, fee, account.balance);
-        throw new Error("low balance (after withdrawal fee)");
+      } else if (total + conversionFee > account.balance) {
+        l.error("total (after conversion fee) exceeds balance", amount, fee, account.balance);
+        throw new Error("low balance (after conversion fee)");
       }
 
       // use user's credits to reduce fee, if available
-      let withdrawalFeeDeduction = Math.min(account.fee_credits, withdrawalFee);
-      if (withdrawalFeeDeduction) {
-        await account.decrement({ fee_credits: withdrawalFeeDeduction }, { transaction });
+      let conversionFeeDeduction = Math.min(account.fee_credits, conversionFee);
+      if (conversionFeeDeduction) {
+        await account.decrement({ fee_credits: conversionFeeDeduction }, { transaction });
         await account.reload({ transaction });
-        withdrawalFee -= withdrawalFeeDeduction;
+        conversionFee -= conversionFeeDeduction;
       }
 
-      await account.decrement({ balance: (total + withdrawalFee) }, { transaction });
+      await account.decrement({ balance: (total + conversionFee) }, { transaction });
       await account.reload({ transaction });
 
       let receiverAccount = await db.Account.findOne({
         where: {
-          "$user.username$": withdrawalFeeReceiver
+          "$user.username$": conversionFeeReceiver
         },
         include: [
           {
@@ -93,13 +92,13 @@ module.exports = ah(async (req, res) => {
       });
 
       let fee_payment_id = null;
-      if (withdrawalFee) {
-        await receiverAccount.increment({ balance: withdrawalFee }, { transaction });
+      if (conversionFee) {
+        await receiverAccount.increment({ balance: conversionFee }, { transaction });
         await receiverAccount.reload({ transaction });
         let fee_payment = await db.Payment.create({
-          amount: withdrawalFee,
+          amount: conversionFee,
           fee: 0,
-          memo: "Bitcoin withdrawal fee",
+          memo: "Bitcoin conversion fee",
           account_id: receiverAccount.id,
           user_id: receiverAccount.user_id,
           rate: app.get("rates")[receiverAccount.user.currency],
