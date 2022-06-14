@@ -124,14 +124,23 @@ const attributes = {
     comment: null,
     field: "balance"
   },
-  fee_credits: {
+  btc_credits: {
     type: DataTypes.DOUBLE,
     allowNull: true,
     defaultValue: 0.0,
     primaryKey: false,
     autoIncrement: false,
     comment: "Credits that can be used towards paying withdrawal fees",
-    field: "fee_credits"
+    field: "btc_credits"
+  },
+  liquid_credits: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: 0.0,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: "Credits that can be used towards paying withdrawal fees",
+    field: "liquid_credits"
   },
   pending: {
     type: DataTypes.DOUBLE,

@@ -344,7 +344,7 @@ setInterval(async () => {
             { pending: Math.min(p.account.pending, total) },
             { transaction }
           );
-          await account.increment({ fee_credits: Math.floor(total * withdrawalFeeMultiplier) }, { transaction });
+          await p.account.increment({ fee_credits: Math.floor(total * withdrawalFeeMultiplier) }, { transaction });
           await p.account.reload({ transaction });
 
           await p.save({ transaction });
