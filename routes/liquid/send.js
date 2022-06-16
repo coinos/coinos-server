@@ -131,10 +131,9 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
           }
 
           // use user's credits to reduce fee, if available
-          console.log(account.fee_credits);
-          let conversionFeeDeduction = Math.min(account.fee_credits, conversionFee);
+          let conversionFeeDeduction = Math.min(account.liquid_credits, conversionFee);
           if (conversionFeeDeduction) {
-            await account.decrement({ fee_credits: conversionFeeDeduction }, { transaction });
+            await account.decrement({ liquid_credits: conversionFeeDeduction }, { transaction });
             await account.reload({ transaction });
             conversionFee -= conversionFeeDeduction;
           }

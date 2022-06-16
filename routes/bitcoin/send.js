@@ -67,9 +67,9 @@ module.exports = ah(async (req, res) => {
       }
 
       // use user's credits to reduce fee, if available
-      let conversionFeeDeduction = Math.min(account.fee_credits, conversionFee);
+      let conversionFeeDeduction = Math.min(account.btc_credits, conversionFee);
       if (conversionFeeDeduction) {
-        await account.decrement({ fee_credits: conversionFeeDeduction }, { transaction });
+        await account.decrement({ btc_credits: conversionFeeDeduction }, { transaction });
         await account.reload({ transaction });
         conversionFee -= conversionFeeDeduction;
       }

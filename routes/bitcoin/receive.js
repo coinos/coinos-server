@@ -195,7 +195,7 @@ setInterval(async () => {
             { transaction }
           );
           // get the # of fee credits you would need to pay off this amount of bitcoin
-          await account.increment({ fee_credits: computeConversionFee(total) }, { transaction });
+          await account.increment({ btc_credits: computeConversionFee(total) }, { transaction });
           await account.reload({ transaction });
           await p.save({ transaction });
 

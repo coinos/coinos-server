@@ -343,7 +343,7 @@ setInterval(async () => {
             { pending: Math.min(p.account.pending, total) },
             { transaction }
           );
-          await p.account.increment({ fee_credits: computeConversionFee(total) }, { transaction });
+          await p.account.increment({ liquid_credits: computeConversionFee(total) }, { transaction });
           await p.account.reload({ transaction });
 
           await p.save({ transaction });
