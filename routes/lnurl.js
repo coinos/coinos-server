@@ -12,6 +12,8 @@ withdrawals = persist("data/withdrawals.json");
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
+let { computeConversionFee, conversionFeeReceiver } = require('lightning/conversionFee.js');
+
 var optionalAuth = function(req, res, next) {
   passport.authenticate("jwt", { session: false }, function(err, user, info) {
     req.user = user;
@@ -391,6 +393,7 @@ lnurlServer.bindToHook(
         try {
           let decoded = await lnp.decodePayReq({ pay_req: pr });
           let amount = decoded.num_satoshis;
+          let conversionFee = computeConversionFee(amount);
 
           await db.transaction(async transaction => {
             let account = await db.Account.findOne({
@@ -402,8 +405,51 @@ lnurlServer.bindToHook(
               transaction
             });
 
+            // account that receives conversion fees
+            let receiverAccount = await db.Account.findOne({
+              where: {
+                "$user.username$": conversionFeeReceiver
+              },
+              include: [
+                {
+                  model: db.User,
+                  as: "user"
+                },
+              ],
+              lock: transaction.LOCK.UPDATE,
+              transaction
+            });
+
+            let conversionFeeDeduction = Math.min(account.lightning_credits, conversionFee);
+            if (conversionFeeDeduction) {
+              await account.decrement({ lightning_credits: conversionFeeDeduction }, { transaction });
+              await account.reload({ transaction });
+              conversionFee -= conversionFeeDeduction;
+            }
+
             if (account.balance < amount) {
               throw new Error("Insufficient funds");
+            } else if (account.balance < amount + conversionFee) {
+              throw new Error("Insufficient funds for conversion fee");
+            }
+
+            let fee_payment_id = null;
+            if (conversionFee) {
+              await receiverAccount.increment({ balance: conversionFee }, { transaction });
+              await receiverAccount.reload({ transaction });
+              let fee_payment = await db.Payment.create({
+                amount: conversionFee,
+                fee: 0,
+                memo: "Bitcoin conversion fee",
+                account_id: receiverAccount.id,
+                user_id: receiverAccount.user_id,
+                rate: app.get("rates")[receiverAccount.user.currency],
+                currency: receiverAccount.user.currency,
+                confirmed: true,
+                received: true,
+                network: "COINOS"
+              }, { transaction });
+              fee_payment_id = fee_payment.id;
             }
 
             let payment = await db.Payment.create(
@@ -415,7 +461,8 @@ lnurlServer.bindToHook(
                 rate: app.get("rates")[user.currency],
                 currency: user.currency,
                 confirmed: true,
-                network: "lightning"
+                network: "lightning",
+                fee_payment_id: fee_payment_id
               },
               { transaction }
             );
@@ -447,7 +494,7 @@ lnurlServer.bindToHook(
               }
             }, 1000);
 
-            await account.decrement({ balance: amount }, { transaction });
+            await account.decrement({ balance: (amount + conversionFee) }, { transaction });
             await account.reload({ transaction });
 
             let p = payment.get({ plain: true });

@@ -21,8 +21,7 @@ const network =
 const queue = {};
 const seen = [];
 
-// used to calculate how many credits to give
-const withdrawalFeeMultiplier = 0.01;
+const { computeConversionFee } = require('./conversionFee.js');
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
@@ -195,7 +194,8 @@ setInterval(async () => {
             { pending: Math.min(account.pending, total) },
             { transaction }
           );
-          await account.increment({ fee_credits: Math.floor(total * withdrawalFeeMultiplier) }, { transaction });
+          // get the # of fee credits you would need to pay off this amount of bitcoin
+          await account.increment({ btc_credits: computeConversionFee(total) }, { transaction });
           await account.reload({ transaction });
           await p.save({ transaction });
 

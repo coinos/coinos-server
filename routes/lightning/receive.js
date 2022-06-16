@@ -1,3 +1,5 @@
+const { computeConversionFee } = require('./conversionFee.js');
+
 const handlePayment = async (msg) => {
   l.info("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
   if (!msg.settled) return;
@@ -60,6 +62,8 @@ const handlePayment = async (msg) => {
       invoice.received += total;
 
       await account.increment({ balance: total }, { transaction });
+      // get the # of fee credits you would need to pay off this amount of bitcoin
+      await account.increment({ btc_credits: computeConversionFee(total) }, { transaction });
       await account.reload({ transaction });
       await invoice.save({ transaction });
       await payment.save({ transaction });
