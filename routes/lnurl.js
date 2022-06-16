@@ -420,18 +420,17 @@ lnurlServer.bindToHook(
               transaction
             });
 
-            if (account.balance < amount) {
-              throw new Error("Insufficient funds");
-            } else if (account.balance < amount + conversionFee) {
-              throw new Error("Insufficient funds for conversion fee");
-            }
-
-            // use user's credits to reduce fee, if available
             let conversionFeeDeduction = Math.min(account.lightning_credits, conversionFee);
             if (conversionFeeDeduction) {
               await account.decrement({ lightning_credits: conversionFeeDeduction }, { transaction });
               await account.reload({ transaction });
               conversionFee -= conversionFeeDeduction;
+            }
+
+            if (account.balance < amount) {
+              throw new Error("Insufficient funds");
+            } else if (account.balance < amount + conversionFee) {
+              throw new Error("Insufficient funds for conversion fee");
             }
 
             let fee_payment_id = null;

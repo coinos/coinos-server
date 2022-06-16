@@ -58,20 +58,20 @@ module.exports = ah(async (req, res) => {
         });
       }
 
-      if (total > account.balance) {
-        l.error("amount exceeds balance", amount, fee, account.balance);
-        throw new Error("low balance");
-      } else if (total + conversionFee > account.balance) {
-        l.error("total (after conversion fee) exceeds balance", amount, fee, account.balance);
-        throw new Error("low balance (after conversion fee)");
-      }
-
       // use user's credits to reduce fee, if available
       let conversionFeeDeduction = Math.min(account.btc_credits, conversionFee);
       if (conversionFeeDeduction) {
         await account.decrement({ btc_credits: conversionFeeDeduction }, { transaction });
         await account.reload({ transaction });
         conversionFee -= conversionFeeDeduction;
+      }
+
+      if (total > account.balance) {
+        l.error("amount exceeds balance", amount, fee, account.balance);
+        throw new Error("low balance");
+      } else if (total + conversionFee > account.balance) {
+        l.error("total (after conversion fee) exceeds balance", amount, fee, account.balance);
+        throw new Error("low balance (after conversion fee)");
       }
 
       await account.decrement({ balance: (total + conversionFee) }, { transaction });

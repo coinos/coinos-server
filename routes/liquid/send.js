@@ -105,6 +105,14 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             transaction
           });
 
+          // use user's credits to reduce fee, if available
+          let conversionFeeDeduction = Math.min(account.liquid_credits, conversionFee);
+          if (conversionFeeDeduction) {
+            await account.decrement({ liquid_credits: conversionFeeDeduction }, { transaction });
+            await account.reload({ transaction });
+            conversionFee -= conversionFeeDeduction;
+          }
+
           if (total > account.balance) {
             l.warn("amount exceeds balance", {
               total,
@@ -128,14 +136,6 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
                 account.ticker === "BTC" ? "SAT" : account.ticker
               }, have ${account.balance}`
             );
-          }
-
-          // use user's credits to reduce fee, if available
-          let conversionFeeDeduction = Math.min(account.liquid_credits, conversionFee);
-          if (conversionFeeDeduction) {
-            await account.decrement({ liquid_credits: conversionFeeDeduction }, { transaction });
-            await account.reload({ transaction });
-            conversionFee -= conversionFeeDeduction;
           }
 
           await account.decrement({ balance: (total + conversionFee)}, { transaction });
