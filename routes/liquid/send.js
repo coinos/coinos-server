@@ -1,7 +1,7 @@
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 const { Transaction } = require("liquidjs-lib");
-import { computeConversionFee, conversionFeeReceiver } from './conversionFee.js';
+const { computeConversionFee, conversionFeeReceiver } = require('./conversionFee.js');
 
 sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   try {

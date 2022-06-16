@@ -13,7 +13,7 @@ const network =
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
-import { computeConversionFee } from './conversionFee.js';
+const { computeConversionFee } = require('./conversionFee.js');
 
 const getAccount = async (params, transaction) => {
   let account = await db.Account.findOne({

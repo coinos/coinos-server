@@ -1,5 +1,5 @@
 const btc = config.liquid.btcasset;
-import { computeConversionFee, conversionFeeReceiver } from './conversionFee.js';
+let { computeConversionFee, conversionFeeReceiver } = require('./conversionFee.js');
 
 module.exports = ah(async (req, res) => {
   let { user } = req;

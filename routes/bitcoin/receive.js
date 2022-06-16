@@ -21,7 +21,7 @@ const network =
 const queue = {};
 const seen = [];
 
-import { computeConversionFee } from './conversionFee.js';
+const { computeConversionFee } = require('./conversionFee.js');
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
