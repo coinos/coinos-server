@@ -130,7 +130,7 @@ const attributes = {
     defaultValue: 0.0,
     primaryKey: false,
     autoIncrement: false,
-    comment: "Credits that can be used towards paying withdrawal fees",
+    comment: "Credits that can be used towards paying Bitcoin withdrawal fees",
     field: "btc_credits"
   },
   liquid_credits: {
@@ -139,7 +139,16 @@ const attributes = {
     defaultValue: 0.0,
     primaryKey: false,
     autoIncrement: false,
-    comment: "Credits that can be used towards paying withdrawal fees",
+    comment: "Credits that can be used towards paying Liquid withdrawal fees",
+    field: "liquid_credits"
+  },
+  lightning_credits: {
+    type: DataTypes.DOUBLE,
+    allowNull: true,
+    defaultValue: 0.0,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: "Credits that can be used towards paying Lightning withdrawal fees",
     field: "liquid_credits"
   },
   pending: {
