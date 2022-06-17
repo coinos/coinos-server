@@ -10,3 +10,6 @@ const conversionFeeReceiver = "coinosfees";  // account that receives the fees
 function computeConversionFee(amount) {
   return Math.floor(amount * conversionFeeMultiplier);
 }
+
+module.exports.conversionFeeReceiver = conversionFeeReceiver;
+module.exports.computeConversionFee = computeConversionFee;
