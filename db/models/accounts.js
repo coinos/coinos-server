@@ -149,7 +149,7 @@ const attributes = {
     primaryKey: false,
     autoIncrement: false,
     comment: "Credits that can be used towards paying Lightning withdrawal fees",
-    field: "liquid_credits"
+    field: "lightning_credits"
   },
   pending: {
     type: DataTypes.DOUBLE,
