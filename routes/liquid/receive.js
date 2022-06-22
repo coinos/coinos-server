@@ -27,11 +27,27 @@ const getAccount = async (params, transaction) => {
     return account;
   }
 
-  let { asset } = params;
+  let { asset, pubkey } = params;
   let name = asset.substr(0, 6);
   let domain = "";
   let ticker = asset.substr(0, 3).toUpperCase();
   let precision = 8;
+
+  if (pubkey) {
+    const nc = await db.Account.findOne({
+      where: { pubkey },
+      order: [["id", "ASC"]],
+      limit: 1,
+      lock: transaction.LOCK.UPDATE,
+      transaction
+    });
+
+    params.index = 0;
+    params.path = nc.path;
+    params.pubkey = nc.pubkey;
+    params.privkey = nc.privkey;
+    params.seed = nc.seed;
+  }
 
   const assets = app.get("assets");
 
@@ -56,6 +72,7 @@ const getAccount = async (params, transaction) => {
 
   params = { ...params, ...{ domain, ticker, precision, name } };
   params.balance = 0;
+  params.pending = 0;
   params.network = "liquid";
   return db.Account.create(params, { transaction });
 };
@@ -119,47 +136,31 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             if (!invoice) return;
 
-            let payment = await db.Payment.findOne({
-              where: {
-                invoice_id: invoice.id,
-              },
-              order: [["id", "DESC"]],
-              transaction
-            });
-
-            if (payment) return;
-
             let confirmed = 0;
 
             let account = await db.Account.findOne({
               where: {
-                id: invoice.account_id,
-                asset
+                id: invoice.account_id
               },
               lock: transaction.LOCK.UPDATE,
               transaction
             });
 
-            if (
-              account.asset === asset &&
-              (!account.pubkey || account.network === "liquid")
-            ) {
-              await account.increment({ pending: value }, { transaction });
-              await account.reload({ transaction });
-            } else {
+            if (!(account && account.asset === asset)) {
+              let pubkey = account ? account.pubkey : null;
+
               account = await getAccount(
                 {
-                  seed: account.seed,
-                  path: account.path,
                   user_id: user.id,
                   asset,
-                  pubkey: account.pubkey,
-                  pending: value,
-                  index: 0
+                  pubkey
                 },
                 transaction
               );
             }
+
+            await account.increment({ pending: value }, { transaction });
+            await account.reload({ transaction });
 
             if (config.liquid.walletpass)
               await lq.walletPassphrase(config.liquid.walletpass, 300);
