@@ -108,30 +108,31 @@ app.post("/email", async (req, res) => {
   try {
     let file = persist("data/emails.json");
     file.emails = [...file.emails, req.body];
-    res.send({ ok: true });
 
     try {
-    // Require:
-    var postmark = require("postmark");
+      // Require:
+      var postmark = require("postmark");
 
-    // Send an email:
-    var client = new postmark.ServerClient(
-      config.postmark
-    );
+      // Send an email:
+      var client = new postmark.ServerClient(config.postmark);
 
-    client.sendEmail({
-      From: "adam@coinos.io",
-      To: "adam@coinos.io",
-      Subject: "Email Signup",
-      HtmlBody: JSON.stringify(req.body),
-      TextBody: JSON.stringify(req.body),
-      MessageStream: "outbound"
-    });
-    } catch(e) {
+      await client.sendEmail({
+        From: "support@coinos.io",
+        To: "support@coinos.io",
+        Subject: req.body.subject || "Email Signup",
+        HtmlBody: JSON.stringify(req.body),
+        TextBody: JSON.stringify(req.body),
+        MessageStream: "outbound"
+      });
+
+      res.send({ ok: true });
+    } catch (e) {
       console.log("problem sending email", e);
-    } 
+      res.code(500).send(e.message);
+    }
   } catch (e) {
     console.log(e);
+    res.code(500).send(e.message);
   }
 });
 
