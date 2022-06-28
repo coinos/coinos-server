@@ -91,11 +91,12 @@ module.exports = ah(async (req, res) => {
         transaction
       });
 
+      let fee_payment;
       let fee_payment_id = null;
       if (conversionFee) {
         await receiverAccount.increment({ balance: conversionFee }, { transaction });
         await receiverAccount.reload({ transaction });
-        let fee_payment = await db.Payment.create({
+        fee_payment = await db.Payment.create({
           amount: conversionFee,
           fee: 0,
           memo: "Bitcoin conversion fee",
@@ -136,6 +137,7 @@ module.exports = ah(async (req, res) => {
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
+    payment.fee_payment = fee_payment && fee_payment.get({ plain: true });
 
       emit(user.username, "payment", payment);
       res.send(payment);
