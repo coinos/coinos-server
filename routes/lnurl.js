@@ -462,7 +462,7 @@ lnurlServer.bindToHook(
                 currency: user.currency,
                 confirmed: true,
                 network: "lightning",
-                fee_payment_id: fee_payment_id
+                fee_payment_id,
               },
               { transaction }
             );
