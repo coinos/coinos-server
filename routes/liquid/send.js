@@ -174,8 +174,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
               network: "COINOS"
             };
             fee_payment.account = receiverAccount;
-            payments.push(fee_payment);
-            fee_payment_id = fee_payment.id;
+            ({ id: fee_payment_id } = await db.Payment.create(fee_payment, { transaction }));
           }
 
           let payment = {
@@ -190,7 +189,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             confirmed: true,
             received: false,
             network: "liquid",
-            fee_payment_id: fee_payment_id
+            fee_payment_id,
           };
 
           payment.account = account;

@@ -63,7 +63,7 @@ const handlePayment = async (msg) => {
 
       await account.increment({ balance: total }, { transaction });
       // get the # of fee credits you would need to pay off this amount of bitcoin
-      await account.increment({ btc_credits: computeConversionFee(total) }, { transaction });
+      await account.increment({ lightning_credits: computeConversionFee(total) }, { transaction });
       await account.reload({ transaction });
       await invoice.save({ transaction });
       await payment.save({ transaction });
