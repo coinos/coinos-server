@@ -52,6 +52,9 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
 
     let main, signed;
     await db.transaction(async transaction => {
+      let fee_payment;
+      let fee_payment_id = null;
+
       for (let i = 0; i < assets.length; i++) {
         let asset = assets[i];
         let amount = totals[asset];
@@ -155,8 +158,6 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             transaction
           });
 
-          let fee_payment;
-          let fee_payment_id = null;
           if (conversionFee) {
             await receiverAccount.increment({ balance: conversionFee }, { transaction });
             await receiverAccount.reload({ transaction });
@@ -202,15 +203,15 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
       );
       let txid = Transaction.fromHex(signed.hex).getId();
 
-      for (let i = 0; i < assets.length; i++) {
+      for (let i = 0; i < payments.length; i++) {
         p = payments[i];
         if (p) {
           let { account } = p;
           p.hash = txid;
           p = await db.Payment.create(p, { transaction });
-          if (account.ticker !== "BTC" || !main) {
+          if (p.user_id === user.id && (account.ticker !== "BTC" || !main)) {
             main = p.get({ plain: true });
-            main.fee_payment = fee_payment && fee_payment.get({ plain: true });
+            main.fee_payment = fee_payment;
             main.account = account.get({ plain: true });
           }
         }
