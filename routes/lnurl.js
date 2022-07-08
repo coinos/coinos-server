@@ -12,7 +12,7 @@ withdrawals = persist("data/withdrawals.json");
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
-let { computeConversionFee, conversionFeeReceiver } = require('lightning/conversionFee.js');
+let { computeConversionFee, conversionFeeReceiver } = require('./lightning/conversionFee.js');
 
 var optionalAuth = function(req, res, next) {
   passport.authenticate("jwt", { session: false }, function(err, user, info) {
