@@ -83,7 +83,7 @@ Under `lna`, update the values for `cert` and `macaroon` with the output from th
 If your app logs complain that the wallet was not found, do the following:
 ```bash
 docker-compose exec bitcoin bash
-bitcoin-cli -datadir=config/ createwallet coinos
+bitcoin-cli createwallet coinos
 exit
 docker exec -it lnd lncli --network=regtest --chain=bitcoin unlock
 ```
@@ -193,11 +193,11 @@ I've only tested with <a href="https://mariadb.org/">Maria</a>. Here's a [schema
 
 generate some blocks
 
-    docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 1 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
+    docker exec -it bitcoin bitcoin-cli generatetoaddress 1 $(docker exec -it bitcoin bitcoin-cli getnewaddress "" "legacy")
 
 get balance
 
-    docker exec -it bitcoin bitcoin-cli -datadir=config/ getbalance
+    docker exec -it bitcoin bitcoin-cli getbalance
 
 ---
 ##### Liquid
@@ -206,11 +206,11 @@ The Liquid network gives you a starting balance of Bitcoin specified in the `con
 
 generate some blocks
 
-    docker exec -it liquid elements-cli -datadir=/home/elements/.elements generatetoaddress 1 $(docker exec -it liquid elements-cli -datadir=/home/elements/.elements getnewaddress)
+    docker exec -it liquid elements-cli generatetoaddress 1 $(docker exec -it liquid elements-cli getnewaddress)
 
 get balance
 
-    docker exec -it liquid elements-cli -datadir=/home/elements/.elements getbalance
+    docker exec -it liquid elements-cli getbalance
 
 ---
 ##### Lightning
@@ -229,7 +229,7 @@ open a channel
 
 generate 10 btc blocks
 
-    docker exec -it bitcoin bitcoin-cli -datadir=config/ generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli -datadir=config/ getnewaddress "" "legacy")
+    docker exec -it bitcoin bitcoin-cli generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli getnewaddress "" "legacy")
 
 ---
 #### Test clightning payment
