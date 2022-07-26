@@ -21,7 +21,7 @@ cd coinos-server
 cp -rf sampleconfig ./config
 cp .env.sample .env
 cp fx.sample fx
-docker network create net
+docker network create net --gateway 172.18.0.1 --subnet 172.18.0.0/16
 docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
