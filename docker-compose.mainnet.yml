@@ -1,0 +1,11 @@
+version: '3.6'
+services:
+  lm:
+    image: ghcr.io/vulpemventures/elements
+    container_name: lm
+    volumes:
+      - ./config/liquidmainnet:/home/elements/.elements
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.18.0.41
