@@ -3,7 +3,6 @@ const axios = require("axios");
 
 app.get(
   "/invoice",
-  auth,
   ah(async (req, res, next) => {
     try {
       const invoice = await db.Invoice.findOne({
