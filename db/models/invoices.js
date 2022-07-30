@@ -76,7 +76,7 @@ const attributes = {
   uuid: {
     type: DataTypes.STRING(255),
     allowNull: true,
-    defaultValue: null,
+    defaultValue: DataTypes.UUIDV4,
     primaryKey: false,
     autoIncrement: false,
     comment: null,
