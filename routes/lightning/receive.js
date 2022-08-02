@@ -61,6 +61,9 @@ const handlePayment = async (msg) => {
       total = amount + tip;
       invoice.received += total;
 
+      invoice.status = 'paid';
+      await invoice.save({ transaction });
+
       await account.increment({ balance: total }, { transaction });
       // get the # of fee credits you would need to pay off this amount of bitcoin
       await account.increment({ lightning_credits: computeConversionFee(total) }, { transaction });
@@ -71,6 +74,7 @@ const handlePayment = async (msg) => {
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
+      payment.invoice= invoice.get({ plain: true });
 
       callWebhook(invoice, payment);
 

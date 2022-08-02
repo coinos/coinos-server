@@ -8,7 +8,12 @@ app.get(
       const invoice = await db.Invoice.findOne({
         where: {
           uuid: req.query.uuid
-        }
+        },
+        include: {
+          model: db.User,
+          as: "user",
+          attributes: ['username']
+        } 
       });
 
       res.send(invoice);
@@ -23,7 +28,7 @@ app.post(
   optionalAuth,
   ah(async (req, res, next) => {
     try {
-      let { liquidAddress, invoice, user, tx } = req.body;
+      let { liquidAddress, id, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
       if (invoice.amount < 0) throw new Error("amount out of range");
