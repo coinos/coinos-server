@@ -2,18 +2,11 @@
 
 Coinos is a bitcoin wallet app that supports payments over the <a href="https://bitcoin.org">bitcoin</a>, <a href="https://blockstream.com/liquid/">liquid</a> and <a href="http://lightning.network/">lightning</a> networks. Try it out at <a href="https://coinos.io/">coinos.io</a>.
 
-This repository contains the code for the backend API server which is implemented as a NodeJS application. The code for the frontend UI is tracked separately <a href="https://github.com/asoltys/coinos.io">here</a> (but is automatically installed & started via the Docker way outlined below). 
+This repository contains the code for the backend API server which is implemented as a NodeJS application. The code for the frontend UI is tracked separately <a href="https://github.com/asoltys/coinos.io">here</a>.
 
-## Install/Run (the Docker way)
+## Install
 
-### Requirements 
-
-* <a href="https://docs.docker.com/get-docker/
-">docker</a> and <a href="https://docs.docker.com/compose/install/">docker-compose</a>
-* NodeJS (recommended version: 16)
-* ~7GB of hard drive space (which will go into /var/lib/docker; primarily for Liquid)
-
-### Getting Started
+The follow commands will set up bitcoin, liquid and lightning nodes in regtest mode, along with a coinos app server, database, and front end UI. You'll need to have <a href="https://docs.docker.com/get-docker/">docker</a> installed as a pre-requisite.
 
 ```bash
 git clone https://github.com/coinos/coinos-server
