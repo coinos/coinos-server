@@ -22,7 +22,7 @@ cp -rf sampleconfig ./config
 cp .env.sample .env
 cp fx.sample fx
 docker network create net --gateway 172.18.0.1 --subnet 172.18.0.0/16
-docker run -it -v $(pwd):/app --entrypoint yarn asoltys/coinos-server
+docker run -it -v $(pwd):/app --entrypoint pnpm asoltys/coinos-server i
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
 docker exec -it liquid elements-cli -conf=/home/elements/.elements/elements.conf sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
