@@ -1,13 +1,13 @@
--- MySQL dump 10.14  Distrib 5.5.68-MariaDB, for Linux (x86_64)
+-- MariaDB dump 10.19  Distrib 10.6.1-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: coinos
 -- ------------------------------------------------------
--- Server version	5.5.68-MariaDB
+-- Server version	10.6.1-MariaDB-1:10.6.1+maria~focal
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -19,7 +19,6 @@
 -- Current Database: `coinos`
 --
 
-DROP DATABASE IF EXISTS `coinos`;
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `coinos` /*!40100 DEFAULT CHARACTER SET latin1 */;
 
 USE `coinos`;
@@ -32,11 +31,11 @@ DROP TABLE IF EXISTS `SequelizeMeta`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `SequelizeMeta` (
-  `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `name` varchar(255) COLLATE utf8mb3_unicode_ci NOT NULL,
   PRIMARY KEY (`name`),
   UNIQUE KEY `name` (`name`),
   UNIQUE KEY `SequelizeMeta_name_unique` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -58,17 +57,20 @@ CREATE TABLE `accounts` (
   `ticker` varchar(255) DEFAULT NULL,
   `precision` int(11) DEFAULT NULL,
   `domain` varchar(255) DEFAULT NULL,
-  `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
-  `index` int(11) NOT NULL DEFAULT '0',
+  `contract` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `index` int(11) NOT NULL DEFAULT 0,
   `pubkey` varchar(255) DEFAULT NULL,
   `hide` tinyint(1) DEFAULT NULL,
   `seed` varchar(255) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   `privkey` varchar(255) DEFAULT NULL,
+  `btc_credits` double NOT NULL DEFAULT 0,
+  `liquid_credits` double NOT NULL DEFAULT 0,
+  `lightning_credits` double NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=21553 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=21593 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -80,7 +82,7 @@ DROP TABLE IF EXISTS `codes`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `codes` (
   `code` varchar(255) NOT NULL DEFAULT '',
-  `text` text,
+  `text` text DEFAULT NULL,
   PRIMARY KEY (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -116,7 +118,7 @@ DROP TABLE IF EXISTS `invoices`;
 CREATE TABLE `invoices` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
-  `text` text,
+  `text` text DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `rate` double DEFAULT NULL,
@@ -127,11 +129,12 @@ CREATE TABLE `invoices` (
   `tip` double DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   `unconfidential` varchar(255) DEFAULT NULL,
-  `uuid` varchar(255) DEFAULT NULL,
-  `memo` text,
+  `uuid` varchar(255) DEFAULT uuid(),
+  `memo` text DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
-  `webhook` text,
+  `webhook` text DEFAULT NULL,
+  `status` varchar(255) DEFAULT 'unpaid',
   PRIMARY KEY (`id`),
   KEY `part_of_unconfidential` (`unconfidential`(10)),
   KEY `text_index` (`text`(100)),
@@ -141,7 +144,7 @@ CREATE TABLE `invoices` (
   KEY `invoices_account_id_foreign` (`account_id`),
   CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `invoices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=46708 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=46953 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -158,7 +161,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12617 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=12623 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -172,9 +175,9 @@ CREATE TABLE `migrations` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
   `batch` int(11) DEFAULT NULL,
-  `migration_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `migration_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -205,7 +208,7 @@ CREATE TABLE `orders` (
   `user_id` int(11) DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
-  `accepted` tinyint(1) NOT NULL DEFAULT '0',
+  `accepted` tinyint(1) NOT NULL DEFAULT 0,
   `a1_id` int(11) DEFAULT NULL,
   `a2_id` int(11) DEFAULT NULL,
   `completedAt` datetime DEFAULT NULL,
@@ -230,7 +233,7 @@ DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
-  `hash` text,
+  `hash` text DEFAULT NULL,
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   `rate` double DEFAULT NULL,
@@ -238,26 +241,29 @@ CREATE TABLE `payments` (
   `address` varchar(255) DEFAULT NULL,
   `received` tinyint(1) DEFAULT NULL,
   `amount` double DEFAULT NULL,
-  `tip` double NOT NULL DEFAULT '0',
+  `tip` double NOT NULL DEFAULT 0,
   `confirmed` tinyint(1) NOT NULL,
-  `fee` double NOT NULL DEFAULT '0',
+  `fee` double NOT NULL DEFAULT 0,
   `network` varchar(255) DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
   `preimage` varchar(255) DEFAULT NULL,
-  `memo` text,
-  `redeemed` tinyint(1) NOT NULL DEFAULT '0',
+  `memo` text DEFAULT NULL,
+  `redeemed` tinyint(1) NOT NULL DEFAULT 0,
   `redeemcode` varchar(255) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   `invoice_id` int(11) DEFAULT NULL,
+  `fee_payment_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_redeemcode` (`redeemcode`),
   KEY `payments_invoice_id_foreign` (`invoice_id`),
   KEY `payments_user_id_foreign` (`user_id`),
   KEY `payments_account_id_foreign` (`account_id`),
+  KEY `fk_payments` (`fee_payment_id`),
+  CONSTRAINT `fk_payments` FOREIGN KEY (`fee_payment_id`) REFERENCES `payments` (`id`),
   CONSTRAINT `payments_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
   CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29225 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=29354 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -268,8 +274,8 @@ DROP TABLE IF EXISTS `prs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `prs` (
-  `text` text,
-  `preimage` text
+  `text` text DEFAULT NULL,
+  `preimage` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -314,16 +320,16 @@ CREATE TABLE `users` (
   `updatedAt` datetime NOT NULL,
   `twofa` tinyint(1) DEFAULT NULL,
   `pin` varchar(255) DEFAULT NULL,
-  `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `currencies` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `otpsecret` varchar(255) DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
   `ip` int(10) unsigned DEFAULT NULL,
-  `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `seed` varchar(255) DEFAULT NULL,
-  `fiat` tinyint(1) NOT NULL DEFAULT '0',
-  `index` int(11) NOT NULL DEFAULT '0',
+  `fiat` tinyint(1) NOT NULL DEFAULT 0,
+  `index` int(11) NOT NULL DEFAULT 0,
   `verified` varchar(255) DEFAULT NULL,
-  `locked` tinyint(1) DEFAULT '0',
+  `locked` tinyint(1) DEFAULT 0,
   `authyId` varchar(255) DEFAULT NULL,
   `admin` tinyint(1) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
@@ -331,7 +337,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`),
   KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=15377 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=15411 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -347,7 +353,7 @@ CREATE TABLE `waiting_list` (
   `phone` varchar(255) NOT NULL,
   `status` enum('pending','activated','expired','cancelled') NOT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `notes` text,
+  `notes` text DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -373,7 +379,7 @@ CREATE TABLE `withdrawals` (
   `transit` varchar(255) DEFAULT NULL,
   `account` varchar(255) DEFAULT NULL,
   `institution` varchar(255) DEFAULT NULL,
-  `notes` text,
+  `notes` text DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `withdrawals_user_id_foreign` (`user_id`),
@@ -390,14 +396,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-08-12 16:26:08
-
-INSERT INTO migrations (name, batch) VALUES ('20210612181508_init_referrals.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210612192804_init_waiting_list.js.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210612203333_schema_diff_merges.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210625232223_add_invoice_id_to_payments.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210628221727_add_webhook_to_invoices.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210713174217_add_admin_to_users.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210714123455_data_fixes_merge.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210714123456_add_fks_merge.js', 1);
-INSERT INTO migrations (name, batch) VALUES ('20210814193811_fix_db_conflicts.js', 1);
+-- Dump completed on 2022-08-05  5:15:19
