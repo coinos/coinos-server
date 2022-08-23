@@ -639,92 +639,95 @@ app.post(
   "/redeem",
   optionalAuth,
   ah(async function(req, res) {
+    const { redeemcode } = req.body;
     try {
-    await db.transaction(async transaction => {
-      const { redeemcode } = req.body;
-      if (redeeming[redeemcode]) fail("redemption in progress");
-      redeeming[redeemcode] = true;
-      if (!redeemcode) fail("no code provided");
+      await db.transaction(async transaction => {
+        if (redeeming[redeemcode]) fail("redemption in progress");
+        redeeming[redeemcode] = true;
+        if (!redeemcode) fail("no code provided");
 
-      let { user } = req;
+        let { user } = req;
 
-      const source = await db.Payment.findOne({
-        where: {
-          redeemcode: req.body.redeemcode
-        },
-        include: {
-          model: db.Account,
-          as: "account"
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
-
-      l.info("redeeming", redeemcode);
-
-      if (!source) fail("Invalid code");
-      if (source.redeemed) fail("Voucher has already been redeemed");
-      let { amount } = source;
-      amount = -amount;
-
-      if (!user) {
-        const ip =
-          req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-
-        user = await register(
-          {
-            username: redeemcode.substr(0, 8),
-            password: ""
+        const source = await db.Payment.findOne({
+          where: {
+            redeemcode: req.body.redeemcode
           },
-          ip,
-          false
-        );
-
-        let payload = { username: user.username };
-        let token = jwt.sign(payload, config.jwt);
-        res.cookie("token", token, {
-          expires: new Date(Date.now() + 432000000)
+          include: {
+            model: db.Account,
+            as: "account"
+          },
+          lock: transaction.LOCK.UPDATE,
+          transaction
         });
 
-        return res.send({ user });
-      }
+        l.info("redeeming", redeemcode);
 
-      let account = await getAccount(source.account.asset, user, transaction);
-      let { hash, memo, confirmed, fee, network } = source;
+        if (!source) fail("Invalid code");
+        if (source.redeemed) fail("Voucher has already been redeemed");
+        let { amount } = source;
+        amount = -amount;
 
-      source.redeemed = true;
-      await source.save({ transaction });
+        if (!user) {
+          const ip =
+            req.headers["x-forwarded-for"] || req.connection.remoteAddress;
 
-      let payment = await db.Payment.create(
-        {
-          amount,
-          account_id: account.id,
-          user_id: user.id,
-          hash: "Voucher " + redeemcode,
-          memo,
-          rate: app.get("rates")[user.currency],
-          currency: user.currency,
-          confirmed,
-          network,
-          received: true,
-          fee
-        },
-        { transaction }
-      );
+          user = await register(
+            {
+              username: redeemcode.substr(0, 8),
+              password: ""
+            },
+            ip,
+            false
+          );
 
-      await account.increment({ balance: amount }, { transaction });
-      await account.reload({ transaction });
+          let payload = { username: user.username };
+          let token = jwt.sign(payload, config.jwt);
+          res.cookie("token", token, {
+            expires: new Date(Date.now() + 432000000)
+          });
 
-      payment = payment.get({ plain: true });
-      payment.account = account.get({ plain: true });
-      emit(user.username, "payment", payment);
-      emit(user.username, "account", account);
+          delete redeeming[redeemcode];
+          return res.send({ user });
+        }
 
-      res.send({ payment });
-    });
-    } catch(e) {
+        let account = await getAccount(source.account.asset, user, transaction);
+        let { hash, memo, confirmed, fee, network } = source;
+
+        source.redeemed = true;
+        await source.save({ transaction });
+
+        let payment = await db.Payment.create(
+          {
+            amount,
+            account_id: account.id,
+            user_id: user.id,
+            hash: "Voucher " + redeemcode,
+            memo,
+            rate: app.get("rates")[user.currency],
+            currency: user.currency,
+            confirmed,
+            network,
+            received: true,
+            fee
+          },
+          { transaction }
+        );
+
+        await account.increment({ balance: amount }, { transaction });
+        await account.reload({ transaction });
+
+        payment = payment.get({ plain: true });
+        payment.account = account.get({ plain: true });
+        emit(user.username, "payment", payment);
+        emit(user.username, "account", account);
+
+        res.send({ payment });
+      });
+    } catch (e) {
+      delete redeeming[redeemcode];
       l.error("problem redeeming", e.message);
       return res.status(500).send("There was a problem redeeming the voucher");
+    }
   })
 );
 

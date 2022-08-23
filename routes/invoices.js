@@ -31,6 +31,8 @@ app.post(
       let { liquidAddress, id, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
+      if (invoice.text.text) invoice.text = invoice.text.text;
+
       if (invoice.amount < 0) throw new Error("amount out of range");
       if (invoice.tip > invoice.amount || invoice.tip > 1000000 || invoice.tip < 0)
         throw new Error("tip amount out of range");
@@ -55,6 +57,8 @@ app.post(
       if (invoice.tip < 0 || invoice.amount < 0) throw new Error("invalid amount");
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
+
+      console.log(invoice);
 
       l.info(
         "creating invoice",
