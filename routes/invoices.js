@@ -58,8 +58,6 @@ app.post(
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
 
-      console.log(invoice);
-
       l.info(
         "creating invoice",
         user.username,
