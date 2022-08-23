@@ -12,7 +12,7 @@ app.get(
         include: {
           model: db.User,
           as: "user",
-          attributes: ['username']
+          attributes: ['username', 'currency']
         } 
       });
 
