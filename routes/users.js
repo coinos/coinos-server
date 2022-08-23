@@ -634,12 +634,16 @@ app.post(
   })
 );
 
+let redeeming = {};
 app.post(
   "/redeem",
   optionalAuth,
   ah(async function(req, res) {
+    try {
     await db.transaction(async transaction => {
       const { redeemcode } = req.body;
+      if (redeeming[redeemcode]) fail("redemption in progress");
+      redeeming[redeemcode] = true;
       if (!redeemcode) fail("no code provided");
 
       let { user } = req;
@@ -652,6 +656,7 @@ app.post(
           model: db.Account,
           as: "account"
         },
+        lock: transaction.LOCK.UPDATE,
         transaction
       });
 
@@ -717,6 +722,9 @@ app.post(
 
       res.send({ payment });
     });
+    } catch(e) {
+      l.error("problem redeeming", e.message);
+      return res.status(500).send("There was a problem redeeming the voucher");
   })
 );
 
