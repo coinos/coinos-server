@@ -12,8 +12,8 @@ The follow commands will set up bitcoin, liquid and lightning nodes in regtest m
 git clone https://github.com/coinos/coinos-server
 cd coinos-server
 cp -rf sampleconfig ./config
-sudo chown 1000:1000 config/liquid
-sudo chown 1000:1000 config/bitcoin
+sudo chown $(id -u):$(id -g) config/liquid
+sudo chown $(id -u):$(id -g) config/bitcoin
 cp .env.sample .env
 cp fx.sample fx
 docker network create net --gateway 172.18.0.1 --subnet 172.18.0.0/16
