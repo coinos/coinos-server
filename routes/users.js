@@ -31,7 +31,9 @@ app.get(
   "/me",
   auth,
   ah(async (req, res) => {
-    res.send(req.user);
+    let user = req.user.get({ plain: true });
+    user.accounts = await req.user.getAccounts();
+    res.send(user);
   })
 );
 
@@ -596,6 +598,8 @@ app.post(
           as: "account"
         }
       });
+
+      user = user.get({ plain: true });
       user.payments = payments;
       user.account = account.get({ plain: true });
 
