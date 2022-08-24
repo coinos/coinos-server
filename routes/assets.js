@@ -132,7 +132,7 @@ app.post(
         .match(/[a-f0-9]{2}/g)
         .reverse()
         .join("");
-      const rawtx = await lq.createRawTransaction([], { data: "00" });
+      const rawtx = await lq.createRawTransaction([], [{ data: "00" }]);
       const funded = await lq.fundRawTransaction(rawtx, { feeRate: 0.000002 });
       const params = {
         asset_amount,
