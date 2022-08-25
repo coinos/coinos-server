@@ -21,7 +21,8 @@ docker run -it -v $(pwd):/app --entrypoint pnpm asoltys/coinos-server i
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
 docker exec -it bitcoin bitcoin-cli createwallet coinos
-docker exec -it bitcoin bitcoin-cli generatetoaddress 1 bcrt1qwhrhu9feqkvmgdph0a4p248zzmy4grjr38a8uq
+docker exec -it bitcoin bitcoin-cli rescanblockchain
+docker exec -it bitcoin bitcoin-cli generatetoaddress 500 $(docker exec -it bitcoin bitcoin-cli getnewaddress "" "p2sh-segwit")
 docker exec -it liquid elements-cli createwallet coinos
 docker exec -it liquid elements-cli rescanblockchain
 docker exec -it liquid elements-cli sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000

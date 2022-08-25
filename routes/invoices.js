@@ -31,8 +31,6 @@ app.post(
       let { liquidAddress, id, invoice, user, tx } = req.body;
       let { blindkey } = invoice;
 
-      if (invoice.text.text) invoice.text = invoice.text.text;
-
       if (invoice.amount < 0) throw new Error("amount out of range");
       if (invoice.tip > invoice.amount || invoice.tip > 1000000 || invoice.tip < 0)
         throw new Error("tip amount out of range");
