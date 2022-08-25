@@ -32,7 +32,23 @@ app.get(
   auth,
   ah(async (req, res) => {
     let user = req.user.get({ plain: true });
+          let payments = await req.user.getPayments({
+            where: {
+              account_id: user.account_id
+            },
+            order: [["id", "DESC"]],
+            limit: 12,
+            include: [{
+              model: db.Account,
+              as: "account"
+            },
+            {
+              model: db.Payment,
+              as: "fee_payment"
+            }]
+          });
     user.accounts = await req.user.getAccounts();
+    user.payments = payments;
     res.send(user);
   })
 );

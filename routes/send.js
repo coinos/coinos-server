@@ -99,7 +99,7 @@ module.exports = ah(async (req, res, next) => {
         };
         if (address) params.where.address = address;
         else if (payreq) params.where.text = payreq;
-        let invoice = await db.Invoice.findOne(params);
+        let invoice = (address || payreq) && await db.Invoice.findOne(params);
 
         let a2;
         let acc = {
