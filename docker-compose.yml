@@ -22,7 +22,7 @@ services:
       - liquid
       - lnd
     container_name: app
-    image: asoltys/coinos-server
+    image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
     ports:
       - '3118:3118'
       - '3119:3119'
