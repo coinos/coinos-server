@@ -18,7 +18,7 @@ cp .env.sample .env
 cp fx.sample fx
 docker network create net --gateway 172.18.0.1 --subnet 172.18.0.0/16
 docker run -it -v $(pwd):/app --entrypoint pnpm asoltys/coinos-server i
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker-compose up -d
 docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
 docker exec -it bitcoin bitcoin-cli createwallet coinos
 docker exec -it bitcoin bitcoin-cli rescanblockchain

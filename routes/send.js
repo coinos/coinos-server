@@ -31,8 +31,7 @@ module.exports = ah(async (req, res, next) => {
           lock: transaction.LOCK.UPDATE,
           transaction
         });
-      }
-      else {
+      } else {
         account = await db.Account.findOne({
           where: {
             user_id: user.id,
@@ -61,7 +60,9 @@ module.exports = ah(async (req, res, next) => {
         rate: app.get("rates")[user.currency],
         currency: user.currency,
         confirmed: true,
-        hash: `#${uuidv4().substr(0, 6)} ${(username ? `Payment to ${username}` : "Internal Transfer")}`,
+        hash: `#${uuidv4().substr(0, 6)} ${
+          username ? `Payment to ${username}` : "Internal Transfer"
+        }`,
         network: "COINOS"
       };
 
@@ -99,7 +100,7 @@ module.exports = ah(async (req, res, next) => {
         };
         if (address) params.where.address = address;
         else if (payreq) params.where.text = payreq;
-        let invoice = (address || payreq) && await db.Invoice.findOne(params);
+        let invoice = (address || payreq) && (await db.Invoice.findOne(params));
 
         let a2;
         let acc = {
@@ -164,7 +165,7 @@ module.exports = ah(async (req, res, next) => {
           rate: app.get("rates")[recipient.currency] * spread,
           currency: recipient.currency,
           confirmed: true,
-          hash: `#${uuidv4().substr(0,6)} Payment from ${user.username}`,
+          hash: `#${uuidv4().substr(0, 6)} Payment from ${user.username}`,
           memo,
           network: "COINOS",
           received: true
