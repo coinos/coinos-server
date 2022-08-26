@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider nodemon index.js",
     "generate": "sequelize-automate -c config/index.js",
     "min": "DEBUG=debug SCOPE=MIN nodemon index.js",
     "debug": "DEBUG=debug nodemon index.js"
