@@ -95,6 +95,8 @@ services:
       default:
         ipv4_address: 172.18.0.26
   electrsb:
+    depends_on:
+      - bitcoin
     image: ghcr.io/vulpemventures/electrs
     container_name: electrsb
     entrypoint:
