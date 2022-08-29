@@ -1,8 +1,42 @@
 const fs = require("fs");
 const BitcoinCore = require("@asoltys/bitcoin-core");
 const { join } = require("path");
+const { Op } = require("sequelize");
 
 app.post("/send", auth, require("./send"));
+app.post(
+  "/sendToTokenHolders",
+  auth,
+  ah(async (req, res, next) => {
+    let { asset, amount } = req.body;
+
+    let accounts = await db.Account.findAll({
+      where: {
+        asset,
+        "$user.username$": { [Op.ne]: "gh" }
+      },
+
+      include: [{ model: db.User, as: "user" }]
+    });
+
+    let totalTokens = accounts.reduce((a, b) => a + b.balance, 0);
+    console.log("TOTAL TOKENS", totalTokens);
+
+    let totalSats = Math.floor(amount / totalTokens);
+
+    console.log("TOTAL SATS", totalSats)
+
+    if (totalSats < 1) throw new Error("amount is too low to distribute");
+
+    for (let i = 0; i < accounts.length; i++) {
+      let account = accounts[i];
+    }
+    accounts.map(({ balance, user: { username } }) => ({ username, balance }));
+
+    res.send({ success: "it worked" });
+  })
+);
+
 app.get(
   "/except",
   adminAuth,
