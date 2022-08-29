@@ -30,6 +30,7 @@ app.post(
 
     for (let i = 0; i < accounts.length; i++) {
       let account = accounts[i];
+      console.log(account.user.username, account.balance);
     }
     accounts.map(({ balance, user: { username } }) => ({ username, balance }));
 
