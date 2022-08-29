@@ -86,9 +86,6 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
           total += fee - covered;
         }
 
-        // get conversion fee
-        // 'total' refers to the total before the conversion fee
-        // (i.e. the total liquid bitcoin that leaves this server)
         var conversionFee = computeConversionFee(amount);
 
         if (limit && total > limit + fee)
@@ -115,6 +112,8 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             await account.reload({ transaction });
             conversionFee -= conversionFeeDeduction;
           }
+
+          if (asset !== btc) conversionFee = 0;
 
           if (total > account.balance) {
             l.warn("amount exceeds balance", {
