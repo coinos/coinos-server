@@ -12,8 +12,8 @@ app.get(
         include: {
           model: db.User,
           as: "user",
-          attributes: ['username', 'currency']
-        } 
+          attributes: ["username", "currency"]
+        }
       });
 
       res.send(invoice);
@@ -32,7 +32,11 @@ app.post(
       let { blindkey } = invoice;
 
       if (invoice.amount < 0) throw new Error("amount out of range");
-      if (invoice.tip > invoice.amount || invoice.tip > 1000000 || invoice.tip < 0)
+      if (
+        invoice.tip > invoice.amount ||
+        invoice.tip > 1000000 ||
+        invoice.tip < 0
+      )
         throw new Error("tip amount out of range");
 
       if (liquidAddress) {
@@ -51,8 +55,10 @@ app.post(
       if (!user) throw new Error("user not provided");
       if (!invoice.currency) invoice.currency = user.currency;
       if (!invoice.rate) invoice.rate = app.get("rates")[invoice.currency];
-      if (invoice.tip > invoice.amount || invoice.tip > 1000000) throw new Error("tip is too large");
-      if (invoice.tip < 0 || invoice.amount < 0) throw new Error("invalid amount");
+      if (invoice.tip > invoice.amount || invoice.tip > 1000000)
+        throw new Error("tip is too large");
+      if (invoice.tip < 0 || invoice.amount < 0)
+        throw new Error("invalid amount");
       invoice.user_id = user.id;
       invoice.account_id = user.account_id;
 
@@ -63,7 +69,8 @@ app.post(
         invoice.amount,
         invoice.tip,
         invoice.currency,
-        invoice.text && `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`,
+        invoice.text &&
+          `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`
       );
 
       if (!invoice.tip) invoice.tip = 0;
@@ -94,5 +101,13 @@ app.post(
       l.error(e.message, e.stack);
       res.status(500).send(`Problem during invoice creation: ${e.message}`);
     }
+  })
+);
+
+app.post(
+  "/:username/:network/invoice",
+  optionalAuth,
+  ah(async (req, res, next) => {
+    let { network, username } = req.params;
   })
 );
