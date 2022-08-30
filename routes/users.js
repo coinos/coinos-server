@@ -153,17 +153,19 @@ app.post(
     try {
       let { user } = req;
       let {
-        username,
-        fiat,
-        unit,
-        currency,
-        currencies,
-        twofa,
-        pin,
-        password,
+        address,
         confirm,
+        currencies,
+        currency,
+        email,
+        fiat,
+        password,
+        pin,
+        seed,
         tokens,
-        seed
+        twofa,
+        unit,
+        username
       } = req.body;
 
       let exists = await db.User.findOne({
@@ -195,6 +197,8 @@ app.post(
       user.pin = pin;
       user.seed = seed;
       user.fiat = fiat;
+      user.email = email;
+      user.address = address;
 
       if (password && password === confirm) {
         user.password = await bcrypt.hash(password, 1);

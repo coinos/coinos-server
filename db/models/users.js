@@ -10,6 +10,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  address: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: false,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "address"
+  },
   admin: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
