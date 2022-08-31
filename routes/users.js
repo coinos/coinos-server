@@ -97,7 +97,7 @@ app.post(
     emit(user.username, "user", user);
     emit(user.username, "otpsecret", user.otpsecret);
     l.info("disabled 2fa", user.username);
-    res.end();
+    res.send({});
   })
 );
 
@@ -117,6 +117,7 @@ app.post(
   auth,
   ah(async (req, res) => {
     let { user } = req;
+    console.log(authenticator.generate(req.user.otpsecret), req.body.token);
     try {
       const isValid = authenticator.check(req.body.token, req.user.otpsecret);
       if (isValid) {
@@ -131,7 +132,7 @@ app.post(
     }
 
     l.info("enabled 2fa", user.username);
-    res.end();
+    res.send({});
   })
 );
 
