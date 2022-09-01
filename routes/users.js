@@ -117,7 +117,6 @@ app.post(
   auth,
   ah(async (req, res) => {
     let { user } = req;
-    console.log(authenticator.generate(req.user.otpsecret), req.body.token);
     try {
       const isValid = authenticator.check(req.body.token, req.user.otpsecret);
       if (isValid) {
