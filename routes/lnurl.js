@@ -138,7 +138,7 @@ app.get(
       let result = await lnurlServer.generateNewUrl("payRequest", {
         minSendable,
         maxSendable,
-        metadata: JSON.stringify([["text/plain", `paying ${user.username}`], ["text/identifier", `${user.username}@coinos.io`])
+        metadata: JSON.stringify([["text/plain", `paying ${user.username}`], ["text/identifier", `${user.username}@coinos.io`]])
       });
 
       recipients[result.secret] = user;
