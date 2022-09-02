@@ -1,5 +1,5 @@
 
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   let { amount, memo, tip } = req.body;
   if (!tip) tip = 0;
   let value = amount + tip;

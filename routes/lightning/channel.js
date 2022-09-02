@@ -1,6 +1,6 @@
-const axios = require("axios");
+import axios from 'axios';
 
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   const { params } = req.body;
   const [pubkey, host] = params.uri.split("@");
 

@@ -1,6 +1,6 @@
-const buildTx = require("../../lib/buildtx");
+import buildTx from '../../lib/buildtx';
 
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   let { user } = req;
   let { address, amount, feeRate, replaceable } = req.body;
   let tx, fee;

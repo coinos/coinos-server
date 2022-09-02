@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return Promise.all([
 
     // alter table invoices add foreign key (user_id) references users (id);
@@ -39,7 +39,7 @@ exports.up = function(knex) {
       t.index('updatedAt')
     }),
   ])
-}
+};
 
-exports.down = function(knex) {
-}
+export const down = function(knex) {
+};

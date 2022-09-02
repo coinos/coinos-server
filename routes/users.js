@@ -1,17 +1,17 @@
-const axios = require("axios");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const authenticator = require("otplib").authenticator;
-const getAccount = require("../lib/account");
-const Sequelize = require("sequelize");
-const bitcoin = require("bitcoinjs-lib");
-const liquid = require("liquidjs-lib");
-const { fromBase58, fromPrivateKey } = require("bip32");
-const { Mutex } = require("async-mutex");
-const bip32 = require("bip32");
+import axios from 'axios';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { authenticator } from 'otplib';
+import getAccount from '../lib/account.js';
+import Sequelize from 'sequelize';
+import bitcoin from 'bitcoinjs-lib';
+import liquid from 'liquidjs-lib';
+import { fromBase58, fromPrivateKey } from 'bip32';
+import { Mutex } from 'async-mutex';
+import bip32 from 'bip32';
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
-require("../lib/whitelist");
+import '../lib/whitelist.js';
 
 const twofa = ah((req, res, next) => {
   let {

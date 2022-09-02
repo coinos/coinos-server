@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return knex.schema.createTable('transactions', function(t) {
       t.increments('id').unsigned().primary();
 
@@ -10,7 +10,7 @@ exports.up = function(knex) {
   })
 };
 
-exports.down = function(knex) {
+export const down = function(knex) {
 return knex.schema.dropTable('transactions');
 };
 
@@ -26,7 +26,7 @@ return knex.schema.dropTable('transactions');
 
 //
 // context for path, memo, rate, preimage, address, received, fee, tip, confirmed, redeemcode ?
-exports.up = function(knex) {
+export const up = function(knex) {
   return knex.schema.createTable('transactions', function(t) {
     t.increments('id').unsigned().primary();
 
@@ -36,6 +36,6 @@ exports.up = function(knex) {
   })
 };
 
-exports.down = function(knex) {
+export const down = function(knex) {
 return knex.schema.dropTable('transactions');
 };

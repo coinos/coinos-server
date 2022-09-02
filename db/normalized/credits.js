@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return knex.schema.createTable('credits', function(t) {
       t.increments('id').unsigned().primary();
 
@@ -16,7 +16,7 @@ exports.up = function(knex) {
   })
 };
 
-exports.down = function(knex) {
+export const down = function(knex) {
 return knex.schema.dropTable('credits');
 };
 
@@ -42,7 +42,7 @@ return knex.schema.dropTable('credits');
 // context for path, memo, rate, preimage, address, received, fee, tip, confirmed, redeemcode ?
 
 
-const { DataTypes } = require('sequelize');
+import { DataTypes } from 'sequelize';
 
 const attributes = {
   id: {

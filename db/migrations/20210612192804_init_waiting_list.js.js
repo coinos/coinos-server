@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
 
     return Promise.all([
       knex.schema.dropTableIfExists('waiting_list'),
@@ -17,8 +17,8 @@ exports.up = function(knex) {
         t.timestamps(true, true);
       })
     ])
-}
-  
-exports.down = function(knex) {
+};
+
+export const down = function(knex) {
     return knex.schema.dropTable('waiting_list');
-}
+};

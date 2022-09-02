@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+import { DataTypes } from 'sequelize';
 
 const attributes = {
   code: {

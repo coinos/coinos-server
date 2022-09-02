@@ -1,12 +1,11 @@
-var express = require('express');
+import express from 'express';
 var router = express.Router();
 
-const parseInput = require('../scripts/apiParse')
-
-const Sequelize = require('sequelize')
+import parseInput from '../scripts/apiParse.js';
+import Sequelize from 'sequelize';
 const Op = Sequelize.Op;
 
-const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * @api {get} /users Retrieve user list
@@ -123,33 +122,33 @@ router.get(
  *        ]
  *     }
  */
- router.get(
-  "/waiting_list",
-  // auth,
-  ah(async (req, res) => {
-    var {search, starts_with, contains} = req.query
+router.get(
+ "/waiting_list",
+ // auth,
+ ah(async (req, res) => {
+   var {search, starts_with, contains} = req.query
 
-    var queue = knex
-      .select(
-        'waiting_list.email', 
-        'waiting_list.phone', 
-        'waiting_list.created_at as requested',
-        'users.id as current_user_id'
-      )
-      .from('waiting_list')
-      .leftJoin('users', 'users.email', 'waiting_list.email')
-      .where('waiting_list.id', '>', 0)
+   var queue = knex
+     .select(
+       'waiting_list.email', 
+       'waiting_list.phone', 
+       'waiting_list.created_at as requested',
+       'users.id as current_user_id'
+     )
+     .from('waiting_list')
+     .leftJoin('users', 'users.email', 'waiting_list.email')
+     .where('waiting_list.id', '>', 0)
 
-    var timeCondition = parseInput.addTimeSearch(req.query, 'waiting_list.updated_at')
-    var userCondition = parseInput.addUserSearch(req.query)
+   var timeCondition = parseInput.addTimeSearch(req.query, 'waiting_list.updated_at')
+   var userCondition = parseInput.addUserSearch(req.query)
 
-    if (timeCondition) queue = queue.whereRaw(timeCondition)
-    if (userCondition) queue = queue.whereRaw(userCondition)
+   if (timeCondition) queue = queue.whereRaw(timeCondition)
+   if (userCondition) queue = queue.whereRaw(userCondition)
 
-    const found = await queue
+   const found = await queue
 
-    return res.send({queue: found})
-  })
+   return res.send({queue: found})
+ })
 );
 
 /**
@@ -569,4 +568,4 @@ router.get(
   })
 );
 
-module.exports = router;
+export default router;

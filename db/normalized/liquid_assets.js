@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return knex.schema.createTable('liquid_assets', function(t) {
     t.increments('id').unsigned().primary();
 
@@ -14,8 +14,8 @@ exports.up = function(knex) {
 
     t.timestamps();
   })
-}
+};
 
-exports.down = function(knex) {
+export const down = function(knex) {
   return knex.schema.dropTable('liquid_assets');
 };

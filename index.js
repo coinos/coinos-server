@@ -1,11 +1,11 @@
-const axios = require("axios");
-const bodyParser = require("body-parser");
-const compression = require("compression");
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
-const express = require("express");
-const { Op } = require("sequelize");
-const persist = require("./lib/persist");
+import axios from 'axios';
+import bodyParser from 'body-parser';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express from 'express';
+import { Op } from 'sequelize';
+import persist from './lib/persist.js';
 
 ah = require("express-async-handler");
 
@@ -61,24 +61,19 @@ app.use(compression());
 
 server = require("http").Server(app);
 
-require("./db");
-require("./lib/logging");
-require("./lib/utils");
-require("./lib/sockets");
-require("./lib/webhooks");
-require("./lib/passport");
-require("./lib/register");
-require("./lib/upload");
-require("./lib/send");
-require("./lib/sync");
-
-require("./routes/assets");
-require("./routes/info");
-
-require("./routes/users");
-
-// Exclude plugins for minimalist version
-if (process.env.SCOPE !== "MIN") {
+import './db/index.js';
+import './lib/logging.js';
+import './lib/utils.js';
+import './lib/sockets.js';
+import './lib/webhooks.js';
+import './lib/passport.js';
+import './lib/register.js';
+import './lib/upload.js';
+import './lib/send.js';
+import './lib/sync.js';
+import './routes/assets.js';
+import './routes/info.js';
+import './routes/users.js';
   if (config.bitcoin) networks.push("bitcoin");
   if (config.liquid) networks.push("liquid");
   if (config.lna) networks.push("lightning");
@@ -93,17 +88,17 @@ if (process.env.SCOPE !== "MIN") {
   require("./routes/invoices");
   require("./routes/payments");
   require("./routes/swaps");
-}
 
 //  Scope based Route Handling
 
-var referralsRouter = require("./routes/referrals.js");
+import referralsRouter from './routes/referrals.js';
+
 app.use("/referrals", referralsRouter);
 
-var adminRouter = require("./routes/admin.js");
+import adminRouter from './routes/admin.js';
 app.use("/admin", adminAuth, adminRouter);
 
-require("./startup");
+import './startup.js';
 
 app.post("/email", async (req, res) => {
   try {

@@ -1,14 +1,14 @@
-const axios = require("axios");
-const bitcoin = require("bitcoinjs-lib");
-const coinselect = require("coinselect");
-const split = require("coinselect/split");
+import axios from 'axios';
+import bitcoin from 'bitcoinjs-lib';
+import coinselect from 'coinselect';
+import split from 'coinselect/split';
 const api = prod ? "https://blockstream.info/api" : config.bitcoin.electrs;
 const SATS = 100000000;
 const network = prod
   ? bitcoin.networks["bitcoin"]
   : bitcoin.networks["regtest"];
 
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   let { address: from, amount, feeRate, target } = req.body;
   let utxos;
   if (!feeRate) feeRate = (await bc.estimateSmartFee(6)).feerate * SATS;

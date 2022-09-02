@@ -1,5 +1,5 @@
 
-exports.up = function(knex) {
+export const up = function(knex) {
   return Promise.all([
 
     // move security fields to separate t (potentially different access permissions)
@@ -48,7 +48,7 @@ exports.up = function(knex) {
   
 };
 
-exports.down = function(knex) {
+export const down = function(knex) {
   return Promise.all([
     knex.schema.table('users', function (t) {
       t.dropColumn('uuid');

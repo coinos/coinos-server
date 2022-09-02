@@ -1,4 +1,4 @@
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   const { payreq } = req.body;
 
   const invoice = await db.Invoice.findOne({

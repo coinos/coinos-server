@@ -1,7 +1,7 @@
-const fs = require("fs");
-const BitcoinCore = require("@asoltys/bitcoin-core");
-const { join } = require("path");
-const { Op } = require("sequelize");
+import fs from 'fs';
+import BitcoinCore from '@asoltys/bitcoin-core';
+import { join } from 'path';
+import { Op } from 'sequelize';
 
 app.post("/send", auth, require("./send"));
 app.post(

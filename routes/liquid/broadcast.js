@@ -1,4 +1,4 @@
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   try {
     const { user } = req;
     let hash = await lq.sendRawTransaction(req.body.tx);

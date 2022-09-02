@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return Promise.all([
     knex.schema.dropTableIfExists('reset'),
     knex.schema.dropTableIfExists('naughty'),
@@ -21,9 +21,9 @@ exports.up = function(knex) {
     knex.raw("ALTER TABLE users MODIFY `subscriptions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL"),
 
   ])
-}
+};
 
-exports.down = async function(knex) {
+export const down = async function(knex) {
   return Promise.all([
     knex.schema.table("orders", function(t) {
       t.integer("a1");
@@ -36,4 +36,4 @@ exports.down = async function(knex) {
       t.dropColumn("authyId");
     }),
   ])
-}
+};

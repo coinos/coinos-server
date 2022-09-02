@@ -1,9 +1,9 @@
-const axios = require("axios");
-const lnurl = require("lnurl");
-const jwt = require("jsonwebtoken");
-const qs = require("query-string");
-const persist = require("../lib/persist");
-const bolt11 = require("bolt11");
+import axios from 'axios';
+import lnurl from 'lnurl';
+import jwt from 'jsonwebtoken';
+import qs from 'query-string';
+import persist from '../lib/persist';
+import bolt11 from 'bolt11';
 
 logins = persist("data/logins.json");
 recipients = persist("data/recipients.json");
@@ -12,7 +12,7 @@ withdrawals = persist("data/withdrawals.json");
 
 lnurlServer = lnurl.createServer(config.lnurl);
 
-let { computeConversionFee, conversionFeeReceiver } = require('./lightning/conversionFee.js');
+import { computeConversionFee, conversionFeeReceiver } from './lightning/conversionFee.js';
 
 var optionalAuth = function(req, res, next) {
   passport.authenticate("jwt", { session: false }, function(err, user, info) {

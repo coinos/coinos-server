@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return knex.schema.createTable('lnurl_codes', function(t) {
     t.increments('id').unsigned().primary();
 
@@ -7,8 +7,8 @@ exports.up = function(knex) {
     
     t.timestamps();
   })
-}
+};
 
-exports.down = function(knex) {
+export const down = function(knex) {
   return knex.schema.dropTable('lnurl_codes');
 };

@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return Promise.all([
     knex.schema.dropTableIfExists('referrals'),
 
@@ -19,6 +19,6 @@ exports.up = function(knex) {
   ])
 };
 
-exports.down = function(knex) {
+export const down = function(knex) {
   return knex.schema.dropTable('referrals');
 };

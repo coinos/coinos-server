@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return Promise.all([
     knex.raw("delete from invoices where invoices.account_id not in (select id from accounts)"),
     knex.raw("delete from orders where orders.a1_id not in (select id from accounts) or orders.a2_id not in (select id from accounts)"),
@@ -13,10 +13,10 @@ exports.up = function(knex) {
     knex.raw('delete from accounts where user_id is null'),
     knex.raw('delete from users where length(username) > 32')
   ])
-}
+};
 
-exports.down = function(knex) {
+export const down = function(knex) {
   return Promise.all([
 
   ])
-}
+};

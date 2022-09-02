@@ -1,4 +1,4 @@
-const buildTx = require("../../lib/buildliquidtx");
+import buildTx from '../../lib/buildliquidtx';
 
 liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let tx, fee;
@@ -71,7 +71,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   return { feeRate, tx };
 };
 
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   try {
     let tx = await liquidTx({ ...req.body, user: req.user })
     res.send(tx);

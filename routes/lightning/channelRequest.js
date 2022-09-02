@@ -1,4 +1,4 @@
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   let { localAmt, pushAmt } = req.body;
 
   pushAmt = 0;

@@ -1,4 +1,4 @@
-exports.up = async function(knex) {
+export const up = async function(knex) {
   return knex.schema.table("users", function(t) {
     t.boolean("admin");
     t.string('email');
@@ -7,7 +7,7 @@ exports.up = async function(knex) {
   });
 };
 
-exports.down = async function(knex) {
+export const down = async function(knex) {
   return knex.schema.table("users", function(t) {
     t.dropColumn("admin");
     t.dropColumn('email')

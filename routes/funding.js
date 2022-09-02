@@ -1,4 +1,5 @@
-const mailgun = require("mailgun-js")(config.mailgun);
+import mailgunFactory from 'mailgun-js';
+const mailgun = mailgunFactory(config.mailgun);
 
 app.post(
   "/id",

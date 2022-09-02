@@ -1,9 +1,8 @@
-const reverse = require("buffer-reverse");
-const zmq = require("zeromq/v5-compat");
-const { Op } = require("sequelize");
-const { fromBase58 } = require("bip32");
-
-const bitcoin = require("bitcoinjs-lib");
+import reverse from 'buffer-reverse';
+import zmq from 'zeromq/v5-compat';
+import { Op } from 'sequelize';
+import { fromBase58 } from 'bip32';
+import bitcoin from 'bitcoinjs-lib';
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);
@@ -21,7 +20,7 @@ const network =
 const queue = {};
 const seen = [];
 
-const { computeConversionFee } = require("./conversionFee.js");
+import { computeConversionFee } from './conversionFee.js';
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");

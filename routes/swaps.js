@@ -1,9 +1,9 @@
-const axios = require("axios");
-const crypto = require("crypto");
-const fs = require("fs");
-const getAccount = require("../lib/account");
-const { Op, col } = require("sequelize");
-const { v4: uuidv4 } = require("uuid");
+import axios from 'axios';
+import crypto from 'crypto';
+import fs from 'fs';
+import getAccount from '../lib/account';
+import { Op, col } from 'sequelize';
+import { v4 as uuidv4 } from 'uuid';
 
 const shallow = a => {
   let b = {};

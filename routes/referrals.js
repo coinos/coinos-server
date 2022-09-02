@@ -1,7 +1,7 @@
-var express = require('express');
+import express from 'express';
 var router = express.Router();
 
-const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid';
 
 router.get('/', function(req, res, next) {
   res.send('list of referrals...');
@@ -272,22 +272,22 @@ router.get(
  * 
  * @apiDescription returns boolean indicating if user is referred or not
  */
- router.get(
-  "/isReferred/:user_id",
-  ah(async (req, res) => {
-    const { user_id } = req.params;
+router.get(
+ "/isReferred/:user_id",
+ ah(async (req, res) => {
+   const { user_id } = req.params;
 
-    var referred = await knex('referrals')
-      .select('referrals.id')
-      .where('user_id', 'like', user_id)
-      .where('status', 'like', 'used')
-    
-    if (referred && referred.length) {
-      res.send({referred: true})
-    } else {
-      res.send({referred: false})
-    }
-  })
- );
+   var referred = await knex('referrals')
+     .select('referrals.id')
+     .where('user_id', 'like', user_id)
+     .where('status', 'like', 'used')
+   
+   if (referred && referred.length) {
+     res.send({referred: true})
+   } else {
+     res.send({referred: false})
+   }
+ })
+);
 
-module.exports = router;
+export default router;

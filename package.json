@@ -70,5 +70,6 @@
   "apidoc": {
     "title": "CoinOS Server API Documentation",
     "url": "https://coinos.io/api"
-  }
+  },
+  "type": "module"
 }

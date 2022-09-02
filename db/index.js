@@ -1,8 +1,5 @@
-const Sequelize = require("sequelize");
-
-const dbOptions = require("./../config/knexfile.js")[
-  process.env.NODE_ENV || "development"
-];
+import Sequelize from 'sequelize';
+import dbOptions from './../config/knexfile.js';
 
 db = new Sequelize(
   dbOptions.connection.database,
@@ -23,15 +20,15 @@ db.authenticate().catch((err) => {
 
 knex = require("knex")(dbOptions);
 
-require("./models/accounts.js");
-require("./models/codes.js");
-require("./models/deposits.js");
-require("./models/invoices.js");
-require("./models/keys.js");
-require("./models/payments.js");
-require("./models/orders.js");
-require("./models/users.js");
-require("./models/withdrawals.js");
+import './models/accounts.js';
+import './models/codes.js';
+import './models/deposits.js';
+import './models/invoices.js';
+import './models/keys.js';
+import './models/payments.js';
+import './models/orders.js';
+import './models/users.js';
+import './models/withdrawals.js';
 
 // Require models in order (to enable FK relationship specs in models)
 
@@ -39,8 +36,9 @@ require("./models/withdrawals.js");
 // require("./normalized/user_keys.js");
 // require("./normalized/user_preferences.js");
 
-require("./models/referrals.js");
-require("./models/waiting_list.js");
+import './models/referrals.js';
+
+import './models/waiting_list.js';
 
 // require("./normalized/subscriptions.js");
 // require("./normalized/user_subscriptions.js");

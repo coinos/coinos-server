@@ -1,4 +1,4 @@
-module.exports = ah(async (req, res) => {
+export default ah(async (req, res) => {
   let { amount, route, memo, payreq } = req.body;
   let { user } = req;
 

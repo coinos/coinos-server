@@ -1,11 +1,11 @@
-const reverse = require("buffer-reverse");
-const zmq = require("zeromq/v5-compat");
-const { Op } = require("sequelize");
-const { fromBase58 } = require("bip32");
-const bitcoin = require("bitcoinjs-lib");
-const { Block, networks, Transaction } = require("liquidjs-lib");
-const wretch = require("wretch");
-const fetch = require("node-fetch");
+import reverse from 'buffer-reverse';
+import zmq from 'zeromq/v5-compat';
+import { Op } from 'sequelize';
+import { fromBase58 } from 'bip32';
+import bitcoin from 'bitcoinjs-lib';
+import { Block, networks, Transaction } from 'liquidjs-lib';
+import wretch from 'wretch';
+import fetch from 'node-fetch';
 wretch().polyfills({ fetch });
 
 const network =
@@ -13,7 +13,7 @@ const network =
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
-const { computeConversionFee } = require('./conversionFee.js');
+import { computeConversionFee } from './conversionFee.js';
 
 const getAccount = async (params, transaction) => {
   let account = await db.Account.findOne({

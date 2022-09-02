@@ -1,4 +1,4 @@
-const { computeConversionFee } = require('./conversionFee.js');
+import { computeConversionFee } from './conversionFee.js';
 
 const handlePayment = async (msg) => {
   l.info("incoming lightning payment", msg.value, msg.payment_request, msg.settled);

@@ -1,4 +1,4 @@
-exports.up = function(knex) {
+export const up = function(knex) {
   return knex.schema.createTable('bank_accounts', function(t) {
     t.increments('id').unsigned().primary();
     t.int('user_id').notNull();
@@ -13,9 +13,9 @@ exports.up = function(knex) {
     
     t.timestamps();
   })
-}
+};
 
-exports.down = function(knex) {
+export const down = function(knex) {
   return knex.schema.dropTable('user_security');
 };
 

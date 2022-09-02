@@ -1,5 +1,5 @@
-const { Op } = require("sequelize");
-const axios = require("axios");
+import { Op } from 'sequelize';
+import axios from 'axios';
 
 app.get(
   "/invoice",
