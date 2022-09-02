@@ -68,6 +68,7 @@ require("./lib/sockets");
 require("./lib/webhooks");
 require("./lib/passport");
 require("./lib/register");
+require("./lib/upload");
 require("./lib/send");
 require("./lib/sync");
 

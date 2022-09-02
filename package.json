@@ -30,6 +30,7 @@
     "express-async-handler": "^1.1.4",
     "express-pino-logger": "^6.0.0",
     "express-session": "^1.16.2",
+    "file-type": "^18.0.0",
     "http-proxy-middleware": "^0.20.0",
     "imap": "^0.8.19",
     "jsonwebtoken": "^8.5.1",
