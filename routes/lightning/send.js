@@ -5,7 +5,7 @@ export default async (req, res) => {
   try {
     res.send(await send(amount, memo, payreq, user));
   } catch (e) {
-    l.error(
+    err(
       "problem sending lightning payment",
       user.username,
       payreq,

@@ -4,7 +4,7 @@ export default async (req, res) => {
   const { params } = req.body;
   const [pubkey, host] = params.uri.split("@");
 
-  l.info("connecting to peer", req.user.username, pubkey, host);
+  l("connecting to peer", req.user.username, pubkey, host);
   let result;
   try {
     result = await lnp.connectPeer({
@@ -13,7 +13,7 @@ export default async (req, res) => {
     });
   } catch (e) {
     if (!e.message.includes("already connected")) {
-      l.error("problem connecting to peer", e.message);
+      err("problem connecting to peer", e.message);
       return res.status(500).send(e.message);
     }
   }
@@ -23,7 +23,7 @@ export default async (req, res) => {
   try {
     remoteid = (await lnp.getInfo({})).identity_pubkey;
   } catch (e) {
-    l.error("problem getting lightning node info", e.message);
+    err("problem getting lightning node info", e.message);
     return res.status(500).send(e.message);
   }
 
@@ -33,7 +33,7 @@ export default async (req, res) => {
     let response = await axios.get(url);
     res.send(response.data);
   } catch (e) {
-    l.error("problem sending channel request", e.message);
+    err("problem sending channel request", e.message);
     return res.status(500).send({ status: "ERROR", reason: e.message });
   }
 };

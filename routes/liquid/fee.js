@@ -59,7 +59,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
     replaceable
   );
 
-  l.info("funding tx for fee estimate", tx);
+  l("funding tx for fee estimate", tx);
 
   tx = await node.fundRawTransaction(tx, params);
 
@@ -68,7 +68,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
 
   decoded = await node.decodeRawTransaction(signed.hex);
   feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
-  l.info("estimated", asset, feeRate);
+  l("estimated", asset, feeRate);
 
   return { feeRate, tx };
 };
@@ -78,7 +78,7 @@ export default async (req, res) => {
     let tx = await liquidTx({ ...req.body, user: req.user });
     res.send(tx);
   } catch (e) {
-    l.error("error estimating liquid fee", e.message, e.stack);
+    err("error estimating liquid fee", e.message, e.stack);
     return res.status(500).send(e.message);
   }
 };

@@ -45,7 +45,7 @@ app.post("/sendToTokenHolders", auth, async (req, res, next) => {
 app.get("/except", adminAuth, (req, res) => {
   let s = fs.createWriteStream("exceptions", { flags: "a" });
   unaccounted.map(tx => s.write(tx.txid + "\n"));
-  l.info("updated exceptions");
+  l("updated exceptions");
   res.send("updated exceptions");
 });
 
@@ -55,7 +55,7 @@ if (config.lna) {
   app.post("/lightning/invoice", lnRoutes.invoice);
   app.post("/lightning/query", auth, lnRoutes.query);
   app.post("/lightning/send", auth, lnRoutes.send);
-  import("./lightning/receive");
+  import("./lightning/receive.js");
 }
 
 if (config.bitcoin) {
@@ -64,7 +64,7 @@ if (config.bitcoin) {
   app.post("/bitcoin/sweep", auth, btcRoutes.sweep);
   app.post("/bitcoin/fee", auth, btcRoutes.fee);
   app.post("/bitcoin/send", auth, btcRoutes.send);
-  import("./bitcoin/receive");
+  import("./bitcoin/receive.js");
 
   setTimeout(async () => {
     try {
@@ -84,7 +84,7 @@ if (config.liquid) {
   // app.post("/liquid/fee", auth, lqRoutes.fee);
   app.post("/liquid/send", auth, lqRoutes.send);
   // app.post("/taxi", auth, lqRoutes.taxi);
-  import("./liquid/receive");
+  import("./liquid/receive.js");
 
   setTimeout(async () => {
     try {
@@ -93,7 +93,7 @@ if (config.liquid) {
       const parts = hdkeypath.split("/");
       app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
     } catch (e) {
-      l.warn("Problem getting liquid address index", e.message);
+      warn("Problem getting liquid address index", e.message);
     }
   }, 50);
 }

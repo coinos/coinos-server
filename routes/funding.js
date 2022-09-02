@@ -22,7 +22,7 @@ app.post(
     };
 
     mailgun.messages().send(data);
-    l.info("id uploaded", user.username);
+    l("id uploaded", user.username);
 
     res.end();
   })
@@ -37,7 +37,7 @@ app.post(
     else user.verified = "proof";
     await user.save();
     emit(user.username, "user", user);
-    l.info("id proof uploaded", user.username);
+    l("id proof uploaded", user.username);
 
     res.end();
   })
@@ -77,7 +77,7 @@ app.post(
 
       res.send(deposit);
     } catch (e) {
-      l.error("funding error", e.message);
+      err("funding error", e.message);
       res.status(500).send("Funding request failed");
     }
   })
@@ -103,7 +103,7 @@ app.post(
 
       res.end();
     } catch (e) {
-      l.error("withdrawal error", e.message);
+      err("withdrawaerr", e.message);
       res.status(500).send("Withdrawal request failed");
     }
   })

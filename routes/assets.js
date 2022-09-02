@@ -1,3 +1,4 @@
+import { rates } from "../lib/store.js";
 import app from "../app.js";
 import { auth } from "../lib/passport.js";
 import axios from 'axios';
@@ -17,7 +18,7 @@ let fetchAssets;
       app.set("assets", liquid_assets);
       console.debug("using static assets..." + e.message);
     } else {
-      l.error("error fetching assets", e.message);
+      err("error fetching assets", e.message);
       res.status(500).send("error fetching assets");
     }
   }
@@ -117,7 +118,7 @@ app.post(
         .sort()
         .reduce((r, k) => ((r[k] = contract[k]), r), {});
 
-      l.info(
+      l(
         "attempting issuance",
         req.user.username,
         contract,
@@ -154,7 +155,7 @@ app.post(
       try {
         ria = await lq.rawIssueAsset(funded.hex, [params]);
       } catch (e) {
-        l.info(asset_amount, token_amount, params);
+        l(asset_amount, token_amount, params);
         throw new Error(e.message);
       }
 
@@ -183,7 +184,7 @@ app.post(
         let { user } = account;
 
         if (Math.round(funded.fee * SATS) > account.balance) {
-          l.error(
+          err(
             "amount exceeds balance",
             asset_amount,
             funded.fee,
@@ -216,7 +217,7 @@ app.post(
         );
 
         emit(user.username, "account", account);
-        l.info(
+        l(
           "issued asset",
           user.username,
           params.asset_amount,
@@ -290,7 +291,7 @@ app.post(
 
       res.send(issuances[txid] ? issuances[txid] : { asset });
     } catch (e) {
-      l.error("asset issuance failed", e.message, e.stack);
+      err("asset issuance failed", e.message, e.stack);
       res.status(500).send(e.message);
     }
   })
@@ -307,7 +308,7 @@ app.post(
       }
     });
 
-    l.info("registering", asset, account.contract);
+    l("registering", asset, account.contract);
 
     try {
       const { data: result } = await axios.post(
@@ -317,10 +318,10 @@ app.post(
           contract: account.contract
         }
       );
-      l.info("register asset result", req.user.username, result);
+      l("register asset result", req.user.username, result);
       res.send(result);
     } catch (e) {
-      l.error("asset registration failed", e.message);
+      err("asset registration failed", e.message);
       res.status(500).send(e.message);
     }
   })
@@ -408,7 +409,7 @@ app.post(
           amount: -amount,
           account_id: account.id,
           user_id: user.id,
-          rate: app.get("rates")[user.currency],
+          rate: rates[user.currency],
           currency: user.currency,
           confirmed: true,
           hash: `Loaded Faucet - ${a2.ticker}`,
@@ -420,17 +421,17 @@ app.post(
         payment = payment.get({ plain: true });
         payment.account = account.get({ plain: true });
 
-        l.info("sent internal", user.username, -payment.amount);
+        l("sent internal", user.username, -payment.amount);
 
         emit(user.username, "payment", payment);
         emit(user.username, "account", account);
         emit(user.username, "user", user);
 
-        l.info("loaded faucet", asset, amount);
+        l("loaded faucet", asset, amount);
         res.end();
       });
     } catch (e) {
-      l.error("problem loading faucet", user.username, e.message);
+      err("problem loading faucet", user.username, e.message);
       return res.status(500).send(e.message);
     }
   })

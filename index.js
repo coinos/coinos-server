@@ -25,7 +25,7 @@ import { networks } from "./lib/store.js";
 //
 //   if (req.user) details.username = req.user.username;
 //
-//   l.error("JSON Error: ", JSON.stringify(details));
+//   err("JSON Error: ", JSON.stringify(details));
 //   res.status(500);
 //   res.set({
 //     "Cache-Control": "no-cache"

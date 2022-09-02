@@ -4,7 +4,7 @@ import { computeConversionFee } from './conversionFee.js';
 import { sendLiquid } from "../liquid/send.js";
 
 const handlePayment = async (msg) => {
-  l.info("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
+  l("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
   if (!msg.settled) return;
   let account, total, user;
 
@@ -15,7 +15,7 @@ const handlePayment = async (msg) => {
   });
 
   if (!invoice)
-    return l.warn("received lightning with no invoice", msg.payment_request);
+    return warn("received lightning with no invoice", msg.payment_request);
 
   try {
     await db.transaction(async (transaction) => {
@@ -85,7 +85,7 @@ const handlePayment = async (msg) => {
       emit(user.username, "account", payment.account);
       notify(user, `Received ${total} SAT`);
 
-      l.info(
+      l(
         "lightning payment received",
         user.username,
         payment.amount,
@@ -95,7 +95,7 @@ const handlePayment = async (msg) => {
 
     let c = convert[msg.payment_request];
     if (msg.payment_request && c) {
-      l.info(
+      l(
         "lightning detected for conversion request",
         msg.payment_request,
         c.address,
@@ -112,11 +112,11 @@ const handlePayment = async (msg) => {
           limit: total,
         });
       } catch (e) {
-        l.error("problem sending liquid payment", e.message, e.stack);
+        err("problem sending liquid payment", e.message, e.stack);
       }
     }
   } catch (e) {
-    l.error("problem receiving lightning payment", e.message);
+    err("problem receiving lightning payment", e.message);
   }
 };
 

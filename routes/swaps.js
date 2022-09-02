@@ -1,9 +1,11 @@
+import { rates } from "../lib/store.js";
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
-import getAccount from '../lib/account';
+import getAccount from '../lib/account.js';
 import { Op, col } from '@sequelize/core';
 import { v4 as uuidv4 } from 'uuid';
+import { rates } from "../lib/store.js";
 
 const shallow = a => {
   let b = {};
@@ -48,7 +50,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
     if (v1 > a1acc.balance)
       throw new Error(`Insufficient funds, ${v1} ${a1acc.balance}`);
 
-    l.info(
+    l(
       `placing order ${v1} ${a1.substr(0, 6)} for ${v2} ${a2.substr(0, 6)}`,
       user.username
     );
@@ -63,7 +65,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         account_id: a1acc.id,
         user_id: user.id,
         currency: user.currency,
-        rate: app.get("rates")[user.currency],
+        rate: rates[user.currency],
         confirmed: true,
         received: false,
         network: "COINOS"
@@ -132,7 +134,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             account_id: a1acc.id,
             user_id: user.id,
             currency: user.currency,
-            rate: app.get("rates")[user.currency],
+            rate: rates[user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -157,7 +159,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
               account_id: btc.id,
               user_id: order.user_id,
               currency: order.user.currency,
-              rate: app.get("rates")[order.user.currency],
+              rate: rates[order.user.currency],
               confirmed: true,
               received: true,
               network: "COINOS"
@@ -196,7 +198,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             account_id: a2acc.id,
             user_id: user.id,
             currency: user.currency,
-            rate: app.get("rates")[user.currency],
+            rate: rates[user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -217,7 +219,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             account_id: order.a2_id,
             user_id: order.user_id,
             currency: order.user.currency,
-            rate: app.get("rates")[order.user.currency],
+            rate: rates[order.user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -290,7 +292,7 @@ const cancel = async (user, id) => {
         account_id: account.id,
         user_id: user.id,
         currency: user.currency,
-        rate: app.get("rates")[user.currency],
+        rate: rates[user.currency],
         confirmed: true,
         received: true,
         network: "COINOS"
@@ -311,7 +313,7 @@ const cancel = async (user, id) => {
           account_id: btc.id,
           user_id: user.id,
           currency: user.currency,
-          rate: app.get("rates")[user.currency],
+          rate: rates[user.currency],
           confirmed: true,
           received: true,
           network: "COINOS"
@@ -353,7 +355,7 @@ app.post(
       await swap(user, req.body);
       res.end();
     } catch (e) {
-      l.error(req.user.username, e.message);
+      err(req.user.username, e.message);
       res.status(500).send(e.message);
     }
   })
@@ -401,7 +403,7 @@ if (config.maker) {
   debug('setup maker account...')
   config.maker.map(({ amount, c1, c2, currency, askMultiplier, bidMultiplier }) => {
     setInterval(async () => {
-      if (!app.get("rates")) return;
+      if (!rates) return;
 
       const user = await db.User.findOne({
         where: {
@@ -443,8 +445,8 @@ if (config.maker) {
             v2: Math.round(
               amount *
                 SATS *
-                (((app.get("ask") * app.get("rates")[currency]) /
-                  app.get("rates")["USD"]) *
+                (((app.get("ask") * rates[currency]) /
+                  rates["USD"]) *
                   askMultiplier)
             )
           };
@@ -494,7 +496,7 @@ if (config.maker) {
             try {
               await swap(user, params);
             } catch (e) {
-              l.warn("Failed to make ask", e.message);
+              warn("Failed to make ask", e.message);
             }
           }
 
@@ -526,8 +528,8 @@ if (config.maker) {
             v1: Math.round(
               amount *
                 SATS *
-                ((app.get("bid") * app.get("rates")[currency]) /
-                  app.get("rates")["USD"]) *
+                ((app.get("bid") * rates[currency]) /
+                  rates["USD"]) *
                 bidMultiplier
             ),
             v2: amount * SATS
@@ -583,7 +585,7 @@ if (config.maker) {
             try {
               await swap(user, params);
             } catch (e) {
-              l.warn("Failed to make bid", e.message);
+              warn("Failed to make bid", e.message);
             }
           }
         });

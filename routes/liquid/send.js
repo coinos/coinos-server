@@ -1,3 +1,5 @@
+import { rates } from "../../lib/store.js";
+import { addresses } from "../../lib/store.js";
 import config from "../../config/index.js";
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
@@ -9,7 +11,7 @@ import {
 
 export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   try {
-    l.info("sending liquid", amount, address);
+    l("sending liquid", amount, address);
     if (!tx) {
       ({ tx } = await liquidTx({
         address,
@@ -96,7 +98,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
           throw new Error("Tx amount exceeds authorized amount");
 
         if (asset !== btc || total) {
-          l.info("creating liquid payment", user.username, asset, total, fee);
+          l("creating liquid payment", user.username, asset, total, fee);
 
           let account = await db.Account.findOne({
             where: {
@@ -126,7 +128,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
           if (asset !== btc) conversionFee = 0;
 
           if (total > account.balance) {
-            l.warn("amount exceeds balance", {
+            warn("amount exceeds balance", {
               total,
               fee,
               balance: account.balance
@@ -137,7 +139,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
               }, have ${account.balance}`
             );
           } else if (total + conversionFee > account.balance) {
-            l.warn("amount plus conversion fee exceeds balance", {
+            warn("amount plus conversion fee exceeds balance", {
               total,
               fee,
               conversionFee,
@@ -182,7 +184,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
               memo: "Liquid conversion fee",
               account_id: receiverAccount.id,
               user_id: receiverAccount.user_id,
-              rate: app.get("rates")[receiverAccount.user.currency],
+              rate: rates[receiverAccount.user.currency],
               currency: receiverAccount.user.currency,
               confirmed: true,
               received: true,
@@ -200,7 +202,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
             fee,
             memo,
             user_id: user.id,
-            rate: app.get("rates")[user.currency],
+            rate: rates[user.currency],
             currency: user.currency,
             address,
             confirmed: true,
@@ -241,11 +243,11 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
       await lq.walletPassphrase(config.liquid.walletpass, 300);
 
     let txid = await lq.sendRawTransaction(signed.hex);
-    l.info("sent liquid tx", txid, address);
+    l("sent liquid tx", txid, address);
 
     return main;
   } catch (e) {
-    l.error("problem sending liquid", e.message);
+    err("problem sending liquid", e.message);
   }
 };
 
@@ -255,7 +257,7 @@ export default async (req, res) => {
   try {
     res.send(await sendLiquid({ ...req.body, user }));
   } catch (e) {
-    l.error("problem sending liquid", user.username, e.message);
+    err("problem sending liquid", user.username, e.message);
     return res.status(500).send(e);
   }
 };

@@ -95,7 +95,7 @@ app.post(
     await user.save();
     emit(user.username, "user", user);
     emit(user.username, "otpsecret", user.otpsecret);
-    l.info("disabled 2fa", user.username);
+    l("disabled 2fa", user.username);
     res.send({});
   })
 
@@ -124,10 +124,10 @@ app.post(
         return res.status(500).send("Invalid token");
       }
     } catch (e) {
-      l.error("error setting up 2fa", e);
+      err("error setting up 2fa", e);
     }
 
-    l.info("enabled 2fa", user.username);
+    l("enabled 2fa", user.username);
     res.send({});
   })
 
@@ -169,12 +169,12 @@ app.post(
 
       let token;
       if (user.username !== username && exists) {
-        l.error("username taken", username, user.username, exists.username);
+        err("username taken", username, user.username, exists.username);
         return res.status(500).send("Username taken");
       } else {
         sockets[username] = sockets[user.username];
         if (user.username !== username)
-          l.info("changing username", user.username, username);
+          l("changing username", user.username, username);
         user.username = username;
 
         token = jwt.sign({ username }, config.jwt);
@@ -203,7 +203,7 @@ app.post(
       emit(user.username, "user", user);
       res.send({ user, token });
     } catch (e) {
-      l.error("error updating user", e.message);
+      err("error updating user", e.message);
     }
   })
 
@@ -327,7 +327,7 @@ let login = async (req, res) => {
         const response = await axios.get(url);
         res.send(response.data);
       } catch (e) {
-        l.error("problem calling lnurl login", e.message);
+        err("problem calling lnurl login", e.message);
         res.status(500).send(e.message);
       }
 
@@ -343,7 +343,7 @@ let login = async (req, res) => {
       (user.password &&
         !(await bcrypt.compare(req.body.password, user.password)))
     ) {
-      l.warn("invalid username or password attempt", req.body.username);
+      warn("invalid username or password attempt", req.body.username);
       return res.status(401).end();
     }
 
@@ -355,7 +355,7 @@ let login = async (req, res) => {
       return res.status(401).send("2fa required");
     }
 
-    l.info(
+    l(
       "login",
       req.body.username,
       req.headers["x-forwarded-for"] || req.connection.remoteAddress
@@ -369,7 +369,7 @@ let login = async (req, res) => {
     user = pick(user, ...whitelist);
     res.send({ user, token });
   } catch (e) {
-    l.error("login error", e.message, req.connection.remoteAddress);
+    err("login error", e.message, req.connection.remoteAddress);
     res.status(401).end();
   }
 
@@ -387,7 +387,7 @@ app.post(
     const { username } = req.user;
 
     if (username) {
-      l.info("logging out", username);
+      l("logging out", username);
       let i = req.user.subscriptions.findIndex(
         s => JSON.stringify(s) === subscription
       );
@@ -453,7 +453,7 @@ app.get(
 
         // async request to node to bump its internal index but don't use result
         lq.getNewAddress().catch(e =>
-          l.warn("Problem bumping liquid address index", e.message)
+          warn("Problem bumping liquid address index", e.message)
         );
 
         i = parseInt(app.get("lqAddressIndex"));
@@ -466,7 +466,7 @@ app.get(
           i = parseInt(parts[parts.length - 1].slice(0, -1));
         }
 
-        l.info("liquid address index", i);
+        l("liquid address index", i);
         if (!i) throw new Error("Problem generating address");
 
         hd = fromBase58(config.liquid.masterkey, n).derivePath(`m/0'/0'/${i}'`);
@@ -572,7 +572,7 @@ app.post(
         res.end();
       });
     } catch (e) {
-      l.error("problem updating account", e.message);
+      err("problem updating account", e.message);
       return res.status(500).send("There was a problem updating the account");
     }
   })
@@ -615,7 +615,7 @@ app.post(
 
       res.send(user);
     } catch (e) {
-      l.error("problem switching account", e.message);
+      err("problem switching account", e.message);
       return res.status(500).send("There was a problem switching accounts");
     }
   })
@@ -638,7 +638,7 @@ app.post(
     )
       subscriptions.push(subscription);
     req.user.subscriptions = subscriptions;
-    l.info("subscribing", req.user.username);
+    l("subscribing", req.user.username);
     await req.user.save();
     res.sendStatus(201);
   })
@@ -669,7 +669,7 @@ app.post(
           transaction
         });
 
-        l.info("redeeming", redeemcode);
+        l("redeeming", redeemcode);
 
         if (!source) fail("Invalid code");
         if (source.redeemed) fail("Voucher has already been redeemed");
@@ -712,7 +712,7 @@ app.post(
             user_id: user.id,
             hash: "Voucher " + redeemcode,
             memo,
-            rate: app.get("rates")[user.currency],
+            rate: rates[user.currency],
             currency: user.currency,
             confirmed,
             network,
@@ -734,7 +734,7 @@ app.post(
       });
     } catch (e) {
       delete redeeming[redeemcode];
-      l.error("problem redeeming", e.message);
+      err("problem redeeming", e.message);
       return res.status(500).send("There was a problem redeeming the voucher");
     }
   })

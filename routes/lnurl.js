@@ -1,3 +1,4 @@
+import { rates } from "../lib/store.js";
 import app from "../app.js";
 import config from "../config/index.js";
 import axios from "axios";
@@ -34,7 +35,7 @@ app.get("/url", async (req, res, next) => {
       throw new Error("code not found");
     }
   } catch (e) {
-    l.error("couldn't find url", e.message);
+    err("couldn't find url", e.message);
   }
 });
 
@@ -51,7 +52,7 @@ app.get("/withdraw", auth, async (req, res, next) => {
 
     res.send(result);
   } catch (e) {
-    l.error("problem generating withdrawl url", e.message);
+    err("problem generating withdrawl url", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -68,7 +69,7 @@ app.post("/code", async (req, res, next) => {
 
     res.send(code);
   } catch (e) {
-    l.error(e.errors);
+    err(e.errors);
     res.status(500).send(e.message);
   }
 });
@@ -86,7 +87,7 @@ app.post("/withdraw", auth, async (req, res, next) => {
   await db.Invoice.create({
     user_id: user.id,
     text: pr,
-    rate: app.get("rates")[user.currency],
+    rate: rates[user.currency],
     currency: user.currency,
     amount: value,
     tip: 0,
@@ -97,7 +98,7 @@ app.post("/withdraw", auth, async (req, res, next) => {
     result = (await axios.get(url)).data;
     res.send(result);
   } catch (e) {
-    l.error("failed to withdraw", e.message);
+    err("failed to withdraw", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -128,13 +129,13 @@ app.get("/lnurlp/:username", async (req, res, next) => {
     });
 
     recipients[result.secret] = user;
-    l.info("recipient", user.username, result.secret);
+    l("recipient", user.username, result.secret);
 
     result = await axios.get(result.url);
 
     res.send(result.data);
   } catch (e) {
-    l.error("problem generating payment url", e.message);
+    err("problem generating payment url", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -160,10 +161,10 @@ app.get("/pay/:username", async (req, res, next) => {
     });
 
     recipients[result.secret] = user;
-    l.info("recipient", user.username, result.secret);
+    l("recipient", user.username, result.secret);
     res.send(result);
   } catch (e) {
-    l.error("problem generating payment url", e.message);
+    err("problem generating payment url", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -206,7 +207,7 @@ app.post("/pay", auth, async (req, res, next) => {
       res.send(await send(amount, "", data.pr, user));
     }
   } catch (e) {
-    l.error("failed to send payment", e.message);
+    err("failed to send payment", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -221,7 +222,7 @@ app.get("/login", optionalAuth, async (req, res, next) => {
 
     res.send(result);
   } catch (e) {
-    l.error("problem generating login url", e.message);
+    err("problem generating login url", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -255,7 +256,7 @@ app.get("/decode", async (req, res, next) => {
     const { data: params } = await axios.get(url);
     res.send(params);
   } catch (e) {
-    l.error("problem decoding lnurl", e.message);
+    err("problem decoding lnurl", e.message);
     res.status(500).send(e.message);
   }
 });
@@ -270,16 +271,16 @@ lnurlServer.on("payRequest:action:processed", async function(event) {
     let i = await db.Invoice.create({
       user_id: recipient.id,
       text: invoice,
-      rate: app.get("rates")[recipient.currency],
+      rate: rates[recipient.currency],
       currency: recipient.currency,
       amount: payreq.satoshis,
       tip: 0,
       network: "lightning"
     });
 
-    l.info("invoice created", i.text, i.amount);
+    l("invoice created", i.text, i.amount);
   } catch (e) {
-    l.error("problem finding lnurl invoice", e.message);
+    err("problem finding lnurl invoice", e.message);
   }
 });
 
@@ -421,7 +422,7 @@ lnurlServer.bindToHook(
                   memo: "Bitcoin conversion fee",
                   account_id: receiverAccount.id,
                   user_id: receiverAccount.user_id,
-                  rate: app.get("rates")[receiverAccount.user.currency],
+                  rate: rates[receiverAccount.user.currency],
                   currency: receiverAccount.user.currency,
                   confirmed: true,
                   received: true,
@@ -438,7 +439,7 @@ lnurlServer.bindToHook(
                 account_id: account.id,
                 user_id: user.id,
                 hash: pr,
-                rate: app.get("rates")[user.currency],
+                rate: rates[user.currency],
                 currency: user.currency,
                 confirmed: true,
                 network: "lightning",
@@ -457,7 +458,7 @@ lnurlServer.bindToHook(
 
                 let p = payments.find(p => p.payment_request === pr);
                 if (p) {
-                  l.info("found payment", pr);
+                  l("found payment", pr);
                   payment.fee = p.fee;
                   await account.decrement({ balance: p.fee }, { transaction });
                   await account.reload({ transaction });
@@ -467,10 +468,10 @@ lnurlServer.bindToHook(
                   emit(user.username, "account", account);
                   emit(user.username, "payment", payment);
                 } else {
-                  l.warn("payment not found, fee not set", pr);
+                  warn("payment not found, fee not set", pr);
                 }
               } catch (e) {
-                l.error("problem trying to get ln withdrawal payment", e);
+                err("problem trying to get ln withdrawal payment", e);
               }
             }, 1000);
 
@@ -487,14 +488,14 @@ lnurlServer.bindToHook(
             emit(user.username, "payment", p);
           });
         } catch (e) {
-          l.error("failed to process withdrawal", e.message);
+          err("failed to process withdrawal", e.message);
           return next(e);
         }
       }
 
       if (next) next(req, res);
     } catch (e) {
-      l.error("unhandled lnurl error", e.message);
+      err("unhandled lnurerr", e.message);
     }
   }
 );
@@ -524,11 +525,11 @@ lnurlServer.bindToHook("login", async key => {
         });
 
         if (created) {
-          l.info("added key", username, k);
+          l("added key", username, k);
           emit(username, "key", k);
         }
       } else {
-        l.info("user not found");
+        l("user not found");
         user = await register({
           username: key.substr(0, 8),
           password: key
@@ -544,6 +545,6 @@ lnurlServer.bindToHook("login", async key => {
         ws.send(JSON.stringify({ type: "token", data: { token, key } }));
     }
   } catch (e) {
-    l.error("problem with login hook", e.message);
+    err("problem with login hook", e.message);
   }
 });

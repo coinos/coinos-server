@@ -1,15 +1,14 @@
+import { rates } from "../../lib/store.js";
+import { addresses } from "../../lib/store.js";
 import { sendLiquid } from "./send.js";
-import { notify } from "../lib/notifications.js";
-import { callWebhook } from "../lib/webhooks.js";
+import { notify } from "../../lib/notifications.js";
+import { callWebhook } from "../../lib/webhooks.js";
 import reverse from 'buffer-reverse';
 import zmq from 'zeromq/v5-compat';
 import { Op } from '@sequelize/core';
 import { fromBase58 } from 'bip32';
 import bitcoin from 'bitcoinjs-lib';
 // import { Block, networks, Transaction } from 'liquidjs-lib';
-import wretch from 'wretch';
-import fetch from 'node-fetch';
-wretch().polyfills({ fetch });
 
 const network =
   networks[
@@ -26,7 +25,7 @@ const getAccount = async (params, transaction) => {
   });
 
   if (account) {
-    l.info("found account", params, account.asset, account.id);
+    l("found account", params, account.asset, account.id);
     return account;
   }
 
@@ -68,7 +67,7 @@ const getAccount = async (params, transaction) => {
     });
 
     if (existing) {
-      l.info("existing", existing.id);
+      l("existing", existing.id);
       ({ domain, ticker, precision, name } = existing);
     }
   }
@@ -105,7 +104,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
     tx = await lq.decodeRawTransaction(unblinded.hex);
     blinded = await lq.decodeRawTransaction(hex);
   } catch (e) {
-    return l.error("problem decoding liquid tx", e.message);
+    return err("problem decoding liquid tx", e.message);
   }
 
   Promise.all(
@@ -173,7 +172,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             const currency = invoice ? invoice.currency : user.currency;
             const rate = invoice
               ? invoice.rate
-              : app.get("rates")[user.currency];
+              : rates[user.currency];
             const tip = invoice ? invoice.tip : 0;
             const memo = invoice ? invoice.memo : "";
 
@@ -201,13 +200,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             emit(user.username, "payment", payment);
             emit(user.username, "account", payment.account);
-            l.info("liquid detected", address, user.username, asset, value);
+            l("liquid detected", address, user.username, asset, value);
             notify(user, `${value} SAT payment detected`);
             callWebhook(invoice, payment);
           });
         }
       } catch (e) {
-        l.error("Problem processing transaction", e.message, e.stack);
+        err("Problem processing transaction", e.message, e.stack);
       }
     })
   );
@@ -357,7 +356,7 @@ setInterval(async () => {
           emit(user.username, "account", p.account);
           emit(user.username, "payment", p);
 
-          l.info(
+          l(
             "liquid confirmed",
             user.username,
             p.account.asset,
@@ -368,7 +367,7 @@ setInterval(async () => {
           notify(user, `${total} SAT payment confirmed`);
           callWebhook(p.invoice, p);
         } else {
-          l.warn("couldn't find liquid payment", hash);
+          warn("couldn't find liquid payment", hash);
         }
 
         delete queue[hash];
@@ -376,7 +375,7 @@ setInterval(async () => {
 
       let c = convert[address];
       if (address && c && p.account.asset === network.assetHash) {
-        l.info(
+        l(
           "liquid detected for conversion request",
           address,
           c.address,
@@ -394,6 +393,6 @@ setInterval(async () => {
       }
     }
   } catch (e) {
-    l.error("problem processing queued liquid transaction", e.message, e.stack);
+    err("problem processing queued liquid transaction", e.message, e.stack);
   }
 }, 1000);

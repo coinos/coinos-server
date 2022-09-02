@@ -1,3 +1,5 @@
+import { rates } from "../../lib/store.js";
+import { addresses } from "../../lib/store.js";
 import config from "../../config/index.js";
 const btc = config.liquid.btcasset;
 import {
@@ -74,10 +76,10 @@ export default async (req, res) => {
       }
 
       if (total > account.balance) {
-        l.error("amount exceeds balance", amount, fee, account.balance);
+        err("amount exceeds balance", amount, fee, account.balance);
         throw new Error("low balance");
       } else if (total + conversionFee > account.balance) {
-        l.error(
+        err(
           "total (after conversion fee) exceeds balance",
           amount,
           fee,
@@ -121,7 +123,7 @@ export default async (req, res) => {
             memo: "Bitcoin conversion fee",
             account_id: receiverAccount.id,
             user_id: receiverAccount.user_id,
-            rate: app.get("rates")[receiverAccount.user.currency],
+            rate: rates[receiverAccount.user.currency],
             currency: receiverAccount.user.currency,
             confirmed: true,
             received: true,
@@ -139,7 +141,7 @@ export default async (req, res) => {
         memo,
         account_id: account.id,
         user_id: user.id,
-        rate: app.get("rates")[user.currency],
+        rate: rates[user.currency],
         currency: user.currency,
         address,
         confirmed: true,
@@ -164,13 +166,13 @@ export default async (req, res) => {
       res.send(payment);
 
       payments.push(params.hash);
-      l.info("sent bitcoin", user.username, total);
+      l("sent bitcoin", user.username, total);
     });
   } catch (e) {
     if (e.message.includes("Insufficient"))
       e.message =
         "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
-    l.error("error sending bitcoin", e.message);
+    err("error sending bitcoin", e.message);
     console.log(e);
     return res.status(500).send(e.message);
   }

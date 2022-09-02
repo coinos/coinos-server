@@ -16,7 +16,7 @@ export default async (req, res) => {
   let utxos;
   if (!feeRate) feeRate = (await bc.estimateSmartFee(6)).feerate * SATS;
   feeRate = Math.round(feeRate / 1000);
-  l.info("sweeping", req.user.username, from, amount, feeRate);
+  l("sweeping", req.user.username, from, amount, feeRate);
 
   try {
     let {
@@ -32,7 +32,7 @@ export default async (req, res) => {
       ({ data: utxos } = await axios.get(`${api}/address/${from}/utxo`));
       console.log("got utxos", utxos);
     } catch (e) {
-      l.error("problem fetching utxos", e.message);
+      err("problem fetching utxos", e.message);
     }
 
     let targets = [
@@ -47,7 +47,7 @@ export default async (req, res) => {
     if (balance === amount) {
       delete targets[0].value;
       ({ inputs, outputs, fee } = split(utxos, targets, feeRate));
-      l.info("split", inputs, outputs, fee);
+      l("split", inputs, outputs, fee);
     }
 
     if (!inputs || !outputs)
@@ -82,6 +82,6 @@ export default async (req, res) => {
     if (balance !== amount) total = 0;
     res.send({ feeRate, psbt, total });
   } catch (e) {
-    l.error("problem getting address stats", from, e.message);
+    err("problem getting address stats", from, e.message);
   }
 };

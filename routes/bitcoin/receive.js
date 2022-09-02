@@ -1,3 +1,4 @@
+import { rates } from "../../lib/store.js";
 import { notify } from "../lib/notifications.js";
 import { callWebhook } from "../lib/webhooks.js";
 import reverse from 'buffer-reverse';
@@ -77,7 +78,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             const currency = invoice ? invoice.currency : user.currency;
             const rate = invoice
               ? invoice.rate
-              : app.get("rates")[user.currency];
+              : rates[user.currency];
             const tip = invoice ? invoice.tip : 0;
             const memo = invoice ? invoice.memo : "";
 
@@ -139,7 +140,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             emit(user.username, "account", account);
 
             emit(user.username, "payment", payment);
-            l.info("bitcoin detected", user.username, value);
+            l("bitcoin detected", user.username, value);
             notify(user, `${value} SAT payment detected`);
             callWebhook(invoice, payment);
           });
@@ -220,13 +221,13 @@ setInterval(async () => {
 
             emit(user.username, "account", account);
             emit(user.username, "payment", p);
-            l.info("bitcoin confirmed", user.username, p.amount, p.tip);
+            l("bitcoin confirmed", user.username, p.amount, p.tip);
             notify(user, `${total} SAT payment confirmed`);
             callWebhook(p.invoice, p);
 
             let c = convert[address];
             if (address && c) {
-              l.info(
+              l(
                 "bitcoin detected to conversion address",
                 address,
                 c.address,
@@ -242,7 +243,7 @@ setInterval(async () => {
               });
             }
           } else {
-            l.warn("couldn't find bitcoin payment", hash);
+            warn("couldn't find bitcoin payment", hash);
           }
         }
 
@@ -250,7 +251,7 @@ setInterval(async () => {
       });
     }
   } catch (e) {
-    l.error(
+    err(
       "problem processing queued bitcoin transaction",
       e.message,
       e.stack

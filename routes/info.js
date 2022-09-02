@@ -35,16 +35,16 @@ app.get("/balances", async (req, res, next) => {
 
   let lnchannel; 
   let lnwallet;
-  let lninfo;
+  let l;
 
   if (config.lna) {
     if (config.lna.clightning) {
       const funds = await lna.listfunds();
-      lninfo = await lna.getinfo();
+      l = await lna.getinfo();
       lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
       lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
     } else {
-      lninfo = await lnp.getInfo({});
+      l = await lnp.getInfo({});
       lnchannel = parseInt((await lnp.channelBalance({}).balance));
       lnwallet = parseInt((await lnp.walletBalance({}).total_balance));
     } 

@@ -61,7 +61,7 @@ export default async (req, res) => {
 
     res.send({ feeRate, tx });
   } catch (e) {
-    l.error("bitcoin fee estimation error", e);
+    err("bitcoin fee estimation error", e);
     return res.status(500).send(e.message);
   }
 };

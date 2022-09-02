@@ -1,3 +1,4 @@
+import { rates } from "../lib/store.js";
 import { callWebhook } from "../lib/webhooks.js";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
@@ -60,7 +61,7 @@ export default async (req, res, next) => {
         account_id: account.id,
         memo,
         user_id: user.id,
-        rate: app.get("rates")[user.currency],
+        rate: rates[user.currency],
         currency: user.currency,
         confirmed: true,
         hash: `#${uuidv4().substr(0, 6)} ${
@@ -70,7 +71,7 @@ export default async (req, res, next) => {
       };
 
       if (!username) {
-        l.info("creating redeemable payment");
+        l("creating redeemable payment");
         params.redeemcode = uuidv4();
         params.hash = `${req.get("origin")}/redeem/${params.redeemcode}`;
       }
@@ -80,7 +81,7 @@ export default async (req, res, next) => {
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
 
-      l.info("sent internal", user.username, -payment.amount);
+      l("sent internal", user.username, -payment.amount);
 
       emit(user.username, "payment", payment);
       emit(user.username, "account", account);
@@ -165,7 +166,7 @@ export default async (req, res, next) => {
           amount,
           account_id: a2.id,
           user_id: recipient.id,
-          rate: app.get("rates")[recipient.currency] * spread,
+          rate: rates[recipient.currency] * spread,
           currency: recipient.currency,
           confirmed: true,
           hash: `#${uuidv4().substr(0, 6)} Payment from ${user.username}`,
@@ -179,7 +180,7 @@ export default async (req, res, next) => {
 
           let c = convert[invoice.text];
           if (c) {
-            l.info(
+            l(
               "internal payment detected for conversion",
               invoice.text,
               c.address,
@@ -204,7 +205,7 @@ export default async (req, res, next) => {
         emit(recipient.username, "payment", p2);
         emit(recipient.username, "account", p2.account);
 
-        l.info("received internal", recipient.username, amount);
+        l("received internal", recipient.username, amount);
         notify(recipient, `Received ${amount} ${a2.ticker} sats`);
         callWebhook(invoice, p2);
       }
@@ -212,7 +213,7 @@ export default async (req, res, next) => {
     });
   } catch (e) {
     console.log(e);
-    l.error("problem sending internal payment", user.username, e.message);
+    err("problem sending internal payment", user.username, e.message);
     return res.status(500).send(e.message);
   }
 };

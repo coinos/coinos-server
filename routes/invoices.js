@@ -1,3 +1,5 @@
+import { rates } from "../lib/store.js";
+import { addresses } from "../lib/store.js";
 import app from "../app.js";
 import { optionalAuth } from "../lib/passport.js";
 import { Op } from "@sequelize/core";
@@ -18,7 +20,7 @@ app.get("/invoice", async (req, res, next) => {
 
     res.send(invoice);
   } catch (e) {
-    l.error("couldn't find invoice", e);
+    err("couldn't find invoice", e);
   }
 });
 
@@ -36,7 +38,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       throw new Error("tip amount out of range");
 
     if (liquidAddress) {
-      l.info("conversion request for", liquidAddress, invoice.text);
+      l("conversion request for", liquidAddress, invoice.text);
       convert[invoice.text] = { address: liquidAddress, tx };
     }
 
@@ -50,7 +52,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     }
     if (!user) throw new Error("user not provided");
     if (!invoice.currency) invoice.currency = user.currency;
-    if (!invoice.rate) invoice.rate = app.get("rates")[invoice.currency];
+    if (!invoice.rate) invoice.rate = rates[invoice.currency];
     if (invoice.tip > invoice.amount || invoice.tip > 1000000)
       throw new Error("tip is too large");
     if (invoice.tip < 0 || invoice.amount < 0)
@@ -58,7 +60,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     invoice.user_id = user.id;
     invoice.account_id = user.account_id;
 
-    l.info(
+    l(
       "creating invoice",
       user.username,
       invoice.network,
@@ -93,7 +95,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
 
     res.send(invoice);
   } catch (e) {
-    l.error(e.message, e.stack);
+    err(e.message, e.stack);
     res.status(500).send(`Problem during invoice creation: ${e.message}`);
   }
 });
