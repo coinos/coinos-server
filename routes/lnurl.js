@@ -1,162 +1,109 @@
-import axios from 'axios';
-import lnurl from 'lnurl';
-import jwt from 'jsonwebtoken';
-import qs from 'query-string';
-import persist from '../lib/persist';
-import bolt11 from 'bolt11';
+import app from "../app.js";
+import config from "../config/index.js";
+import axios from "axios";
+import lnurl from "lnurl";
+import jwt from "jsonwebtoken";
+import qs from "query-string";
+import persist from "../lib/persist.js";
+import bolt11 from "bolt11";
+import { optionalAuth, auth } from "../lib/passport.js";
 
-logins = persist("data/logins.json");
-recipients = persist("data/recipients.json");
-lnurlPayments = persist("data/payments.json");
-withdrawals = persist("data/withdrawals.json");
+export const logins = persist("data/logins.json");
+export const recipients = persist("data/recipients.json");
+export const lnurlPayments = persist("data/payments.json");
+export const withdrawals = persist("data/withdrawals.json");
 
-lnurlServer = lnurl.createServer(config.lnurl);
+export const lnurlServer = lnurl.createServer(config.lnurl);
 
-import { computeConversionFee, conversionFeeReceiver } from './lightning/conversionFee.js';
+import {
+  computeConversionFee,
+  conversionFeeReceiver
+} from "./lightning/conversionFee.js";
 
-var optionalAuth = function(req, res, next) {
-  passport.authenticate("jwt", { session: false }, function(err, user, info) {
-    req.user = user;
-    next();
-  })(req, res, next);
-};
-
-app.get(
-  "/url",
-  ah(async (req, res, next) => {
-    try {
-      const code = await db.Code.findOne({
-        where: {
-          code: req.query.code
-        }
-      });
-
-      if (code) {
-        res.send(code.text);
-      } else {
-        throw new Error("code not found");
+app.get("/url", async (req, res, next) => {
+  try {
+    const code = await db.Code.findOne({
+      where: {
+        code: req.query.code
       }
-    } catch (e) {
-      l.error("couldn't find url", e.message);
-    }
-  })
-);
-
-app.get(
-  "/withdraw",
-  auth,
-  ah(async (req, res, next) => {
-    const { min, max } = req.query;
-    try {
-      const result = await lnurlServer.generateNewUrl("withdrawRequest", {
-        minWithdrawable: min * 1000,
-        maxWithdrawable: max * 1000,
-        defaultDescription: "coinos voucher"
-      });
-
-      withdrawals[result.secret] = req.user;
-
-      res.send(result);
-    } catch (e) {
-      l.error("problem generating withdrawl url", e.message);
-      res.status(500).send(e.message);
-    }
-  })
-);
-
-app.post(
-  "/code",
-  ah(async (req, res, next) => {
-    try {
-      const { encoded } = req.body.lnurl;
-      const code = await db.Code.findOrCreate({
-        where: {
-          code: `lnurl:${encoded.substr(-32)}`,
-          text: encoded
-        }
-      });
-
-      res.send(code);
-    } catch (e) {
-      l.error(e.errors);
-      res.status(500).send(e.message);
-    }
-  })
-);
-
-app.post(
-  "/withdraw",
-  auth,
-  ah(async (req, res, next) => {
-    const { user } = req;
-    const {
-      amount: value,
-      params: { callback, k1 }
-    } = req.body;
-    const invoice = await lnp.addInvoice({ value });
-    const { payment_request: pr } = invoice;
-    const url = `${callback}?k1=${k1}&pr=${pr}`;
-
-    await db.Invoice.create({
-      user_id: user.id,
-      text: pr,
-      rate: app.get("rates")[user.currency],
-      currency: user.currency,
-      amount: value,
-      tip: 0,
-      network: "bitcoin"
     });
 
-    try {
-      result = (await axios.get(url)).data;
-      res.send(result);
-    } catch (e) {
-      l.error("failed to withdraw", e.message);
-      res.status(500).send(e.message);
+    if (code) {
+      res.send(code.text);
+    } else {
+      throw new Error("code not found");
     }
-  })
-);
+  } catch (e) {
+    l.error("couldn't find url", e.message);
+  }
+});
 
-app.get(
-  "/lnurlp/:username",
-  ah(async (req, res, next) => {
-    try {
-      const { username } = req.params;
-      let user = await db.User.findOne({
-        where: {
-          username
-        }
-      });
+app.get("/withdraw", auth, async (req, res, next) => {
+  const { min, max } = req.query;
+  try {
+    const result = await lnurlServer.generateNewUrl("withdrawRequest", {
+      minWithdrawable: min * 1000,
+      maxWithdrawable: max * 1000,
+      defaultDescription: "coinos voucher"
+    });
 
-      if (!user) throw new Error("user not found");
+    withdrawals[result.secret] = req.user;
 
-      let { amount, minSendable, maxSendable } = req.query;
-      minSendable = minSendable || 1000;
-      maxSendable = maxSendable || 1000000000;
-      if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
+    res.send(result);
+  } catch (e) {
+    l.error("problem generating withdrawl url", e.message);
+    res.status(500).send(e.message);
+  }
+});
 
-      let result = await lnurlServer.generateNewUrl("payRequest", {
-        minSendable,
-        maxSendable,
-        metadata: JSON.stringify([["text/plain", `paying ${user.username}`], ["text/identifier", `${user.username}@coinos.io`]])
-      });
+app.post("/code", async (req, res, next) => {
+  try {
+    const { encoded } = req.body.lnurl;
+    const code = await db.Code.findOrCreate({
+      where: {
+        code: `lnurl:${encoded.substr(-32)}`,
+        text: encoded
+      }
+    });
 
-      recipients[result.secret] = user;
-      l.info("recipient", user.username, result.secret);
+    res.send(code);
+  } catch (e) {
+    l.error(e.errors);
+    res.status(500).send(e.message);
+  }
+});
 
-      result = await axios.get(result.url);
+app.post("/withdraw", auth, async (req, res, next) => {
+  const { user } = req;
+  const {
+    amount: value,
+    params: { callback, k1 }
+  } = req.body;
+  const invoice = await lnp.addInvoice({ value });
+  const { payment_request: pr } = invoice;
+  const url = `${callback}?k1=${k1}&pr=${pr}`;
 
-      res.send(result.data);
-    } catch (e) {
-      l.error("problem generating payment url", e.message);
-      res.status(500).send(e.message);
-    }
-  })
-);
+  await db.Invoice.create({
+    user_id: user.id,
+    text: pr,
+    rate: app.get("rates")[user.currency],
+    currency: user.currency,
+    amount: value,
+    tip: 0,
+    network: "bitcoin"
+  });
 
-app.get(
-  "/pay/:username",
-  ah(async (req, res, next) => {
+  try {
+    result = (await axios.get(url)).data;
+    res.send(result);
+  } catch (e) {
+    l.error("failed to withdraw", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
+app.get("/lnurlp/:username", async (req, res, next) => {
+  try {
     const { username } = req.params;
     let user = await db.User.findOne({
       where: {
@@ -164,133 +111,154 @@ app.get(
       }
     });
 
+    if (!user) throw new Error("user not found");
+
     let { amount, minSendable, maxSendable } = req.query;
     minSendable = minSendable || 1000;
     maxSendable = maxSendable || 1000000000;
     if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
 
-    try {
-      const result = await lnurlServer.generateNewUrl("payRequest", {
-        minSendable,
-        maxSendable,
-        metadata: JSON.stringify([["text/plain", `paying ${user.username}`]])
-      });
+    let result = await lnurlServer.generateNewUrl("payRequest", {
+      minSendable,
+      maxSendable,
+      metadata: JSON.stringify([
+        ["text/plain", `paying ${user.username}`],
+        ["text/identifier", `${user.username}@coinos.io`]
+      ])
+    });
 
-      recipients[result.secret] = user;
-      l.info("recipient", user.username, result.secret);
-      res.send(result);
-    } catch (e) {
-      l.error("problem generating payment url", e.message);
-      res.status(500).send(e.message);
+    recipients[result.secret] = user;
+    l.info("recipient", user.username, result.secret);
+
+    result = await axios.get(result.url);
+
+    res.send(result.data);
+  } catch (e) {
+    l.error("problem generating payment url", e.message);
+    res.status(500).send(e.message);
+  }
+});
+
+app.get("/pay/:username", async (req, res, next) => {
+  const { username } = req.params;
+  let user = await db.User.findOne({
+    where: {
+      username
     }
-  })
-);
+  });
 
-app.post(
-  "/pay",
-  auth,
-  ah(async (req, res, next) => {
-    const { user } = req;
-    const {
-      amount,
-      comment,
-      params: { callback, k1 }
-    } = req.body;
+  let { amount, minSendable, maxSendable } = req.query;
+  minSendable = minSendable || 1000;
+  maxSendable = maxSendable || 1000000000;
+  if (parseInt(amount)) minSendable = maxSendable = amount * 1000;
 
-    let url = `${callback}${callback.includes("?") ? "&" : "?"}amount=${amount *
-      1000}${comment ? "&comment=" + comment : ""}`;
+  try {
+    const result = await lnurlServer.generateNewUrl("payRequest", {
+      minSendable,
+      maxSendable,
+      metadata: JSON.stringify([["text/plain", `paying ${user.username}`]])
+    });
 
-    try {
-      const parts = callback.split("/");
-      const secret = parts[parts.length - 1];
-      lnurlPayments[secret] = user.id;
+    recipients[result.secret] = user;
+    l.info("recipient", user.username, result.secret);
+    res.send(result);
+  } catch (e) {
+    l.error("problem generating payment url", e.message);
+    res.status(500).send(e.message);
+  }
+});
 
-      if (recipients[secret]) {
-        url = `${req.protocol}://${req.get("host")}/api/send`;
-        const { data } = await axios.post(
-          url,
-          {
-            amount,
-            memo: comment,
-            username: recipients[secret].username
-          },
-          {
-            headers: {
-              Authorization: req.get("Authorization")
-            }
+app.post("/pay", auth, async (req, res, next) => {
+  const { user } = req;
+  const {
+    amount,
+    comment,
+    params: { callback, k1 }
+  } = req.body;
+
+  let url = `${callback}${callback.includes("?") ? "&" : "?"}amount=${amount *
+    1000}${comment ? "&comment=" + comment : ""}`;
+
+  try {
+    const parts = callback.split("/");
+    const secret = parts[parts.length - 1];
+    lnurlPayments[secret] = user.id;
+
+    if (recipients[secret]) {
+      url = `${req.protocol}://${req.get("host")}/api/send`;
+      const { data } = await axios.post(
+        url,
+        {
+          amount,
+          memo: comment,
+          username: recipients[secret].username
+        },
+        {
+          headers: {
+            Authorization: req.get("Authorization")
           }
-        );
+        }
+      );
 
-        res.send(data);
-      } else {
-        const { data } = await axios.get(url);
-        res.send(await send(amount, "", data.pr, user));
-      }
-    } catch (e) {
-      l.error("failed to send payment", e.message);
-      res.status(500).send(e.message);
+      res.send(data);
+    } else {
+      const { data } = await axios.get(url);
+      res.send(await send(amount, "", data.pr, user));
     }
-  })
-);
+  } catch (e) {
+    l.error("failed to send payment", e.message);
+    res.status(500).send(e.message);
+  }
+});
 
-app.get(
-  "/login",
-  optionalAuth,
-  ah(async (req, res, next) => {
-    try {
-      const result = await lnurlServer.generateNewUrl("login");
+app.get("/login", optionalAuth, async (req, res, next) => {
+  try {
+    const result = await lnurlServer.generateNewUrl("login");
 
-      if (req.user) {
-        logins[result.secret] = req.user.username;
-      }
-
-      res.send(result);
-    } catch (e) {
-      l.error("problem generating login url", e.message);
-      res.status(500).send(e.message);
+    if (req.user) {
+      logins[result.secret] = req.user.username;
     }
-  })
-);
 
-app.get(
-  "/encode",
-  ah(async (req, res, next) => {
-    let { domain, name } = req.query;
-    let url = `https://${domain}/.well-known/lnurlp/${name}`;
-    res.send(lnurl.encode(url));
-  })
-);
+    res.send(result);
+  } catch (e) {
+    l.error("problem generating login url", e.message);
+    res.status(500).send(e.message);
+  }
+});
 
-app.get(
-  "/decode",
-  ah(async (req, res, next) => {
-    const { text } = req.query;
+app.get("/encode", async (req, res, next) => {
+  let { domain, name } = req.query;
+  let url = `https://${domain}/.well-known/lnurlp/${name}`;
+  res.send(lnurl.encode(url));
+});
 
-    try {
-      const url = lnurl.decode(text);
-      let spl = url.split("?");
-      if (spl.length > 1 && qs.parse(spl[1]).tag === "login") {
-        return res.send({
-          tag: "login",
-          k1: qs.parse(spl[1]).k1,
-          callback: url,
-          domain: url
-            .split("://")[1]
-            .split("/")[0]
-            .split("@")
-            .slice(-1)[0]
-            .split(":")[0]
-        });
-      }
+app.get("/decode", async (req, res, next) => {
+  const { text } = req.query;
 
-      const { data: params } = await axios.get(url);
-      res.send(params);
-    } catch (e) {
-      l.error("problem decoding lnurl", e.message);
-      res.status(500).send(e.message);
+  try {
+    const url = lnurl.decode(text);
+    let spl = url.split("?");
+    if (spl.length > 1 && qs.parse(spl[1]).tag === "login") {
+      return res.send({
+        tag: "login",
+        k1: qs.parse(spl[1]).k1,
+        callback: url,
+        domain: url
+          .split("://")[1]
+          .split("/")[0]
+          .split("@")
+          .slice(-1)[0]
+          .split(":")[0]
+      });
     }
-  })
-);
+
+    const { data: params } = await axios.get(url);
+    res.send(params);
+  } catch (e) {
+    l.error("problem decoding lnurl", e.message);
+    res.status(500).send(e.message);
+  }
+});
 
 lnurlServer.on("payRequest:action:processed", async function(event) {
   const { secret, params, result } = event;
@@ -414,15 +382,21 @@ lnurlServer.bindToHook(
                 {
                   model: db.User,
                   as: "user"
-                },
+                }
               ],
               lock: transaction.LOCK.UPDATE,
               transaction
             });
 
-            let conversionFeeDeduction = Math.min(account.lightning_credits, conversionFee);
+            let conversionFeeDeduction = Math.min(
+              account.lightning_credits,
+              conversionFee
+            );
             if (conversionFeeDeduction) {
-              await account.decrement({ lightning_credits: conversionFeeDeduction }, { transaction });
+              await account.decrement(
+                { lightning_credits: conversionFeeDeduction },
+                { transaction }
+              );
               await account.reload({ transaction });
               conversionFee -= conversionFeeDeduction;
             }
@@ -435,20 +409,26 @@ lnurlServer.bindToHook(
 
             let fee_payment_id = null;
             if (conversionFee) {
-              await receiverAccount.increment({ balance: conversionFee }, { transaction });
+              await receiverAccount.increment(
+                { balance: conversionFee },
+                { transaction }
+              );
               await receiverAccount.reload({ transaction });
-              let fee_payment = await db.Payment.create({
-                amount: conversionFee,
-                fee: 0,
-                memo: "Bitcoin conversion fee",
-                account_id: receiverAccount.id,
-                user_id: receiverAccount.user_id,
-                rate: app.get("rates")[receiverAccount.user.currency],
-                currency: receiverAccount.user.currency,
-                confirmed: true,
-                received: true,
-                network: "COINOS"
-              }, { transaction });
+              let fee_payment = await db.Payment.create(
+                {
+                  amount: conversionFee,
+                  fee: 0,
+                  memo: "Bitcoin conversion fee",
+                  account_id: receiverAccount.id,
+                  user_id: receiverAccount.user_id,
+                  rate: app.get("rates")[receiverAccount.user.currency],
+                  currency: receiverAccount.user.currency,
+                  confirmed: true,
+                  received: true,
+                  network: "COINOS"
+                },
+                { transaction }
+              );
               fee_payment_id = fee_payment.id;
             }
 
@@ -462,7 +442,7 @@ lnurlServer.bindToHook(
                 currency: user.currency,
                 confirmed: true,
                 network: "lightning",
-                fee_payment_id,
+                fee_payment_id
               },
               { transaction }
             );
@@ -494,7 +474,10 @@ lnurlServer.bindToHook(
               }
             }, 1000);
 
-            await account.decrement({ balance: (amount + conversionFee) }, { transaction });
+            await account.decrement(
+              { balance: amount + conversionFee },
+              { transaction }
+            );
             await account.reload({ transaction });
 
             let p = payment.get({ plain: true });

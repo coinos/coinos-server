@@ -39,7 +39,7 @@ export const down = function(knex) {
 // checkout - fields ?
 // voucher - fields ?
 
-// const { DataTypes } = require('sequelize');
+// const { DataTypes } = require('@sequelize/core');
 
 // const attributes = {
 //   id: {

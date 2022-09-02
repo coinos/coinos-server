@@ -1,7 +1,11 @@
+import config from "../../config/index.js";
 const btc = config.liquid.btcasset;
-import { computeConversionFee, conversionFeeReceiver } from './conversionFee.js';
+import {
+  computeConversionFee,
+  conversionFeeReceiver
+} from "./conversionFee.js";
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   let { user } = req;
   let { address, memo, tx } = req.body;
   let { hex } = tx;
@@ -61,7 +65,10 @@ export default ah(async (req, res) => {
       // use user's credits to reduce fee, if available
       let conversionFeeDeduction = Math.min(account.btc_credits, conversionFee);
       if (conversionFeeDeduction) {
-        await account.decrement({ btc_credits: conversionFeeDeduction }, { transaction });
+        await account.decrement(
+          { btc_credits: conversionFeeDeduction },
+          { transaction }
+        );
         await account.reload({ transaction });
         conversionFee -= conversionFeeDeduction;
       }
@@ -70,11 +77,19 @@ export default ah(async (req, res) => {
         l.error("amount exceeds balance", amount, fee, account.balance);
         throw new Error("low balance");
       } else if (total + conversionFee > account.balance) {
-        l.error("total (after conversion fee) exceeds balance", amount, fee, account.balance);
+        l.error(
+          "total (after conversion fee) exceeds balance",
+          amount,
+          fee,
+          account.balance
+        );
         throw new Error("low balance (after conversion fee)");
       }
 
-      await account.decrement({ balance: (total + conversionFee) }, { transaction });
+      await account.decrement(
+        { balance: total + conversionFee },
+        { transaction }
+      );
       await account.reload({ transaction });
 
       let receiverAccount = await db.Account.findOne({
@@ -85,7 +100,7 @@ export default ah(async (req, res) => {
           {
             model: db.User,
             as: "user"
-          },
+          }
         ],
         lock: transaction.LOCK.UPDATE,
         transaction
@@ -94,20 +109,26 @@ export default ah(async (req, res) => {
       let fee_payment;
       let fee_payment_id = null;
       if (conversionFee) {
-        await receiverAccount.increment({ balance: conversionFee }, { transaction });
+        await receiverAccount.increment(
+          { balance: conversionFee },
+          { transaction }
+        );
         await receiverAccount.reload({ transaction });
-        fee_payment = await db.Payment.create({
-          amount: conversionFee,
-          fee: 0,
-          memo: "Bitcoin conversion fee",
-          account_id: receiverAccount.id,
-          user_id: receiverAccount.user_id,
-          rate: app.get("rates")[receiverAccount.user.currency],
-          currency: receiverAccount.user.currency,
-          confirmed: true,
-          received: true,
-          network: "COINOS"
-        }, { transaction });
+        fee_payment = await db.Payment.create(
+          {
+            amount: conversionFee,
+            fee: 0,
+            memo: "Bitcoin conversion fee",
+            account_id: receiverAccount.id,
+            user_id: receiverAccount.user_id,
+            rate: app.get("rates")[receiverAccount.user.currency],
+            currency: receiverAccount.user.currency,
+            confirmed: true,
+            received: true,
+            network: "COINOS"
+          },
+          { transaction }
+        );
         fee_payment_id = fee_payment.id;
       }
 
@@ -146,9 +167,11 @@ export default ah(async (req, res) => {
       l.info("sent bitcoin", user.username, total);
     });
   } catch (e) {
-    if (e.message.includes("Insufficient")) e.message = "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
+    if (e.message.includes("Insufficient"))
+      e.message =
+        "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
     l.error("error sending bitcoin", e.message);
     console.log(e);
     return res.status(500).send(e.message);
   }
-});
+};

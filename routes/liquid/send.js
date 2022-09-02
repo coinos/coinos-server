@@ -1,9 +1,13 @@
+import config from "../../config/index.js";
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
-import { Transaction } from 'liquidjs-lib';
-import { computeConversionFee, conversionFeeReceiver } from './conversionFee.js';
+// import { Transaction } from 'liquidjs-lib';
+import {
+  computeConversionFee,
+  conversionFeeReceiver
+} from "./conversionFee.js";
 
-sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
+export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   try {
     l.info("sending liquid", amount, address);
     if (!tx) {
@@ -106,9 +110,15 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
           });
 
           // use user's credits to reduce fee, if available
-          let conversionFeeDeduction = Math.min(account.liquid_credits, conversionFee);
+          let conversionFeeDeduction = Math.min(
+            account.liquid_credits,
+            conversionFee
+          );
           if (conversionFeeDeduction) {
-            await account.decrement({ liquid_credits: conversionFeeDeduction }, { transaction });
+            await account.decrement(
+              { liquid_credits: conversionFeeDeduction },
+              { transaction }
+            );
             await account.reload({ transaction });
             conversionFee -= conversionFeeDeduction;
           }
@@ -140,7 +150,10 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             );
           }
 
-          await account.decrement({ balance: (total + conversionFee)}, { transaction });
+          await account.decrement(
+            { balance: total + conversionFee },
+            { transaction }
+          );
           await account.reload({ transaction });
 
           let receiverAccount = await db.Account.findOne({
@@ -151,14 +164,17 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
               {
                 model: db.User,
                 as: "user"
-              },
+              }
             ],
             lock: transaction.LOCK.UPDATE,
             transaction
           });
 
           if (conversionFee) {
-            await receiverAccount.increment({ balance: conversionFee }, { transaction });
+            await receiverAccount.increment(
+              { balance: conversionFee },
+              { transaction }
+            );
             await receiverAccount.reload({ transaction });
             fee_payment = {
               amount: conversionFee,
@@ -173,7 +189,9 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
               network: "COINOS"
             };
             fee_payment.account = receiverAccount;
-            ({ id: fee_payment_id } = await db.Payment.create(fee_payment, { transaction }));
+            ({ id: fee_payment_id } = await db.Payment.create(fee_payment, {
+              transaction
+            }));
           }
 
           let payment = {
@@ -188,7 +206,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
             confirmed: true,
             received: false,
             network: "liquid",
-            fee_payment_id,
+            fee_payment_id
           };
 
           payment.account = account;
@@ -231,7 +249,7 @@ sendLiquid = async ({ asset, amount, user, address, memo, tx, limit }) => {
   }
 };
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   let { user } = req;
 
   try {
@@ -240,4 +258,4 @@ export default ah(async (req, res) => {
     l.error("problem sending liquid", user.username, e.message);
     return res.status(500).send(e);
   }
-});
+};

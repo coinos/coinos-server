@@ -1,7 +1,10 @@
-import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
+import { callWebhook } from "../lib/webhooks.js";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
+import { notify } from "../lib/notifications.js";
+import { sendLiquid } from "./liquid/send.js";
 
-export default ah(async (req, res, next) => {
+export default async (req, res, next) => {
   let {
     amount,
     address,
@@ -212,4 +215,4 @@ export default ah(async (req, res, next) => {
     l.error("problem sending internal payment", user.username, e.message);
     return res.status(500).send(e.message);
   }
-});
+};

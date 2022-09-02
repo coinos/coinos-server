@@ -1,4 +1,4 @@
-export default ah(async (req, res) => {
+export default async (req, res) => {
   try {
     const { user } = req;
     let hash = await lq.sendRawTransaction(req.body.tx);
@@ -49,4 +49,4 @@ export default ah(async (req, res) => {
     l.error("problem broadcasting liquid transaction", e);
     res.status(500).send(e.message);
   }
-});
+};

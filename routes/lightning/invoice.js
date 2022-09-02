@@ -1,5 +1,4 @@
-
-export default ah(async (req, res) => {
+export default async (req, res) => {
   let { amount, memo, tip } = req.body;
   if (!tip) tip = 0;
   let value = amount + tip;
@@ -22,4 +21,4 @@ export default ah(async (req, res) => {
     l.error("problem creating invoice", e.message, e.stack);
     res.status(500).send(e.message);
   }
-});
+};

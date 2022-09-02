@@ -1,6 +1,6 @@
-import buildTx from '../../lib/buildtx';
+import buildTx from "../../lib/buildtx.js";
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   let { user } = req;
   let { address, amount, feeRate, replaceable } = req.body;
   let tx, fee;
@@ -9,9 +9,9 @@ export default ah(async (req, res) => {
     try {
       let psbt = await buildTx({ address, amount, feeRate, replaceable, user });
       return res.send(psbt);
-    } catch(e) {
+    } catch (e) {
       return res.status(500).send(e.message);
-    } 
+    }
   }
 
   let invoice = await db.Invoice.findOne({
@@ -19,8 +19,8 @@ export default ah(async (req, res) => {
     include: {
       attributes: ["username"],
       model: db.User,
-      as: "user",
-    },
+      as: "user"
+    }
   });
 
   if (invoice) {
@@ -34,13 +34,18 @@ export default ah(async (req, res) => {
   try {
     amount = parseInt(amount);
 
-    let partial = await bc.createRawTransaction([], {
-      [address]: (amount / SATS).toFixed(8),
-    }, 0, replaceable);
+    let partial = await bc.createRawTransaction(
+      [],
+      {
+        [address]: (amount / SATS).toFixed(8)
+      },
+      0,
+      replaceable
+    );
 
     let params = {
       subtractFeeFromOutputs: amount === user.balance ? [0] : [],
-      replaceable,
+      replaceable
     };
 
     if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
@@ -59,4 +64,4 @@ export default ah(async (req, res) => {
     l.error("bitcoin fee estimation error", e);
     return res.status(500).send(e.message);
   }
-});
+};

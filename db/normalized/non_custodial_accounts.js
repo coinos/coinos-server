@@ -20,7 +20,7 @@ export const down = function(knex) {
   return knex.schema.dropTable('non_custodial_accounts');
 };
 
-// const { DataTypes } = require('sequelize');
+// const { DataTypes } = require('@sequelize/core');
 
 // const attributes = {
 //   id: {

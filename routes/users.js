@@ -1,19 +1,21 @@
+import { getUser } from "../lib/utils.js";
 import axios from 'axios';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import getAccount from '../lib/account.js';
-import Sequelize from 'sequelize';
+import Sequelize from '@sequelize/core';
 import bitcoin from 'bitcoinjs-lib';
-import liquid from 'liquidjs-lib';
+// import liquid from 'liquidjs-lib';
 import { fromBase58, fromPrivateKey } from 'bip32';
 import { Mutex } from 'async-mutex';
 import bip32 from 'bip32';
+import whitelist from "../lib/whitelist.js";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
-import '../lib/whitelist.js';
 
-const twofa = ah((req, res, next) => {
+/*
+const twofa = (req, res, next) => {
   let {
     user,
     body: { token }
@@ -25,12 +27,12 @@ const twofa = ah((req, res, next) => {
   ) {
     return res.status(401).send("2fa required");
   } else next();
-});
+}
 
 app.get(
   "/me",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     let user = req.user.get({ plain: true });
     let payments = await req.user.getPayments({
       where: {
@@ -53,11 +55,10 @@ app.get(
     user.payments = payments;
     res.send(user);
   })
-);
 
 app.get(
   "/users/:username",
-  ah(async (req, res) => {
+  async (req, res) => {
     const { username } = req.params;
 
     const user = await db.User.findOne({
@@ -71,11 +72,10 @@ app.get(
     if (user) res.send(user);
     else res.status(500).send("User not found");
   })
-);
 
 app.post(
   "/register",
-  ah(async (req, res) => {
+  async (req, res) => {
     try {
       const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
       const user = await register(req.body.user, ip, false);
@@ -84,13 +84,12 @@ app.post(
       res.status(500).send(e.message);
     }
   })
-);
 
 app.post(
   "/disable2fa",
   auth,
   twofa,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { user } = req;
     user.twofa = false;
     await user.save();
@@ -99,23 +98,21 @@ app.post(
     l.info("disabled 2fa", user.username);
     res.send({});
   })
-);
 
 app.get(
   "/otpsecret",
   auth,
   twofa,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { user } = req;
     emit(user.username, "otpsecret", user.otpsecret);
     res.end();
   })
-);
 
 app.post(
   "/2fa",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { user } = req;
     try {
       const isValid = authenticator.check(req.body.token, req.user.otpsecret);
@@ -133,23 +130,21 @@ app.post(
     l.info("enabled 2fa", user.username);
     res.send({});
   })
-);
 
 app.get(
   "/exists",
-  ah(async (req, res) => {
+  async (req, res) => {
     let exists = await db.User.findOne({
       where: { username: req.query.username }
     });
 
     res.send(!!exists);
   })
-);
 
 app.post(
   "/user",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     try {
       let { user } = req;
       let {
@@ -211,12 +206,11 @@ app.post(
       l.error("error updating user", e.message);
     }
   })
-);
 
 app.post(
   "/keys",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { key: hex } = req.body;
     const key = await db.Key.create({
       user_id: req.user.id,
@@ -225,12 +219,11 @@ app.post(
     emit(req.user.username, "key", key);
     res.send(key);
   })
-);
 
 app.post(
   "/keys/delete",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { hex } = req.body;
     (
       await db.Key.findOne({
@@ -241,12 +234,11 @@ app.post(
       })
     ).destroy();
   })
-);
 
 app.post(
   "/updateSeeds",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { user } = req;
     let { seeds } = req.body;
     let keys = Object.keys(seeds);
@@ -270,23 +262,21 @@ app.post(
 
     res.end();
   })
-);
 
 app.post(
   "/accounts/delete",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { id } = req.body;
     const account = await db.Account.findOne({ where: { id } });
     if (account) await account.destroy();
     res.end();
   })
-);
 
 app.post(
   "/accounts",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const {
       name,
       seed,
@@ -324,9 +314,8 @@ app.post(
 
     res.send(account);
   })
-);
 
-let login = ah(async (req, res) => {
+let login = async (req, res) => {
   try {
     const { params, sig, key } = req.body;
 
@@ -383,7 +372,6 @@ let login = ah(async (req, res) => {
     l.error("login error", e.message, req.connection.remoteAddress);
     res.status(401).end();
   }
-});
 
 app.post("/login", login);
 app.post("/taboggan", login);
@@ -392,7 +380,7 @@ app.post("/doggin", login);
 app.post(
   "/logout",
   optionalAuth,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { subscription } = req.body;
     if (!subscription) return res.end();
 
@@ -414,11 +402,10 @@ app.post(
 
     res.end();
   })
-);
 
 app.get(
   "/address",
-  ah(async (req, res) => {
+  async (req, res) => {
     let { network, type } = req.query;
     let address, confidentialAddress;
 
@@ -532,12 +519,11 @@ app.get(
 
     res.send({ address, confidentialAddress });
   })
-);
 
 app.post(
   "/account",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { user } = req;
     const {
       id,
@@ -590,12 +576,11 @@ app.post(
       return res.status(500).send("There was a problem updating the account");
     }
   })
-);
 
 app.post(
   "/shiftAccount",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { user } = req;
     let { id } = req.body;
 
@@ -634,7 +619,6 @@ app.post(
       return res.status(500).send("There was a problem switching accounts");
     }
   })
-);
 
 app.get("/vapidPublicKey", function(req, res) {
   res.send(config.vapid.publicKey);
@@ -643,7 +627,7 @@ app.get("/vapidPublicKey", function(req, res) {
 app.post(
   "/subscribe",
   auth,
-  ah(async function(req, res) {
+  async function(req, res) {
     let { subscriptions } = req.user;
     let { subscription } = req.body;
     if (!subscriptions) subscriptions = [];
@@ -658,13 +642,12 @@ app.post(
     await req.user.save();
     res.sendStatus(201);
   })
-);
 
 let redeeming = {};
 app.post(
   "/redeem",
   optionalAuth,
-  ah(async function(req, res) {
+  async function(req, res) {
     const { redeemcode } = req.body;
     try {
       await db.transaction(async transaction => {
@@ -755,35 +738,32 @@ app.post(
       return res.status(500).send("There was a problem redeeming the voucher");
     }
   })
-);
 
 app.post(
   "/checkRedeemCode",
   auth,
-  ah(async function(req, res) {
+  async function(req, res) {
     const { redeemcode } = req.body;
 
     const payment = await db.Payment.findOne({ where: { redeemcode } });
     res.send(payment);
   })
-);
 
 app.post(
   "/password",
   auth,
-  ah(async function(req, res) {
+  async function(req, res) {
     const { user } = req;
     const { password } = req.body;
 
     if (!user.password) return res.send(true);
     res.send(await bcrypt.compare(password, user.password));
   })
-);
 
 app.get(
   "/isInternal",
   auth,
-  ah(async function(req, res) {
+  async function(req, res) {
     let { user } = req;
     let { address } = req.query;
     if (!address) throw new Error("Address not provided");
@@ -812,23 +792,21 @@ app.get(
 
     res.send(false);
   })
-);
 
 app.get(
   "/invoices",
   auth,
-  ah(async function(req, res) {
+  async function(req, res) {
     let invoices = await db.Invoice.findAll({
       where: { user_id: req.user.id }
     });
     res.send(invoices);
-  })
-);
+  });
 
 app.post(
   "/signMessage",
   auth,
-  ah(async function(req, res) {
+  async function(req, res) {
     let { address, message } = req.body;
 
     let invoices = await db.Invoice.findAll({
@@ -843,4 +821,4 @@ app.post(
 
     res.status(500).send("Address not found for user");
   })
-);
+  */

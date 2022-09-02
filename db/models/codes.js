@@ -1,4 +1,5 @@
-import { DataTypes } from 'sequelize';
+import db from "../db.js";
+import { DataTypes } from '@sequelize/core';
 
 const attributes = {
   code: {

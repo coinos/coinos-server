@@ -1,4 +1,4 @@
-export default ah(async (req, res) => {
+export default async (req, res) => {
   try {
     const { user } = req;
     let hash = await bc.sendRawTransaction(req.body.tx);
@@ -47,4 +47,4 @@ export default ah(async (req, res) => {
   } catch (e) {
     res.status(500).send(e.message);
   }
-});
+};

@@ -1,3 +1,5 @@
+import app from "../app.js";
+import config from "../config/index.js";
 import mailgunFactory from 'mailgun-js';
 const mailgun = mailgunFactory(config.mailgun);
 
@@ -5,7 +7,7 @@ app.post(
   "/id",
   auth,
   upload.single("id"),
-  ah(async (req, res) => {
+  async (req, res) => {
     const { user } = req;
     if (user.verified === "proof") user.verified = "pending";
     else user.verified = "id";
@@ -24,13 +26,12 @@ app.post(
 
     res.end();
   })
-);
 
 app.post(
   "/proof",
   auth,
   upload.single("proof"),
-  ah(async (req, res) => {
+  async (req, res) => {
     const { user } = req;
     if (user.verified === "id") user.verified = "pending";
     else user.verified = "proof";
@@ -40,12 +41,11 @@ app.post(
 
     res.end();
   })
-);
 
 app.post(
   "/funding",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     try {
       let { id, amount, code } = req.body;
 
@@ -81,12 +81,11 @@ app.post(
       res.status(500).send("Funding request failed");
     }
   })
-);
 
 app.post(
   "/withdrawal",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     try {
       const { account, amount, email, institution, transit, notes } = req.body;
       if (!parseFloat(amount) || parseFloat(amount) < 0)
@@ -108,4 +107,3 @@ app.post(
       res.status(500).send("Withdrawal request failed");
     }
   })
-);

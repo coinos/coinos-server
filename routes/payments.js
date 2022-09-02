@@ -1,93 +1,70 @@
-import fs from 'fs';
-import BitcoinCore from '@asoltys/bitcoin-core';
-import { join } from 'path';
-import { Op } from 'sequelize';
+import bc from "../lib/bitcoin.js";
+import app from "../app.js";
+import config from "../config/index.js";
+import { auth, adminAuth, optionalAuth } from "../lib/passport.js";
+import fs from "fs";
+import { join } from "path";
+import { Op } from "@sequelize/core";
+import send from "./send.js";
 
-app.post("/send", auth, require("./send"));
-app.post(
-  "/sendToTokenHolders",
-  auth,
-  ah(async (req, res, next) => {
-    let { asset, amount } = req.body;
+import btcRoutes from "./bitcoin/index.js";
+import lnRoutes from "./lightning/index.js";
+import lqRoutes from "./liquid/index.js";
 
-    let accounts = await db.Account.findAll({
-      where: {
-        asset,
-        "$user.username$": { [Op.ne]: "gh" }
-      },
+app.post("/send", auth, send);
+app.post("/sendToTokenHolders", auth, async (req, res, next) => {
+  let { asset, amount } = req.body;
 
-      include: [{ model: db.User, as: "user" }]
-    });
+  let accounts = await db.Account.findAll({
+    where: {
+      asset,
+      "$user.username$": { [Op.ne]: "gh" }
+    },
 
-    let totalTokens = accounts.reduce((a, b) => a + b.balance, 0);
-    console.log("TOTAL TOKENS", totalTokens);
+    include: [{ model: db.User, as: "user" }]
+  });
 
-    let totalSats = Math.floor(amount / totalTokens);
+  let totalTokens = accounts.reduce((a, b) => a + b.balance, 0);
+  console.log("TOTAL TOKENS", totalTokens);
 
-    console.log("TOTAL SATS", totalSats)
+  let totalSats = Math.floor(amount / totalTokens);
 
-    if (totalSats < 1) throw new Error("amount is too low to distribute");
+  console.log("TOTAL SATS", totalSats);
 
-    for (let i = 0; i < accounts.length; i++) {
-      let account = accounts[i];
-      console.log(account.user.username, account.balance);
-    }
-    accounts.map(({ balance, user: { username } }) => ({ username, balance }));
+  if (totalSats < 1) throw new Error("amount is too low to distribute");
 
-    res.send({ success: "it worked" });
-  })
-);
+  for (let i = 0; i < accounts.length; i++) {
+    let account = accounts[i];
+    console.log(account.user.username, account.balance);
+  }
+  accounts.map(({ balance, user: { username } }) => ({ username, balance }));
 
-app.get(
-  "/except",
-  adminAuth,
-  ah((req, res) => {
-    let s = fs.createWriteStream("exceptions", { flags: "a" });
-    unaccounted.map(tx => s.write(tx.txid + "\n"));
-    l.info("updated exceptions");
-    res.send("updated exceptions");
-  })
-);
+  res.send({ success: "it worked" });
+});
+
+app.get("/except", adminAuth, (req, res) => {
+  let s = fs.createWriteStream("exceptions", { flags: "a" });
+  unaccounted.map(tx => s.write(tx.txid + "\n"));
+  l.info("updated exceptions");
+  res.send("updated exceptions");
+});
 
 if (config.lna) {
-  if (config.lna.clightning) {
-    lna = require("clightning-client")(config.lna.dir);
-  } else {
-    const lnd = require("../lib/lnd");
-    lna = lnd.default;
-    lnp = [
-      "addInvoice",
-      "channelBalance",
-      "connectPeer",
-      "decodePayReq",
-      "getInfo",
-      "listInvoices",
-      "listPayments",
-      "sendPaymentSync",
-      "walletBalance"
-    ].reduce(
-      (a, b) =>
-        (a[b] = args => new Promise(r => lna[b](args, (e, v) => r(v)))) && a,
-      {}
-    );
-  }
-
-  app.post("/lightning/channel", require("./lightning/channel"));
-  app.post("/lightning/channelRequest", require("./lightning/channelRequest"));
-  app.post("/lightning/invoice", require("./lightning/invoice"));
-  app.post("/lightning/query", auth, require("./lightning/query"));
-  app.post("/lightning/send", auth, require("./lightning/send"));
-  require("./lightning/receive");
+  app.post("/lightning/channel", lnRoutes.channel);
+  app.post("/lightning/channelRequest", lnRoutes.channelRequest);
+  app.post("/lightning/invoice", lnRoutes.invoice);
+  app.post("/lightning/query", auth, lnRoutes.query);
+  app.post("/lightning/send", auth, lnRoutes.send);
+  import("./lightning/receive");
 }
 
 if (config.bitcoin) {
-  bc = new BitcoinCore(config.bitcoin);
-  app.post("/bitcoin/broadcast", optionalAuth, require("./bitcoin/broadcast"));
-  app.get("/bitcoin/generate", auth, require("./bitcoin/generate"));
-  app.post("/bitcoin/sweep", auth, require("./bitcoin/sweep"));
-  app.post("/bitcoin/fee", auth, require("./bitcoin/fee"));
-  app.post("/bitcoin/send", auth, require("./bitcoin/send"));
-  require("./bitcoin/receive");
+  app.post("/bitcoin/broadcast", optionalAuth, btcRoutes.broadcast);
+  app.get("/bitcoin/generate", auth, btcRoutes.generate);
+  app.post("/bitcoin/sweep", auth, btcRoutes.sweep);
+  app.post("/bitcoin/fee", auth, btcRoutes.fee);
+  app.post("/bitcoin/send", auth, btcRoutes.send);
+  import("./bitcoin/receive");
 
   setTimeout(async () => {
     try {
@@ -102,14 +79,12 @@ if (config.bitcoin) {
 }
 
 if (config.liquid) {
-  lq = new BitcoinCore(config.liquid);
-  rare = new BitcoinCore(config.rare);
-  app.post("/liquid/broadcast", optionalAuth, require("./liquid/broadcast"));
-  app.get("/liquid/generate", auth, require("./liquid/generate"));
-  app.post("/liquid/fee", auth, require("./liquid/fee"));
-  app.post("/liquid/send", auth, require("./liquid/send"));
-  app.post("/taxi", auth, require("./liquid/taxi"));
-  require("./liquid/receive");
+  app.post("/liquid/broadcast", optionalAuth, lqRoutes.broadcast);
+  app.get("/liquid/generate", auth, lqRoutes.generate);
+  // app.post("/liquid/fee", auth, lqRoutes.fee);
+  app.post("/liquid/send", auth, lqRoutes.send);
+  // app.post("/taxi", auth, lqRoutes.taxi);
+  import("./liquid/receive");
 
   setTimeout(async () => {
     try {
@@ -123,46 +98,39 @@ if (config.liquid) {
   }, 50);
 }
 
-app.get(
-  "/payments",
-  auth,
-  ah(async (req, res) => {
-    if (!req.user.account_id) return res.send([]);
-    let payments = await db.Payment.findAll({
+app.get("/payments", auth, async (req, res) => {
+  if (!req.user.account_id) return res.send([]);
+  let payments = await db.Payment.findAll({
+    where: {
+      account_id: req.user.account_id
+    },
+    order: [["id", "DESC"]],
+    include: {
+      model: db.Account,
+      as: "account"
+    }
+  });
+
+  res.send(payments);
+});
+
+app.get("/payment/:redeemcode", async (req, res) => {
+  try {
+    const { redeemcode } = req.params;
+    let payment = await db.Payment.findOne({
       where: {
-        account_id: req.user.account_id
+        redeemcode
       },
-      order: [["id", "DESC"]],
       include: {
         model: db.Account,
         as: "account"
       }
     });
 
-    res.send(payments);
-  })
-);
+    if (!payment) fail("invalid code");
 
-app.get(
-  "/payment/:redeemcode",
-  ah(async (req, res) => {
-    try {
-      const { redeemcode } = req.params;
-      let payment = await db.Payment.findOne({
-        where: {
-          redeemcode
-        },
-        include: {
-          model: db.Account,
-          as: "account"
-        }
-      });
-
-      if (!payment) fail("invalid code");
-
-      res.send(payment);
-    } catch (e) {
-      res.status(500).send(e.message);
-    }
-  })
-);
+    res.send(payment);
+  } catch (e) {
+    res.status(500).send(e.message);
+  }
+});

@@ -1,4 +1,4 @@
-const addUserSearch = function (input, table) {
+export const addUserSearch = function (input, table) {
   var {search, starts_with, contains} = input
 
   if (!table) { table = 'users' }
@@ -19,7 +19,7 @@ const addUserSearch = function (input, table) {
   }
 }
 
-const addTimeSearch = function (input, field) {
+export const addTimeSearch = function (input, field) {
   if (!field) { field = 'updatedAt' }
   
   var {since} = input
@@ -30,10 +30,5 @@ const addTimeSearch = function (input, field) {
   } else {
     return ''
   }
-}
-
-module.exports = {
-  addUserSearch: addUserSearch, 
-  addTimeSearch: addTimeSearch,
 }
 

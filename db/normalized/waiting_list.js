@@ -14,7 +14,7 @@ export const down = function(knex) {
   return knex.schema.dropTable('waiting_list');
 };
 
-// const { DataTypes } = require('sequelize');
+// const { DataTypes } = require('@sequelize/core');
 
 // const attributes = {
 //   id: {

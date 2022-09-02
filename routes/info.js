@@ -1,4 +1,5 @@
-import sequelize from 'sequelize';
+import app from "../app.js";
+import sequelize from '@sequelize/core';
 const { Op } = sequelize;
 
 /**
@@ -10,7 +11,7 @@ const { Op } = sequelize;
  * @apiSuccess {String[]} networks Array of supported networks; possible values are "bitcoin", "liquid" and "lightning".
  * @apiSuccess {String} clientVersion the current git commit of the ui
  */
-app.get("/info", ah(async (req, res, next) => {
+app.get("/info", async (req, res, next) => {
   const { clientVersion } = config;
 
   const info = {
@@ -20,9 +21,9 @@ app.get("/info", ah(async (req, res, next) => {
   };
 
   res.send(info);
-}));
+});
 
-app.get("/balances", ah(async (req, res, next) => {
+app.get("/balances", async (req, res, next) => {
   const accounts = await db.Account.findAll({
     attributes: [
       "asset",
@@ -44,8 +45,8 @@ app.get("/balances", ah(async (req, res, next) => {
       lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
     } else {
       lninfo = await lnp.getInfo({});
-      lnchannel = parseInt((await lnp.channelBalance({})).balance);
-      lnwallet = parseInt((await lnp.walletBalance({})).total_balance);
+      lnchannel = parseInt((await lnp.channelBalance({}).balance));
+      lnwallet = parseInt((await lnp.walletBalance({}).total_balance));
     } 
   }
 
@@ -80,4 +81,4 @@ app.get("/balances", ah(async (req, res, next) => {
     parseInt(lnwallet);
 
   res.send(info);
-}));
+});

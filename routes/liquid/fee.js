@@ -1,4 +1,4 @@
-import buildTx from '../../lib/buildliquidtx';
+import buildTx from "../../lib/buildliquidtx.js";
 
 liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let tx, fee;
@@ -49,12 +49,14 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
 
   tx = await node.createRawTransaction(
     [],
-    [{
-      [address]: (amount / SATS).toFixed(8),
-      asset
-    }],
+    [
+      {
+        [address]: (amount / SATS).toFixed(8),
+        asset
+      }
+    ],
     0,
-    replaceable,
+    replaceable
   );
 
   l.info("funding tx for fee estimate", tx);
@@ -71,12 +73,12 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   return { feeRate, tx };
 };
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   try {
-    let tx = await liquidTx({ ...req.body, user: req.user })
+    let tx = await liquidTx({ ...req.body, user: req.user });
     res.send(tx);
   } catch (e) {
     l.error("error estimating liquid fee", e.message, e.stack);
     return res.status(500).send(e.message);
   }
-});
+};

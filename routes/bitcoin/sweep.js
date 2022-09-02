@@ -1,14 +1,17 @@
-import axios from 'axios';
-import bitcoin from 'bitcoinjs-lib';
-import coinselect from 'coinselect';
-import split from 'coinselect/split';
+import config from "../../config/index.js";
+import { prod } from "../../lib/utils.js";
+import axios from "axios";
+import bitcoin from "bitcoinjs-lib";
+import coinselect from "coinselect";
+import split from "coinselect/split.js";
+
 const api = prod ? "https://blockstream.info/api" : config.bitcoin.electrs;
 const SATS = 100000000;
 const network = prod
   ? bitcoin.networks["bitcoin"]
   : bitcoin.networks["regtest"];
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   let { address: from, amount, feeRate, target } = req.body;
   let utxos;
   if (!feeRate) feeRate = (await bc.estimateSmartFee(6)).feerate * SATS;
@@ -81,4 +84,4 @@ export default ah(async (req, res) => {
   } catch (e) {
     l.error("problem getting address stats", from, e.message);
   }
-});
+};

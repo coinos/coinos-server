@@ -40,7 +40,7 @@ export const down = function(knex) {
 //
 
 
-// const { DataTypes } = require('sequelize');
+// const { DataTypes } = require('@sequelize/core');
 
 // const attributes = {
 //   id: {

@@ -1,8 +1,8 @@
 import express from 'express';
 var router = express.Router();
 
-import parseInput from '../scripts/apiParse.js';
-import Sequelize from 'sequelize';
+import  * as  parseInput from '../scripts/apiParse.js';
+import Sequelize from '@sequelize/core';
 const Op = Sequelize.Op;
 
 import { v4 as uuidv4 } from 'uuid';
@@ -27,7 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 router.get(
   "/users",
   // auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {search, starts_with, contains} = req.query
     var users = knex
       .select('username', 'email', 'phone', 'verified', knex.raw('LEFT(createdAt,10) as created_at'))
@@ -47,7 +47,6 @@ router.get(
     const found = await users
     return res.send({users: found})
   })
-);
 
 /**
  * @api {get} /referrals Retrieve list of referral tokens
@@ -69,7 +68,7 @@ router.get(
 router.get(
   "/referrals",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var referrals = knex
       .select(
         'token', 
@@ -103,7 +102,6 @@ router.get(
     var found = await referrals
     return res.send({referrals: found})
   })
-);
 
 /**
  * @api {get} /waiting_list Retrieve waiting_list
@@ -125,7 +123,7 @@ router.get(
 router.get(
  "/waiting_list",
  // auth,
- ah(async (req, res) => {
+ async (req, res) => {
    var {search, starts_with, contains} = req.query
 
    var queue = knex
@@ -149,7 +147,6 @@ router.get(
 
    return res.send({queue: found})
  })
-);
 
 /**
  * @api {get} /accounts Retrieve list of accounts
@@ -171,7 +168,7 @@ router.get(
 router.get(
   "/accounts",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {nonZero, search, starts_with, contains} = req.query
 
     var accounts = knex
@@ -194,7 +191,6 @@ router.get(
 
     return res.send({accounts: found})
   })
-);
 
 /**
  * @api {get} /transactions Retrieve summary of user transactions
@@ -217,7 +213,7 @@ router.get(
 router.get(
   "/transactions",
   // auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {type, since, search, starts_with, contains} = req.query
 
     var transactions = knex
@@ -262,7 +258,6 @@ router.get(
 
     return res.send({transactions: found})
   })
-);
 
 /**
  * @api {get} /orders Retrieve summary of orders
@@ -285,7 +280,7 @@ router.get(
 router.get(
   "/orders",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {type, since, search, starts_with, contains} = req.query
 
     var orders = knex
@@ -319,7 +314,6 @@ router.get(
     var found = await orders
     return res.send({orders: found})
   })
-);
 
 /**
  * @api {get} /invoices Retrieve summary of invoices
@@ -342,7 +336,7 @@ router.get(
 router.get(
   "/invoices",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {type, since, search, starts_with, contains} = req.query
 
     var invoices = knex
@@ -367,7 +361,6 @@ router.get(
     var found = await invoices
     return res.send({invoices: found})
   })
-);
 
 
 /**
@@ -391,7 +384,7 @@ router.get(
 router.get(
   "/deposits",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {type, since, search, starts_with, contains} = req.query
 
     var deposits = knex
@@ -414,7 +407,6 @@ router.get(
     var found = await deposits
     return res.send({deposits: found})
   })
-);
 
 /**
  * @api {get} /withdrawals Retrieve summary of withdrawals
@@ -437,7 +429,7 @@ router.get(
 router.get(
   "/withdrawals",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {type, since, search, starts_with, contains} = req.query
 
     var withdrawals = knex
@@ -460,7 +452,6 @@ router.get(
     var found = await withdrawals
     return res.send({withdrawals: found})
   })
-);
 
 /**
  * @api {get} /payments Retrieve summary of payments
@@ -483,7 +474,7 @@ router.get(
 router.get(
   "/payments",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {type, since, search, starts_with, contains} = req.query
 
     var payments = knex
@@ -508,7 +499,6 @@ router.get(
     var found = await payments
     return res.send({payments: found})
   })
-);
 
 /**
  * @api {get} /user_kyc Retrieve user kyc details
@@ -531,7 +521,7 @@ router.get(
 router.get(
   "/kyc_required",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     var {since, search, starts_with, contains} = req.query
     
     var threshold = '0.2'
@@ -566,6 +556,5 @@ router.get(
 
     return res.send({found: found})
   })
-);
 
 export default router;

@@ -1,17 +1,17 @@
-export default ah(async (req, res) => {
+export default async (req, res) => {
   const { payreq } = req.body;
 
   const invoice = await db.Invoice.findOne({
     include: {
-      attributes: ['username'],
+      attributes: ["username"],
       model: db.User,
       as: "user"
     },
     where: {
-      text: payreq,
+      text: payreq
     }
   });
 
   if (invoice) emit(req.user.username, "to", invoice.user);
   res.end();
-});
+};

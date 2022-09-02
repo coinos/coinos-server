@@ -2,7 +2,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
 import getAccount from '../lib/account';
-import { Op, col } from 'sequelize';
+import { Op, col } from '@sequelize/core';
 import { v4 as uuidv4 } from 'uuid';
 
 const shallow = a => {
@@ -71,8 +71,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
       { transaction }
     );
 
-    emit(user.username, "payment", payment.get({ plain: true }));
-    emit(user.username, "account", a1acc.get({ plain: true }));
+    emit(user.username, "payment", payment.get({ plain: true });
+    emit(user.username, "account", a1acc.get({ plain: true });
 
     const orders = await db.Order.findAll(
       {
@@ -123,7 +123,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         await order.acc1.increment({ balance: v2 }, { transaction });
         await order.acc1.reload({ transaction });
 
-        emit(order.user.username, "account", order.acc1.get({ plain: true }));
+        emit(order.user.username, "account", order.acc1.get({ plain: true });
 
         payment = await db.Payment.create(
           {
@@ -140,8 +140,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        emit(user.username, "payment", payment.get({ plain: true }));
-        emit(user.username, "account", a1acc.get({ plain: true }));
+        emit(user.username, "payment", payment.get({ plain: true });
+        emit(user.username, "account", a1acc.get({ plain: true });
 
         if (order.fee) {
           const btc = await getAccount(
@@ -168,10 +168,10 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           await btc.increment({ balance: order.fee }, { transaction });
           await btc.reload({ transaction });
 
-          emit(order.user.username, "account", btc.get({ plain: true }));
+          emit(order.user.username, "account", btc.get({ plain: true });
         }
 
-        emit(order.user.username, "payment", payment.get({ plain: true }));
+        emit(order.user.username, "payment", payment.get({ plain: true });
 
         order = order.get({ plain: true });
         order.a1 = order.acc1.asset;
@@ -207,8 +207,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         await a2acc.increment({ balance: order.v1 }, { transaction });
         await a2acc.reload({ transaction });
 
-        emit(user.username, "payment", payment.get({ plain: true }));
-        emit(user.username, "account", a2acc.get({ plain: true }));
+        emit(user.username, "payment", payment.get({ plain: true });
+        emit(user.username, "account", a2acc.get({ plain: true });
 
         payment = await db.Payment.create(
           {
@@ -225,7 +225,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        emit(order.user.username, "payment", payment.get({ plain: true }));
+        emit(order.user.username, "payment", payment.get({ plain: true });
         await order.acc2.increment({ balance: order.v2 }, { transaction });
         await order.acc2.reload({ transaction });
 
@@ -298,8 +298,8 @@ const cancel = async (user, id) => {
       { transaction }
     );
 
-    emit(user.username, "account", account.get({ plain: true }));
-    emit(user.username, "payment", payment.get({ plain: true }));
+    emit(user.username, "account", account.get({ plain: true });
+    emit(user.username, "payment", payment.get({ plain: true });
 
     if (order.fee) {
       const btc = await getAccount(config.liquid.btcasset, user, transaction);
@@ -322,8 +322,8 @@ const cancel = async (user, id) => {
       await btc.increment({ balance: order.fee }, { transaction });
       await btc.reload({ transaction });
 
-      emit(user.username, "account", btc.get({ plain: true }));
-      emit(user.username, "payment", payment.get({ plain: true }));
+      emit(user.username, "account", btc.get({ plain: true });
+      emit(user.username, "payment", payment.get({ plain: true });
     }
 
     broadcast("removeOrder", id);
@@ -334,7 +334,7 @@ const cancel = async (user, id) => {
 app.delete(
   "/order/:id",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { id } = req.params;
     const { user } = req;
 
@@ -346,7 +346,7 @@ app.delete(
 app.post(
   "/orders",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     return res.status(500).send("Trading temporarily disabled");
     const { user } = req;
     try {
@@ -362,7 +362,7 @@ app.post(
 app.get(
   "/orders",
   optionalAuth,
-  ah(async (req, res) => {
+  async (req, res) => {
     try {
       let orders = await db.Order.findAll({
         attributes: {

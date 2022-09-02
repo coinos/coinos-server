@@ -1,3 +1,5 @@
+import app from "../app.js";
+import { auth } from "../lib/passport.js";
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -25,7 +27,7 @@ let fetchAssets;
 
 app.get(
   "/assets",
-  ah(async (req, res) => {
+  async (req, res) => {
     if (app.get("assets")) {
       const assets = app.get("assets");
 
@@ -64,12 +66,11 @@ app.get(
       res.status(500).send("Problem fetching blockstream asset registry data");
     }
   })
-);
 
 app.post(
   "/assets",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     try {
       const sha256 = crypto.createHash("sha256");
       const { id: user_id } = req.user;
@@ -293,12 +294,11 @@ app.post(
       res.status(500).send(e.message);
     }
   })
-);
 
 app.post(
   "/assets/register",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { asset } = req.body;
     const account = await db.Account.findOne({
       where: {
@@ -324,12 +324,11 @@ app.post(
       res.status(500).send(e.message);
     }
   })
-);
 
 app.post(
   "/loadFaucet",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     return res.status(500).send("Faucet feature temporarily disabled");
 
     const { user } = req;
@@ -435,12 +434,11 @@ app.post(
       return res.status(500).send(e.message);
     }
   })
-);
 
 app.get(
   "/faucet",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     let { asset } = req.query;
     let faucet = await db.Account.findOne({
       where: {
@@ -458,4 +456,3 @@ app.get(
 
     res.send(faucet);
   })
-);

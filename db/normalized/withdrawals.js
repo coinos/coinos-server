@@ -24,7 +24,7 @@ export const down = function(knex) {
 //
 // bank info -> bank_account records
 
-// const { DataTypes } = require('sequelize');
+// const { DataTypes } = require('@sequelize/core');
 
 // const attributes = {
 //   id: {

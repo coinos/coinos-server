@@ -42,7 +42,7 @@ router.get('/', function(req, res, next) {
 router.post(
   "/grant",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const {sponsor_id, expiry} = req.body
     var token = uuidv4()
 
@@ -56,7 +56,6 @@ router.post(
 
     return res.send({token: token, status: 'available', expiry: expiry})
   })
-);
 
 /**
  * @api {get} /grant Grant Referral code (variation using get)
@@ -83,7 +82,7 @@ router.post(
 router.get(
   "/grant",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const {sponsor_id, expiry} = req.query
     var token = uuidv4()
 
@@ -97,7 +96,6 @@ router.get(
 
     return res.send({token: token, status: 'available', expiry: expiry})
   })
-);
 
 
 /**
@@ -127,7 +125,7 @@ router.get(
 router.get(
   "/checkTokens/:sponsor_id",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const {sponsor_id} = req.params
     const {status} = req.query
 
@@ -148,7 +146,6 @@ router.get(
 
     return res.send({tokens: found})
   })
-);
 
 
 /**
@@ -175,7 +172,7 @@ router.get(
 router.get(
   "/verify/:user_id/:token",
   auth,
-  ah(async (req, res) => {
+  async (req, res) => {
     const { user_id, token } = req.params;
 
     const found = await knex
@@ -203,7 +200,6 @@ router.get(
       res.status(500).send('Invalid referral token')
     }
   })
-);
 
 
 /**
@@ -227,7 +223,7 @@ router.get(
  */
 router.post(
   "/joinQueue",
-  ah(async (req, res) => {
+  async (req, res) => {
     const { email, phone, user_id } = req.body;
 
     await knex.table('waiting_list')
@@ -239,11 +235,10 @@ router.post(
 
     res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
   })
-);
 
 router.get(
   "/joinQueue",
-  ah(async (req, res) => {
+  async (req, res) => {
     const {email, phone, user_id} = req.query;
 
     await knex('waiting_list')
@@ -255,7 +250,6 @@ router.get(
 
     res.send({success: true, message: 'Added ' + email + ' to waiting list ' + phone})
   })
-);
 
 /**
  * @api {get} /isReferred/:user_id  Check if user is referred
@@ -274,7 +268,7 @@ router.get(
  */
 router.get(
  "/isReferred/:user_id",
- ah(async (req, res) => {
+ async (req, res) => {
    const { user_id } = req.params;
 
    var referred = await knex('referrals')
@@ -288,6 +282,5 @@ router.get(
      res.send({referred: false})
    }
  })
-);
 
 export default router;

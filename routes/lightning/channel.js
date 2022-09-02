@@ -1,6 +1,6 @@
-import axios from 'axios';
+import axios from "axios";
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   const { params } = req.body;
   const [pubkey, host] = params.uri.split("@");
 
@@ -12,7 +12,7 @@ export default ah(async (req, res) => {
       perm: true
     });
   } catch (e) {
-    if (!e.message.includes('already connected')) {
+    if (!e.message.includes("already connected")) {
       l.error("problem connecting to peer", e.message);
       return res.status(500).send(e.message);
     }
@@ -22,18 +22,18 @@ export default ah(async (req, res) => {
   let remoteid;
   try {
     remoteid = (await lnp.getInfo({})).identity_pubkey;
-  } catch(e) {
+  } catch (e) {
     l.error("problem getting lightning node info", e.message);
     return res.status(500).send(e.message);
-  } 
+  }
 
   let url = `${callback}?k1=${k1}&remoteid=${remoteid}&private=0`;
 
   try {
     let response = await axios.get(url);
     res.send(response.data);
-  } catch(e) {
+  } catch (e) {
     l.error("problem sending channel request", e.message);
     return res.status(500).send({ status: "ERROR", reason: e.message });
-  } 
-});
+  }
+};

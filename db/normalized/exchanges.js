@@ -38,7 +38,7 @@ return knex.schema.dropTable('exchanges');
 // context for path, memo, rate, preimage, address, received, fee, tip, confirmed, redeemcode ?
 
 
-import { DataTypes } from 'sequelize';
+import { DataTypes } from '@sequelize/core';
 
 const attributes = {
   id: {

@@ -1,8 +1,8 @@
-import { address as Address, Psbt, payments, networks } from 'liquidjs-lib';
-import { ECPairFactory } from 'ecpair';
-import tinysecp from 'tiny-secp256k1';
-import wretch from 'wretch';
-import fetch from 'node-fetch';
+// import { address as Address, Psbt, payments, networks } from 'liquidjs-lib';
+import { ECPairFactory } from "ecpair";
+import tinysecp from "tiny-secp256k1";
+import wretch from "wretch";
+import fetch from "node-fetch";
 
 wretch().polyfills({ fetch });
 
@@ -16,7 +16,7 @@ const network = prod ? networks.liquid : networks.regtest;
 const ECPair = ECPairFactory(tinysecp);
 const key = ECPair.fromPrivateKey(Buffer.from(config.taxi, "hex"));
 
-export default ah(async (req, res) => {
+export default async (req, res) => {
   let { user } = req;
   let { psbt } = req.body;
 
@@ -82,4 +82,4 @@ export default ah(async (req, res) => {
     console.log(e);
     return res.status(500).send(e);
   }
-});
+};

@@ -9,7 +9,10 @@
     "debug": "DEBUG=debug nodemon index.js"
   },
   "dependencies": {
-    "@asoltys/bitcoin-core": "^3.0.7",
+    "@fastify/passport": "^2.2.0",
+    "@fastify/secure-session": "^5.2.0",
+    "@fastify/websocket": "^7.0.1",
+    "@sequelize/core": "7.0.0-alpha.10",
     "async-mutex": "^0.2.4",
     "axios": "^0.21.1",
     "bcrypt": "^5.0.0",
@@ -30,6 +33,7 @@
     "express-async-handler": "^1.1.4",
     "express-pino-logger": "^6.0.0",
     "express-session": "^1.16.2",
+    "fastify": "^4.5.3",
     "file-type": "^18.0.0",
     "http-proxy-middleware": "^0.20.0",
     "imap": "^0.8.19",

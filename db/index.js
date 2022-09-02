@@ -1,24 +1,11 @@
-import Sequelize from 'sequelize';
-import dbOptions from './../config/knexfile.js';
+import Sequelize from '@sequelize/core';
 
-db = new Sequelize(
-  dbOptions.connection.database,
-  dbOptions.connection.user,
-  dbOptions.connection.password,
-  {
-    host: dbOptions.connection.host,
-    dialect: "mariadb",
-    logging: false,
-    dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" },
-  }
-);
+import db from "./db.js";
 
 db.authenticate().catch((err) => {
   console.debug("Error connecting to database: " + err.message);
   console.log(dbOptions.connection.database + "." + dbOptions.connection.user);
 });
-
-knex = require("knex")(dbOptions);
 
 import './models/accounts.js';
 import './models/codes.js';
@@ -166,3 +153,5 @@ Payment.belongsTo(Payment, {
 });
 
 db.Order = Order;
+
+export default db;
