@@ -21,7 +21,7 @@ const network =
 const queue = {};
 const seen = [];
 
-const { computeConversionFee } = require('./conversionFee.js');
+const { computeConversionFee } = require("./conversionFee.js");
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   const hex = message.toString("hex");
@@ -170,7 +170,7 @@ setInterval(async () => {
 
       let account, address, user, total;
       await db.transaction(async transaction => {
-        let p = await db.Payment.findOne({
+        let payments = await db.Payment.findAll({
           where: { hash, confirmed: 0, received: 1 },
           include: [
             {
@@ -190,57 +190,63 @@ setInterval(async () => {
           transaction
         });
 
-        if (p && p.address) address = p.address;
-        if (p && p.user) user = p.user;
+        for (let i = 0; i < payments.length; i++) {
+          let p = payments[i];
+          if (p && p.address) address = p.address;
+          if (p && p.user) user = p.user;
 
-        if (p && p.account) {
-          ({ account } = p);
-          total = p.amount + p.tip;
+          if (p && p.account) {
+            ({ account } = p);
+            total = p.amount + p.tip;
 
-          p.confirmed = 1;
-          await account.save({ transaction });
+            p.confirmed = 1;
+            await account.save({ transaction });
 
-          await account.increment({ balance: total }, { transaction });
-          await account.decrement(
-            { pending: Math.min(account.pending, total) },
-            { transaction }
-          );
-          // get the # of fee credits you would need to pay off this amount of bitcoin
-          await account.increment({ btc_credits: computeConversionFee(total) }, { transaction });
-          await account.reload({ transaction });
-          await p.save({ transaction });
+            await account.increment({ balance: total }, { transaction });
+            await account.decrement(
+              { pending: Math.min(account.pending, total) },
+              { transaction }
+            );
+            // get the # of fee credits you would need to pay off this amount of bitcoin
+            await account.increment(
+              { btc_credits: computeConversionFee(total) },
+              { transaction }
+            );
+            await account.reload({ transaction });
+            await p.save({ transaction });
 
-          p = p.get({ plain: true });
+            p = p.get({ plain: true });
 
-          emit(user.username, "account", account);
-          emit(user.username, "payment", p);
-          l.info("bitcoin confirmed", user.username, p.amount, p.tip);
-          notify(user, `${total} SAT payment confirmed`);
-          callWebhook(p.invoice, p);
-        } else {
-          l.warn("couldn't find bitcoin payment", hash);
+            emit(user.username, "account", account);
+            emit(user.username, "payment", p);
+            l.info("bitcoin confirmed", user.username, p.amount, p.tip);
+            notify(user, `${total} SAT payment confirmed`);
+            callWebhook(p.invoice, p);
+
+            let c = convert[address];
+            if (address && c) {
+              l.info(
+                "bitcoin detected to conversion address",
+                address,
+                c.address,
+                user.username
+              );
+              user.account = account;
+
+              sendLiquid({
+                address: c.address,
+                amount: total - 100,
+                user,
+                limit: total
+              });
+            }
+          } else {
+            l.warn("couldn't find bitcoin payment", hash);
+          }
         }
 
         delete queue[hash];
       });
-
-      let c = convert[address];
-      if (address && c) {
-        l.info(
-          "bitcoin detected to conversion address",
-          address,
-          c.address,
-          user.username
-        );
-        user.account = account;
-
-        sendLiquid({
-          address: c.address,
-          amount: total - 100,
-          user,
-          limit: total
-        });
-      }
     }
   } catch (e) {
     l.error(
