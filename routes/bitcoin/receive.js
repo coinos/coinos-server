@@ -49,7 +49,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
         if (
           Object.keys(addresses).includes(address) &&
-          !change.includes(address)
+          !store.change.includes(address)
         ) {
           await db.transaction(async transaction => {
             let user = await db.User.findOne({

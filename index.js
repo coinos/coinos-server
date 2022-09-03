@@ -5,12 +5,12 @@ import store from "./lib/store.js";
 import { l } from "./lib/logging.js";
 
 import "./lib/sockets.js";
-// import "./lib/webhooks.js";
-// import "./lib/passport.js";
-// import "./lib/register.js";
-// import "./lib/upload.js";
-// import "./lib/send.js";
-// import "./lib/sync.js";
+import "./lib/webhooks.js";
+import "./lib/passport.js";
+import "./lib/register.js";
+import "./lib/upload.js";
+import "./lib/send.js";
+import "./lib/sync.js";
 // import "./routes/assets.js";
 // import "./routes/info.js";
 // import "./routes/users.js";
