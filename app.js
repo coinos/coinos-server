@@ -1,2 +1,4 @@
 import fastify from "fastify";
-export default fastify();
+import pino from "pino";
+
+export default fastify({ logger: pino(), disableRequestLogging: true });

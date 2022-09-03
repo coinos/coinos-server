@@ -30,6 +30,7 @@ let fetchAssets;
 app.get(
   "/assets",
   async (req, res) => {
+    throw new Error("BOOM");
     if (store.assets) {
       const accounts = await db.Account.findAll({
         // group: ["asset"]

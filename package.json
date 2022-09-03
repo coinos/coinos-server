@@ -54,7 +54,7 @@
     "passport": "0.4.0",
     "passport-jwt": "^4.0.0",
     "passport-local": "1.0.0",
-    "pino": "^6.13.2",
+    "pino": "8",
     "pino-pretty": "^7.0.0",
     "pm2": "^5.2.0",
     "postmark": "^3.0.11",

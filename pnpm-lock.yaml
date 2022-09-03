@@ -46,7 +46,7 @@ specifiers:
   passport: 0.4.0
   passport-jwt: ^4.0.0
   passport-local: 1.0.0
-  pino: ^6.13.2
+  pino: '8'
   pino-pretty: ^7.0.0
   pm2: ^5.2.0
   postmark: ^3.0.11
@@ -107,7 +107,7 @@ dependencies:
   passport: 0.4.0
   passport-jwt: 4.0.0
   passport-local: 1.0.0
-  pino: 6.13.3
+  pino: 8.4.2
   pino-pretty: 7.0.1
   pm2: 5.2.0
   postmark: 3.0.11
@@ -2193,11 +2193,6 @@ packages:
     resolution: {integrity: sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=}
     dev: false
 
-  /fast-redact/3.0.2:
-    resolution: {integrity: sha512-YN+CYfCVRVMUZOUPeinHNKgytM1wPI/C/UCLEi56EsY2dwwvI00kIJHJoI7pMVqGoMew8SMZ2SSfHKHULHXDsg==}
-    engines: {node: '>=6'}
-    dev: false
-
   /fast-redact/3.1.2:
     resolution: {integrity: sha512-+0em+Iya9fKGfEQGcd62Yv6onjBmmhV1uh86XVfOU8VwAe6kaFdQCWI9s0/Nnugx5Vd9tdbZ7e6gE2tR9dzXdw==}
     engines: {node: '>=6'}
@@ -4122,7 +4117,7 @@ packages:
     resolution: {integrity: sha512-tJy6qVgkh9MwNgqX1/oYi3ehfl2Y9H0uHyEEMsBe74KinESIjdMrMQDWpcZPpPicg3VV35d/GLQZmo4QgU2Xkg==}
     hasBin: true
     dependencies:
-      fast-redact: 3.0.2
+      fast-redact: 3.1.2
       fast-safe-stringify: 2.1.1
       fastify-warning: 0.2.0
       flatstr: 1.0.12
