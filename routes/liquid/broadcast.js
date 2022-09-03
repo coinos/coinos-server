@@ -1,4 +1,4 @@
-import { rates } from "../../lib/store.js";
+import store from "../../lib/store.js";
 export default async (req, res) => {
   try {
     const { user } = req;
@@ -22,7 +22,7 @@ export default async (req, res) => {
             tip: 0,
             account_id: account.id,
             user_id: user.id,
-            rate: rates[user.currency],
+            rate: store.rates[user.currency],
             currency: user.currency,
             confirmed: true,
             received: false,

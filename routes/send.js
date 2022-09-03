@@ -1,7 +1,7 @@
-import { rates } from "../lib/store.js";
+import store from "../lib/store.js";
 import { callWebhook } from "../lib/webhooks.js";
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid";
+import { v4 } from "uuid";
 import { notify } from "../lib/notifications.js";
 import { sendLiquid } from "./liquid/send.js";
 
@@ -61,10 +61,10 @@ export default async (req, res, next) => {
         account_id: account.id,
         memo,
         user_id: user.id,
-        rate: rates[user.currency],
+        rate: store.rates[user.currency],
         currency: user.currency,
         confirmed: true,
-        hash: `#${uuidv4().substr(0, 6)} ${
+        hash: `#${v4().substr(0, 6)} ${
           username ? `Payment to ${username}` : "Internal Transfer"
         }`,
         network: "COINOS"
@@ -72,7 +72,7 @@ export default async (req, res, next) => {
 
       if (!username) {
         l("creating redeemable payment");
-        params.redeemcode = uuidv4();
+        params.redeemcode = v4();
         params.hash = `${req.get("origin")}/redeem/${params.redeemcode}`;
       }
 
@@ -132,10 +132,8 @@ export default async (req, res, next) => {
           let ticker = asset.substr(0, 3).toUpperCase();
           let precision = 8;
 
-          const assets = app.get("assets");
-
-          if (assets[asset]) {
-            ({ domain, ticker, precision, name } = assets[asset]);
+          if (store.assets[asset]) {
+            ({ domain, ticker, precision, name } = store.assets[asset]);
           } else {
             const existing = await db.Account.findOne({
               where: {
@@ -166,10 +164,10 @@ export default async (req, res, next) => {
           amount,
           account_id: a2.id,
           user_id: recipient.id,
-          rate: rates[recipient.currency] * spread,
+          rate: store.rates[recipient.currency] * spread,
           currency: recipient.currency,
           confirmed: true,
-          hash: `#${uuidv4().substr(0, 6)} Payment from ${user.username}`,
+          hash: `#${v4().substr(0, 6)} Payment from ${user.username}`,
           memo,
           network: "COINOS",
           received: true

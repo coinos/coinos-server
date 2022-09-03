@@ -1,3 +1,4 @@
+import store from "../lib/store.js";
 import bc from "../lib/bitcoin.js";
 import app from "../app.js";
 import config from "../config/index.js";
@@ -6,6 +7,7 @@ import fs from "fs";
 import { join } from "path";
 import { Op } from "@sequelize/core";
 import send from "./send.js";
+import { warn } from "../lib/logging.js";
 
 import btcRoutes from "./bitcoin/index.js";
 import lnRoutes from "./lightning/index.js";
@@ -71,7 +73,7 @@ if (config.bitcoin) {
       const address = await bc.getNewAddress();
       const { hdkeypath } = await bc.getAddressInfo(address);
       const parts = hdkeypath.split("/");
-      app.set("bcAddressIndex", parts[parts.length - 1].replace("'", ""));
+      store.bcAddressIndex = parts[parts.length - 1].replace("'", "");
     } catch (e) {
       console.error(e);
     }
@@ -91,7 +93,7 @@ if (config.liquid) {
       const address = await lq.getNewAddress();
       const { hdkeypath } = await lq.getAddressInfo(address);
       const parts = hdkeypath.split("/");
-      app.set("lqAddressIndex", parts[parts.length - 1].slice(0, -1));
+      store.lqAddressIndex = parts[parts.length - 1].slice(0, -1);
     } catch (e) {
       warn("Problem getting liquid address index", e.message);
     }

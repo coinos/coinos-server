@@ -1,5 +1,4 @@
-import { rates } from "../../lib/store.js";
-import { addresses } from "../../lib/store.js";
+import store from "../../lib/store.js";
 import config from "../../config/index.js";
 const btc = config.liquid.btcasset;
 import {
@@ -17,7 +16,7 @@ export default async (req, res) => {
 
   const isChange = async ({ address }) =>
     (await bc.getAddressInfo(address)).ismine &&
-    !Object.keys(addresses).includes(address);
+    !Object.keys(store.addresses).includes(address);
 
   tx = await bc.decodeRawTransaction(hex);
 
@@ -123,7 +122,7 @@ export default async (req, res) => {
             memo: "Bitcoin conversion fee",
             account_id: receiverAccount.id,
             user_id: receiverAccount.user_id,
-            rate: rates[receiverAccount.user.currency],
+            rate: store.rates[receiverAccount.user.currency],
             currency: receiverAccount.user.currency,
             confirmed: true,
             received: true,
@@ -141,7 +140,7 @@ export default async (req, res) => {
         memo,
         account_id: account.id,
         user_id: user.id,
-        rate: rates[user.currency],
+        rate: store.rates[user.currency],
         currency: user.currency,
         address,
         confirmed: true,
@@ -165,7 +164,7 @@ export default async (req, res) => {
       emit(user.username, "payment", payment);
       res.send(payment);
 
-      payments.push(params.hash);
+      store.payments.push(params.hash);
       l("sent bitcoin", user.username, total);
     });
   } catch (e) {

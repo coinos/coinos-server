@@ -1,5 +1,4 @@
-import { rates } from "../lib/store.js";
-import { addresses } from "../lib/store.js";
+import store from "../lib/store.js";
 import app from "../app.js";
 import { optionalAuth } from "../lib/passport.js";
 import { Op } from "@sequelize/core";
@@ -52,7 +51,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     }
     if (!user) throw new Error("user not provided");
     if (!invoice.currency) invoice.currency = user.currency;
-    if (!invoice.rate) invoice.rate = rates[invoice.currency];
+    if (!invoice.rate) invoice.rate = store.rates[invoice.currency];
     if (invoice.tip > invoice.amount || invoice.tip > 1000000)
       throw new Error("tip is too large");
     if (invoice.tip < 0 || invoice.amount < 0)
@@ -87,9 +86,9 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     invoice = exists
       ? await exists.update(invoice)
       : await db.Invoice.create(invoice);
-    addresses[invoice.address] = user.username;
+    store.addresses[invoice.address] = user.username;
     if (invoice.unconfidential) {
-      addresses[invoice.unconfidential] = user.username;
+      store.addresses[invoice.unconfidential] = user.username;
       if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
     }
 

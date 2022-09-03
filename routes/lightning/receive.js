@@ -1,7 +1,9 @@
+import config from "../../config/index.js";
 import { notify } from "../../lib/notifications.js";
 import { callWebhook } from "../../lib/webhooks.js";
 import { computeConversionFee } from './conversionFee.js';
 import { sendLiquid } from "../liquid/send.js";
+import ln from "../../lib/ln.js";
 
 const handlePayment = async (msg) => {
   l("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
@@ -147,8 +149,8 @@ if (config.lna.clightning) {
     wait(Math.max(...invoices.map((i) => i.pay_index).filter((n) => n)));
   };
 
-  poll(lna);
+  poll(ln);
 } else {
-  const invoices = lna.subscribeInvoices({});
+  const invoices = ln.subscribeInvoices({});
   invoices.on("data", handlePayment);
 }

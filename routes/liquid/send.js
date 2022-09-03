@@ -1,5 +1,4 @@
-import { rates } from "../../lib/store.js";
-import { addresses } from "../../lib/store.js";
+import store from "../../lib/store.js";
 import config from "../../config/index.js";
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
@@ -25,7 +24,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
 
     const isChange = async address =>
       (await lq.getAddressInfo(address)).ismine &&
-      !Object.keys(addresses).includes(address);
+      !Object.keys(store.addresses).includes(address);
 
     let totals = {};
     let change = {};
@@ -184,7 +183,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
               memo: "Liquid conversion fee",
               account_id: receiverAccount.id,
               user_id: receiverAccount.user_id,
-              rate: rates[receiverAccount.user.currency],
+              rate: store.rates[receiverAccount.user.currency],
               currency: receiverAccount.user.currency,
               confirmed: true,
               received: true,
@@ -202,7 +201,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
             fee,
             memo,
             user_id: user.id,
-            rate: rates[user.currency],
+            rate: store.rates[user.currency],
             currency: user.currency,
             address,
             confirmed: true,

@@ -1,4 +1,4 @@
-import { rates } from "../lib/store.js";
+import store from "../lib/store.js";
 import app from "../app.js";
 import config from "../config/index.js";
 import axios from "axios";
@@ -87,7 +87,7 @@ app.post("/withdraw", auth, async (req, res, next) => {
   await db.Invoice.create({
     user_id: user.id,
     text: pr,
-    rate: rates[user.currency],
+    rate: store.rates[user.currency],
     currency: user.currency,
     amount: value,
     tip: 0,
@@ -271,7 +271,7 @@ lnurlServer.on("payRequest:action:processed", async function(event) {
     let i = await db.Invoice.create({
       user_id: recipient.id,
       text: invoice,
-      rate: rates[recipient.currency],
+      rate: store.rates[recipient.currency],
       currency: recipient.currency,
       amount: payreq.satoshis,
       tip: 0,
@@ -422,7 +422,7 @@ lnurlServer.bindToHook(
                   memo: "Bitcoin conversion fee",
                   account_id: receiverAccount.id,
                   user_id: receiverAccount.user_id,
-                  rate: rates[receiverAccount.user.currency],
+                  rate: store.rates[receiverAccount.user.currency],
                   currency: receiverAccount.user.currency,
                   confirmed: true,
                   received: true,
@@ -439,7 +439,7 @@ lnurlServer.bindToHook(
                 account_id: account.id,
                 user_id: user.id,
                 hash: pr,
-                rate: rates[user.currency],
+                rate: store.rates[user.currency],
                 currency: user.currency,
                 confirmed: true,
                 network: "lightning",

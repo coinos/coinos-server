@@ -1,7 +1,7 @@
 import express from 'express';
 var router = express.Router();
 
-import { v4 as uuidv4 } from 'uuid';
+import { v4 } from 'uuid';
 
 router.get('/', function(req, res, next) {
   res.send('list of referrals...');
@@ -44,7 +44,7 @@ router.post(
   auth,
   async (req, res) => {
     const {sponsor_id, expiry} = req.body
-    var token = uuidv4()
+    var token = v4()
 
     var ref = await knex.table('referrals')
       .insert({
@@ -84,7 +84,7 @@ router.get(
   auth,
   async (req, res) => {
     const {sponsor_id, expiry} = req.query
-    var token = uuidv4()
+    var token = v4()
 
     var ref = await knex.table('referrals')
       .insert({

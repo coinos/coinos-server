@@ -5,8 +5,6 @@ import  * as  parseInput from '../scripts/apiParse.js';
 import Sequelize from '@sequelize/core';
 const Op = Sequelize.Op;
 
-import { v4 as uuidv4 } from 'uuid';
-
 /**
  * @api {get} /users Retrieve user list
  * @apiName getUsers

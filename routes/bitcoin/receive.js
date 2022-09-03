@@ -1,8 +1,8 @@
 import { rates } from "../../lib/store.js";
-import { notify } from "../lib/notifications.js";
-import { callWebhook } from "../lib/webhooks.js";
+import { notify } from "../../lib/notifications.js";
+import { callWebhook } from "../../lib/webhooks.js";
 import reverse from 'buffer-reverse';
-import zmq from 'zeromq/v5-compat';
+import zmq from 'zeromq/v5-compat.js';
 import { Op } from '@sequelize/core';
 import { fromBase58 } from 'bip32';
 import bitcoin from 'bitcoinjs-lib';
@@ -78,7 +78,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             const currency = invoice ? invoice.currency : user.currency;
             const rate = invoice
               ? invoice.rate
-              : rates[user.currency];
+              : store.rates[user.currency];
             const tip = invoice ? invoice.tip : 0;
             const memo = invoice ? invoice.memo : "";
 

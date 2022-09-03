@@ -1,4 +1,4 @@
-import { rates } from "../lib/store.js";
+import store from "../lib/store.js";
 import app from "../app.js";
 import { auth } from "../lib/passport.js";
 import axios from 'axios';
@@ -8,10 +8,11 @@ import fs from 'fs';
 let fetchAssets;
 (fetchAssets = async () => {
   try {
-    const { data: assets } = await axios.get(
+    const { data } = await axios.get(
       "https://assets.blockstream.info/"
     );
-    app.set("assets", assets);
+
+    store.assets = data;
   } catch (e) {
     var liquid_assets = require("./../assets.json");
     if (liquid_assets) {
@@ -29,30 +30,28 @@ let fetchAssets;
 app.get(
   "/assets",
   async (req, res) => {
-    if (app.get("assets")) {
-      const assets = app.get("assets");
-
+    if (store.assets) {
       const accounts = await db.Account.findAll({
         // group: ["asset"]
       });
-      Object.keys(assets).map(a => {
-        assets[a].registered = true;
-        if (!assets[a].asset) assets[a].asset = assets[a].asset_id;
+      Object.keys(store.assets).map(a => {
+        store.assets[a].registered = true;
+        if (!store.assets[a].asset) store.assets[a].asset = store.assets[a].asset_id;
         if (
-          (assets[a].ticker === "BTC" &&
-            assets[a].asset !== config.liquid.btcasset) ||
-          (assets[a].ticker === "EUR" &&
-            assets[a].asset !== config.liquid.eurasset) ||
-          (assets[a].ticker === "CAD" &&
-            assets[a].asset !== config.liquid.cadasset) ||
-          (assets[a].ticker === "USDt" &&
-            assets[a].asset !== config.liquid.usdtasset)
+          (store.assets[a].ticker === "BTC" &&
+            store.assets[a].asset !== config.liquid.btcasset) ||
+          (store.assets[a].ticker === "EUR" &&
+            store.assets[a].asset !== config.liquid.eurasset) ||
+          (store.assets[a].ticker === "CAD" &&
+            store.assets[a].asset !== config.liquid.cadasset) ||
+          (store.assets[a].ticker === "USDt" &&
+            store.assets[a].asset !== config.liquid.usdtasset)
         )
-          delete assets[a];
+          delete store.assets[a];
       });
       accounts.map(({ asset, name, domain, ticker, precision }) => {
-        if (!assets[asset])
-          assets[asset] = {
+        if (!store.assets[asset])
+          store.assets[asset] = {
             asset,
             name,
             domain,
@@ -61,7 +60,7 @@ app.get(
           };
       });
 
-      res.send(assets);
+      res.send(store.assets);
     } else {
       console.log("error getting blockstream assets");
       res.status(500).send("Problem fetching blockstream asset registry data");
@@ -378,7 +377,7 @@ app.post(
           let ticker = asset.substr(0, 3).toUpperCase();
           let precision = 8;
 
-          const assets = app.get("assets");
+          const assets = assets;
 
           if (assets[asset]) {
             ({ domain, ticker, precision, name } = assets[asset]);
@@ -409,7 +408,7 @@ app.post(
           amount: -amount,
           account_id: account.id,
           user_id: user.id,
-          rate: rates[user.currency],
+          rate: store.rates[user.currency],
           currency: user.currency,
           confirmed: true,
           hash: `Loaded Faucet - ${a2.ticker}`,

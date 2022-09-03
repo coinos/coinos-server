@@ -15,7 +15,6 @@ app.get("/info", async (req, res, next) => {
   const { clientVersion } = config;
 
   const info = {
-    fx: app.get("fx"),
     nodes: networks,
     clientVersion,
   };

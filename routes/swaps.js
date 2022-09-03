@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import fs from 'fs';
 import getAccount from '../lib/account.js';
 import { Op, col } from '@sequelize/core';
-import { v4 as uuidv4 } from 'uuid';
 import { rates } from "../lib/store.js";
 
 const shallow = a => {
@@ -65,7 +64,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         account_id: a1acc.id,
         user_id: user.id,
         currency: user.currency,
-        rate: rates[user.currency],
+        rate: store.rates[user.currency],
         confirmed: true,
         received: false,
         network: "COINOS"
@@ -134,7 +133,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             account_id: a1acc.id,
             user_id: user.id,
             currency: user.currency,
-            rate: rates[user.currency],
+            rate: store.rates[user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -159,7 +158,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
               account_id: btc.id,
               user_id: order.user_id,
               currency: order.user.currency,
-              rate: rates[order.user.currency],
+              rate: store.rates[order.user.currency],
               confirmed: true,
               received: true,
               network: "COINOS"
@@ -198,7 +197,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             account_id: a2acc.id,
             user_id: user.id,
             currency: user.currency,
-            rate: rates[user.currency],
+            rate: store.rates[user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -219,7 +218,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
             account_id: order.a2_id,
             user_id: order.user_id,
             currency: order.user.currency,
-            rate: rates[order.user.currency],
+            rate: store.rates[order.user.currency],
             confirmed: true,
             received: true,
             network: "COINOS"
@@ -292,7 +291,7 @@ const cancel = async (user, id) => {
         account_id: account.id,
         user_id: user.id,
         currency: user.currency,
-        rate: rates[user.currency],
+        rate: store.rates[user.currency],
         confirmed: true,
         received: true,
         network: "COINOS"
@@ -313,7 +312,7 @@ const cancel = async (user, id) => {
           account_id: btc.id,
           user_id: user.id,
           currency: user.currency,
-          rate: rates[user.currency],
+          rate: store.rates[user.currency],
           confirmed: true,
           received: true,
           network: "COINOS"
@@ -445,8 +444,8 @@ if (config.maker) {
             v2: Math.round(
               amount *
                 SATS *
-                (((app.get("ask") * rates[currency]) /
-                  rates["USD"]) *
+                (((app.get("ask") * store.rates[currency]) /
+                  store.rates["USD"]) *
                   askMultiplier)
             )
           };
@@ -528,8 +527,8 @@ if (config.maker) {
             v1: Math.round(
               amount *
                 SATS *
-                ((app.get("bid") * rates[currency]) /
-                  rates["USD"]) *
+                ((app.get("bid") * store.rates[currency]) /
+                  store.rates["USD"]) *
                 bidMultiplier
             ),
             v2: amount * SATS
