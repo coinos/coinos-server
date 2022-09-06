@@ -1,4 +1,6 @@
 import store from "$lib/store";
+import db from "$db";
+import config from "$config";
 import app from "$app";
 import { auth } from "$lib/passport";
 import axios from 'axios';
@@ -30,7 +32,6 @@ let fetchAssets;
 app.get(
   "/assets",
   async (req, res) => {
-    throw new Error("BOOM");
     if (store.assets) {
       const accounts = await db.Account.findAll({
         // group: ["asset"]

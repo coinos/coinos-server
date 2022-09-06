@@ -13,6 +13,7 @@ import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";
 import whitelist from "$lib/whitelist";
+import { l, err, warn } from "$lib/logging";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 

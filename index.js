@@ -4,6 +4,7 @@ import config from "./config/index";
 import store from "./lib/store";
 import { l } from "./lib/logging";
 
+import "./db";
 import "./lib/sockets";
 import "./lib/webhooks";
 import "./lib/passport";
@@ -14,6 +15,7 @@ import "./lib/sync";
 import "./routes/assets";
 import "./routes/info";
 import "./routes/users";
+
 // if (config.bitcoin) store.networks.push("bitcoin");
 // if (config.liquid) store.networks.push("liquid");
 // if (config.lna) store.networks.push("lightning");

@@ -1,4 +1,4 @@
-import db from "/db";
+import db from "$db/db";
 import { DataTypes } from '@sequelize/core';
 
 const attributes = {
