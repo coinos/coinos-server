@@ -1,4 +1,6 @@
 import config from "$config";
+import db from "$db";
+import bc from "$lib/bitcoin";
 import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import { notify } from "$lib/notifications";
@@ -10,6 +12,7 @@ import { fromBase58 } from 'bip32';
 import bitcoin from 'bitcoinjs-lib';
 import { sendLiquid } from "$routes/liquid/send";
 import { computeConversionFee } from './conversionFee';
+import { l, warn, err } from "$lib/logging";
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);
@@ -52,13 +55,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
         }
 
         if (
-          Object.keys(addresses).includes(address) &&
+          Object.keys(store.addresses).includes(address) &&
           !store.change.includes(address)
         ) {
           await db.transaction(async transaction => {
             let user = await db.User.findOne({
               where: {
-                username: addresses[address]
+                username: store.addresses[address]
               },
               transaction
             });
@@ -229,7 +232,7 @@ setInterval(async () => {
             notify(user, `${total} SAT payment confirmed`);
             callWebhook(p.invoice, p);
 
-            let c = convert[address];
+            let c = store.convert[address];
             if (address && c) {
               l(
                 "bitcoin detected to conversion address",

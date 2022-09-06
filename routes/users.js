@@ -20,6 +20,7 @@ import db from "$db";
 import bc from "$lib/bitcoin";
 import lq from "$lib/liquid";
 import { emit } from "$lib/sockets";
+import register from "$lib/register";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 

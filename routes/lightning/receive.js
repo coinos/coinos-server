@@ -1,3 +1,4 @@
+import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import config from "$config";
 import { notify } from "$lib/notifications";
@@ -99,7 +100,7 @@ const handlePayment = async msg => {
       );
     });
 
-    let c = convert[msg.payment_request];
+    let c = store.convert[msg.payment_request];
     if (msg.payment_request && c) {
       l(
         "lightning detected for conversion request",

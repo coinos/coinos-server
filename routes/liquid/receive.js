@@ -1,3 +1,4 @@
+import db from "$db";
 import config from "$config";
 import { toSats } from "$lib/utils";
 import { emit } from "$lib/sockets";
@@ -5,19 +6,22 @@ import store from "$lib/store";
 import { sendLiquid } from "$routes/liquid/send";
 import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
-import reverse from 'buffer-reverse';
-import zmq from 'zeromq/v5-compat';
-import { Op } from '@sequelize/core';
-import { fromBase58 } from 'bip32';
-import bitcoin from 'bitcoinjs-lib';
-import { Block, networks, Transaction } from 'liquidjs-lib';
+import reverse from "buffer-reverse";
+import zmq from "zeromq/v5-compat";
+import { Op } from "@sequelize/core";
+import { fromBase58 } from "bip32";
+import bitcoin from "bitcoinjs-lib";
+import { Block, networks, Transaction } from "liquidjs-lib";
+import { l, err, warn } from "$lib/logging";
+import lq from "$lib/liquid";
+import { getUser } from "$lib/utils";
 
 const network =
   networks[
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
 
-import { computeConversionFee } from './conversionFee';
+import { computeConversionFee } from "./conversionFee";
 
 const getAccount = async (params, transaction) => {
   let account = await db.Account.findOne({
@@ -172,13 +176,11 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
             await user.save({ transaction });
 
             const currency = invoice ? invoice.currency : user.currency;
-            const rate = invoice
-              ? invoice.rate
-              : store.rates[user.currency];
+            const rate = invoice ? invoice.rate : store.rates[user.currency];
             const tip = invoice ? invoice.tip : 0;
             const memo = invoice ? invoice.memo : "";
 
-            payment = await db.Payment.create(
+            let payment = await db.Payment.create(
               {
                 account_id: account.id,
                 user_id: user.id,
@@ -228,7 +230,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
     json = await lq.getBlock(hash, 2);
 
     json.tx.map(async tx => {
-      if (issuances[tx.txid]) {
+      if (store.issuances[tx.txid]) {
         await db.transaction(async transaction => {
           const {
             user_id,
@@ -238,7 +240,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
             token,
             token_amount,
             token_payment_id
-          } = issuances[tx.txid];
+          } = store.issuances[tx.txid];
 
           const user = await getUserById(user_id);
 
@@ -348,7 +350,10 @@ setInterval(async () => {
             { pending: Math.min(p.account.pending, total) },
             { transaction }
           );
-          await p.account.increment({ liquid_credits: computeConversionFee(total) }, { transaction });
+          await p.account.increment(
+            { liquid_credits: computeConversionFee(total) },
+            { transaction }
+          );
           await p.account.reload({ transaction });
 
           await p.save({ transaction });
@@ -375,7 +380,7 @@ setInterval(async () => {
         delete queue[hash];
       });
 
-      let c = convert[address];
+      let c = store.convert[address];
       if (address && c && p.account.asset === network.assetHash) {
         l(
           "liquid detected for conversion request",

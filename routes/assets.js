@@ -238,7 +238,7 @@ app.post("/assets", auth, async (req, res) => {
         );
         emit(user.username, "payment", asset_payment);
 
-        issuances[txid] = {
+        store.issuances[txid] = {
           user_id,
           asset,
           asset_amount: params.asset_amount,
@@ -278,14 +278,14 @@ app.post("/assets", auth, async (req, res) => {
           );
           emit(user.username, "payment", token_payment);
 
-          issuances[txid].token = token;
-          issuances[txid].token_amount = token_amount;
-          issuances[txid].token_payment_id = token_payment.id;
+          store.issuances[txid].token = token;
+          store.issuances[txid].token_amount = token_amount;
+          store.issuances[txid].token_payment_id = token_payment.id;
         }
       }
     });
 
-    res.send(issuances[txid] ? issuances[txid] : { asset });
+    res.send(store.issuances[txid] ? store.issuances[txid] : { asset });
   } catch (e) {
     err("asset issuance failed", e.message, e.stack);
     res.code(500).send(e.message);
