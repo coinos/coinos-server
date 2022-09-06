@@ -1,4 +1,4 @@
-import { lnurlServer } from "../lnurl.js";
+import { lnurlServer } from "$lnurl.js";
 
 export default async (req, res) => {
   let { localAmt, pushAmt } = req.body;

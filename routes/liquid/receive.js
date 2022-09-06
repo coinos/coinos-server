@@ -1,7 +1,7 @@
-import store from "../../lib/store.js";
+import store from "$lib/store.js";
 import { sendLiquid } from "./send.js";
-import { notify } from "../../lib/notifications.js";
-import { callWebhook } from "../../lib/webhooks.js";
+import { notify } from "$lib/notifications.js";
+import { callWebhook } from "$lib/webhooks.js";
 import reverse from 'buffer-reverse';
 import zmq from 'zeromq/v5-compat.js';
 import { Op } from '@sequelize/core';

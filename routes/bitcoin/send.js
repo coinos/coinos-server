@@ -1,5 +1,5 @@
-import store from "../../lib/store.js";
-import config from "../../config/index.js";
+import store from "$lib/store.js";
+import config from "$config/index.js";
 const btc = config.liquid.btcasset;
 import {
   computeConversionFee,

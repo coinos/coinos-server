@@ -1,13 +1,13 @@
-import store from "../lib/store.js";
-import app from "../app.js";
-import config from "../config/index.js";
+import store from "$lib/store.js";
+import app from "$app.js";
+import config from "$config/index.js";
 import axios from "axios";
 import lnurl from "lnurl";
 import jwt from "jsonwebtoken";
 import qs from "query-string";
-import persist from "../lib/persist.js";
+import persist from "$lib/persist.js";
 import bolt11 from "bolt11";
-import { optionalAuth, auth } from "../lib/passport.js";
+import { optionalAuth, auth } from "$lib/passport.js";
 
 export const logins = persist("data/logins.json");
 export const recipients = persist("data/recipients.json");

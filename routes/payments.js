@@ -1,13 +1,13 @@
-import store from "../lib/store.js";
-import bc from "../lib/bitcoin.js";
-import app from "../app.js";
-import config from "../config/index.js";
-import { auth, adminAuth, optionalAuth } from "../lib/passport.js";
+import store from "$lib/store.js";
+import bc from "$lib/bitcoin.js";
+import app from "$app.js";
+import config from "$config/index.js";
+import { auth, adminAuth, optionalAuth } from "$lib/passport.js";
 import fs from "fs";
 import { join } from "path";
 import { Op } from "@sequelize/core";
 import send from "./send.js";
-import { warn } from "../lib/logging.js";
+import { warn } from "$lib/logging.js";
 
 import btcRoutes from "./bitcoin/index.js";
 import lnRoutes from "./lightning/index.js";

@@ -1,5 +1,5 @@
-import config from "../../config/index.js";
-import { prod } from "../../lib/utils.js";
+import config from "$config/index.js";
+import { prod } from "$lib/utils.js";
 import axios from "axios";
 import bitcoin from "bitcoinjs-lib";
 import coinselect from "coinselect";

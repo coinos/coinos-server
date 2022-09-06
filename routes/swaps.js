@@ -1,10 +1,10 @@
-import { rates } from "../lib/store.js";
+import { rates } from "$lib/store.js";
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
 import getAccount from '../lib/account.js';
 import { Op, col } from '@sequelize/core';
-import { rates } from "../lib/store.js";
+import { rates } from "$lib/store.js";
 
 const shallow = a => {
   let b = {};

@@ -1,21 +1,21 @@
 import Sequelize from '@sequelize/core';
 
-import db from "./db.js";
+import db from "/db";
 
 db.authenticate().catch((err) => {
   console.debug("Error connecting to database: " + err.message);
   console.log(dbOptions.connection.database + "." + dbOptions.connection.user);
 });
 
-import './models/accounts.js';
-import './models/codes.js';
-import './models/deposits.js';
-import './models/invoices.js';
-import './models/keys.js';
-import './models/payments.js';
-import './models/orders.js';
-import './models/users.js';
-import './models/withdrawals.js';
+import '/db/models/accounts';
+import '/db/models/codes';
+import '/db/models/deposits';
+import '/db/models/invoices';
+import '/db/models/keys';
+import '/db/models/payments';
+import '/db/models/orders';
+import '/db/models/users';
+import '/db/models/withdrawals';
 
 // Require models in order (to enable FK relationship specs in models)
 
@@ -23,9 +23,9 @@ import './models/withdrawals.js';
 // require("./normalized/user_keys.js");
 // require("./normalized/user_preferences.js");
 
-import './models/referrals.js';
+import '/db/models/referrals';
 
-import './models/waiting_list.js';
+import '/db/models/waiting_list';
 
 // require("./normalized/subscriptions.js");
 // require("./normalized/user_subscriptions.js");

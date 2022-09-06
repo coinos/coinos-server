@@ -1,6 +1,6 @@
-import store from "../lib/store.js";
-import app from "../app.js";
-import { optionalAuth } from "../lib/passport.js";
+import store from "$lib/store.js";
+import app from "$app.js";
+import { optionalAuth } from "$lib/passport.js";
 import { Op } from "@sequelize/core";
 import axios from "axios";
 

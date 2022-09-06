@@ -1,9 +1,9 @@
-import config from "../../config/index.js";
-import { notify } from "../../lib/notifications.js";
-import { callWebhook } from "../../lib/webhooks.js";
+import config from "$config/index.js";
+import { notify } from "$lib/notifications.js";
+import { callWebhook } from "$lib/webhooks.js";
 import { computeConversionFee } from './conversionFee.js';
-import { sendLiquid } from "../liquid/send.js";
-import ln from "../../lib/ln.js";
+import { sendLiquid } from "$liquid/send.js";
+import ln from "$lib/ln.js";
 
 const handlePayment = async (msg) => {
   l("incoming lightning payment", msg.value, msg.payment_request, msg.settled);

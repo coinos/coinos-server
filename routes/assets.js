@@ -1,6 +1,6 @@
-import store from "../lib/store.js";
-import app from "../app.js";
-import { auth } from "../lib/passport.js";
+import store from "$lib/store.js";
+import app from "$app.js";
+import { auth } from "$lib/passport.js";
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';

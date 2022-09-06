@@ -1,8 +1,8 @@
-import store from "../lib/store.js";
-import { callWebhook } from "../lib/webhooks.js";
+import store from "$lib/store.js";
+import { callWebhook } from "$lib/webhooks.js";
 import axios from "axios";
 import { v4 } from "uuid";
-import { notify } from "../lib/notifications.js";
+import { notify } from "$lib/notifications.js";
 import { sendLiquid } from "./liquid/send.js";
 
 export default async (req, res, next) => {
