@@ -1,7 +1,7 @@
 import express from 'express';
 var router = express.Router();
 
-import  * as  parseInput from '../scripts/apiParse.js';
+import  * as  parseInput from '../scripts/apiParse';
 import Sequelize from '@sequelize/core';
 const Op = Sequelize.Op;
 

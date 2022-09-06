@@ -1,8 +1,8 @@
-import broadcast from "./broadcast.js";
-import generate from "./generate.js";
-import sweep from "./sweep.js";
-import fee from "./fee.js";
-import send from "./send.js";
+import broadcast from "./broadcast";
+import generate from "./generate";
+import sweep from "./sweep";
+import fee from "./fee";
+import send from "./send";
 
 export default {
   broadcast,

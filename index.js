@@ -1,44 +1,44 @@
-import app from "./app.js";
-import persist from "./lib/persist.js";
-import config from "./config/index.js";
-import store from "./lib/store.js";
-import { l } from "./lib/logging.js";
+import app from "./app";
+import persist from "./lib/persist";
+import config from "./config/index";
+import store from "./lib/store";
+import { l } from "./lib/logging";
 
-import "./lib/sockets.js";
-import "./lib/webhooks.js";
-import "./lib/passport.js";
-import "./lib/register.js";
-import "./lib/upload.js";
-import "./lib/send.js";
-import "./lib/sync.js";
-import "./routes/assets.js";
-import "./routes/info.js";
-import "./routes/users.js";
+import "./lib/sockets";
+import "./lib/webhooks";
+import "./lib/passport";
+import "./lib/register";
+import "./lib/upload";
+import "./lib/send";
+import "./lib/sync";
+import "./routes/assets";
+import "./routes/info";
+import "./routes/users";
 // if (config.bitcoin) store.networks.push("bitcoin");
 // if (config.liquid) store.networks.push("liquid");
 // if (config.lna) store.networks.push("lightning");
 //
-// import "./lib/rates.js";
-// import "./lib/notifications.js";
+// import "./lib/rates";
+// import "./lib/notifications";
 //
-// if (config.imap) import("./lib/mail.js");
-// if (config.lnurl) import("./routes/lnurl.js");
-// if (config.mailgun) import("./routes/funding.js");
+// if (config.imap) import("./lib/mail");
+// if (config.lnurl) import("./routes/lnurl");
+// if (config.mailgun) import("./routes/funding");
 //
-// import "./routes/invoices.js";
-// import "./routes/payments.js";
-// import "./routes/swaps.js";
+// import "./routes/invoices";
+// import "./routes/payments";
+// import "./routes/swaps";
 
 //  Scope based Route Handling
 
-// import referralsRouter from './routes/referrals.js';
+// import referralsRouter from './routes/referrals';
 
 // app.use("/referrals", referralsRouter);
 
-// import adminRouter from './routes/admin.js';
+// import adminRouter from './routes/admin';
 // app.use("/admin", adminAuth, adminRouter);
 
-import "./startup.js";
+import "./startup";
 
 app.post("/email", async (req, res) => {
   try {

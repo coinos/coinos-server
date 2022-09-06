@@ -1,4 +1,4 @@
-import buildTx from "$lib/buildtx.js";
+import buildTx from "$lib/buildtx";
 
 export default async (req, res) => {
   let { user } = req;

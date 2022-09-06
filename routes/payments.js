@@ -1,17 +1,17 @@
-import store from "$lib/store.js";
-import bc from "$lib/bitcoin.js";
-import app from "$app.js";
-import config from "$config/index.js";
-import { auth, adminAuth, optionalAuth } from "$lib/passport.js";
+import store from "$lib/store";
+import bc from "$lib/bitcoin";
+import app from "$app";
+import config from "$config";
+import { auth, adminAuth, optionalAuth } from "$lib/passport";
 import fs from "fs";
 import { join } from "path";
 import { Op } from "@sequelize/core";
-import send from "./send.js";
-import { warn } from "$lib/logging.js";
+import send from "./send";
+import { warn } from "$lib/logging";
 
-import btcRoutes from "./bitcoin/index.js";
-import lnRoutes from "./lightning/index.js";
-import lqRoutes from "./liquid/index.js";
+import btcRoutes from "./bitcoin/index";
+import lnRoutes from "./lightning/index";
+import lqRoutes from "./liquid/index";
 
 app.post("/send", auth, send);
 app.post("/sendToTokenHolders", auth, async (req, res, next) => {
@@ -57,7 +57,7 @@ if (config.lna) {
   app.post("/lightning/invoice", lnRoutes.invoice);
   app.post("/lightning/query", auth, lnRoutes.query);
   app.post("/lightning/send", auth, lnRoutes.send);
-  import("./lightning/receive.js");
+  import("./lightning/receive");
 }
 
 if (config.bitcoin) {
@@ -66,7 +66,7 @@ if (config.bitcoin) {
   app.post("/bitcoin/sweep", auth, btcRoutes.sweep);
   app.post("/bitcoin/fee", auth, btcRoutes.fee);
   app.post("/bitcoin/send", auth, btcRoutes.send);
-  import("./bitcoin/receive.js");
+  import("./bitcoin/receive");
 
   setTimeout(async () => {
     try {
@@ -86,7 +86,7 @@ if (config.liquid) {
   // app.post("/liquid/fee", auth, lqRoutes.fee);
   app.post("/liquid/send", auth, lqRoutes.send);
   // app.post("/taxi", auth, lqRoutes.taxi);
-  import("./liquid/receive.js");
+  import("./liquid/receive");
 
   setTimeout(async () => {
     try {

@@ -1,8 +1,8 @@
-import channel from "./channel.js";
-import channelRequest from "./channelRequest.js";
-import invoice from "./invoice.js";
-import query from "./query.js";
-import send from "./send.js";
+import channel from "./channel";
+import channelRequest from "./channelRequest";
+import invoice from "./invoice";
+import query from "./query";
+import send from "./send";
 
 export default {
   channel,

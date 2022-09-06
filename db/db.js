@@ -1,5 +1,5 @@
 import Sequelize from '@sequelize/core';
-import dbOptions from '../config/knexfile.js';
+import dbOptions from '../config/knexfile';
 
 let { database, user, password, host } = dbOptions[process.env.NODE_ENV].connection;
  

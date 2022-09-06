@@ -1,4 +1,4 @@
-import buildTx from "$lib/buildliquidtx.js";
+import buildTx from "$lib/buildliquidtx";
 
 liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let tx, fee;

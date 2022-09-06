@@ -1,4 +1,4 @@
-import app from "$app.js";
+import app from "$app";
 import sequelize from '@sequelize/core';
 const { Op } = sequelize;
 

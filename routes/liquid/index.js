@@ -1,8 +1,8 @@
-import broadcast from "./broadcast.js";
-import generate from "./generate.js";
-// import fee from "./fee.js";
-import send from "./send.js";
-// import taxi from "./taxi.js";
+import broadcast from "./broadcast";
+import generate from "./generate";
+// import fee from "./fee";
+import send from "./send";
+// import taxi from "./taxi";
 
 export default {
   broadcast,

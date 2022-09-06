@@ -1,5 +1,5 @@
-import store from "$lib/store.js";
-import config from "$config/index.js";
+import store from "$lib/store";
+import config from "$config";
 const btc = config.liquid.btcasset;
 const lcad = config.liquid.cadasset;
 // import { Transaction } from 'liquidjs-lib';

@@ -1,18 +1,18 @@
-import app from "$app.js";
-import { auth, optionalAuth } from "$lib/passport.js";
-import { getUser } from "$lib/utils.js";
+import app from "$app";
+import { auth, optionalAuth } from "$lib/passport";
+import { getUser } from "$lib/utils";
 import axios from "axios";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
-import getAccount from "$lib/account.js";
+import getAccount from "$lib/account";
 import Sequelize from "@sequelize/core";
 import bitcoin from "bitcoinjs-lib";
 // import liquid from 'liquidjs-lib';
 import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";
-import whitelist from "$lib/whitelist.js";
+import whitelist from "$lib/whitelist";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 

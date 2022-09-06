@@ -1,9 +1,9 @@
-import config from "$config/index.js";
-import { prod } from "$lib/utils.js";
+import config from "$config";
+import { prod } from "$lib/utils";
 import axios from "axios";
 import bitcoin from "bitcoinjs-lib";
 import coinselect from "coinselect";
-import split from "coinselect/split.js";
+import split from "coinselect/split";
 
 const api = prod ? "https://blockstream.info/api" : config.bitcoin.electrs;
 const SATS = 100000000;
