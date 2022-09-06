@@ -3,7 +3,7 @@ import { callWebhook } from "$lib/webhooks";
 import axios from "axios";
 import { v4 } from "uuid";
 import { notify } from "$lib/notifications";
-import { sendLiquid } from "./liquid/send";
+import { sendLiquid } from "$routes/liquid/send";
 
 export default async (req, res, next) => {
   let {

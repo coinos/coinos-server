@@ -1,10 +1,12 @@
-import { rates } from "$lib/store";
+import app from "$app";
+import config from "$config";
+import { auth, optionalAuth } from "$lib/passport";
+import store from "$lib/store";
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
 import getAccount from '../lib/account';
 import { Op, col } from '@sequelize/core';
-import { rates } from "$lib/store";
 
 const shallow = a => {
   let b = {};
@@ -72,8 +74,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
       { transaction }
     );
 
-    emit(user.username, "payment", payment.get({ plain: true });
-    emit(user.username, "account", a1acc.get({ plain: true });
+    emit(user.username, "payment", payment.get({ plain: true }));
+    emit(user.username, "account", a1acc.get({ plain: true }));
 
     const orders = await db.Order.findAll(
       {
@@ -124,7 +126,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         await order.acc1.increment({ balance: v2 }, { transaction });
         await order.acc1.reload({ transaction });
 
-        emit(order.user.username, "account", order.acc1.get({ plain: true });
+        emit(order.user.username, "account", order.acc1.get({ plain: true }));
 
         payment = await db.Payment.create(
           {
@@ -141,8 +143,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        emit(user.username, "payment", payment.get({ plain: true });
-        emit(user.username, "account", a1acc.get({ plain: true });
+        emit(user.username, "payment", payment.get({ plain: true }));
+        emit(user.username, "account", a1acc.get({ plain: true }));
 
         if (order.fee) {
           const btc = await getAccount(
@@ -169,10 +171,10 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           await btc.increment({ balance: order.fee }, { transaction });
           await btc.reload({ transaction });
 
-          emit(order.user.username, "account", btc.get({ plain: true });
+          emit(order.user.username, "account", btc.get({ plain: true }));
         }
 
-        emit(order.user.username, "payment", payment.get({ plain: true });
+        emit(order.user.username, "payment", payment.get({ plain: true }));
 
         order = order.get({ plain: true });
         order.a1 = order.acc1.asset;
@@ -208,8 +210,8 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
         await a2acc.increment({ balance: order.v1 }, { transaction });
         await a2acc.reload({ transaction });
 
-        emit(user.username, "payment", payment.get({ plain: true });
-        emit(user.username, "account", a2acc.get({ plain: true });
+        emit(user.username, "payment", payment.get({ plain: true }));
+        emit(user.username, "account", a2acc.get({ plain: true }));
 
         payment = await db.Payment.create(
           {
@@ -226,7 +228,7 @@ const swap = async (user, { a1, a2, v1, v2 }) => {
           { transaction }
         );
 
-        emit(order.user.username, "payment", payment.get({ plain: true });
+        emit(order.user.username, "payment", payment.get({ plain: true }));
         await order.acc2.increment({ balance: order.v2 }, { transaction });
         await order.acc2.reload({ transaction });
 
@@ -299,8 +301,8 @@ const cancel = async (user, id) => {
       { transaction }
     );
 
-    emit(user.username, "account", account.get({ plain: true });
-    emit(user.username, "payment", payment.get({ plain: true });
+    emit(user.username, "account", account.get({ plain: true }));
+    emit(user.username, "payment", payment.get({ plain: true }));
 
     if (order.fee) {
       const btc = await getAccount(config.liquid.btcasset, user, transaction);
@@ -323,8 +325,8 @@ const cancel = async (user, id) => {
       await btc.increment({ balance: order.fee }, { transaction });
       await btc.reload({ transaction });
 
-      emit(user.username, "account", btc.get({ plain: true });
-      emit(user.username, "payment", payment.get({ plain: true });
+      emit(user.username, "account", btc.get({ plain: true }));
+      emit(user.username, "payment", payment.get({ plain: true }));
     }
 
     broadcast("removeOrder", id);
@@ -342,7 +344,6 @@ app.delete(
     await cancel(user, id);
     res.send({});
   })
-);
 
 app.post(
   "/orders",
@@ -358,7 +359,6 @@ app.post(
       res.code(500).send(e.message);
     }
   })
-);
 
 app.get(
   "/orders",
@@ -396,7 +396,6 @@ app.get(
       res.code(500).send(e.message);
     }
   })
-);
 
 if (config.maker) {
   debug('setup maker account...')

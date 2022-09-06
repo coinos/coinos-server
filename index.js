@@ -16,19 +16,21 @@ import "./routes/assets";
 import "./routes/info";
 import "./routes/users";
 
-// if (config.bitcoin) store.networks.push("bitcoin");
-// if (config.liquid) store.networks.push("liquid");
-// if (config.lna) store.networks.push("lightning");
-//
-// import "./lib/rates";
-// import "./lib/notifications";
-//
+if (config.bitcoin) store.networks.push("bitcoin");
+if (config.liquid) store.networks.push("liquid");
+if (config.lna) store.networks.push("lightning");
+
+import "./lib/rates";
+import "./lib/notifications";
+
+console.log("LNURL?", config.lnurl)
+
 // if (config.imap) import("./lib/mail");
 // if (config.lnurl) import("./routes/lnurl");
 // if (config.mailgun) import("./routes/funding");
 //
-// import "./routes/invoices";
-// import "./routes/payments";
+import "./routes/invoices";
+import "./routes/payments";
 // import "./routes/swaps";
 
 //  Scope based Route Handling

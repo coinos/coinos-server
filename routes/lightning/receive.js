@@ -1,43 +1,43 @@
 import config from "$config";
 import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
-import { computeConversionFee } from './conversionFee';
-import { sendLiquid } from "$liquid/send";
-import ln from "$lib/ln";
+import { computeConversionFee } from "./conversionFee";
+import { sendLiquid } from "$routes/liquid/send";
+import { subscribeToInvoices } from "lightning";
+import lnd from "$lib/lnd";
 
-const handlePayment = async (msg) => {
+const handlePayment = async msg => {
   l("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
   if (!msg.settled) return;
   let account, total, user;
 
   const invoice = await db.Invoice.findOne({
     where: {
-      text: msg.payment_request,
-    },
+      text: msg.payment_request
+    }
   });
 
   if (!invoice)
     return warn("received lightning with no invoice", msg.payment_request);
 
   try {
-    await db.transaction(async (transaction) => {
+    await db.transaction(async transaction => {
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
       const amount = parseInt(msg.amt_paid_sat) - tip;
-      if (amount < 0)
-        throw new Error("amount out of range");
+      if (amount < 0) throw new Error("amount out of range");
 
       account = await db.Account.findOne({
         where: {
           user_id,
           asset: config.liquid.btcasset,
-          pubkey: null,
+          pubkey: null
         },
         include: {
           model: db.User,
-          as: "user",
+          as: "user"
         },
         lock: transaction.LOCK.UPDATE,
-        transaction,
+        transaction
       });
 
       ({ user } = account);
@@ -58,7 +58,7 @@ const handlePayment = async (msg) => {
           confirmed: true,
           network: "lightning",
           tip,
-          invoice_id: invoice.id,
+          invoice_id: invoice.id
         },
         { transaction }
       );
@@ -66,12 +66,15 @@ const handlePayment = async (msg) => {
       total = amount + tip;
       invoice.received += total;
 
-      invoice.status = 'paid';
+      invoice.status = "paid";
       await invoice.save({ transaction });
 
       await account.increment({ balance: total }, { transaction });
       // get the # of fee credits you would need to pay off this amount of bitcoin
-      await account.increment({ lightning_credits: computeConversionFee(total) }, { transaction });
+      await account.increment(
+        { lightning_credits: computeConversionFee(total) },
+        { transaction }
+      );
       await account.reload({ transaction });
       await invoice.save({ transaction });
       await payment.save({ transaction });
@@ -79,7 +82,7 @@ const handlePayment = async (msg) => {
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
-      payment.invoice= invoice.get({ plain: true });
+      payment.invoice = invoice.get({ plain: true });
 
       callWebhook(invoice, payment);
 
@@ -111,7 +114,7 @@ const handlePayment = async (msg) => {
           address: c.address,
           amount: total - 100,
           user,
-          limit: total,
+          limit: total
         });
       } catch (e) {
         err("problem sending liquid payment", e.message, e.stack);
@@ -123,14 +126,14 @@ const handlePayment = async (msg) => {
 };
 
 if (config.lna.clightning) {
-  const poll = async (ln) => {
-    const wait = async (i) => {
+  const poll = async ln => {
+    const wait = async i => {
       const {
         bolt11: payment_request,
         pay_index,
         status,
         msatoshi_received,
-        payment_preimage: r_preimage,
+        payment_preimage: r_preimage
       } = await ln.waitanyinvoice(i);
 
       let settled = status === "paid";
@@ -140,17 +143,17 @@ if (config.lna.clightning) {
         payment_request,
         settled,
         amt_paid_sat,
-        r_preimage,
+        r_preimage
       });
       wait(pay_index);
     };
 
     const { invoices } = await ln.listinvoices();
-    wait(Math.max(...invoices.map((i) => i.pay_index).filter((n) => n)));
+    wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
   };
 
   poll(ln);
 } else {
-  const invoices = ln.subscribeInvoices({});
+  const invoices = subscribeToInvoices({ lnd });
   invoices.on("data", handlePayment);
 }

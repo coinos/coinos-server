@@ -69,7 +69,7 @@
     "zeromq": "6.0.0-beta.6"
   },
   "devDependencies": {
-    "prettier": "^1.18.2"
+    "prettier": "^1.19.1"
   },
   "apidoc": {
     "title": "CoinOS Server API Documentation",

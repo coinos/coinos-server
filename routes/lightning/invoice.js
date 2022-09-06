@@ -1,3 +1,8 @@
+import config from "$config";
+import { createInvoice } from "lightning";
+import { err } from "$lib/logging";
+import lnd from "$lib/lnd";
+
 export default async (req, res) => {
   let { amount, memo, tip } = req.body;
   if (!tip) tip = 0;
@@ -14,8 +19,13 @@ export default async (req, res) => {
       );
       res.send({ text: invoice.bolt11 });
     } else {
-      const invoice = await lnp.addInvoice({ value, memo });
-      res.send({ text: invoice.payment_request });
+      const invoice = await createInvoice({
+        lnd,
+        tokens: value,
+        description: memo
+      });
+      console.log(invoice)
+      res.send({ text: invoice.request });
     }
   } catch (e) {
     err("problem creating invoice", e.message, e.stack);

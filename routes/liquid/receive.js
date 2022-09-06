@@ -1,5 +1,5 @@
 import store from "$lib/store";
-import { sendLiquid } from "./send";
+import { sendLiquid } from "$routes/liquid/send";
 import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
 import reverse from 'buffer-reverse';

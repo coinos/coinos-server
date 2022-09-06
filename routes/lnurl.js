@@ -8,6 +8,8 @@ import qs from "query-string";
 import persist from "$lib/persist";
 import bolt11 from "bolt11";
 import { optionalAuth, auth } from "$lib/passport";
+import { createInvoice, getPayments,  from "lightning";
+import lnd from "$lib/lnd";
 
 export const logins = persist("data/logins.json");
 export const recipients = persist("data/recipients.json");
@@ -80,7 +82,7 @@ app.post("/withdraw", auth, async (req, res, next) => {
     amount: value,
     params: { callback, k1 }
   } = req.body;
-  const invoice = await lnp.addInvoice({ value });
+  const invoice = await createInvoice({ lnd, value });
   const { payment_request: pr } = invoice;
   const url = `${callback}?k1=${k1}&pr=${pr}`;
 
@@ -360,7 +362,7 @@ lnurlServer.bindToHook(
         }
 
         try {
-          let decoded = await lnp.decodePayReq({ pay_req: pr });
+          let decoded = await decodePaymentRequest({ lnd, request: pr });
           let amount = decoded.num_satoshis;
           let conversionFee = computeConversionFee(amount);
 
@@ -450,13 +452,12 @@ lnurlServer.bindToHook(
 
             setTimeout(async () => {
               try {
-                let { payments } = await lnp.listPayments({
-                  include_incomplete: false,
-                  max_payments: 5,
-                  reversed: true
+                let { payments } = await ln.getPayments({
+                  lnd,
+                  limit: 5,
                 });
 
-                let p = payments.find(p => p.payment_request === pr);
+                let p = payments.find(p => p.request === pr);
                 if (p) {
                   l("found payment", pr);
                   payment.fee = p.fee;

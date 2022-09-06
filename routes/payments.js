@@ -1,13 +1,17 @@
-import store from "$lib/store";
-import bc from "$lib/bitcoin";
 import app from "$app";
 import config from "$config";
+import store from "$lib/store";
+
 import { auth, adminAuth, optionalAuth } from "$lib/passport";
 import fs from "fs";
 import { join } from "path";
 import { Op } from "@sequelize/core";
 import send from "./send";
-import { warn } from "$lib/logging";
+import { l, warn } from "$lib/logging";
+import { fail } from "$lib/utils";
+
+import bc from "$lib/bitcoin";
+import lq from "$lib/liquid";
 
 import btcRoutes from "./bitcoin/index";
 import lnRoutes from "./lightning/index";
@@ -52,87 +56,92 @@ app.get("/except", adminAuth, (req, res) => {
 });
 
 if (config.lna) {
+  console.log("LIGHTNING ROUTES")
   app.post("/lightning/channel", lnRoutes.channel);
-  app.post("/lightning/channelRequest", lnRoutes.channelRequest);
   app.post("/lightning/invoice", lnRoutes.invoice);
   app.post("/lightning/query", auth, lnRoutes.query);
   app.post("/lightning/send", auth, lnRoutes.send);
   import("./lightning/receive");
+
+  // if (config.lnurl) {
+  //   let channelRequest = await import("$routes/lightning/channelRequest");
+  //   app.post("/lightning/channelRequest", channelRequest)
+  // } 
 }
-
-if (config.bitcoin) {
-  app.post("/bitcoin/broadcast", optionalAuth, btcRoutes.broadcast);
-  app.get("/bitcoin/generate", auth, btcRoutes.generate);
-  app.post("/bitcoin/sweep", auth, btcRoutes.sweep);
-  app.post("/bitcoin/fee", auth, btcRoutes.fee);
-  app.post("/bitcoin/send", auth, btcRoutes.send);
-  import("./bitcoin/receive");
-
-  setTimeout(async () => {
-    try {
-      const address = await bc.getNewAddress();
-      const { hdkeypath } = await bc.getAddressInfo(address);
-      const parts = hdkeypath.split("/");
-      store.bcAddressIndex = parts[parts.length - 1].replace("'", "");
-    } catch (e) {
-      console.error(e);
-    }
-  }, 50);
-}
-
-if (config.liquid) {
-  app.post("/liquid/broadcast", optionalAuth, lqRoutes.broadcast);
-  app.get("/liquid/generate", auth, lqRoutes.generate);
-  // app.post("/liquid/fee", auth, lqRoutes.fee);
-  app.post("/liquid/send", auth, lqRoutes.send);
-  // app.post("/taxi", auth, lqRoutes.taxi);
-  import("./liquid/receive");
-
-  setTimeout(async () => {
-    try {
-      const address = await lq.getNewAddress();
-      const { hdkeypath } = await lq.getAddressInfo(address);
-      const parts = hdkeypath.split("/");
-      store.lqAddressIndex = parts[parts.length - 1].slice(0, -1);
-    } catch (e) {
-      warn("Problem getting liquid address index", e.message);
-    }
-  }, 50);
-}
-
-app.get("/payments", auth, async (req, res) => {
-  if (!req.user.account_id) return res.send([]);
-  let payments = await db.Payment.findAll({
-    where: {
-      account_id: req.user.account_id
-    },
-    order: [["id", "DESC"]],
-    include: {
-      model: db.Account,
-      as: "account"
-    }
-  });
-
-  res.send(payments);
-});
-
-app.get("/payment/:redeemcode", async (req, res) => {
-  try {
-    const { redeemcode } = req.params;
-    let payment = await db.Payment.findOne({
-      where: {
-        redeemcode
-      },
-      include: {
-        model: db.Account,
-        as: "account"
-      }
-    });
-
-    if (!payment) fail("invalid code");
-
-    res.send(payment);
-  } catch (e) {
-    res.code(500).send(e.message);
-  }
-});
+//
+// if (config.bitcoin) {
+//   app.post("/bitcoin/broadcast", optionalAuth, btcRoutes.broadcast);
+//   app.get("/bitcoin/generate", auth, btcRoutes.generate);
+//   app.post("/bitcoin/sweep", auth, btcRoutes.sweep);
+//   app.post("/bitcoin/fee", auth, btcRoutes.fee);
+//   app.post("/bitcoin/send", auth, btcRoutes.send);
+//   import("./bitcoin/receive");
+//
+//   setTimeout(async () => {
+//     try {
+//       const address = await bc.getNewAddress();
+//       const { hdkeypath } = await bc.getAddressInfo(address);
+//       const parts = hdkeypath.split("/");
+//       store.bcAddressIndex = parts[parts.length - 1].replace("'", "");
+//     } catch (e) {
+//       console.error(e);
+//     }
+//   }, 50);
+// }
+//
+// if (config.liquid) {
+//   app.post("/liquid/broadcast", optionalAuth, lqRoutes.broadcast);
+//   app.get("/liquid/generate", auth, lqRoutes.generate);
+//   // app.post("/liquid/fee", auth, lqRoutes.fee);
+//   app.post("/liquid/send", auth, lqRoutes.send);
+//   // app.post("/taxi", auth, lqRoutes.taxi);
+//   import("./liquid/receive");
+//
+//   setTimeout(async () => {
+//     try {
+//       const address = await lq.getNewAddress();
+//       const { hdkeypath } = await lq.getAddressInfo(address);
+//       const parts = hdkeypath.split("/");
+//       store.lqAddressIndex = parts[parts.length - 1].slice(0, -1);
+//     } catch (e) {
+//       warn("Problem getting liquid address index", e.message);
+//     }
+//   }, 50);
+// }
+//
+// app.get("/payments", auth, async (req, res) => {
+//   if (!req.user.account_id) return res.send([]);
+//   let payments = await db.Payment.findAll({
+//     where: {
+//       account_id: req.user.account_id
+//     },
+//     order: [["id", "DESC"]],
+//     include: {
+//       model: db.Account,
+//       as: "account"
+//     }
+//   });
+//
+//   res.send(payments);
+// });
+//
+// app.get("/payment/:redeemcode", async (req, res) => {
+//   try {
+//     const { redeemcode } = req.params;
+//     let payment = await db.Payment.findOne({
+//       where: {
+//         redeemcode
+//       },
+//       include: {
+//         model: db.Account,
+//         as: "account"
+//       }
+//     });
+//
+//     if (!payment) fail("invalid code");
+//
+//     res.send(payment);
+//   } catch (e) {
+//     res.code(500).send(e.message);
+//   }
+// });

@@ -6,6 +6,7 @@ import zmq from 'zeromq/v5-compat';
 import { Op } from '@sequelize/core';
 import { fromBase58 } from 'bip32';
 import bitcoin from 'bitcoinjs-lib';
+import { sendLiquid } from "$routes/liquid/send";
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);

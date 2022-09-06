@@ -2,6 +2,8 @@ import app from "$app";
 import sequelize from '@sequelize/core';
 import config from "$config";
 import store from "$lib/store";
+import ln from "$lib/ln";
+import { getChannelBalance, getChainBalance } from "lightning";
 
 const { Op } = sequelize;
 
@@ -37,18 +39,15 @@ app.get("/balances", async (req, res, next) => {
 
   let lnchannel; 
   let lnwallet;
-  let l;
 
   if (config.lna) {
     if (config.lna.clightning) {
       const funds = await lna.listfunds();
-      l = await lna.getinfo();
       lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
       lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
     } else {
-      l = await lnp.getInfo({});
-      lnchannel = parseInt((await lnp.channelBalance({}).balance));
-      lnwallet = parseInt((await lnp.walletBalance({}).total_balance));
+      lnchannel = parseInt((await getChannelBalance({ lnd }).channel_balance));
+      lnwallet = parseInt((await getChainBalance({ lnd }).chain_balance));
     } 
   }
 

@@ -1,15 +1,18 @@
 import axios from "axios";
+import { addPeer, getIdentity } from "lightning";
+import lnd from "$lib/lnd";
 
 export default async (req, res) => {
   const { params } = req.body;
-  const [pubkey, host] = params.uri.split("@");
+  const [public_key, socket] = params.uri.split("@");
 
-  l("connecting to peer", req.user.username, pubkey, host);
+  l("connecting to peer", req.user.username, public_key, socket);
   let result;
   try {
-    result = await lnp.connectPeer({
-      addr: { pubkey, host },
-      perm: true
+    result = await addPeer({
+      lnd,
+      socket,
+      public_key
     });
   } catch (e) {
     if (!e.message.includes("already connected")) {
@@ -21,7 +24,7 @@ export default async (req, res) => {
   const { callback, k1 } = params;
   let remoteid;
   try {
-    remoteid = (await lnp.getInfo({})).identity_pubkey;
+    remoteid = (await getIdentity({ lnd })).public_key;
   } catch (e) {
     err("problem getting lightning node info", e.message);
     return res.code(500).send(e.message);
