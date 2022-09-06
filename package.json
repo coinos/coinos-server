@@ -40,7 +40,7 @@
     "jsonwebtoken": "^8.5.1",
     "knex": "^0.95.6",
     "lightning": "5",
-    "liquidjs-lib": "https://github.com/asoltys/liquidjs-lib#4a0bb0c4b38d327ec247d49e89219798fb0b28e2",
+    "liquidjs-lib": "6.0.2-liquid.8",
     "lnurl": "0.19",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",

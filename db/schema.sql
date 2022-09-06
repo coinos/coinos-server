@@ -70,7 +70,7 @@ CREATE TABLE `accounts` (
   `lightning_credits` double NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=21593 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=21645 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -144,7 +144,7 @@ CREATE TABLE `invoices` (
   KEY `invoices_account_id_foreign` (`account_id`),
   CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `invoices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=46953 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=47779 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -161,7 +161,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12623 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=12630 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -263,7 +263,7 @@ CREATE TABLE `payments` (
   CONSTRAINT `payments_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
   CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29354 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=29783 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -334,10 +334,11 @@ CREATE TABLE `users` (
   `admin` tinyint(1) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
   `phone` varchar(255) DEFAULT NULL,
+  `address` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`),
   KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=15411 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=15450 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -396,4 +397,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-08-05  5:15:19
+-- Dump completed on 2022-09-06 19:00:21
