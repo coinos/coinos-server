@@ -11,10 +11,12 @@ import zmq from "zeromq/v5-compat";
 import { Op } from "@sequelize/core";
 import { fromBase58 } from "bip32";
 import bitcoin from "bitcoinjs-lib";
-import { Block, networks, Transaction } from "liquidjs-lib";
+import liquidJs from "liquidjs-lib";
 import { l, err, warn } from "$lib/logging";
 import lq from "$lib/liquid";
 import { getUser } from "$lib/utils";
+
+const { Block, networks, Transaction } = liquidJs;
 
 const network =
   networks[
