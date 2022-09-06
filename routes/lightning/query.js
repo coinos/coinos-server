@@ -1,3 +1,5 @@
+import { emit } from "$lib/sockets";
+
 export default async (req, res) => {
   const { payreq } = req.body;
 

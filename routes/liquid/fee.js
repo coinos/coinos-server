@@ -1,3 +1,4 @@
+import { emit } from "$lib/sockets";
 import buildTx from "$lib/buildliquidtx";
 
 liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {

@@ -1,3 +1,4 @@
+import { emit } from "$lib/sockets";
 import app from "$app";
 import config from "$config";
 import mailgunFactory from 'mailgun-js';

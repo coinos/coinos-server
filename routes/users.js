@@ -1,5 +1,6 @@
 import app from "$app";
 import config from "$config";
+import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
 import { getUser } from "$lib/utils";
 import axios from "axios";
@@ -9,13 +10,16 @@ import { authenticator } from "otplib";
 import getAccount from "$lib/account";
 import Sequelize from "@sequelize/core";
 import bitcoin from "bitcoinjs-lib";
-// import liquid from 'liquidjs-lib';
+import liquid from 'liquidjs-lib';
 import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";
 import whitelist from "$lib/whitelist";
 import { l, err, warn } from "$lib/logging";
 import db from "$db";
+import bc from "$lib/bitcoin";
+import lq from "$lib/liquid";
+import { emit } from "$lib/sockets";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -153,7 +157,7 @@ app.post("/user", auth, async (req, res) => {
       err("username taken", username, user.username, exists.username);
       return res.code(500).send("Username taken");
     } else {
-      sockets[username] = sockets[user.username];
+      store.sockets[username] = store.sockets[user.username];
       if (user.username !== username)
         l("changing username", user.username, username);
       user.username = username;
@@ -387,20 +391,20 @@ app.get("/address", async (req, res) => {
         return res.code(500).send("Bitcoin not configured");
 
       address = await bc.getNewAddress("", type);
-      bcAddressIndex = i + 1;
+      store.bcAddressIndex = i + 1;
       return res.send({ address });
 
       p = bitcoin.payments;
       n = prod ? bitcoin.networks["bitcoin"] : bitcoin.networks["regtest"];
 
-      i = parseInt(app.get("bcAddressIndex"));
+      i = parseInt(store.bcAddressIndex);
       hd = fromBase58(config.bitcoin.masterkey, n).derivePath(`m/0'/0'/${i}'`);
 
       // async request to node to bump its internal index but don't use result
       bc.getNewAddress().catch(console.error);
       res.send({ address, confidentialAddress });
 
-      bcAddressIndex = i + 1;
+      store.bcAddressIndex = i + 1;
     } else if (network === "liquid") {
       p = liquid.payments;
       n =
@@ -414,7 +418,7 @@ app.get("/address", async (req, res) => {
         warn("Problem bumping liquid address index", e.message)
       );
 
-      i = parseInt(app.get("lqAddressIndex"));
+      i = parseInt(store.lqAddressIndex);
 
       if (!i) {
         const { hdkeypath } = await lq.getAddressInfo(await lq.getNewAddress());
@@ -426,7 +430,7 @@ app.get("/address", async (req, res) => {
       if (!i) throw new Error("Problem generating address");
 
       hd = fromBase58(config.liquid.masterkey, n).derivePath(`m/0'/0'/${i}'`);
-      lqAddressIndex = i + 1;
+      store.lqAddressIndex = i + 1;
     } else {
       throw new Error("Unsupported network");
     }

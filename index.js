@@ -23,8 +23,6 @@ if (config.lna) store.networks.push("lightning");
 import "./lib/rates";
 import "./lib/notifications";
 
-console.log("LNURL?", config.lnurl)
-
 // if (config.imap) import("./lib/mail");
 // if (config.lnurl) import("./routes/lnurl");
 // if (config.mailgun) import("./routes/funding");

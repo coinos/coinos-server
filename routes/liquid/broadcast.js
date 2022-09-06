@@ -1,4 +1,6 @@
+import { emit } from "$lib/sockets";
 import store from "$lib/store";
+
 export default async (req, res) => {
   try {
     const { user } = req;

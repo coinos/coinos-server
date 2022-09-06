@@ -1,3 +1,4 @@
+import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import app from "$app";
 import config from "$config";

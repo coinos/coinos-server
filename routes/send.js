@@ -1,3 +1,4 @@
+import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import { callWebhook } from "$lib/webhooks";
 import axios from "axios";

@@ -1,4 +1,6 @@
-import { rates } from "$lib/store";
+import config from "$config";
+import { emit } from "$lib/sockets";
+import store from "$lib/store";
 import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
 import reverse from 'buffer-reverse';
@@ -7,6 +9,7 @@ import { Op } from '@sequelize/core';
 import { fromBase58 } from 'bip32';
 import bitcoin from 'bitcoinjs-lib';
 import { sendLiquid } from "$routes/liquid/send";
+import { computeConversionFee } from './conversionFee';
 
 const zmqRawBlock = zmq.socket("sub");
 zmqRawBlock.connect(config.bitcoin.zmqrawblock);
@@ -24,9 +27,9 @@ const network =
 const queue = {};
 const seen = [];
 
-import { computeConversionFee } from './conversionFee';
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
+  console.log("TX", message)
   const hex = message.toString("hex");
   let tx = bitcoin.Transaction.fromHex(message);
 
