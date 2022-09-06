@@ -7,6 +7,9 @@ import { auth } from "$lib/passport";
 import axios from "axios";
 import crypto from "crypto";
 import fs from "fs";
+import { err, l } from "$lib/logging";
+import lq from "$lib/liquid";
+import { SATS } from "$lib/utils";
 
 let fetchAssets;
 (fetchAssets = async () => {

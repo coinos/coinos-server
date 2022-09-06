@@ -1,6 +1,6 @@
 import db from "$db";
 import config from "$config";
-import { toSats } from "$lib/utils";
+import { getBlockHeight, getUser, toSats } from "$lib/utils";
 import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import { sendLiquid } from "$routes/liquid/send";
@@ -14,7 +14,6 @@ import bitcoin from "bitcoinjs-lib";
 import liquidJs from "liquidjs-lib";
 import { l, err, warn } from "$lib/logging";
 import lq from "$lib/liquid";
-import { getUser } from "$lib/utils";
 
 const { Block, networks, Transaction } = liquidJs;
 
@@ -224,11 +223,9 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
       where: { confirmed: 0 }
     });
 
-    const block = Block.fromHex(message.toString("hex"), true);
-
     let hash, json;
 
-    hash = await lq.getBlockHash(block.blockHeight);
+    hash = await lq.getBlockHash(getBlockHeight(message));
     json = await lq.getBlock(hash, 2);
 
     json.tx.map(async tx => {
