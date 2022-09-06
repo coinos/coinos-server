@@ -1,4 +1,5 @@
 import app from "$app";
+import config from "$config";
 import { auth, optionalAuth } from "$lib/passport";
 import { getUser } from "$lib/utils";
 import axios from "axios";
@@ -14,6 +15,7 @@ import { Mutex } from "async-mutex";
 import bip32 from "bip32";
 import whitelist from "$lib/whitelist";
 import { l, err, warn } from "$lib/logging";
+import db from "$db";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -67,7 +69,7 @@ app.get("/users/:username", async (req, res) => {
   });
 
   if (user) res.send(user);
-  else res.status(500).send("User not found");
+  else res.code(500).send("User not found");
 });
 
 app.post("/register", async (req, res) => {
@@ -76,7 +78,7 @@ app.post("/register", async (req, res) => {
     const user = await register(req.body.user, ip, false);
     res.send(pick(user, ...whitelist));
   } catch (e) {
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -93,7 +95,7 @@ app.post("/disable2fa", auth, twofa, async (req, res) => {
 app.get("/otpsecret", auth, twofa, async (req, res) => {
   let { user } = req;
   emit(user.username, "otpsecret", user.otpsecret);
-  res.end();
+  res.send({});
 });
 
 app.post("/2fa", auth, async (req, res) => {
@@ -105,7 +107,7 @@ app.post("/2fa", auth, async (req, res) => {
       user.save();
       emit(user.username, "user", req.user);
     } else {
-      return res.status(500).send("Invalid token");
+      return res.code(500).send("Invalid token");
     }
   } catch (e) {
     err("error setting up 2fa", e);
@@ -149,7 +151,7 @@ app.post("/user", auth, async (req, res) => {
     let token;
     if (user.username !== username && exists) {
       err("username taken", username, user.username, exists.username);
-      return res.status(500).send("Username taken");
+      return res.code(500).send("Username taken");
     } else {
       sockets[username] = sockets[user.username];
       if (user.username !== username)
@@ -230,14 +232,14 @@ app.post("/updateSeeds", auth, async (req, res) => {
     emit(user.username, "account", account);
   }
 
-  res.end();
+  res.send({});
 });
 
 app.post("/accounts/delete", auth, async (req, res) => {
   const { id } = req.body;
   const account = await db.Account.findOne({ where: { id } });
   if (account) await account.destroy();
-  res.end();
+  res.send({});
 });
 
 app.post("/accounts", auth, async (req, res) => {
@@ -292,7 +294,7 @@ let login = async (req, res) => {
         res.send(response.data);
       } catch (e) {
         err("problem calling lnurl login", e.message);
-        res.status(500).send(e.message);
+        res.code(500).send(e.message);
       }
 
       return;
@@ -308,7 +310,7 @@ let login = async (req, res) => {
         !(await bcrypt.compare(req.body.password, user.password)))
     ) {
       warn("invalid username or password attempt", req.body.username);
-      return res.status(401).end();
+      return res.status(401).send({});
     }
 
     if (
@@ -334,7 +336,7 @@ let login = async (req, res) => {
     res.send({ user, token });
   } catch (e) {
     err("login error", e.message, req.connection.remoteAddress);
-    res.status(401).end();
+    res.status(401).send({});
   }
 };
 
@@ -344,7 +346,7 @@ app.post("/doggin", login);
 
 app.post("/logout", optionalAuth, async (req, res) => {
   let { subscription } = req.body;
-  if (!subscription) return res.end();
+  if (!subscription) return res.send({});
 
   const { username } = req.user;
 
@@ -362,7 +364,7 @@ app.post("/logout", optionalAuth, async (req, res) => {
     );
   }
 
-  res.end();
+  res.send({});
 });
 
 app.get("/address", async (req, res) => {
@@ -382,7 +384,7 @@ app.get("/address", async (req, res) => {
   try {
     if (network === "bitcoin") {
       if (!config.bitcoin)
-        return res.status(500).send("Bitcoin not configured");
+        return res.code(500).send("Bitcoin not configured");
 
       address = await bc.getNewAddress("", type);
       bcAddressIndex = i + 1;
@@ -520,11 +522,11 @@ app.post("/account", auth, async (req, res) => {
 
       await account.reload({ transaction });
       emit(user.username, "account", account);
-      res.end();
+      res.send({});
     });
   } catch (e) {
     err("problem updating account", e.message);
-    return res.status(500).send("There was a problem updating the account");
+    return res.code(500).send("There was a problem updating the account");
   }
 });
 
@@ -538,7 +540,7 @@ app.post("/shiftAccount", auth, async (req, res) => {
     });
 
     if (account.user_id !== user.id)
-      return res.status(500).send("Failed to open wallet");
+      return res.code(500).send("Failed to open wallet");
 
     user.account_id = account.id;
     await user.save();
@@ -564,7 +566,7 @@ app.post("/shiftAccount", auth, async (req, res) => {
     res.send(user);
   } catch (e) {
     err("problem switching account", e.message);
-    return res.status(500).send("There was a problem switching accounts");
+    return res.code(500).send("There was a problem switching accounts");
   }
 });
 
@@ -675,7 +677,7 @@ app.post("/redeem", optionalAuth, async function(req, res) {
   } catch (e) {
     delete redeeming[redeemcode];
     err("problem redeeming", e.message);
-    return res.status(500).send("There was a problem redeeming the voucher");
+    return res.code(500).send("There was a problem redeeming the voucher");
   }
 });
 
@@ -744,5 +746,5 @@ app.post("/signMessage", auth, async function(req, res) {
     return res.send(await bc.signMessage(address, message));
   }
 
-  res.status(500).send("Address not found for user");
+  res.code(500).send("Address not found for user");
 });

@@ -10,7 +10,7 @@ export default async (req, res) => {
       let psbt = await buildTx({ address, amount, feeRate, replaceable, user });
       return res.send(psbt);
     } catch (e) {
-      return res.status(500).send(e.message);
+      return res.code(500).send(e.message);
     }
   }
 
@@ -27,7 +27,7 @@ export default async (req, res) => {
     let { ismine } = await bc.getAddressInfo(address);
     if (ismine) {
       emit(user.username, "to", invoice.user);
-      return res.end();
+      return res.send({});
     }
   }
 
@@ -62,6 +62,6 @@ export default async (req, res) => {
     res.send({ feeRate, tx });
   } catch (e) {
     err("bitcoin fee estimation error", e);
-    return res.status(500).send(e.message);
+    return res.code(500).send(e.message);
   }
 };

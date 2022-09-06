@@ -18,6 +18,6 @@ export default async (req, res) => {
     res.send(result);
   } catch (e) {
     err("problem generating channel request", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 };

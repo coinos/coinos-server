@@ -21,7 +21,7 @@ export default async (req, res, next) => {
   if (!asset) asset = config.liquid.btcasset;
 
   if (!amount || amount < 0)
-    return res.status(500).send("Amount must be greater than zero");
+    return res.code(500).send("Amount must be greater than zero");
 
   try {
     await db.transaction(async transaction => {
@@ -212,6 +212,6 @@ export default async (req, res, next) => {
   } catch (e) {
     console.log(e);
     err("problem sending internal payment", user.username, e.message);
-    return res.status(500).send(e.message);
+    return res.code(500).send(e.message);
   }
 };

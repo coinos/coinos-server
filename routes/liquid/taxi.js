@@ -80,6 +80,6 @@ export default async (req, res) => {
     res.send({ txid });
   } catch (e) {
     console.log(e);
-    return res.status(500).send(e);
+    return res.code(500).send(e);
   }
 };

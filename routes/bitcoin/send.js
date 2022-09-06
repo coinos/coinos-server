@@ -173,6 +173,6 @@ export default async (req, res) => {
         "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
     err("error sending bitcoin", e.message);
     console.log(e);
-    return res.status(500).send(e.message);
+    return res.code(500).send(e.message);
   }
 };

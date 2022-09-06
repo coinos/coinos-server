@@ -53,7 +53,7 @@ app.get("/withdraw", auth, async (req, res, next) => {
     res.send(result);
   } catch (e) {
     err("problem generating withdrawl url", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -70,7 +70,7 @@ app.post("/code", async (req, res, next) => {
     res.send(code);
   } catch (e) {
     err(e.errors);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -99,7 +99,7 @@ app.post("/withdraw", auth, async (req, res, next) => {
     res.send(result);
   } catch (e) {
     err("failed to withdraw", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -136,7 +136,7 @@ app.get("/lnurlp/:username", async (req, res, next) => {
     res.send(result.data);
   } catch (e) {
     err("problem generating payment url", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -165,7 +165,7 @@ app.get("/pay/:username", async (req, res, next) => {
     res.send(result);
   } catch (e) {
     err("problem generating payment url", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -208,7 +208,7 @@ app.post("/pay", auth, async (req, res, next) => {
     }
   } catch (e) {
     err("failed to send payment", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -223,7 +223,7 @@ app.get("/login", optionalAuth, async (req, res, next) => {
     res.send(result);
   } catch (e) {
     err("problem generating login url", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 
@@ -257,7 +257,7 @@ app.get("/decode", async (req, res, next) => {
     res.send(params);
   } catch (e) {
     err("problem decoding lnurl", e.message);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });
 

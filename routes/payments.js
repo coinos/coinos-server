@@ -133,6 +133,6 @@ app.get("/payment/:redeemcode", async (req, res) => {
 
     res.send(payment);
   } catch (e) {
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 });

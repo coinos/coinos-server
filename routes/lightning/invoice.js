@@ -19,6 +19,6 @@ export default async (req, res) => {
     }
   } catch (e) {
     err("problem creating invoice", e.message, e.stack);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 };

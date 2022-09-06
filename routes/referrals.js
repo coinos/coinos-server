@@ -194,10 +194,10 @@ router.get(
 
         return res.send({ verified: true, sponsor_id: found.sponsor_id, updated: found.updated_at});
       } else {
-        res.status(500).send({ verified: false, message: 'Referral already ' + found[0].status })
+        res.code(500).send({ verified: false, message: 'Referral already ' + found[0].status })
       }
     } else {
-      res.status(500).send('Invalid referral token')
+      res.code(500).send('Invalid referral token')
     }
   })
 

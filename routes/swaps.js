@@ -340,7 +340,7 @@ app.delete(
     const { user } = req;
 
     await cancel(user, id);
-    res.end();
+    res.send({});
   })
 );
 
@@ -348,14 +348,14 @@ app.post(
   "/orders",
   auth,
   async (req, res) => {
-    return res.status(500).send("Trading temporarily disabled");
+    return res.code(500).send("Trading temporarily disabled");
     const { user } = req;
     try {
       await swap(user, req.body);
-      res.end();
+      res.send({});
     } catch (e) {
       err(req.user.username, e.message);
-      res.status(500).send(e.message);
+      res.code(500).send(e.message);
     }
   })
 );
@@ -393,7 +393,7 @@ app.get(
         })
       );
     } catch (e) {
-      res.status(500).send(e.message);
+      res.code(500).send(e.message);
     }
   })
 );

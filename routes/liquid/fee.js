@@ -79,6 +79,6 @@ export default async (req, res) => {
     res.send(tx);
   } catch (e) {
     err("error estimating liquid fee", e.message, e.stack);
-    return res.status(500).send(e.message);
+    return res.code(500).send(e.message);
   }
 };

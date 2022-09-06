@@ -24,7 +24,7 @@ app.post(
     mailgun.messages().send(data);
     l("id uploaded", user.username);
 
-    res.end();
+    res.send({});
   })
 
 app.post(
@@ -39,7 +39,7 @@ app.post(
     emit(user.username, "user", user);
     l("id proof uploaded", user.username);
 
-    res.end();
+    res.send({});
   })
 
 app.post(
@@ -78,7 +78,7 @@ app.post(
       res.send(deposit);
     } catch (e) {
       err("funding error", e.message);
-      res.status(500).send("Funding request failed");
+      res.code(500).send("Funding request failed");
     }
   })
 
@@ -101,9 +101,9 @@ app.post(
         notes
       });
 
-      res.end();
+      res.send({});
     } catch (e) {
       err("withdrawaerr", e.message);
-      res.status(500).send("Withdrawal request failed");
+      res.code(500).send("Withdrawal request failed");
     }
   })

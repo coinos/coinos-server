@@ -95,7 +95,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     res.send(invoice);
   } catch (e) {
     err(e.message, e.stack);
-    res.status(500).send(`Problem during invoice creation: ${e.message}`);
+    res.code(500).send(`Problem during invoice creation: ${e.message}`);
   }
 });
 

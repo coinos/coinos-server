@@ -257,6 +257,6 @@ export default async (req, res) => {
     res.send(await sendLiquid({ ...req.body, user }));
   } catch (e) {
     err("problem sending liquid", user.username, e.message);
-    return res.status(500).send(e);
+    return res.code(500).send(e);
   }
 };

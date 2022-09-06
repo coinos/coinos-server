@@ -48,6 +48,6 @@ export default async (req, res) => {
     }
   } catch (e) {
     err("problem broadcasting liquid transaction", e);
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 };

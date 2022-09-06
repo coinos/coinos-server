@@ -1,5 +1,8 @@
 import app from "$app";
 import sequelize from '@sequelize/core';
+import config from "$config";
+import store from "$lib/store";
+
 const { Op } = sequelize;
 
 /**
@@ -15,7 +18,7 @@ app.get("/info", async (req, res, next) => {
   const { clientVersion } = config;
 
   const info = {
-    nodes: networks,
+    nodes: store.networks,
     clientVersion,
   };
 

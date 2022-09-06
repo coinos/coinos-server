@@ -22,7 +22,7 @@ let fetchAssets;
       console.debug("using static assets..." + e.message);
     } else {
       err("error fetching assets", e.message);
-      res.status(500).send("error fetching assets");
+      res.code(500).send("error fetching assets");
     }
   }
 
@@ -65,7 +65,7 @@ app.get(
       res.send(store.assets);
     } else {
       console.log("error getting blockstream assets");
-      res.status(500).send("Problem fetching blockstream asset registry data");
+      res.code(500).send("Problem fetching blockstream asset registry data");
     }
   })
 
@@ -293,7 +293,7 @@ app.post(
       res.send(issuances[txid] ? issuances[txid] : { asset });
     } catch (e) {
       err("asset issuance failed", e.message, e.stack);
-      res.status(500).send(e.message);
+      res.code(500).send(e.message);
     }
   })
 
@@ -323,7 +323,7 @@ app.post(
       res.send(result);
     } catch (e) {
       err("asset registration failed", e.message);
-      res.status(500).send(e.message);
+      res.code(500).send(e.message);
     }
   })
 
@@ -331,7 +331,7 @@ app.post(
   "/loadFaucet",
   auth,
   async (req, res) => {
-    return res.status(500).send("Faucet feature temporarily disabled");
+    return res.code(500).send("Faucet feature temporarily disabled");
 
     const { user } = req;
     let { asset, amount } = req.body;
@@ -429,11 +429,11 @@ app.post(
         emit(user.username, "user", user);
 
         l("loaded faucet", asset, amount);
-        res.end();
+        res.send({});
       });
     } catch (e) {
       err("problem loading faucet", user.username, e.message);
-      return res.status(500).send(e.message);
+      return res.code(500).send(e.message);
     }
   })
 

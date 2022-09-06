@@ -14,7 +14,7 @@ export default async (req, res) => {
   } catch (e) {
     if (!e.message.includes("already connected")) {
       err("problem connecting to peer", e.message);
-      return res.status(500).send(e.message);
+      return res.code(500).send(e.message);
     }
   }
 
@@ -24,7 +24,7 @@ export default async (req, res) => {
     remoteid = (await lnp.getInfo({})).identity_pubkey;
   } catch (e) {
     err("problem getting lightning node info", e.message);
-    return res.status(500).send(e.message);
+    return res.code(500).send(e.message);
   }
 
   let url = `${callback}?k1=${k1}&remoteid=${remoteid}&private=0`;
@@ -34,6 +34,6 @@ export default async (req, res) => {
     res.send(response.data);
   } catch (e) {
     err("problem sending channel request", e.message);
-    return res.status(500).send({ status: "ERROR", reason: e.message });
+    return res.code(500).send({ status: "ERROR", reason: e.message });
   }
 };

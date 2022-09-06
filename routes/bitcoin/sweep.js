@@ -52,7 +52,7 @@ export default async (req, res) => {
 
     if (!inputs || !outputs)
       return res
-        .status(500)
+        .code(500)
         .send("Unable to construct sweep transaction, try a lower fee rate?");
 
     let psbt = new bitcoin.Psbt({ network });

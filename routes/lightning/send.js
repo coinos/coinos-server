@@ -11,6 +11,6 @@ export default async (req, res) => {
       payreq,
       e.message
     );
-    res.status(500).send(e.message);
+    res.code(500).send(e.message);
   }
 };

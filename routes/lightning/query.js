@@ -13,5 +13,5 @@ export default async (req, res) => {
   });
 
   if (invoice) emit(req.user.username, "to", invoice.user);
-  res.end();
+  res.send({});
 };
