@@ -32,7 +32,6 @@ const seen = [];
 
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
-  console.log("TX", message)
   const hex = message.toString("hex");
   let tx = bitcoin.Transaction.fromHex(message);
 
