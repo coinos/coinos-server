@@ -65,7 +65,7 @@ if (config.lna) {
   // if (config.lnurl) {
   //   let channelRequest = await import("$routes/lightning/channelRequest");
   //   app.post("/lightning/channelRequest", channelRequest)
-  // } 
+  // }
 }
 
 if (config.bitcoin) {

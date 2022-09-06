@@ -1,5 +1,5 @@
 import app from "$app";
-import sequelize from '@sequelize/core';
+import sequelize from "@sequelize/core";
 import config from "$config";
 import store from "$lib/store";
 import ln from "$lib/ln";
@@ -21,7 +21,7 @@ app.get("/info", async (req, res, next) => {
 
   const info = {
     nodes: store.networks,
-    clientVersion,
+    clientVersion
   };
 
   res.send(info);
@@ -34,35 +34,37 @@ app.get("/balances", async (req, res, next) => {
       "pubkey",
       [sequelize.fn("sum", sequelize.col("balance")), "total"]
     ],
-    group: ["asset", "pubkey"],
+    group: ["asset", "pubkey"]
   });
 
-  let lnchannel; 
+  let lnchannel;
   let lnwallet;
 
   if (config.lna) {
     if (config.lna.clightning) {
       const funds = await lna.listfunds();
-      lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
+      lnchannel = parseInt(
+        funds.channels.reduce((a, b) => a + b.channel_sat, 0)
+      );
       lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
     } else {
-      lnchannel = parseInt((await getChannelBalance({ lnd }).channel_balance));
-      lnwallet = parseInt((await getChainBalance({ lnd }).chain_balance));
-    } 
+      lnchannel = parseInt(await getChannelBalance({ lnd }).channel_balance);
+      lnwallet = parseInt(await getChainBalance({ lnd }).chain_balance);
+    }
   }
 
   let bitcoin, bitcoind;
   if (config.bitcoin) {
     bitcoin = parseInt((await bc.getBalance()) * SATS);
     bitcoind = await bc.getNetworkInfo();
-  } 
+  }
 
   let assets, liquid, elementsd;
   if (config.liquid) {
     assets = await lq.getBalance();
     liquid = parseInt(assets.bitcoin * SATS);
     elementsd = await lq.getNetworkInfo();
-  } 
+  }
 
   const info = {
     bitcoind,
@@ -72,7 +74,7 @@ app.get("/balances", async (req, res, next) => {
     bitcoin,
     liquid,
     lnchannel,
-    lnwallet,
+    lnwallet
   };
 
   info.total =

@@ -10,7 +10,7 @@ import { authenticator } from "otplib";
 import getAccount from "$lib/account";
 import Sequelize from "@sequelize/core";
 import bitcoin from "bitcoinjs-lib";
-import liquid from 'liquidjs-lib';
+import liquid from "liquidjs-lib";
 import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";
@@ -387,8 +387,7 @@ app.get("/address", async (req, res) => {
   const release = await mutex.acquire();
   try {
     if (network === "bitcoin") {
-      if (!config.bitcoin)
-        return res.code(500).send("Bitcoin not configured");
+      if (!config.bitcoin) return res.code(500).send("Bitcoin not configured");
 
       address = await bc.getNewAddress("", type);
       store.bcAddressIndex = i + 1;

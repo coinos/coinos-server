@@ -1,34 +1,46 @@
-export const addUserSearch = function (input, table) {
-  var {search, starts_with, contains} = input
+export const addUserSearch = function(input, table) {
+  var { search, starts_with, contains } = input;
 
-  if (!table) { table = 'users' }
+  if (!table) {
+    table = "users";
+  }
   // if (since) cmd = cmd.havingRaw('invoices + payments + deposits + orders > ?', [0])
 
   if (search) {
     if (starts_with) {
-      search = search + '%'
+      search = search + "%";
     } else if (contains) {
-      search = '%' + search + '%'
+      search = "%" + search + "%";
     }
 
-    var condition = "(" + table + ".email like '" + search + "' OR " + table + ".username like '" + search + "')"
+    var condition =
+      "(" +
+      table +
+      ".email like '" +
+      search +
+      "' OR " +
+      table +
+      ".username like '" +
+      search +
+      "')";
 
-    return condition
+    return condition;
   } else {
-    return ''
+    return "";
   }
-}
+};
 
-export const addTimeSearch = function (input, field) {
-  if (!field) { field = 'updatedAt' }
-  
-  var {since} = input
+export const addTimeSearch = function(input, field) {
+  if (!field) {
+    field = "updatedAt";
+  }
+
+  var { since } = input;
   if (since) {
-    condition = field + " >= '" + since + "'"
+    condition = field + " >= '" + since + "'";
 
-    return condition
+    return condition;
   } else {
-    return ''
+    return "";
   }
-}
-
+};

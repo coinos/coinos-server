@@ -9,7 +9,7 @@ import qs from "query-string";
 import persist from "$lib/persist";
 import bolt11 from "bolt11";
 import { optionalAuth, auth } from "$lib/passport";
-import { createInvoice, getPayments,  from "lightning";
+import { createInvoice, getPayments } from "lightning";
 import lnd from "$lib/lnd";
 
 export const logins = persist("data/logins.json");
@@ -455,7 +455,7 @@ lnurlServer.bindToHook(
               try {
                 let { payments } = await ln.getPayments({
                   lnd,
-                  limit: 5,
+                  limit: 5
                 });
 
                 let p = payments.find(p => p.request === pr);
