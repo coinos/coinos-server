@@ -1,3 +1,5 @@
+import config from "$config";
+import db from "$db";
 import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import { callWebhook } from "$lib/webhooks";
@@ -5,6 +7,7 @@ import axios from "axios";
 import { v4 } from "uuid";
 import { notify } from "$lib/notifications";
 import { sendLiquid } from "$routes/liquid/send";
+import { l, err } from "$lib/logging";
 
 export default async (req, res, next) => {
   let {
