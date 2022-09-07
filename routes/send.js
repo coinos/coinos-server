@@ -77,7 +77,7 @@ export default async (req, res, next) => {
       if (!username) {
         l("creating redeemable payment");
         params.redeemcode = v4();
-        params.hash = `${req.get("origin")}/redeem/${params.redeemcode}`;
+        params.hash = `${req.hostname}/redeem/${params.redeemcode}`;
       }
 
       let payment = await db.Payment.create(params, { transaction });

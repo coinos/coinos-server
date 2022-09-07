@@ -24,11 +24,10 @@ export default async (req, res) => {
         tokens: value,
         description: memo
       });
-      console.log(invoice)
       res.send({ text: invoice.request });
     }
   } catch (e) {
-    err("problem creating invoice", e.message, e.stack);
+    err("problem creating invoice", e.message);
     res.code(500).send(e.message);
   }
 };

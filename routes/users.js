@@ -293,8 +293,11 @@ let login = async (req, res) => {
     if (sig) {
       const { callback } = params;
 
+      console.log(params, sig, key)
+
       try {
         const url = `${callback}&sig=${sig}&key=${key}`;
+        console.log(url)
         const response = await axios.get(url);
         res.send(response.data);
       } catch (e) {
@@ -680,6 +683,7 @@ app.post("/redeem", optionalAuth, async function(req, res) {
     });
   } catch (e) {
     delete redeeming[redeemcode];
+    console.log(e)
     err("problem redeeming", e.message);
     return res.code(500).send("There was a problem redeeming the voucher");
   }

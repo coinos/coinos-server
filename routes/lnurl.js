@@ -1,7 +1,9 @@
 import app from "$app";
 import config from "$config";
+import db from "$db";
 import store from "$lib/store";
 import { optionalAuth, auth } from "$lib/passport";
+import { l, err, warn } from "$lib/logging";
 
 import lnd from "$lib/lnd";
 import persist from "$lib/persist";
@@ -15,17 +17,17 @@ import bolt11 from "bolt11";
 
 import { createInvoice, getPayments } from "lightning";
 
-export const logins = persist("data/logins.json");
-export const recipients = persist("data/recipients.json");
-export const lnurlPayments = persist("data/payments.json");
-export const withdrawals = persist("data/withdrawals.json");
-
-export const lnurlServer = lnurl.createServer(config.lnurl);
-
 import {
   computeConversionFee,
   conversionFeeReceiver
 } from "./lightning/conversionFee.js";
+
+const logins = persist("data/logins.json");
+const recipients = persist("data/recipients.json");
+const lnurlPayments = persist("data/payments.json");
+const withdrawals = persist("data/withdrawals.json");
+
+export const lnurlServer = lnurl.createServer(config.lnurl);
 
 app.get("/url", async (req, res, next) => {
   try {

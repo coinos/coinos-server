@@ -1,4 +1,5 @@
 import app from "$app";
+import db from "$db";
 import config from "$config";
 import store from "$lib/store";
 
