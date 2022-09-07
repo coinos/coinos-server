@@ -20,6 +20,7 @@ app.get("/info", async (req, res, next) => {
   const { clientVersion } = config;
 
   const info = {
+    fx: store.fx,
     nodes: store.networks,
     clientVersion
   };

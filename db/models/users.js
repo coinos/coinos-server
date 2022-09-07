@@ -20,6 +20,24 @@ const attributes = {
     comment: null,
     field: "address"
   },
+  profile: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "profile"
+  },
+  banner: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "banner"
+  },
   admin: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
