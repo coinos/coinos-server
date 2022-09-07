@@ -23,7 +23,7 @@ import "./routes/payments";
 if (config.bitcoin) store.networks.push("bitcoin");
 if (config.liquid) store.networks.push("liquid");
 if (config.lna) store.networks.push("lightning");
-// if (config.lnurl) import("./routes/lnurl");
+if (config.lnurl) import("./routes/lnurl");
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;

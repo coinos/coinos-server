@@ -180,12 +180,10 @@ router.get("/verify/:user_id/:token", auth, async (req, res) => {
         updated: found.updated_at
       });
     } else {
-      res
-        .code(500)
-        .send({
-          verified: false,
-          message: "Referral already " + found[0].status
-        });
+      res.code(500).send({
+        verified: false,
+        message: "Referral already " + found[0].status
+      });
     }
   } else {
     res.code(500).send("Invalid referral token");
