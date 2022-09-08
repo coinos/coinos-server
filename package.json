@@ -43,7 +43,7 @@
     "knex": "^2.3.0",
     "lightning": "5",
     "liquidjs-lib": "6.0.2-liquid.8",
-    "lnurl": "0.19",
+    "lnurl": "^0.24.2",
     "long": "^4.0.0",
     "mailgun-js": "^0.22.0",
     "mariadb": "^2.4.0",
