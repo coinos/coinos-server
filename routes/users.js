@@ -10,7 +10,7 @@ import { authenticator } from "otplib";
 import getAccount from "$lib/account";
 import Sequelize from "@sequelize/core";
 import bitcoin from "bitcoinjs-lib";
-import liquid from "liquidjs-lib";
+// import liquid from "liquidjs-lib";
 import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";

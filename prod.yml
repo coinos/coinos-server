@@ -11,3 +11,9 @@ services:
     volumes:
       - ./:/app
       - ./logs:/logs
+      - /root/.lnda/tls.cert:/tls.cert
+  maria:
+    container_name: maria
+    image: mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: pw

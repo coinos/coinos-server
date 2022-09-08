@@ -11,16 +11,18 @@ import zmq from "zeromq/v5-compat";
 import { Op } from "@sequelize/core";
 import { fromBase58 } from "bip32";
 import bitcoin from "bitcoinjs-lib";
-import liquidJs from "liquidjs-lib";
+// import liquidJs from "liquidjs-lib";
 import { l, err, warn } from "$lib/logging";
 import lq from "$lib/liquid";
 
-const { Block, networks, Transaction } = liquidJs;
+// const { Block, networks, Transaction } = liquidJs;
 
+/*
 const network =
   networks[
     config.liquid.network === "mainnet" ? "liquid" : config.liquid.network
   ];
+  */
 
 import { computeConversionFee } from "./conversionFee";
 
