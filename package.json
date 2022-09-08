@@ -57,7 +57,6 @@
     "passport-local": "1.0.0",
     "pino": "8",
     "pino-pretty": "^7.0.0",
-    "pm2": "^5.2.0",
     "postmark": "^3.0.11",
     "pump": "^3.0.0",
     "query-string": "^6.13.1",
