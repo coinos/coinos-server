@@ -1,0 +1,13 @@
+version: '3.6'
+services:
+  app:
+    container_name: app
+    image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
+    ports:
+      - '3118:3118'
+      - '3119:3119'
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./:/app
+      - ./logs:/logs
