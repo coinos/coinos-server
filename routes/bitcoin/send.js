@@ -1,6 +1,11 @@
+import bc from "$lib/bitcoin";
+import { emit } from "$lib/sockets";
+import db from "$db";
 import { toSats } from "$lib/utils";
 import store from "$lib/store";
 import config from "$config";
+import { l, warn, err } from "$lib/logging";
+
 const btc = config.liquid.btcasset;
 import {
   computeConversionFee,

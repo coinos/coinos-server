@@ -1,5 +1,10 @@
+import config from "$config";
+import db from "$db";
+import bc from "$lib/bitcoin";
+import { err } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import buildTx from "$lib/buildtx";
+import { SATS } from "$lib/utils";
 
 export default async (req, res) => {
   let { user } = req;
@@ -57,7 +62,7 @@ export default async (req, res) => {
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
     let signed = await bc.signRawTransactionWithWallet(tx.hex);
-    decoded = await bc.decodeRawTransaction(signed.hex);
+    let decoded = await bc.decodeRawTransaction(signed.hex);
     feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
 
     res.send({ feeRate, tx });
