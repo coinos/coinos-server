@@ -1,3 +1,4 @@
+import db from "$db";
 import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import config from "$config";
@@ -7,25 +8,27 @@ import { computeConversionFee } from "./conversionFee";
 import { sendLiquid } from "$routes/liquid/send";
 import { subscribeToInvoices } from "lightning";
 import lnd from "$lib/lnd";
+import { l, err, warn } from "$lib/logging";
 
 const handlePayment = async msg => {
-  l("incoming lightning payment", msg.value, msg.payment_request, msg.settled);
-  if (!msg.settled) return;
-  let account, total, user;
-
-  const invoice = await db.Invoice.findOne({
-    where: {
-      text: msg.payment_request
-    }
-  });
-
-  if (!invoice)
-    return warn("received lightning with no invoice", msg.payment_request);
-
   try {
+    l("incoming lightning payment", msg.tokens, msg.request.substr(0,20));
+
+    if (!msg.secret) return;
+    let account, total, user;
+
+    const invoice = await db.Invoice.findOne({
+      where: {
+        text: msg.request
+      }
+    });
+
+    if (!invoice)
+      return warn("received lightning with no invoice", msg.request);
+
     await db.transaction(async transaction => {
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
-      const amount = parseInt(msg.amt_paid_sat) - tip;
+      const amount = parseInt(msg.tokens) - tip;
       if (amount < 0) throw new Error("amount out of range");
 
       account = await db.Account.findOne({
@@ -44,7 +47,7 @@ const handlePayment = async msg => {
 
       ({ user } = account);
 
-      let preimage = msg.r_preimage.toString("hex");
+      let preimage = msg.secret;
 
       let payment = await db.Payment.create(
         {
@@ -80,7 +83,7 @@ const handlePayment = async msg => {
       await account.reload({ transaction });
       await invoice.save({ transaction });
       await payment.save({ transaction });
-      payments.push(msg.payment_request);
+      store.payments.push(msg.request);
 
       payment = payment.get({ plain: true });
       payment.account = account.get({ plain: true });
@@ -100,11 +103,11 @@ const handlePayment = async msg => {
       );
     });
 
-    let c = store.convert[msg.payment_request];
-    if (msg.payment_request && c) {
+    let c = store.convert[msg.request];
+    if (msg.request && c) {
       l(
         "lightning detected for conversion request",
-        msg.payment_request,
+        msg.request,
         c.address,
         user.username
       );
@@ -123,6 +126,7 @@ const handlePayment = async msg => {
       }
     }
   } catch (e) {
+    console.log(e);
     err("problem receiving lightning payment", e.message);
   }
 };
@@ -157,5 +161,5 @@ if (config.lna.clightning) {
   poll(ln);
 } else {
   const invoices = subscribeToInvoices({ lnd });
-  invoices.on("data", handlePayment);
+  invoices.on("invoice_updated", handlePayment);
 }
