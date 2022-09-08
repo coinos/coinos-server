@@ -10,7 +10,7 @@ import { authenticator } from "otplib";
 import getAccount from "$lib/account";
 import Sequelize from "@sequelize/core";
 import bitcoin from "bitcoinjs-lib";
-// import liquid from "liquidjs-lib";
+import liquid from "liquidjs-lib";
 import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";
@@ -293,11 +293,8 @@ let login = async (req, res) => {
     if (sig) {
       const { callback } = params;
 
-      console.log(params, sig, key)
-
       try {
         const url = `${callback}&sig=${sig}&key=${key}`;
-        console.log(url)
         const response = await axios.get(url);
         res.send(response.data);
       } catch (e) {

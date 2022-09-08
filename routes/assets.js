@@ -18,9 +18,9 @@ let fetchAssets;
 
     store.assets = data;
   } catch (e) {
-    var liquid_assets = require("./../assets.json");
+    var liquid_assets = JSON.parse(fs.readFileSync("/app/assets.json"));
     if (liquid_assets) {
-      app.set("assets", liquid_assets);
+      store.assets = liquid_assets;
       console.debug("using static assets..." + e.message);
     } else {
       err("error fetching assets", e.message);

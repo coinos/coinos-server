@@ -12,6 +12,8 @@ services:
       - ./:/app
       - ./logs:/logs
       - /root/.lnda/tls.cert:/tls.cert
+    extra_hosts:
+      - host.docker.internal:host-gateway
   maria:
     container_name: maria
     image: mariadb
