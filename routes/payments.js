@@ -87,8 +87,7 @@ setTimeout(async () => {
 app.post("/liquid/broadcast", optionalAuth, lqRoutes.broadcast);
 app.get("/liquid/generate", auth, lqRoutes.generate);
 // app.post("/liquid/fee", auth, lqRoutes.fee);
-app.post("/liquid/send", auth, lqRoutes.send);
-// app.post("/taxi", auth, lqRoutes.taxi);
+// app.post("/liquid/send", auth, lqRoutes.send);
 
 setTimeout(async () => {
   try {

@@ -27,6 +27,7 @@ const recipients = persist("data/recipients.json");
 const lnurlPayments = persist("data/payments.json");
 const withdrawals = persist("data/withdrawals.json");
 
+console.log("creating lnurl")
 export const lnurlServer = lnurl.createServer(config.lnurl);
 
 app.get("/url", async (req, res, next) => {

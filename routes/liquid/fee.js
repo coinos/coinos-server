@@ -1,9 +1,10 @@
+import db from "$db";
 import { emit } from "$lib/sockets";
 import buildTx from "$lib/buildliquidtx";
+import { err, l } from "$lib/logging";
 
-liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
+export const liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let tx, fee;
-  let node = lq;
 
   if (user.account.pubkey) {
     let psbt = await buildTx({
@@ -27,7 +28,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   });
 
   if (invoice) {
-    let { ismine } = await node.getAddressInfo(address);
+    let { ismine } = await lq.getAddressInfo(address);
     if (ismine) {
       emit(user.username, "to", invoice.user);
       return;
@@ -35,7 +36,7 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   }
 
   if (config.liquid.walletpass)
-    await node.walletPassphrase(config.liquid.walletpass, 300);
+    await lq.walletPassphrase(config.liquid.walletpass, 300);
 
   amount = parseInt(amount);
 
@@ -46,9 +47,9 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
   let value = (amount / SATS).toFixed(8);
   if (feeRate) params.feeRate = (feeRate / SATS).toFixed(8);
 
-  let info = await node.getAddressInfo(address);
+  let info = await lq.getAddressInfo(address);
 
-  tx = await node.createRawTransaction(
+  tx = await lq.createRawTransaction(
     [],
     [
       {
@@ -62,12 +63,12 @@ liquidTx = async ({ address, asset, amount, feeRate, replaceable, user }) => {
 
   l("funding tx for fee estimate", tx);
 
-  tx = await node.fundRawTransaction(tx, params);
+  tx = await lq.fundRawTransaction(tx, params);
 
-  let blinded = await node.blindRawTransaction(tx.hex);
-  let signed = await node.signRawTransactionWithWallet(blinded);
+  let blinded = await lq.blindRawTransaction(tx.hex);
+  let signed = await lq.signRawTransactionWithWallet(blinded);
 
-  decoded = await node.decodeRawTransaction(signed.hex);
+  let decoded = await lq.decodeRawTransaction(signed.hex);
   feeRate = Math.round((tx.fee * SATS * 1000) / decoded.vsize);
   l("estimated", asset, feeRate);
 
