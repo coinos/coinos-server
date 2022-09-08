@@ -9,6 +9,7 @@ import lnd from "$lib/lnd";
 
 import { getChannelBalance, getChainBalance } from "lightning";
 import sequelize from "@sequelize/core";
+import { SATS } from "$lib/utils";
 
 const { Op } = sequelize;
 
@@ -34,6 +35,7 @@ app.get("/info", async (req, res, next) => {
 });
 
 app.get("/balances", async (req, res, next) => {
+  try {
   const accounts = await db.Account.findAll({
     attributes: [
       "asset",
@@ -90,4 +92,7 @@ app.get("/balances", async (req, res, next) => {
     parseInt(lnwallet);
 
   res.send(info);
+  } catch(e) {
+    console.log("problem getting balances", e)
+  } 
 });

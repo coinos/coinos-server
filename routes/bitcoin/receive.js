@@ -159,6 +159,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 });
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
+  try {
   const payments = await db.Payment.findAll({
     where: { confirmed: false }
   });
@@ -168,6 +169,9 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
     let hash = reverse(tx.getHash()).toString("hex");
     if (payments.find(p => p.hash === hash)) queue[hash] = 1;
   });
+  } catch(e) {
+    console.log(e)
+  } 
 });
 
 setInterval(async () => {
