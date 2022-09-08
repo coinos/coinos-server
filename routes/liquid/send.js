@@ -5,8 +5,8 @@ import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import config from "$config";
 import { l, warn, err } from "$lib/logging";
-// import { liquidTx } from "$routes/liquid/fee";
-// import { Transaction } from 'liquidjs-lib';
+import { liquidTx } from "$routes/liquid/fee";
+import { Transaction } from 'liquidjs-lib';
 
 import {
   computeConversionFee,
@@ -229,7 +229,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
       let txid = Transaction.fromHex(signed.hex).getId();
 
       for (let i = 0; i < payments.length; i++) {
-        p = payments[i];
+        let p = payments[i];
         if (p) {
           let { account } = p;
           p.hash = txid;
@@ -255,6 +255,7 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
     return main;
   } catch (e) {
     err("problem sending liquid", e.message);
+    return e;
   }
 };
 
@@ -262,8 +263,11 @@ export default async (req, res) => {
   let { user } = req;
 
   try {
-    res.send(await sendLiquid({ ...req.body, user }));
+    let result = await sendLiquid({ ...req.body, user })
+    if (result instanceof Error) throw result;
+    res.send(result);
   } catch (e) {
+    console.log(e)
     err("problem sending liquid", user.username, e.message);
     return res.code(500).send(e);
   }
