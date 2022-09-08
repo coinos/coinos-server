@@ -61,7 +61,7 @@ services:
       default:
         ipv4_address: 172.18.0.24
   lnd:
-    image: lightninglabs/lnd:v0.14.1-beta
+    image: lightninglabs/lnd:v0.15.1-beta
     container_name: lnd
     volumes:
       - ./config/lnd:/root/.lnd
