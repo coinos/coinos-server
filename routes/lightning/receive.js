@@ -12,7 +12,7 @@ import { l, err, warn } from "$lib/logging";
 
 const handlePayment = async msg => {
   try {
-    l("incoming lightning payment", msg.tokens, msg.request.substr(0,20));
+    l("incoming lightning payment", msg.received, msg.request.substr(0,20));
 
     if (!msg.secret) return;
     let account, total, user;
@@ -28,7 +28,7 @@ const handlePayment = async msg => {
 
     await db.transaction(async transaction => {
       const { text: hash, currency, memo, rate, tip, user_id } = invoice;
-      const amount = parseInt(msg.tokens) - tip;
+      const amount = parseInt(msg.received) - tip;
       if (amount < 0) throw new Error("amount out of range");
 
       account = await db.Account.findOne({

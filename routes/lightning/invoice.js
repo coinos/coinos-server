@@ -8,7 +8,6 @@ export default async (req, res) => {
   if (!tip) tip = 0;
   let value = amount + tip;
 
-  console.log("getting invoice");
   try {
     if (config.lna.clightning) {
       if (!memo) memo = "coinos";
@@ -20,13 +19,11 @@ export default async (req, res) => {
       );
       res.send({ text: invoice.bolt11 });
     } else {
-      console.log("creating invoice");
       const invoice = await createInvoice({
         lnd,
         tokens: value,
         description: memo
       });
-      console.log("created");
       res.send({ text: invoice.request });
     }
   } catch (e) {
