@@ -180,7 +180,7 @@ export default async (req, res, next) => {
         if (invoice) {
           params.invoice_id = invoice.id;
 
-          let c = convert[invoice.text];
+          let c = store.convert[invoice.text];
           if (c) {
             l(
               "internal payment detected for conversion",
