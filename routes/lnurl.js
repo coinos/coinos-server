@@ -15,7 +15,6 @@ import jwt from "jsonwebtoken";
 import qs from "query-string";
 import bolt11 from "bolt11";
 
-
 import { createInvoice, decodePaymentRequest, getPayments } from "lightning";
 
 import {
@@ -24,13 +23,14 @@ import {
 } from "./lightning/conversionFee.js";
 
 import send from "$lib/send";
+import sendInternal from "$lib/sendInternal";
 
 const logins = persist("data/logins.json");
 const recipients = persist("data/recipients.json");
 const lnurlPayments = persist("data/payments.json");
 const withdrawals = persist("data/withdrawals.json");
 
-console.log("creating lnurl")
+console.log("creating lnurl");
 export const lnurlServer = lnurl.createServer(config.lnurl);
 
 app.get("/url", async (req, res, next) => {
@@ -198,19 +198,14 @@ app.post("/pay", auth, async (req, res, next) => {
     lnurlPayments[secret] = user.id;
 
     if (recipients[secret]) {
-      url = `https://coinos.io/api/send`;
-      const { data } = await axios.post(
-        url,
+      let data = await sendInternal(
         {
           amount,
           memo: comment,
           username: recipients[secret].username
         },
-        {
-          headers: {
-            authorization: req.headers.authorization
-          }
-        }
+        req.hostname,
+        user
       );
 
       res.send(data);
