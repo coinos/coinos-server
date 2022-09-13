@@ -12,6 +12,7 @@ import { l, err, warn } from "$lib/logging";
 
 const handlePayment = async msg => {
   try {
+    console.log(msg)
     l("incoming lightning payment", msg.received);
 
     if (!msg.secret) return;
