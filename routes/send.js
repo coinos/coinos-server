@@ -30,7 +30,7 @@ export default async (req, res, next) => {
   try {
     await db.transaction(async transaction => {
       let account;
-      if (user.account.asset === asset) {
+      if (user.account.asset === asset && !user.account.pubkey) {
         account = await db.Account.findOne({
           where: {
             id: user.account.id,
@@ -50,6 +50,8 @@ export default async (req, res, next) => {
           transaction
         });
       }
+
+      if (!account) throw new Error("Account not found");
 
       if (account.balance < amount) {
         throw new Error("Insufficient funds");

@@ -32,6 +32,7 @@ const seen = [];
 
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
+  try {
   const hex = message.toString("hex");
   let tx = bitcoin.Transaction.fromHex(message);
 
@@ -152,10 +153,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           });
         }
       } catch (e) {
-        console.log(e);
+        console.log("problem parsing bitcoin tx", e);
       }
     })
   );
+  } catch(e) {
+    console.log("problem receiving bitcoin tx", e);
+  } 
 });
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {

@@ -15,7 +15,8 @@ import jwt from "jsonwebtoken";
 import qs from "query-string";
 import bolt11 from "bolt11";
 
-import { createInvoice, getPayments } from "lightning";
+
+import { createInvoice, decodePaymentRequest, getPayments } from "lightning";
 
 import {
   computeConversionFee,
@@ -197,8 +198,7 @@ app.post("/pay", auth, async (req, res, next) => {
     lnurlPayments[secret] = user.id;
 
     if (recipients[secret]) {
-      url = `${req.protocol}://${req.get("host")}/api/send`;
-      console.log(url);
+      url = `https://coinos.io/api/send`;
       const { data } = await axios.post(
         url,
         {
@@ -208,7 +208,7 @@ app.post("/pay", auth, async (req, res, next) => {
         },
         {
           headers: {
-            Authorization: req.get("Authorization")
+            authorization: req.headers.authorization
           }
         }
       );
@@ -219,7 +219,6 @@ app.post("/pay", auth, async (req, res, next) => {
       res.send(await send(amount, "", data.pr, user));
     }
   } catch (e) {
-    console.log(e);
     err("failed to send payment", e.message);
     res.code(500).send(e.message);
   }
@@ -305,7 +304,7 @@ lnurlServer.bindToHook(
       const { amount: msats, key, tag, pr, k1 } = req.query;
 
       if (msats) {
-        amount = Math.round(msats / 1000);
+        let amount = Math.round(msats / 1000);
         const parts = req.originalUrl.split("/");
         const secret = parts[parts.length - 1].split("?")[0];
         let user_id = lnurlPayments[secret];
@@ -505,7 +504,7 @@ lnurlServer.bindToHook(
         }
       }
 
-      if (next) next(req, res);
+      if (next) next();
     } catch (e) {
       err("unhandled lnurerr", e.message);
     }
