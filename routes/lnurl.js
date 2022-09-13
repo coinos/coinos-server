@@ -22,6 +22,8 @@ import {
   conversionFeeReceiver
 } from "./lightning/conversionFee.js";
 
+import send from "$lib/send";
+
 const logins = persist("data/logins.json");
 const recipients = persist("data/recipients.json");
 const lnurlPayments = persist("data/payments.json");
@@ -196,6 +198,7 @@ app.post("/pay", auth, async (req, res, next) => {
 
     if (recipients[secret]) {
       url = `${req.protocol}://${req.get("host")}/api/send`;
+      console.log(url);
       const { data } = await axios.post(
         url,
         {
@@ -216,6 +219,7 @@ app.post("/pay", auth, async (req, res, next) => {
       res.send(await send(amount, "", data.pr, user));
     }
   } catch (e) {
+    console.log(e);
     err("failed to send payment", e.message);
     res.code(500).send(e.message);
   }

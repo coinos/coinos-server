@@ -12,7 +12,7 @@ import { l, err, warn } from "$lib/logging";
 
 const handlePayment = async msg => {
   try {
-    l("incoming lightning payment", msg.received, msg.request.substr(0,20));
+    l("incoming lightning payment", msg.received);
 
     if (!msg.secret) return;
     let account, total, user;
