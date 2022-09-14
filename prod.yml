@@ -9,6 +9,7 @@ services:
       - '3119:3119'
     environment:
       NODE_ENV: production
+      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
     volumes:
       - ./:/app
       - ./logs:/logs

@@ -5,11 +5,12 @@ services:
       - app
     container_name: ui
     image: asoltys/coinos-ui:dev
+    command: ["pnpm", "dev"]
     ports:
       - '8085:8085'
     environment:
       NODE_ENV: development
-      # NODE_OPTIONS: --openssl-legacy-provider
+      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
     volumes:
       - ../coinos-ui:/app
     networks:
