@@ -70,7 +70,7 @@ CREATE TABLE `accounts` (
   `lightning_credits` double NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=21645 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=21656 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -142,9 +142,10 @@ CREATE TABLE `invoices` (
   KEY `address_index` (`address`(100)),
   KEY `invoices_user_id_foreign` (`user_id`),
   KEY `invoices_account_id_foreign` (`account_id`),
+  KEY `uuid` (`uuid`(10)),
   CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `invoices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=47779 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=48112 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -162,6 +163,36 @@ CREATE TABLE `linkingkeys` (
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=12630 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `lnurl_migrations`
+--
+
+DROP TABLE IF EXISTS `lnurl_migrations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lnurl_migrations` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  `batch` int(11) DEFAULT NULL,
+  `migration_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `lnurl_migrations_lock`
+--
+
+DROP TABLE IF EXISTS `lnurl_migrations_lock`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lnurl_migrations_lock` (
+  `index` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `is_locked` int(11) DEFAULT NULL,
+  PRIMARY KEY (`index`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -263,7 +294,7 @@ CREATE TABLE `payments` (
   CONSTRAINT `payments_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
   CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29783 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=29861 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -304,6 +335,26 @@ CREATE TABLE `referrals` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `urls`
+--
+
+DROP TABLE IF EXISTS `urls`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `urls` (
+  `hash` varchar(255) DEFAULT NULL,
+  `apiKeyId` varchar(255) DEFAULT NULL,
+  `tag` varchar(255) DEFAULT NULL,
+  `params` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`params`)),
+  `initialUses` int(10) unsigned DEFAULT 1,
+  `remainingUses` int(10) unsigned DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  UNIQUE KEY `urls_hash_unique` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `users`
 --
 
@@ -335,10 +386,12 @@ CREATE TABLE `users` (
   `email` varchar(255) DEFAULT NULL,
   `phone` varchar(255) DEFAULT NULL,
   `address` text DEFAULT NULL,
+  `profile` tinyint(1) DEFAULT 0,
+  `banner` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`),
   KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=15450 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=15455 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -397,4 +450,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-09-06 19:00:21
+-- Dump completed on 2022-09-14 19:59:19
