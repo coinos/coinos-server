@@ -3,10 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "NODE_OPTIONS=\"--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider\" nodemon index.js",
-    "generate": "sequelize-automate -c config/index.js",
-    "min": "DEBUG=debug SCOPE=MIN nodemon index.js",
-    "debug": "DEBUG=debug nodemon index.js"
+    "start": "NODE_OPTIONS=\"--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider\" node index.js",
+    "dev": "NODE_OPTIONS=\"--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider\" nodemon index.js"
   },
   "dependencies": {
     "@fastify/multipart": "^7.1.2",
