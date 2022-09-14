@@ -10,7 +10,6 @@ services:
       - '8085:8085'
     environment:
       NODE_ENV: development
-      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
     volumes:
       - ../coinos-ui:/app
     networks:
@@ -28,6 +27,7 @@ services:
       - '3118:3118'
       - '3119:3119'
     environment:
+      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
       NODE_ENV: development
     volumes:
       - ./:/app
