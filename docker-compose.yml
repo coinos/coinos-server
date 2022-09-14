@@ -9,7 +9,6 @@ services:
       - '8085:8085'
     environment:
       NODE_ENV: development
-      # NODE_OPTIONS: --openssl-legacy-provider
     volumes:
       - ../coinos-ui:/app
     networks:
@@ -23,14 +22,18 @@ services:
       - lnd
     container_name: app
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
+    command: ["pnpm", "dev"]
     ports:
       - '3118:3118'
       - '3119:3119'
     environment:
+      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
       NODE_ENV: development
     volumes:
       - ./:/app
       - ./logs:/logs
+    extra_hosts:
+      - host.docker.internal:host-gateway
     networks:
       default:
         ipv4_address: 172.18.0.22
@@ -82,7 +85,7 @@ services:
       default:
         ipv4_address: 172.18.0.31
   maria:
-    container_name: mariadb
+    container_name: maria
     image: mariadb:10.6.1
     restart: always
     environment:

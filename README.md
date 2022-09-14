@@ -19,7 +19,7 @@ cp fx.sample fx
 docker network create net --gateway 172.18.0.1 --subnet 172.18.0.0/16
 docker run -it -v $(pwd):/app --entrypoint pnpm asoltys/coinos-server i
 docker-compose up -d
-docker exec -i mariadb mysql -u root -ppassword < db/schema.sql   
+docker exec -i maria mysql -u root -ppassword < db/schema.sql   
 docker exec -it bitcoin bitcoin-cli createwallet coinos
 docker exec -it bitcoin bitcoin-cli rescanblockchain
 docker exec -it bitcoin bitcoin-cli generatetoaddress 500 $(docker exec -it bitcoin bitcoin-cli getnewaddress "" "p2sh-segwit")

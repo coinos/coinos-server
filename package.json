@@ -3,8 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "NODE_OPTIONS=\"--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider\" node index.js",
-    "dev": "NODE_OPTIONS=\"--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider\" nodemon index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "@fastify/multipart": "^7.1.2",
