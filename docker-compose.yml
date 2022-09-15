@@ -74,7 +74,7 @@ services:
       default:
         ipv4_address: 172.18.0.25
   clightning:
-    image: asoltys/lightning
+    image: elementsproject/lightningd:v0.12.0
     container_name: cl
     environment:
       LIGHTNINGD_NETWORK: regtest
@@ -180,5 +180,4 @@ services:
         ipv4_address: 172.18.0.30
 networks: 
   default: 
-    external: 
-      name: net
+    name: net

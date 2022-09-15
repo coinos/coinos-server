@@ -21,3 +21,5 @@ watcher.sh
 logs
 docker-compose.mainnet.yml
 assets.json
+lm.yml
+lt.yml
