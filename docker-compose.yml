@@ -22,7 +22,7 @@ services:
       - lnd
     container_name: app
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
-    command: ["pnpm", "dev"]
+    command: "pnpm dev"
     ports:
       - '3118:3118'
       - '3119:3119'
