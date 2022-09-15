@@ -181,3 +181,4 @@ services:
 networks: 
   default: 
     name: net
+    external: true
