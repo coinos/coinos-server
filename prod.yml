@@ -22,3 +22,7 @@ services:
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: pw
+networks:
+  default:
+    name: net
+    external: true

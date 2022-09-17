@@ -545,7 +545,7 @@ lnurlServer.bindToHook("login", async key => {
     if (user && user.username) {
       const payload = { username: user.username };
       const token = jwt.sign(payload, config.jwt);
-      const ws = sessions[logins[key].k1];
+      const ws = store.sessions[logins[key].k1];
       if (ws && ws.send)
         ws.send(JSON.stringify({ type: "token", data: { token, key } }));
     }
