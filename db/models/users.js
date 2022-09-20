@@ -20,6 +20,15 @@ const attributes = {
     comment: null,
     field: "address"
   },
+  theme: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: false,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "theme"
+  },
   profile: {
     type: DataTypes.BOOLEAN,
     allowNull: true,
