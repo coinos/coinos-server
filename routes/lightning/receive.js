@@ -8,11 +8,11 @@ import { computeConversionFee } from "./conversionFee";
 import { sendLiquid } from "$routes/liquid/send";
 import { subscribeToInvoices } from "lightning";
 import lnd from "$lib/lnd";
+import ln from "$lib/ln";
 import { l, err, warn } from "$lib/logging";
 
 const handlePayment = async msg => {
   try {
-    console.log(msg)
     l("incoming lightning payment", msg.received);
 
     if (!msg.secret) return;
@@ -134,29 +134,33 @@ const handlePayment = async msg => {
 
 if (config.lna.clightning) {
   const poll = async ln => {
-    const wait = async i => {
-      const {
-        bolt11: payment_request,
-        pay_index,
-        status,
-        msatoshi_received,
-        payment_preimage: r_preimage
-      } = await ln.waitanyinvoice(i);
+    try {
+      const wait = async i => {
+        const {
+          bolt11: request,
+          pay_index,
+          status,
+          msatoshi_received,
+          payment_preimage: secret
+        } = await ln.waitanyinvoice(i);
+        console.log("um");
 
-      let settled = status === "paid";
-      let amt_paid_sat = parseInt(msatoshi_received / 1000);
+        let settled = status === "paid";
+        let received = parseInt(msatoshi_received / 1000);
 
-      await handlePayment({
-        payment_request,
-        settled,
-        amt_paid_sat,
-        r_preimage
-      });
-      wait(pay_index);
-    };
+        await handlePayment({
+          request,
+          received,
+          secret
+        });
+        await wait(pay_index);
+      };
 
-    const { invoices } = await ln.listinvoices();
-    wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
+      const { invoices } = await ln.listinvoices();
+      await wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
+    } catch (e) {
+      err("problem waiting for c-lightning invoice", e.message);
+    }
   };
 
   poll(ln);
