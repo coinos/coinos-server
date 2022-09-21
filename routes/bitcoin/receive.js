@@ -30,6 +30,7 @@ const network =
 const queue = {};
 const seen = [];
 
+console.warn = () => {};
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
   try {
