@@ -1,0 +1,19 @@
+coinos.bobcat-liberty.ts.net {
+        handle_path /api* {
+                reverse_proxy localhost:3119
+        }
+
+        handle /lnurl* {
+                reverse_proxy localhost:3118
+        }
+
+        handle /ws* {
+                reverse_proxy localhost:3119
+        }
+
+        handle {
+                root * /home/adam/coinos-ui/dist
+                try_files {path}.html {path} /index.html
+                file_server
+        }
+}

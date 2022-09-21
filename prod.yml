@@ -1,24 +1,67 @@
 version: '3.6'
 services:
+  caddy:
+    container_name: caddy
+    image: caddy:2
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy:/data
+    environment:
+      DOMAIN: "${DOMAIN}"
+    networks:
+      default:
+        ipv4_address: 172.42.0.21
   app:
     container_name: app
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
     restart: always
-    ports:
-      - '3118:3118'
-      - '3119:3119'
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
     volumes:
       - ./:/app
       - ./logs:/logs
-      - /root/.lnda/tls.cert:/tls.cert
     extra_hosts:
       - host.docker.internal:host-gateway
+    networks:
+      default:
+        ipv4_address: 172.42.0.22
   maria:
     container_name: maria
     image: mariadb
     restart: always
     environment:
-      MARIADB_ROOT_PASSWORD: pw
+      MARIADB_ROOT_PASSWORD: password
+  bitcoin:
+    image: ghcr.io/vulpemventures/bitcoin
+    container_name: bitcoin
+    volumes:
+      - ./config/bitcoin:/home/bitcoin/.bitcoin
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.42.0.23
+  liquid:
+    image: ghcr.io/vulpemventures/elements
+    container_name: liquid
+    volumes:
+      - ./config/liquid:/home/elements/.elements
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.42.0.24
+  cl:
+    image: elementsproject/lightningd:v0.12.0
+    container_name: cl
+    volumes:
+      - ./config/lightning:/root/.lightning
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.42.0.25
+networks: 
+  default: 
+    name: net
+    external: true
