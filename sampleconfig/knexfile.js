@@ -4,7 +4,7 @@ export default {
   development: {
     client: "mysql2",
     connection: {
-      host: "mariadb",
+      host: "maria",
       database: "coinos",
       user: "root",
       password: "password"

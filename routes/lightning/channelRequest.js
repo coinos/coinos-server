@@ -1,6 +1,7 @@
 import { lnurlServer } from "$routes/lnurl";
+import { err } from "$lib/logging";
 
-export default async (req, res) => {
+export const channelRequest = async (req, res) => {
   let { localAmt, pushAmt } = req.body;
 
   pushAmt = 0;

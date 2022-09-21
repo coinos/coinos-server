@@ -6,6 +6,7 @@ import store from "$lib/store";
 import bc from "$lib/bitcoin";
 import lq from "$lib/liquid";
 import lnd from "$lib/lnd";
+import ln from "$lib/ln";
 
 import { getChannelBalance, getChainBalance } from "lightning";
 import sequelize from "@sequelize/core";
@@ -50,7 +51,7 @@ app.get("/balances", async (req, res, next) => {
 
   if (config.lna) {
     if (config.lna.clightning) {
-      const funds = await lna.listfunds();
+      const funds = await ln.listfunds();
       lnchannel = parseInt(
         funds.channels.reduce((a, b) => a + b.channel_sat, 0)
       );

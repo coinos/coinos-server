@@ -1,3 +1,4 @@
+import { err } from "$lib/logging";
 import sendInternal from "$lib/sendInternal";
 
 export default async (req, res, next) => {

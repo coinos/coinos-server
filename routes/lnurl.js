@@ -91,7 +91,17 @@ app.post("/withdraw", auth, async (req, res, next) => {
     amount: value,
     params: { callback, k1 }
   } = req.body;
-  const invoice = await createInvoice({ lnd, value });
+
+  let invoice;
+  if (config.lna.clightning) {
+    let label = new Date();
+    let desc = label;
+
+    invoice = await ln.invoice(`${value}sats`, label, desc);
+  } else {
+    invoice = await createInvoice({ lnd, value });
+  }
+
   const { payment_request: pr } = invoice;
   const url = `${callback}?k1=${k1}&pr=${pr}`;
 
@@ -260,6 +270,7 @@ app.get("/decode", async (req, res, next) => {
     }
 
     const { data: params } = await axios.get(url);
+
     res.send(params);
   } catch (e) {
     err("problem decoding lnurl", e.message);
@@ -366,8 +377,14 @@ lnurlServer.bindToHook(
         }
 
         try {
-          let decoded = await decodePaymentRequest({ lnd, request: pr });
-          let amount = decoded.num_satoshis;
+          let amount;
+
+          if (config.lna.clightning) {
+            let { msatoshi } = await ln.decodepay(pr);
+            amount = parseInt(msatoshi/1000);
+          } else {
+            ({ num_satoshis: amount }  = await decodePaymentRequest({ lnd, request: pr }));
+          } 
           let conversionFee = computeConversionFee(amount);
 
           await db.transaction(async transaction => {

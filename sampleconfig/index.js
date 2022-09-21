@@ -2,7 +2,7 @@ const db = {
   user: "root",
   password: "password",
   database: "coinos",
-  host: "mariadb",
+  host: "maria",
   dialect: "mariadb",
   dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" }
 };
