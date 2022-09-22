@@ -4,8 +4,9 @@ services:
     container_name: caddy
     image: caddy:2
     ports:
-      - "443:443"
+      - "80:80"
     volumes:
+      - /var/coinos:/coinos
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy:/data
     environment:
