@@ -2,6 +2,7 @@ import config from "$config";
 import { createInvoice } from "lightning";
 import { err } from "$lib/logging";
 import lnd from "$lib/lnd";
+import ln from "$lib/ln";
 
 export default async (req, res) => {
   let { amount, memo, tip } = req.body;
@@ -11,7 +12,7 @@ export default async (req, res) => {
   try {
     if (config.lna.clightning) {
       if (!memo) memo = "coinos";
-      const invoice = await lna.invoice(
+      const invoice = await ln.invoice(
         value ? `${value}sat` : "any",
         new Date(),
         memo,

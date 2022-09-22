@@ -62,7 +62,7 @@ services:
     networks:
       default:
         ipv4_address: 172.42.0.25
-networks: 
-  default: 
+networks:
+  default:
     name: net
     external: true
