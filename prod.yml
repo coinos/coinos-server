@@ -3,6 +3,7 @@ services:
   caddy:
     container_name: caddy
     image: caddy:2
+    restart: always
     ports:
       - "80:80"
     volumes:
@@ -40,7 +41,7 @@ services:
     container_name: bitcoin
     volumes:
       - ./config/bitcoin:/home/bitcoin/.bitcoin
-    restart: unless-stopped
+    restart: always
     networks:
       default:
         ipv4_address: 172.42.0.23
@@ -49,20 +50,32 @@ services:
     container_name: liquid
     volumes:
       - ./config/liquid:/home/elements/.elements
-    restart: unless-stopped
+    restart: always
     networks:
       default:
         ipv4_address: 172.42.0.24
   cl:
     image: elementsproject/lightningd:v0.12.0
     container_name: cl
+    restart: always
     volumes:
       - ./config/lightning:/root/.lightning
-    restart: unless-stopped
+    ports:
+      - "9735:9735"
     networks:
       default:
         ipv4_address: 172.42.0.25
-networks: 
-  default: 
+  lnd:
+    image: lightninglabs/lnd:v0.15.1-beta
+    container_name: lnd
+    volumes:
+      - ./config/lnd:/root/.lnd
+      - ./config/bitcoin:/root/.bitcoin
+    restart: always
+    networks:
+      default:
+        ipv4_address: 172.42.0.26
+networks:
+  default:
     name: net
     external: true
