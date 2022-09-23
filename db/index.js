@@ -1,7 +1,6 @@
 import Sequelize from "@sequelize/core";
 
 import db from "$db/db";
-import dbOptions from "$config/knexfile";
 
 db.authenticate().catch(err => {
   console.debug("Error connecting to database: " + err.message);
