@@ -43,3 +43,7 @@ coinos.io {
 		dns cloudflare {env.CLOUDFLARE_AUTH_TOKEN}
 	}
 }
+
+v2.coinos.io {
+  redir https://coinos.io{uri} permanent
+} 
