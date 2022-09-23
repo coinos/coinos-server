@@ -1,7 +1,7 @@
 // Code for the conversion fee
 // This is in a separate file so that the same function can be used by ./send and ./receive
 
-const conversionFeeMultiplier = 0.01;
+const conversionFeeMultiplier = 0.001;
 export const conversionFeeReceiver = "coinosfees";  // account that receives the fees
 
 /**
