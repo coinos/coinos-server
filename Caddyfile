@@ -1,19 +1,45 @@
-:80 {
-        handle_path /api* {
-                reverse_proxy app:3119
-        }
+classic.coinos.io {
+	handle_path /api* {
+		reverse_proxy app:3119
+	}
 
-        handle /lnurl* {
-                reverse_proxy app:3118
-        }
+	handle /lnurl* {
+		reverse_proxy app:3118
+	}
 
-        handle /ws* {
-                reverse_proxy app:3119
-        }
+	handle /ws* {
+		reverse_proxy app:3119
+	}
 
-        handle {
-                root * /coinos
-                try_files {path}.html {path} /index.html
-                file_server
-        }
+	handle {
+		root * /coinos
+		try_files {path}.html {path} /index.html
+		file_server
+	}
+
+	tls {
+		dns cloudflare {env.CLOUDFLARE_AUTH_TOKEN}
+	}
+}
+
+coinos.io {
+	handle_path /api* {
+		reverse_proxy app:3119
+	}
+
+	handle /lnurl* {
+		reverse_proxy app:3118
+	}
+
+	handle /ws* {
+		reverse_proxy app:3119
+	}
+
+	handle {
+		reverse_proxy ui:3000
+	}
+
+	tls {
+		dns cloudflare {env.CLOUDFLARE_AUTH_TOKEN}
+	}
 }
