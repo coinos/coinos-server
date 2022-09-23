@@ -75,6 +75,13 @@ services:
     networks:
       default:
         ipv4_address: 172.42.0.26
+  tor:
+    container_name: tor
+    image: dperson/torproxy
+    restart: always
+    networks:
+      default:
+        ipv4_address: 172.42.0.27
 networks:
   default:
     name: net
