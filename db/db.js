@@ -1,13 +1,5 @@
 import Sequelize from "@sequelize/core";
-import dbOptions from "../config/knexfile";
+import config from "$config";
 
-let { database, user, password, host } = dbOptions[
-  process.env.NODE_ENV
-].connection;
-
-export default new Sequelize(database, user, password, {
-  host,
-  dialect: "mariadb",
-  logging: false,
-  dialectOptions: { multipleStatements: true, timezone: "Etc/GMT+7" }
-});
+let { database, user, password, options } = config.db;
+export default new Sequelize(database, user, password, options);

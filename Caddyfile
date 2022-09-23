@@ -1,4 +1,4 @@
-localhost:80 {
+:80 {
         handle_path /api* {
                 reverse_proxy app:3119
         }
@@ -13,6 +13,7 @@ localhost:80 {
 
         handle {
                 root * /coinos
+                try_files {path}.html {path} /index.html
                 file_server
         }
 }
