@@ -1,20 +1,14 @@
 version: '3.6'
 services:
-  caddy:
+  coinos:
     depends_on:
       - app
-    container_name: caddy
+    container_name: coinos
     image: gcr.io/coinos-326717/github.com/asoltys/caddy-cloudflare:latest
     restart: always
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
-      - /var/coinos:/coinos
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy:/data
-    environment:
-      CLOUDFLARE_AUTH_TOKEN: "${CLOUDFLARE_AUTH_TOKEN}"
     networks:
       default:
         ipv4_address: 172.42.0.21
