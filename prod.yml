@@ -1,21 +1,35 @@
 version: '3.6'
 services:
   caddy:
+    depends_on:
+      - app
     container_name: caddy
-    image: caddy:2
+    image: gcr.io/coinos-326717/github.com/asoltys/caddy-cloudflare:latest
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - /var/coinos:/coinos
       - ./Caddyfile:/etc/caddy/Caddyfile
       - ./caddy:/data
     environment:
-      DOMAIN: "${DOMAIN}"
+      CLOUDFLARE_AUTH_TOKEN: "${CLOUDFLARE_AUTH_TOKEN}"
     networks:
       default:
         ipv4_address: 172.42.0.21
+  ui:
+    depends_on:
+      - app
+    container_name: ui
+    image: gcr.io/coinos-326717/github.com/coinos/coinos-ui:prod
+    restart: always
   app:
+    depends_on:
+      - cl
+      - maria
+      - bitcoin
+      - liquid
     container_name: app
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
     restart: always
@@ -25,8 +39,6 @@ services:
     volumes:
       - ./:/app
       - ./logs:/logs
-    extra_hosts:
-      - host.docker.internal:host-gateway
     networks:
       default:
         ipv4_address: 172.42.0.22
@@ -36,6 +48,8 @@ services:
     restart: always
     environment:
       MARIADB_ROOT_PASSWORD: password
+    volumes:
+      - ./mysql:/var/lib/mysql
   bitcoin:
     image: ghcr.io/vulpemventures/bitcoin
     container_name: bitcoin
@@ -55,26 +69,43 @@ services:
       default:
         ipv4_address: 172.42.0.24
   cl:
+    depends_on:
+      - bitcoin
     image: elementsproject/lightningd:v0.12.0
     container_name: cl
     restart: always
     volumes:
       - ./config/lightning:/root/.lightning
     ports:
-      - "9735:9735"
+      - "9736:9735"
     networks:
       default:
         ipv4_address: 172.42.0.25
   lnd:
+    depends_on:
+      - bitcoin
+      - tor 
     image: lightninglabs/lnd:v0.15.1-beta
     container_name: lnd
     volumes:
       - ./config/lnd:/root/.lnd
       - ./config/bitcoin:/root/.bitcoin
+      - ./config/tor:/etc/tor
+    ports:
+      - "9735:9735"
     restart: always
     networks:
       default:
         ipv4_address: 172.42.0.26
+  tor:
+    container_name: tor
+    image: dperson/torproxy
+    restart: always
+    volumes:
+      - ./config/tor:/etc/tor
+    networks:
+      default:
+        ipv4_address: 172.42.0.27
 networks:
   default:
     name: net
