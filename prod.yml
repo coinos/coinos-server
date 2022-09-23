@@ -16,7 +16,7 @@ services:
     depends_on:
       - app
     container_name: ui
-    image: gcr.io/coinos-326717/github.com/coinos/coinos-ui:prod
+    image: coinos-ui
     restart: always
   app:
     depends_on:
