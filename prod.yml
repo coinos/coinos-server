@@ -18,6 +18,7 @@ services:
     container_name: ui
     image: coinos-ui
     restart: always
+    pull_policy: never
   app:
     depends_on:
       - cl
