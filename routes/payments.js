@@ -52,7 +52,7 @@ app.post("/sendToTokenHolders", auth, async (req, res, next) => {
 
 app.get("/except", adminAuth, (req, res) => {
   let s = fs.createWriteStream("exceptions", { flags: "a" });
-  unaccounted.map(tx => s.write(tx.txid + "\n"));
+  store.unaccounted.map(tx => s.write(tx.txid + "\n"));
   l("updated exceptions");
   res.send("updated exceptions");
 });
