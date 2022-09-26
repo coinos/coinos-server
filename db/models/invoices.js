@@ -173,6 +173,15 @@ const attributes = {
     comment: null,
     field: "tip"
   },
+  prompt: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "prompt"
+  },
 };
 
 const options = {
