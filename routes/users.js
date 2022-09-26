@@ -39,6 +39,7 @@ const twofa = (req, res, next) => {
 };
 
 app.get("/me", auth, async (req, res) => {
+  try {
   let user = req.user.get({ plain: true });
   let payments = await req.user.getPayments({
     where: {
@@ -60,6 +61,9 @@ app.get("/me", auth, async (req, res) => {
   user.accounts = await req.user.getAccounts();
   user.payments = payments;
   res.send(user);
+  } catch (e) {
+    res.code(500).send(e.message);
+  }
 });
 
 app.get("/users/:username", async (req, res) => {
