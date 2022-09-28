@@ -16,7 +16,7 @@ const attributes = {
     allowNull: false,
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true,
+    autoIncrement: false,
     comment: null,
     field: "uuid"
   },
