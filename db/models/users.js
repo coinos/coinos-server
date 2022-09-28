@@ -11,6 +11,15 @@ const attributes = {
     comment: null,
     field: "id"
   },
+  uuid: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+    autoIncrement: true,
+    comment: null,
+    field: "uuid"
+  },
   address: {
     type: DataTypes.STRING,
     allowNull: true,
