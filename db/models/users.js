@@ -23,7 +23,7 @@ const attributes = {
   address: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: false,
+    defaultValue: null,
     primaryKey: false,
     autoIncrement: false,
     comment: null,
