@@ -8,7 +8,7 @@ import { SATS } from "$lib/utils";
 
 export default async (req, res) => {
   let { user } = req;
-  let { address, amount, feeRate, replaceable } = req.body;
+  let { address, amount, feeRate, replaceable = true } = req.body;
   let tx, fee;
 
   if (user.account.pubkey) {
