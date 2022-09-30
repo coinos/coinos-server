@@ -24,43 +24,29 @@ import register from "$lib/register";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
-const twofa = (req, res, next) => {
-  let {
-    user,
-    body: { token }
-  } = req;
-  if (
-    user.twofa &&
-    (typeof token === "undefined" ||
-      !authenticator.check(token, user.otpsecret))
-  ) {
-    return res.code(401).send("2fa required");
-  } else next();
-};
-
 app.get("/me", auth, async (req, res) => {
   try {
-  let user = req.user.get({ plain: true });
-  let payments = await req.user.getPayments({
-    where: {
-      account_id: user.account_id
-    },
-    order: [["id", "DESC"]],
-    limit: 12,
-    include: [
-      {
-        model: db.Account,
-        as: "account"
+    let user = req.user.get({ plain: true });
+    let payments = await req.user.getPayments({
+      where: {
+        account_id: user.account_id,
       },
-      {
-        model: db.Payment,
-        as: "fee_payment"
-      }
-    ]
-  });
-  user.accounts = await req.user.getAccounts();
-  user.payments = payments;
-  res.send(user);
+      order: [["id", "DESC"]],
+      limit: 12,
+      include: [
+        {
+          model: db.Account,
+          as: "account",
+        },
+        {
+          model: db.Payment,
+          as: "fee_payment",
+        },
+      ],
+    });
+    user.accounts = await req.user.getAccounts();
+    user.payments = payments;
+    res.send(user);
   } catch (e) {
     res.code(500).send(e.message);
   }
@@ -74,7 +60,7 @@ app.get("/users/:username", async (req, res) => {
     where: Sequelize.where(
       Sequelize.fn("lower", Sequelize.col("username")),
       username.toLowerCase()
-    )
+    ),
   });
 
   if (user) res.send(user);
@@ -91,19 +77,25 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/disable2fa", auth, twofa, async (req, res) => {
-  let { user } = req;
+app.post("/disable2fa", auth, async (req, res) => {
+  let {
+    user,
+    body: { token },
+  } = req;
+
+  if (
+    user.twofa &&
+    (typeof token === "undefined" ||
+      !authenticator.check(token, user.otpsecret))
+  ) {
+    return res.code(401).send("2fa required");
+  }
+
   user.twofa = false;
   await user.save();
   emit(user.username, "user", user);
   emit(user.username, "otpsecret", user.otpsecret);
   l("disabled 2fa", user.username);
-  res.send({});
-});
-
-app.get("/otpsecret", auth, twofa, async (req, res) => {
-  let { user } = req;
-  emit(user.username, "otpsecret", user.otpsecret);
   res.send({});
 });
 
@@ -128,7 +120,7 @@ app.post("/2fa", auth, async (req, res) => {
 
 app.get("/exists", async (req, res) => {
   let exists = await db.User.findOne({
-    where: { username: req.query.username }
+    where: { username: req.query.username },
   });
 
   res.send(!!exists);
@@ -150,11 +142,11 @@ app.post("/user", auth, async (req, res) => {
       tokens,
       twofa,
       unit,
-      username
+      username,
     } = req.body;
 
     let exists = await db.User.findOne({
-      where: { username }
+      where: { username },
     });
 
     let token;
@@ -169,7 +161,7 @@ app.post("/user", auth, async (req, res) => {
 
       token = jwt.sign({ username }, config.jwt);
       res.cookie("token", token, {
-        expires: new Date(Date.now() + 432000000)
+        expires: new Date(Date.now() + 432000000),
       });
     }
 
@@ -201,7 +193,7 @@ app.post("/keys", auth, async (req, res) => {
   const { key: hex } = req.body;
   const key = await db.Key.create({
     user_id: req.user.id,
-    hex
+    hex,
   });
   emit(req.user.username, "key", key);
   res.send(key);
@@ -213,8 +205,8 @@ app.post("/keys/delete", auth, async (req, res) => {
     await db.Key.findOne({
       where: {
         user_id: req.user.id,
-        hex
-      }
+        hex,
+      },
     })
   ).destroy();
 });
@@ -230,12 +222,12 @@ app.post("/updateSeeds", auth, async (req, res) => {
     await db.Account.update(
       { seed },
       {
-        where: { id, user_id: user.id }
+        where: { id, user_id: user.id },
       }
     );
 
     const account = await db.Account.findOne({
-      where: { id }
+      where: { id },
     });
 
     emit(user.username, "account", account);
@@ -252,16 +244,8 @@ app.post("/accounts/delete", auth, async (req, res) => {
 });
 
 app.post("/accounts", auth, async (req, res) => {
-  const {
-    name,
-    seed,
-    pubkey,
-    ticker,
-    precision,
-    path,
-    privkey,
-    network
-  } = req.body;
+  const { name, seed, pubkey, ticker, precision, path, privkey, network } =
+    req.body;
   const { user } = req;
 
   let account = await db.Account.create({
@@ -276,7 +260,7 @@ app.post("/accounts", auth, async (req, res) => {
     privkey,
     seed,
     path,
-    network
+    network,
   });
 
   emit(user.username, "account", account);
@@ -362,14 +346,14 @@ app.post("/logout", optionalAuth, async (req, res) => {
   if (username) {
     l("logging out", username);
     let i = req.user.subscriptions.findIndex(
-      s => JSON.stringify(s) === subscription
+      (s) => JSON.stringify(s) === subscription
     );
     if (i > -1) {
       req.user.subscriptions.splice(i, 1);
     }
     await req.user.save();
     Object.keys(logins).map(
-      k => logins[k]["username"] === username && delete logins[k]
+      (k) => logins[k]["username"] === username && delete logins[k]
     );
   }
 
@@ -383,7 +367,7 @@ app.get("/address", async (req, res) => {
   let paymentType = {
     bech32: "p2wpkh",
     "p2sh-segwit": "p2sh",
-    legacy: "p2pkh"
+    legacy: "p2pkh",
   }[type];
   if (!paymentType) paymentType = "p2wpkh";
 
@@ -418,7 +402,7 @@ app.get("/address", async (req, res) => {
       paymentType = "p2sh";
 
       // async request to node to bump its internal index but don't use result
-      lq.getNewAddress().catch(e =>
+      lq.getNewAddress().catch((e) =>
         warn("Problem bumping liquid address index", e.message)
       );
 
@@ -445,13 +429,13 @@ app.get("/address", async (req, res) => {
   if (paymentType !== "p2sh") {
     ({ address } = p[paymentType]({
       pubkey: hd.publicKey,
-      network: n
+      network: n,
     }));
   } else {
     if (network === "liquid") {
       const p2wpkh = p.p2wpkh({
         pubkey: hd.publicKey,
-        network: n
+        network: n,
       });
 
       const blindkey = fromPrivateKey(
@@ -463,7 +447,7 @@ app.get("/address", async (req, res) => {
       ({ address, confidentialAddress } = p[paymentType]({
         redeem: p2wpkh,
         network: n,
-        blindkey: blindkey.publicKey
+        blindkey: blindkey.publicKey,
       }));
 
       lq.importBlindingKey(
@@ -474,9 +458,9 @@ app.get("/address", async (req, res) => {
       ({ address } = p[paymentType]({
         redeem: p.p2wpkh({
           pubkey: hd.publicKey,
-          network: n
+          network: n,
         }),
-        network: n
+        network: n,
       }));
     }
   }
@@ -497,15 +481,15 @@ app.post("/account", auth, async (req, res) => {
     privkey,
     path,
     hide,
-    index
+    index,
   } = req.body;
 
   try {
-    await db.transaction(async transaction => {
+    await db.transaction(async (transaction) => {
       let account = await db.Account.findOne({
         where: { id, user_id: user.id },
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       let params = {
@@ -518,14 +502,14 @@ app.post("/account", auth, async (req, res) => {
         path,
         hide,
         index,
-        privkey
+        privkey,
       };
 
       if (!account || (account.pubkey && !pubkey)) delete params.pubkey;
 
       await db.Account.update(params, {
         where: { id, user_id: user.id },
-        transaction
+        transaction,
       });
 
       await account.reload({ transaction });
@@ -544,7 +528,7 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (account.user_id !== user.id)
@@ -554,14 +538,14 @@ app.post("/shiftAccount", auth, async (req, res) => {
     await user.save();
     let payments = await db.Payment.findAll({
       where: {
-        account_id: id
+        account_id: id,
       },
       order: [["id", "DESC"]],
       limit: 12,
       include: {
         model: db.Account,
-        as: "account"
-      }
+        as: "account",
+      },
     });
 
     user = user.get({ plain: true });
@@ -578,16 +562,18 @@ app.post("/shiftAccount", auth, async (req, res) => {
   }
 });
 
-app.get("/vapidPublicKey", function(req, res) {
+app.get("/vapidPublicKey", function (req, res) {
   res.send(config.vapid.publicKey);
 });
 
-app.post("/subscribe", auth, async function(req, res) {
+app.post("/subscribe", auth, async function (req, res) {
   let { subscriptions } = req.user;
   let { subscription } = req.body;
   if (!subscriptions) subscriptions = [];
   if (
-    !subscriptions.find(s => JSON.stringify(s) === JSON.stringify(subscription))
+    !subscriptions.find(
+      (s) => JSON.stringify(s) === JSON.stringify(subscription)
+    )
   )
     subscriptions.push(subscription);
   req.user.subscriptions = subscriptions;
@@ -597,10 +583,10 @@ app.post("/subscribe", auth, async function(req, res) {
 });
 
 let redeeming = {};
-app.post("/redeem", optionalAuth, async function(req, res) {
+app.post("/redeem", optionalAuth, async function (req, res) {
   const { redeemcode } = req.body;
   try {
-    await db.transaction(async transaction => {
+    await db.transaction(async (transaction) => {
       if (redeeming[redeemcode]) fail("redemption in progress");
       redeeming[redeemcode] = true;
       if (!redeemcode) fail("no code provided");
@@ -609,14 +595,14 @@ app.post("/redeem", optionalAuth, async function(req, res) {
 
       const source = await db.Payment.findOne({
         where: {
-          redeemcode: req.body.redeemcode
+          redeemcode: req.body.redeemcode,
         },
         include: {
           model: db.Account,
-          as: "account"
+          as: "account",
         },
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       l("redeeming", redeemcode);
@@ -633,7 +619,7 @@ app.post("/redeem", optionalAuth, async function(req, res) {
         user = await register(
           {
             username: redeemcode.substr(0, 8),
-            password: ""
+            password: "",
           },
           ip,
           false
@@ -642,7 +628,7 @@ app.post("/redeem", optionalAuth, async function(req, res) {
         let payload = { username: user.username };
         let token = jwt.sign(payload, config.jwt);
         res.cookie("token", token, {
-          expires: new Date(Date.now() + 432000000)
+          expires: new Date(Date.now() + 432000000),
         });
 
         delete redeeming[redeemcode];
@@ -667,7 +653,7 @@ app.post("/redeem", optionalAuth, async function(req, res) {
           confirmed,
           network,
           received: true,
-          fee
+          fee,
         },
         { transaction }
       );
@@ -684,20 +670,20 @@ app.post("/redeem", optionalAuth, async function(req, res) {
     });
   } catch (e) {
     delete redeeming[redeemcode];
-    console.log(e)
+    console.log(e);
     err("problem redeeming", e.message);
     return res.code(500).send("There was a problem redeeming the voucher");
   }
 });
 
-app.post("/checkRedeemCode", auth, async function(req, res) {
+app.post("/checkRedeemCode", auth, async function (req, res) {
   const { redeemcode } = req.body;
 
   const payment = await db.Payment.findOne({ where: { redeemcode } });
   res.send(payment);
 });
 
-app.post("/password", auth, async function(req, res) {
+app.post("/password", auth, async function (req, res) {
   const { user } = req;
   const { password } = req.body;
 
@@ -705,7 +691,7 @@ app.post("/password", auth, async function(req, res) {
   res.send(await bcrypt.compare(password, user.password));
 });
 
-app.get("/isInternal", auth, async function(req, res) {
+app.get("/isInternal", auth, async function (req, res) {
   let { user } = req;
   let { address } = req.query;
   if (!address) throw new Error("Address not provided");
@@ -715,8 +701,8 @@ app.get("/isInternal", auth, async function(req, res) {
     include: {
       attributes: ["username"],
       model: db.User,
-      as: "user"
-    }
+      as: "user",
+    },
   });
 
   if (invoice) {
@@ -735,21 +721,21 @@ app.get("/isInternal", auth, async function(req, res) {
   res.send(false);
 });
 
-app.get("/invoices", auth, async function(req, res) {
+app.get("/invoices", auth, async function (req, res) {
   let invoices = await db.Invoice.findAll({
-    where: { user_id: req.user.id }
+    where: { user_id: req.user.id },
   });
   res.send(invoices);
 });
 
-app.post("/signMessage", auth, async function(req, res) {
+app.post("/signMessage", auth, async function (req, res) {
   let { address, message } = req.body;
 
   let invoices = await db.Invoice.findAll({
-    where: { user_id: req.user.id }
+    where: { user_id: req.user.id },
   });
 
-  if (invoices.find(i => i.address === address)) {
+  if (invoices.find((i) => i.address === address)) {
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
     return res.send(await bc.signMessage(address, message));
