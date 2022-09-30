@@ -58,7 +58,6 @@ app.get("/except", adminAuth, (req, res) => {
 });
 
 app.post("/lightning/channel", lnRoutes.channel);
-app.post("/lightning/invoice", lnRoutes.invoice);
 app.post("/lightning/query", auth, lnRoutes.query);
 app.post("/lightning/send", auth, lnRoutes.send);
 
