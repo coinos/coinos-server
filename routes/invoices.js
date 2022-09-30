@@ -5,6 +5,9 @@ import { optionalAuth } from "$lib/passport";
 import { Op } from "@sequelize/core";
 import axios from "axios";
 import { err, l } from "$lib/logging";
+import bc from "$lib/bitcoin";
+import lq from "$lib/liquid";
+import { SATS, bip21, deriveAddress, derivePayRequest } from "$lib/utils";
 
 app.get("/invoice", async (req, res, next) => {
   try {
@@ -27,15 +30,12 @@ app.get("/invoice", async (req, res, next) => {
 
 app.post("/invoice", optionalAuth, async (req, res, next) => {
   try {
-    let { liquidAddress, id, invoice, user, tx } = req.body;
-    let { blindkey } = invoice;
+    let { type = "bech32", liquidAddress, id, invoice, user, tx } = req.body;
+    let { blindkey, currency, tip, amount, rate, network } = invoice;
+    let address, unconfidential, text;
 
-    if (invoice.amount < 0) throw new Error("amount out of range");
-    if (
-      invoice.tip > invoice.amount ||
-      invoice.tip > 1000000 ||
-      invoice.tip < 0
-    )
+    if (amount < 0) throw new Error("amount out of range");
+    if (tip > amount || tip > 1000000 || tip < 0)
       throw new Error("tip amount out of range");
 
     if (liquidAddress) {
@@ -48,18 +48,56 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       user = await db.User.findOne({
         where: {
           username: user.username
+        },
+        include: {
+          model: db.Account,
+          as: "account"
         }
       });
     }
     if (!user) throw new Error("user not provided");
-    if (!invoice.currency) invoice.currency = user.currency;
-    if (!invoice.rate) invoice.rate = store.rates[invoice.currency];
-    if (invoice.tip > invoice.amount || invoice.tip > 1000000)
-      throw new Error("tip is too large");
-    if (invoice.tip < 0 || invoice.amount < 0)
-      throw new Error("invalid amount");
-    invoice.user_id = user.id;
-    invoice.account_id = user.account_id;
+    if (!currency) currency = user.currency;
+    if (!rate) rate = store.rates[currency];
+    if (tip > amount || tip > 1000000) throw new Error("tip is too large");
+    if (tip < 0 || amount < 0) throw new Error("invalid amount");
+
+    if (user.account.pubkey) {
+      let { address, confidentialAddress } = await deriveAddress(
+        user.account,
+        type
+      );
+      if (confidentialAddress) {
+        address = confidentialAddress;
+        unconfidential = address;
+      } else {
+        address = address;
+      }
+    } else if (network !== "lightning") {
+      console.log(network, { bitcoin: bc, liquid: lq }[network])
+      address = await { bitcoin: bc, liquid: lq }[network].getNewAddress();
+      if (network === "liquid")
+        ({ unconfidential } = await lq.getAddressInfo(address));
+    }
+
+    invoice = {
+      ...invoice,
+      account_id: user.account.id,
+      address,
+      amount,
+      currency,
+      rate,
+      tip,
+      unconfidential,
+      user_id: user.id
+    };
+
+    if (network === "lightning") {
+      invoice.text = await derivePayRequest(invoice);
+    } else {
+      invoice.text = bip21(invoice, user.account);
+    }
+
+    console.log("TEXT", invoice.text)
 
     l(
       "creating invoice",
@@ -73,21 +111,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
 
     if (!invoice.tip) invoice.tip = 0;
 
-    const exists =
-      invoice.text &&
-      (await db.Invoice.findOne({
-        where: {
-          [Op.or]: {
-            address: invoice.address || "",
-            unconfidential: invoice.unconfidential || "",
-            text: invoice.text
-          }
-        }
-      }));
-
-    invoice = exists
-      ? await exists.update(invoice)
-      : await db.Invoice.create(invoice);
+    invoice = await db.Invoice.create(invoice);
     store.addresses[invoice.address] = user.username;
     if (invoice.unconfidential) {
       store.addresses[invoice.unconfidential] = user.username;
