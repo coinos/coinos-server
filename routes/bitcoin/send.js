@@ -9,63 +9,56 @@ import { l, warn, err } from "$lib/logging";
 const btc = config.liquid.btcasset;
 import {
   computeConversionFee,
-  conversionFeeReceiver
+  conversionFeeReceiver,
 } from "./conversionFee.js";
 
 export default async (req, res) => {
-  let { user } = req;
-  let { address, memo, tx } = req.body;
-  let { hex } = tx;
-
-  let fee = toSats(tx.fee);
-  if (fee < 0) throw new Error("fee cannot be negative");
-
-  const isChange = async ({ address }) =>
-    (await bc.getAddressInfo(address)).ismine &&
-    !Object.keys(store.addresses).includes(address);
-
-  tx = await bc.decodeRawTransaction(hex);
-
-  let total = 0;
-  let change = 0;
-
-  for (let i = 0; i < tx.vout.length; i++) {
-    let o = tx.vout[i];
-    total += toSats(o.value);
-
-    if (await isChange(o.scriptPubKey)) {
-      change += toSats(o.value);
-    }
-  }
-
-  total = total - change + fee;
-  let amount = total - fee;
-
-  // get conversion fee
-  // 'total' refers to the total before the conversion fee
-  // (i.e. the total bitcoin that leaves this server)
-  let conversionFee = computeConversionFee(amount);
-
   try {
-    // withdraw bitcoin
-    await db.transaction(async transaction => {
-      let account = await db.Account.findOne({
-        where: {
-          id: user.account_id
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
+    let { user } = req;
+    let { address, memo, tx } = req.body;
+    let { hex } = tx;
 
+    let fee = toSats(tx.fee);
+    if (fee < 0) throw new Error("fee cannot be negative");
+
+    const isChange = async ({ address }) =>
+      (await bc.getAddressInfo(address)).ismine &&
+      !Object.keys(store.addresses).includes(address);
+
+    tx = await bc.decodeRawTransaction(hex);
+
+    let total = 0;
+    let change = 0;
+
+    for (let i = 0; i < tx.vout.length; i++) {
+      let o = tx.vout[i];
+      total += toSats(o.value);
+
+      if (await isChange(o.scriptPubKey)) {
+        change += toSats(o.value);
+      }
+    }
+
+    total = total - change + fee;
+    let amount = total - fee;
+
+    // get conversion fee
+    // 'total' refers to the total before the conversion fee
+    // (i.e. the total bitcoin that leaves this server)
+    let conversionFee = computeConversionFee(amount);
+
+    // withdraw bitcoin
+    await db.transaction(async (transaction) => {
+      let { account } = user;
       if (account.asset !== btc) {
         account = await db.Account.findOne({
           where: {
             user_id: user.id,
             asset: btc,
-            pubkey: null
+            pubkey: null,
           },
           lock: transaction.LOCK.UPDATE,
-          transaction
+          transaction,
         });
       }
 
@@ -79,6 +72,16 @@ export default async (req, res) => {
         await account.reload({ transaction });
         conversionFee -= conversionFeeDeduction;
       }
+
+      l(
+        "attempting to send bitcoin",
+        user.username,
+        account.id,
+        address,
+        total,
+        conversionFee,
+        conversionFeeDeduction
+      );
 
       if (total > account.balance) {
         err("amount exceeds balance", amount, fee, account.balance);
@@ -101,16 +104,16 @@ export default async (req, res) => {
 
       let receiverAccount = await db.Account.findOne({
         where: {
-          "$user.username$": conversionFeeReceiver
+          "$user.username$": conversionFeeReceiver,
         },
         include: [
           {
             model: db.User,
-            as: "user"
-          }
+            as: "user",
+          },
         ],
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       let fee_payment;
@@ -132,7 +135,7 @@ export default async (req, res) => {
             currency: receiverAccount.user.currency,
             confirmed: true,
             received: true,
-            network: "COINOS"
+            network: "COINOS",
           },
           { transaction }
         );
@@ -152,7 +155,7 @@ export default async (req, res) => {
         confirmed: true,
         received: false,
         network: "bitcoin",
-        fee_payment_id: fee_payment_id
+        fee_payment_id: fee_payment_id,
       };
 
       if (config.bitcoin.walletpass)
