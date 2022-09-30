@@ -319,7 +319,7 @@ let login = async (req, res) => {
         !(await bcrypt.compare(req.body.password, user.password)))
     ) {
       warn("invalid username or password attempt", req.body.username);
-      return res.status(401).send({});
+      return res.code(401).send({});
     }
 
     if (
@@ -327,7 +327,7 @@ let login = async (req, res) => {
       (typeof twofa === "undefined" ||
         !authenticator.check(twofa, user.otpsecret))
     ) {
-      return res.status(401).send("2FA required");
+      return res.code(401).send("2FA required");
     }
 
     l(
