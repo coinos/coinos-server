@@ -97,8 +97,6 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       invoice.text = bip21(invoice, user.account);
     }
 
-    console.log("TEXT", invoice.text)
-
     l(
       "creating invoice",
       user.username,
