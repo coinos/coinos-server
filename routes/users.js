@@ -34,7 +34,7 @@ const twofa = (req, res, next) => {
     (typeof token === "undefined" ||
       !authenticator.check(token, user.otpsecret))
   ) {
-    return res.status(401).send("2FA required");
+    return res.code(401).send("2fa required");
   } else next();
 };
 
@@ -345,7 +345,7 @@ let login = async (req, res) => {
     res.send({ user, token });
   } catch (e) {
     err("login error", e.message, req.connection.remoteAddress);
-    res.status(401).send({});
+    res.code(401).send({});
   }
 };
 
