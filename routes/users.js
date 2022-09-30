@@ -327,7 +327,7 @@ let login = async (req, res) => {
       (typeof twofa === "undefined" ||
         !authenticator.check(twofa, user.otpsecret))
     ) {
-      return res.code(401).send("2FA required");
+      return res.code(401).send("2fa required");
     }
 
     l(
