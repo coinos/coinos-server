@@ -57,6 +57,7 @@ app.get("/except", adminAuth, (req, res) => {
   res.send("updated exceptions");
 });
 
+app.post("/lightning/parse", lnRoutes.parse);
 app.post("/lightning/channel", lnRoutes.channel);
 app.post("/lightning/query", auth, lnRoutes.query);
 app.post("/lightning/send", auth, lnRoutes.send);

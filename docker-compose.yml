@@ -23,9 +23,6 @@ services:
     container_name: app
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
     command: "pnpm dev"
-    ports:
-      - '3118:3118'
-      - '3119:3119'
     environment:
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
       NODE_ENV: development
@@ -40,9 +37,6 @@ services:
   bitcoin:
     image: ghcr.io/vulpemventures/bitcoin
     container_name: bitcoin
-    ports:
-      - ${BITCOIN_PEER_PORT}:18442
-      - ${BITCOIN_NODE_PORT}:18443
     volumes:
       - ./config/bitcoin:/home/bitcoin/.bitcoin
     restart: unless-stopped
@@ -52,11 +46,6 @@ services:
   liquid:
     image: ghcr.io/vulpemventures/elements
     container_name: liquid
-    ports:
-      - ${LIQUID_NODE_PORT}:7040
-      - ${LIQUID_PEER_PORT}:18444
-      - ${LIQUID_BLOCK_PORT}:18606
-      - ${LIQUID_TX_PORT}:18607
     volumes:
       - ./config/liquid:/home/elements/.elements
     restart: unless-stopped
@@ -123,8 +112,6 @@ services:
     volumes:
       - ./config/bitcoin/:/config
     restart: unless-stopped
-    ports:
-      - 3095:3095
     networks:
       default:
         ipv4_address: 172.18.0.28
@@ -154,9 +141,6 @@ services:
       - 0.0.0.0:60401
       - --cors
       - "*"
-    ports:
-      - ${LIQUID_ELECTRS_RPC_PORT}:60401
-      - ${LIQUID_ELECTRS_PORT}:3002
     volumes:
       - ./config/liquid/:/config
     restart: unless-stopped

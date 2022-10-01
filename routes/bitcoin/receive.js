@@ -213,12 +213,13 @@ setInterval(async () => {
           if (p && p.user) user = p.user;
 
           if (p && p.account) {
-            ({ account } = p);
+            ({ account, invoice } = p);
             total = p.amount + p.tip;
 
             p.confirmed = 1;
             await account.save({ transaction });
 
+            await invoice.increment({ received: total }, { transaction });
             await account.increment({ balance: total }, { transaction });
             await account.decrement(
               { pending: Math.min(account.pending, total) },
