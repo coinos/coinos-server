@@ -344,6 +344,7 @@ setInterval(async () => {
           p.confirmed = 1;
           await p.account.save({ transaction });
 
+          await p.invoice.increment({ received: total }, { transaction });
           await p.account.increment({ balance: total }, { transaction });
           await p.account.decrement(
             { pending: Math.min(p.account.pending, total) },
