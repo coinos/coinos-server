@@ -28,6 +28,11 @@ if (config.lna) store.networks.push("lightning");
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
 
+app.post('/echo', async (req, res) => {
+  console.log(req.body)
+  res.send(req.body);
+}); 
+
 app.listen({ host, port }, (e, address) => {
   e && err(e) && process.exit(1);
   l(`CoinOS Server listening on ${address}`);

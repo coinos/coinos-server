@@ -117,11 +117,11 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
   Promise.all(
     tx.vout.map(async o => {
       try {
-        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
+        if (!(o.scriptPubKey && o.scriptPubKey.address)) return;
 
         const { asset } = o;
         const value = toSats(o.value);
-        const address = o.scriptPubKey.addresses[0];
+        const { address } = o.scriptPubKey;
 
         if (
           Object.keys(store.addresses).includes(address) &&
