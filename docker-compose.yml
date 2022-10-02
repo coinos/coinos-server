@@ -23,6 +23,8 @@ services:
     container_name: app
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
     command: "pnpm dev"
+    ports:
+      - '3119:3119'
     environment:
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
       NODE_ENV: development
