@@ -16,5 +16,5 @@ export default async (req, res) => {
   let { alias } = nodes.find((n) => n.nodeid === payee);
   let route = await ln.getroute(payee, msatoshi, 5);
 
-  res.send({ alias, route });
+  res.send({ alias, amount: Math.round(msatoshi / 1000), route });
 };
