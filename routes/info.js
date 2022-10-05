@@ -37,63 +37,63 @@ app.get("/info", async (req, res, next) => {
 
 app.get("/balances", async (req, res, next) => {
   try {
-  const accounts = await db.Account.findAll({
-    attributes: [
-      "asset",
-      "pubkey",
-      [sequelize.fn("sum", sequelize.col("balance")), "total"]
-    ],
-    group: ["asset", "pubkey"]
-  });
+    const accounts = await db.Account.findAll({
+      attributes: [
+        "asset",
+        "pubkey",
+        [sequelize.fn("sum", sequelize.col("balance")), "total"]
+      ],
+      group: ["asset", "pubkey"]
+    });
 
-  let lnchannel;
-  let lnwallet;
+    let lnchannel;
+    let lnwallet;
 
-  if (config.lna) {
-    if (config.lna.clightning) {
-      const funds = await ln.listfunds();
-      lnchannel = parseInt(
-        funds.channels.reduce((a, b) => a + b.channel_sat, 0)
-      );
-      lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
-    } else {
-      lnchannel = parseInt(await getChannelBalance({ lnd }).channel_balance);
-      lnwallet = parseInt(await getChainBalance({ lnd }).chain_balance);
+    if (config.lna) {
+      if (config.lna.clightning) {
+        const funds = await ln.listfunds();
+        lnchannel = parseInt(
+          funds.channels.reduce((a, b) => a + b.channel_sat, 0)
+        );
+        lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
+      } else {
+        lnchannel = parseInt(await getChannelBalance({ lnd }).channel_balance);
+        lnwallet = parseInt(await getChainBalance({ lnd }).chain_balance);
+      }
     }
+
+    let bitcoin, bitcoind;
+    if (config.bitcoin) {
+      bitcoin = parseInt((await bc.getBalance()) * SATS);
+      bitcoind = await bc.getNetworkInfo();
+    }
+
+    let assets, liquid, elementsd;
+    if (config.liquid) {
+      assets = await lq.getBalance();
+      liquid = parseInt(assets.bitcoin * SATS);
+      elementsd = await lq.getNetworkInfo();
+    }
+
+    const info = {
+      bitcoind,
+      elementsd,
+      accounts,
+      assets,
+      bitcoin,
+      liquid,
+      lnchannel,
+      lnwallet
+    };
+
+    info.total =
+      parseInt(bitcoin) +
+      parseInt(liquid) +
+      parseInt(lnchannel) +
+      parseInt(lnwallet);
+
+    res.send(info);
+  } catch (e) {
+    console.log("problem getting balances", e);
   }
-
-  let bitcoin, bitcoind;
-  if (config.bitcoin) {
-    bitcoin = parseInt((await bc.getBalance()) * SATS);
-    bitcoind = await bc.getNetworkInfo();
-  }
-
-  let assets, liquid, elementsd;
-  if (config.liquid) {
-    assets = await lq.getBalance();
-    liquid = parseInt(assets.bitcoin * SATS);
-    elementsd = await lq.getNetworkInfo();
-  }
-
-  const info = {
-    bitcoind,
-    elementsd,
-    accounts,
-    assets,
-    bitcoin,
-    liquid,
-    lnchannel,
-    lnwallet
-  };
-
-  info.total =
-    parseInt(bitcoin) +
-    parseInt(liquid) +
-    parseInt(lnchannel) +
-    parseInt(lnwallet);
-
-  res.send(info);
-  } catch(e) {
-    console.log("problem getting balances", e)
-  } 
 });

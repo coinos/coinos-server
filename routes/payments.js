@@ -64,7 +64,7 @@ app.post("/lightning/send", auth, lnRoutes.send);
 
 if (config.lnurl) {
   let { channelRequest } = await import("$routes/lightning/channelRequest");
-  app.post("/lightning/channelRequest", channelRequest)
+  app.post("/lightning/channelRequest", channelRequest);
 }
 
 app.post("/bitcoin/broadcast", optionalAuth, btcRoutes.broadcast);

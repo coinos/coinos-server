@@ -231,9 +231,12 @@ setInterval(async () => {
               { transaction }
             );
             await account.reload({ transaction });
+            await invoice.reload({ transaction });
             await p.save({ transaction });
 
             p = p.get({ plain: true });
+            p.account = account.get({ plain: true });
+            p.invoice = invoice.get({ plain: true });
 
             emit(user.username, "account", account);
             emit(user.username, "payment", p);

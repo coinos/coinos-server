@@ -20,10 +20,7 @@ export default {
     config: {
       hostname: "lnd:9735",
       cert: {
-        data: fs.readFileSync(
-          "/app/config/lnd/tls.cert",
-          "utf8"
-        )
+        data: fs.readFileSync("/app/config/lnd/tls.cert", "utf8")
       },
       macaroon: {
         data:
@@ -31,16 +28,16 @@ export default {
       }
     }
   },
-	store: {
-		backend: 'knex',
-		config: {
-			client: 'mysql',
-			connection: {
-				host: 'maria',
-				user: 'root',
-				password: 'password',
-				database: 'coinos',
-			},
-		},
-	},
+  store: {
+    backend: "knex",
+    config: {
+      client: "mysql",
+      connection: {
+        host: "maria",
+        user: "root",
+        password: "password",
+        database: "coinos"
+      }
+    }
+  }
 };

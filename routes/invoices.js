@@ -24,7 +24,29 @@ app.get("/invoice", async (req, res, next) => {
 
     res.send(invoice);
   } catch (e) {
-    err("couldn't find invoice", e);
+    err("invoice not found", e);
+    res.code(500).send("Invoice not found");
+  }
+});
+
+app.get("/invoice/:text", async (req, res, next) => {
+  try {
+    let { text } = req.params;
+    const invoice = await db.Invoice.findOne({
+      where: {
+        [Op.or]: [{ unconfidential: text }, { address: text }, { text }]
+      },
+      include: {
+        model: db.User,
+        as: "user",
+        attributes: ["username", "currency"]
+      }
+    });
+
+    res.send(invoice);
+  } catch (e) {
+    err("invoice not found", e);
+    res.code(500).send("Invoice not found");
   }
 });
 
@@ -73,7 +95,6 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
         address = address;
       }
     } else if (network !== "lightning") {
-      console.log(network, { bitcoin: bc, liquid: lq }[network])
       address = await { bitcoin: bc, liquid: lq }[network].getNewAddress();
       if (network === "liquid")
         ({ unconfidential } = await lq.getAddressInfo(address));

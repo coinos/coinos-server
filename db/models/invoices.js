@@ -130,8 +130,8 @@ const attributes = {
   },
   received: {
     type: DataTypes.STRING(255),
-    allowNull: true,
-    defaultValue: null,
+    allowNull: false,
+    defaultValue: 0,
     primaryKey: false,
     autoIncrement: false,
     comment: null,

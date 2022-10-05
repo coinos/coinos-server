@@ -82,7 +82,7 @@ const handlePayment = async msg => {
         { transaction }
       );
       await account.reload({ transaction });
-      await invoice.save({ transaction });
+      await invoice.reload({ transaction });
       await payment.save({ transaction });
       store.payments.push(msg.request);
 
@@ -91,6 +91,8 @@ const handlePayment = async msg => {
       payment.invoice = invoice.get({ plain: true });
 
       callWebhook(invoice, payment);
+
+      console.log("INVOICE", payment.invoice.received);
 
       emit(user.username, "payment", payment);
       emit(user.username, "account", payment.account);
