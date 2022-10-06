@@ -30,6 +30,8 @@ const recipients = persist("data/recipients.json");
 const lnurlPayments = persist("data/payments.json");
 const withdrawals = persist("data/withdrawals.json");
 
+const { HOSTNAME: hostname } = process.env;
+
 export const lnurlServer = lnurl.createServer(config.lnurl);
 
 app.get("/url", async (req, res, next) => {
@@ -226,7 +228,7 @@ app.post("/pay", auth, async (req, res, next) => {
           memo: comment,
           username: recipients[secret].username
         },
-        req.hostname,
+        hostname,
         user
       );
 

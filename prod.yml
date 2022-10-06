@@ -19,6 +19,10 @@ services:
     image: coinos-ui
     restart: always
     pull_policy: never
+    environment:
+      PUBLIC_COINOS_URL: "${PUBLIC_COINOS_URL}"
+      PUBLIC_BTC: "${PUBLIC_BTC}"
+      PUBLIC_SOCKET: "${PUBLIC_SOCKET}"
   app:
     depends_on:
       - cl
@@ -31,6 +35,7 @@ services:
     environment:
       NODE_ENV: production
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
+      HOSTNAME: "${HOSTNAME}"
     volumes:
       - ./:/app
       - ./logs:/logs

@@ -67,7 +67,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
               transaction
             });
 
-            const invoice = await db.Invoice.findOne({
+            let invoice = await db.Invoice.findOne({
               where: {
                 address,
                 user_id: user.id,
@@ -185,7 +185,7 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      let account, address, user, total;
+      let account, address, invoice, user, total;
       await db.transaction(async transaction => {
         let payments = await db.Payment.findAll({
           where: { hash, confirmed: 0, received: 1 },

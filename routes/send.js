@@ -3,7 +3,7 @@ import sendInternal from "$lib/sendInternal";
 
 export default async (req, res, next) => {
   try {
-    let payment = await sendInternal(req.body, req.hostname, req.user);
+    let payment = await sendInternal(req.body, req.user);
     res.send(payment);
   } catch (e) {
     err("problem sending internal payment", e.message);
