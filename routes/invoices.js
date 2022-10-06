@@ -32,10 +32,17 @@ app.get("/invoice", async (req, res, next) => {
 app.get("/invoice/:text", async (req, res, next) => {
   try {
     let { text } = req.params;
+    let where =
+      text.split("-").length > 4
+        ? { uuid: text }
+        : text.startsWith("ln")
+        ? { text }
+        : {
+            [Op.or]: [{ unconfidential: text }, { address: text }]
+          };
+
     const invoice = await db.Invoice.findOne({
-      where: {
-        [Op.or]: [{ unconfidential: text }, { address: text }, { text }]
-      },
+      where,
       include: {
         model: db.User,
         as: "user",
