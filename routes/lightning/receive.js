@@ -92,8 +92,6 @@ const handlePayment = async msg => {
 
       callWebhook(invoice, payment);
 
-      console.log("INVOICE", payment.invoice.received);
-
       emit(user.username, "payment", payment);
       emit(user.username, "account", payment.account);
       notify(user, `Received ${total} SAT`);

@@ -202,6 +202,7 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             payment = payment.get({ plain: true });
             payment.account = account.get({ plain: true });
+            payment.invoice = invoice.get({ plain: true });
 
             emit(user.username, "payment", payment);
             emit(user.username, "account", payment.account);

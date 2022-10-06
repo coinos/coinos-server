@@ -144,9 +144,9 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             payment = payment.get({ plain: true });
             payment.account = account.get({ plain: true });
+            payment.invoice = invoice.get({ plain: true });
 
             emit(user.username, "account", account);
-
             emit(user.username, "payment", payment);
             l("bitcoin detected", user.username, value);
             notify(user, `${value} SAT payment detected`);
