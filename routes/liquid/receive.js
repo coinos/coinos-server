@@ -117,12 +117,11 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
     for (let o of tx.vout) {
       try {
-        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
+        if (!(o.scriptPubKey && o.scriptPubKey.address)) return;
 
         const { asset } = o;
         const value = toSats(o.value);
-        const { addresses } = o.scriptPubKey;
-        const address = addresses[0];
+        const { address } = o.scriptPubKey;
 
         if (
           Object.keys(store.addresses).includes(address) &&
@@ -319,7 +318,7 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      let account, address, user, total, p;
+      let account, invoice, address, user, total, p;
       await db.transaction(async transaction => {
         p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
@@ -345,36 +344,37 @@ setInterval(async () => {
         if (p && p.user) user = p.user;
 
         if (p && p.account) {
+          ({ account, invoice } = p);
           total = p.amount + p.tip;
           p.confirmed = 1;
-          await p.account.save({ transaction });
+          await account.save({ transaction });
 
-          await p.invoice.increment({ received: total }, { transaction });
-          await p.account.increment({ balance: total }, { transaction });
-          await p.account.decrement(
-            { pending: Math.min(p.account.pending, total) },
+          await invoice.increment({ received: total }, { transaction });
+          await account.increment({ balance: total }, { transaction });
+          await account.decrement(
+            { pending: Math.min(account.pending, total) },
             { transaction }
           );
-          await p.account.increment(
+          await account.increment(
             { liquid_credits: computeConversionFee(total) },
             { transaction }
           );
-          await p.account.reload({ transaction });
-          await p.invoice.reload({ transaction });
+          await account.reload({ transaction });
+          await invoice.reload({ transaction });
 
           await p.save({ transaction });
 
           p = p.get({ plain: true });
-          p.account = p.account.get({ plain: true });
-          p.invoice = p.invoice.get({ plain: true });
+          account = account.get({ plain: true });
+          invoice = invoice.get({ plain: true });
 
-          emit(user.username, "account", p.account);
+          emit(user.username, "account", account);
           emit(user.username, "payment", p);
 
           l(
             "liquid confirmed",
             user.username,
-            p.account.asset,
+            account.asset,
             p.amount,
             p.tip
           );
