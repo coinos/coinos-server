@@ -67,11 +67,6 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     if (tip > amount || tip > 1000000 || tip < 0)
       throw new Error("tip amount out of range");
 
-    if (liquidAddress) {
-      l("conversion request for", liquidAddress, text);
-      store.convert[text] = { address: liquidAddress, tx };
-    }
-
     if (!user) ({ user } = req);
     else {
       user = await db.User.findOne({
@@ -123,6 +118,11 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       invoice.text = await derivePayRequest(invoice);
     } else {
       invoice.text = bip21(invoice, user.account);
+    }
+
+    if (liquidAddress) {
+      l("conversion request for", liquidAddress, text);
+      store.convert[text] = { address: liquidAddress, tx };
     }
 
     l(
