@@ -3,6 +3,7 @@ import persist from "./lib/persist";
 import config from "./config/index";
 import store from "./lib/store";
 import { l, err } from "./lib/logging";
+import { optionalAuth } from "$lib/passport";
 
 import "./db";
 import "./lib/sockets";
@@ -28,7 +29,8 @@ if (config.lna) store.networks.push("lightning");
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
 
-app.post('/echo', async (req, res) => {
+app.post('/echo', optionalAuth, async (req, res) => {
+  console.log(req.user.username)
   console.log(req.body)
   res.send(req.body);
 }); 

@@ -164,6 +164,20 @@ services:
     networks:
       default:
         ipv4_address: 172.18.0.30
+  spark:
+    image: shesek/spark-wallet:standalone
+    container_name: spark
+    volumes:
+      - ./config/spark:/data
+      - ./config/lightning/regtest:/etc/lightning
+    ports:
+      - '9737:9737'
+    environment:
+      LOGIN: "${LOGIN}"
+      NO_TLS: "${NO_TLS}"
+    networks:
+      default:
+        ipv4_address: 172.18.0.32
 networks: 
   default: 
     name: net

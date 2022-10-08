@@ -225,29 +225,59 @@ app.post("/assets", auth, async (req, res) => {
         account.id
       );
 
-      if (!address) {
-        const asset_payment = await db.Payment.create(
+      const { id: invoice_id } = await db.Invoice.create(
+        {
+          account_id: account.id,
+          user_id,
+          amount: Math.round(params.asset_amount * SATS),
+          address: asset_address,
+          currency: user.currency,
+          rate: store.rates[user.currency],
+          network: "liquid"
+        },
+        { transaction }
+      );
+
+      const asset_payment = await db.Payment.create(
+        {
+          account_id: account.id,
+          user_id,
+          invoice_id,
+          hash: txid,
+          amount: Math.round(params.asset_amount * SATS),
+          received: true,
+          confirmed: false,
+          address: asset_address,
+          network: "liquid"
+        },
+        { transaction }
+      );
+      emit(user.username, "payment", asset_payment);
+
+      if (address) {
+        const asset_send = await db.Payment.create(
           {
             account_id: account.id,
             user_id,
+            invoice_id,
             hash: txid,
-            amount: Math.round(params.asset_amount * SATS),
-            received: true,
+            amount: -Math.round(params.asset_amount * SATS),
+            received: false,
             confirmed: false,
-            address: asset_address,
+            address,
             network: "liquid"
           },
           { transaction }
         );
-        emit(user.username, "payment", asset_payment);
-
-        store.issuances[txid] = {
-          user_id,
-          asset,
-          asset_amount: params.asset_amount,
-          asset_payment_id: asset_payment.id
-        };
+        emit(user.username, "payment", asset_send);
       }
+
+      store.issuances[txid] = {
+        user_id,
+        asset,
+        asset_amount: params.asset_amount,
+        asset_payment_id: asset_payment.id
+      };
 
       if (token_amount) {
         account = await db.Account.create(
@@ -265,26 +295,54 @@ app.post("/assets", auth, async (req, res) => {
         );
         emit(user.username, "account", account);
 
-        if (!address) {
-          const token_payment = await db.Payment.create(
+        const { id: invoice_id } = await db.Invoice.create(
+          {
+            account_id: account.id,
+            user_id,
+            amount: Math.round(params.asset_amount * SATS),
+            address: asset_address,
+            currency: user.currency,
+            rate: store.rates[user.currency],
+            network: "liquid"
+          },
+          { transaction }
+        );
+
+        const token_payment = await db.Payment.create(
+          {
+            account_id: account.id,
+            user_id,
+            hash: txid,
+            amount: Math.round(token_amount * SATS),
+            received: true,
+            confirmed: false,
+            address: token_address,
+            network: "liquid"
+          },
+          { transaction }
+        );
+        emit(user.username, "payment", token_payment);
+
+        if (address) {
+          const token_send = await db.Payment.create(
             {
               account_id: account.id,
               user_id,
               hash: txid,
-              amount: Math.round(token_amount * SATS),
-              received: true,
+              amount: -Math.round(token_amount * SATS),
+              received: false,
               confirmed: false,
-              address: token_address,
+              address,
               network: "liquid"
             },
             { transaction }
           );
-          emit(user.username, "payment", token_payment);
-
-          store.issuances[txid].token = token;
-          store.issuances[txid].token_amount = token_amount;
-          store.issuances[txid].token_payment_id = token_payment.id;
+          emit(user.username, "payment", token_send);
         }
+
+        store.issuances[txid].token = token;
+        store.issuances[txid].token_amount = token_amount;
+        store.issuances[txid].token_payment_id = token_payment.id;
       }
     });
 

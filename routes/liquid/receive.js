@@ -1,6 +1,6 @@
 import db from "$db";
 import config from "$config";
-import { getBlockHeight, getUser, toSats } from "$lib/utils";
+import { getBlockHeight, getUser, getUserById, toSats, SATS } from "$lib/utils";
 import { emit } from "$lib/sockets";
 import store from "$lib/store";
 import { sendLiquid } from "$routes/liquid/send";
@@ -98,30 +98,31 @@ const queue = {};
 const seen = [];
 
 zmqRawTx.on("message", async (topic, message, sequence) => {
-  const hex = message.toString("hex");
-
-  let unblinded, tx, blinded, txid;
   try {
-    txid = Transaction.fromHex(hex).getId();
-    if (seen.includes(txid)) return;
-    seen.push(txid);
-    if (seen.length > 5000) seen.shift();
+    const hex = message.toString("hex");
 
-    unblinded = await lq.unblindRawTransaction(hex);
-    tx = await lq.decodeRawTransaction(unblinded.hex);
-    blinded = await lq.decodeRawTransaction(hex);
-  } catch (e) {
-    return err("problem decoding liquid tx", e.message);
-  }
+    let unblinded, tx, blinded, txid;
+    try {
+      txid = Transaction.fromHex(hex).getId();
+      if (seen.includes(txid)) return;
+      seen.push(txid);
+      if (seen.length > 5000) seen.shift();
 
-  Promise.all(
-    tx.vout.map(async o => {
+      unblinded = await lq.unblindRawTransaction(hex);
+      tx = await lq.decodeRawTransaction(unblinded.hex);
+      blinded = await lq.decodeRawTransaction(hex);
+    } catch (e) {
+      return err("problem decoding liquid tx", e.message);
+    }
+
+    for (let o of tx.vout) {
       try {
-        if (!(o.scriptPubKey && o.scriptPubKey.address)) return;
+        if (!(o.scriptPubKey && o.scriptPubKey.addresses)) return;
 
         const { asset } = o;
         const value = toSats(o.value);
-        const { address } = o.scriptPubKey;
+        const { addresses } = o.scriptPubKey;
+        const address = addresses[0];
 
         if (
           Object.keys(store.addresses).includes(address) &&
@@ -212,10 +213,13 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
           });
         }
       } catch (e) {
+        console.log(e);
         err("Problem processing transaction", e.message, e.stack);
       }
-    })
-  );
+    }
+  } catch (e) {
+    console.log(e);
+  }
 });
 
 zmqRawBlock.on("message", async (topic, message, sequence) => {
@@ -229,7 +233,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
     hash = await lq.getBlockHash(getBlockHeight(message));
     json = await lq.getBlock(hash, 2);
 
-    json.tx.map(async tx => {
+    for (let tx of json.tx) {
       if (store.issuances[tx.txid]) {
         await db.transaction(async transaction => {
           const {
@@ -302,7 +306,7 @@ zmqRawBlock.on("message", async (topic, message, sequence) => {
           }
         });
       } else if (payments.find(p => p.hash === tx.txid)) queue[tx.txid] = 1;
-    });
+    }
   } catch (e) {
     return console.log(e);
   }
