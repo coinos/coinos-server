@@ -3,6 +3,10 @@
 		reverse_proxy app:3119
 	}
 
+	handle_path /.well-known* {
+		reverse_proxy app:3119
+	}
+
 	handle /lnurl* {
 		reverse_proxy app:3118
 	}
