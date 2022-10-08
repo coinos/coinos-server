@@ -70,7 +70,7 @@ CREATE TABLE `accounts` (
   `lightning_credits` double NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=38821 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=38966 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -136,7 +136,7 @@ CREATE TABLE `invoices` (
   `rate` double DEFAULT NULL,
   `currency` varchar(255) NOT NULL,
   `address` varchar(255) DEFAULT NULL,
-  `received` double DEFAULT NULL,
+  `received` bigint(20) DEFAULT NULL,
   `amount` double DEFAULT NULL,
   `tip` double DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
@@ -147,6 +147,7 @@ CREATE TABLE `invoices` (
   `path` varchar(255) DEFAULT NULL,
   `webhook` text DEFAULT NULL,
   `status` varchar(255) DEFAULT 'unpaid',
+  `prompt` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `part_of_unconfidential` (`unconfidential`(10)),
   KEY `text_index` (`text`(100)),
@@ -156,7 +157,7 @@ CREATE TABLE `invoices` (
   KEY `invoices_account_id_foreign` (`account_id`),
   KEY `invoices_time_index` (`createdAt`),
   KEY `uuid` (`uuid`(10))
-) ENGINE=InnoDB AUTO_INCREMENT=371007 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=372769 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -173,7 +174,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26671 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=26721 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -304,7 +305,7 @@ CREATE TABLE `payments` (
   KEY `payments_time_index` (`createdAt`),
   KEY `hash` (`hash`(10)),
   CONSTRAINT `fk_account_id` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=206858 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=208429 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -508,10 +509,11 @@ CREATE TABLE `users` (
   `profile` tinyint(1) DEFAULT 0,
   `banner` tinyint(1) DEFAULT 0,
   `theme` varchar(255) DEFAULT NULL,
+  `uuid` varchar(255) NOT NULL DEFAULT uuid(),
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`),
   KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=29734 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=29850 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -570,4 +572,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-09-24 16:23:35
+-- Dump completed on 2022-10-08  6:29:13
