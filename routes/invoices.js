@@ -68,8 +68,8 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       throw new Error("tip amount out of range");
 
     if (liquidAddress) {
-      l("conversion request for", liquidAddress, invoice.text);
-      store.convert[invoice.text] = { address: liquidAddress, tx };
+      l("conversion request for", liquidAddress, text);
+      store.convert[text] = { address: liquidAddress, tx };
     }
 
     if (!user) ({ user } = req);
