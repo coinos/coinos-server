@@ -121,8 +121,8 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     }
 
     if (liquidAddress) {
-      l("conversion request for", liquidAddress, text);
-      store.convert[text] = { address: liquidAddress, tx };
+      l("conversion request for", liquidAddress, invoice.text);
+      store.convert[invoice.text] = { address: liquidAddress, tx };
     }
 
     l(
