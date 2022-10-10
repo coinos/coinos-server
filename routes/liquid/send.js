@@ -44,16 +44,16 @@ export const sendLiquid = async ({ asset, amount, user, address, memo, tx, limit
       let {
         asset,
         value,
-        scriptPubKey: { type, addresses }
+        scriptPubKey
       } = vout[i];
 
-      if (type === "fee") fee = toSats(value);
+      if (scriptPubKey.type === "fee") fee = toSats(value);
       else {
         if (!totals[asset]) totals[asset] = change[asset] = 0;
         totals[asset] += toSats(value);
 
-        if (addresses) {
-          if (await isChange(addresses[0])) {
+        if (scriptPubKey.address) {
+          if (await isChange(scriptPubKey.address)) {
             change[asset] += toSats(value);
           }
         }

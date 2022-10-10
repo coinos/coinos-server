@@ -13,13 +13,13 @@ app.get("/invoice", async (req, res, next) => {
   try {
     const invoice = await db.Invoice.findOne({
       where: {
-        uuid: req.query.uuid
+        uuid: req.query.uuid,
       },
       include: {
         model: db.User,
         as: "user",
-        attributes: ["username", "currency"]
-      }
+        attributes: ["username", "currency"],
+      },
     });
 
     res.send(invoice);
@@ -38,7 +38,7 @@ app.get("/invoice/:text", async (req, res, next) => {
         : text.startsWith("ln")
         ? { text }
         : {
-            [Op.or]: [{ unconfidential: text }, { address: text }]
+            [Op.or]: [{ unconfidential: text }, { address: text }],
           };
 
     const invoice = await db.Invoice.findOne({
@@ -46,8 +46,8 @@ app.get("/invoice/:text", async (req, res, next) => {
       include: {
         model: db.User,
         as: "user",
-        attributes: ["username", "currency"]
-      }
+        attributes: ["username", "currency"],
+      },
     });
 
     res.send(invoice);
@@ -71,12 +71,12 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     else {
       user = await db.User.findOne({
         where: {
-          username: user.username
+          username: user.username,
         },
         include: {
           model: db.Account,
-          as: "account"
-        }
+          as: "account",
+        },
       });
     }
     if (!user) throw new Error("user not provided");
@@ -111,7 +111,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       rate,
       tip,
       unconfidential,
-      user_id: user.id
+      user_id: user.id,
     };
 
     if (network === "lightning") {
@@ -121,8 +121,16 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     }
 
     if (liquidAddress) {
-      l("conversion request for", liquidAddress, invoice.text);
-      store.convert[invoice.text] = { address: liquidAddress, tx };
+      if (network === "lightning") {
+        l("conversion request for", liquidAddress, invoice.text);
+        store.convert[invoice.text] = { address: liquidAddress, tx };
+      } else if (network === "liquid") {
+        l("conversion request for", liquidAddress, invoice.unconfidential);
+        store.convert[invoice.unconfidential] = { address: liquidAddress, tx };
+      } else {
+        l("conversion request for", liquidAddress, invoice.address);
+        store.convert[invoice.address] = { address: liquidAddress, tx };
+      }
     }
 
     l(
