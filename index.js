@@ -6,6 +6,7 @@ import { l, err } from "./lib/logging";
 import { optionalAuth } from "$lib/passport";
 
 import "./db";
+import "./lib/redis";
 import "./lib/sockets";
 import "./lib/webhooks";
 import "./lib/passport";
@@ -21,6 +22,7 @@ import "./routes/users";
 import "./routes/invoices";
 import "./routes/payments";
 import "./routes/lnurl";
+import "./routes/tickets";
 
 if (config.bitcoin) store.networks.push("bitcoin");
 if (config.liquid) store.networks.push("liquid");
