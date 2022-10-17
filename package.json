@@ -59,6 +59,7 @@
     "query-string": "^6.13.1",
     "readable-stream-clone": "^0.0.7",
     "redis": "^4.3.1",
+    "sharp": "^0.31.1",
     "sqlite3": "^5.0.11",
     "tiny-secp256k1": "^2.1.2",
     "uuid": "8",
