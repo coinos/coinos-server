@@ -207,6 +207,7 @@ app.get("/pay/:username", async (req, res, next) => {
 
 app.post("/pay", auth, async (req, res, next) => {
   const { user } = req;
+
   const {
     amount,
     comment,
@@ -228,7 +229,6 @@ app.post("/pay", auth, async (req, res, next) => {
           memo: comment,
           username: recipients[secret].username
         },
-        hostname,
         user
       );
 
@@ -238,6 +238,7 @@ app.post("/pay", auth, async (req, res, next) => {
       res.send(await send(amount, "", data.pr, user));
     }
   } catch (e) {
+    console.log(e);
     err("failed to send payment", e.message);
     res.code(500).send(e.message);
   }
