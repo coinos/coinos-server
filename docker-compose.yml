@@ -21,7 +21,8 @@ services:
       - liquid
       - lnd
     container_name: app
-    image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
+    image: cs
+    build: .
     command: "pnpm dev"
     ports:
       - '3119:3119'

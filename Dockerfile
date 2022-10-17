@@ -11,6 +11,6 @@ RUN npm i -g pnpm
 COPY . /app
 WORKDIR /app
 
-RUN pnpm i
+RUN NODE_OPTIONS="" pnpm i
 
 CMD ["pnpm", "start"]
