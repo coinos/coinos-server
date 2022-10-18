@@ -177,7 +177,7 @@ app.post("/user", auth, async (req, res) => {
     user.email = email;
     user.address = address;
 
-    if (password) {
+    if (password && password === confirm) {
       user.password = await bcrypt.hash(password, 1);
     }
 
