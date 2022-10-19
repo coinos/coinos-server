@@ -143,7 +143,6 @@ if (config.lna.clightning) {
           msatoshi_received,
           payment_preimage: secret
         } = await ln.waitanyinvoice(i);
-        console.log("um");
 
         let settled = status === "paid";
         let received = parseInt(msatoshi_received / 1000);

@@ -58,10 +58,8 @@ const getAccount = async (params, transaction) => {
     params.seed = nc.seed;
   }
 
-  const assets = assets;
-
-  if (assets[asset]) {
-    ({ domain, ticker, precision, name } = assets[asset]);
+  if (store.assets[asset]) {
+    ({ domain, ticker, precision, name } = store.assets[asset]);
   } else {
     const existing = await db.Account.findOne({
       where: {
@@ -149,13 +147,14 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
 
             let account = await db.Account.findOne({
               where: {
-                id: invoice.account_id
+                id: invoice.account_id,
+                asset
               },
               lock: transaction.LOCK.UPDATE,
               transaction
             });
 
-            if (!(account && account.asset === asset)) {
+            if (!account) {
               let pubkey = account ? account.pubkey : null;
 
               account = await getAccount(
@@ -371,13 +370,7 @@ setInterval(async () => {
           emit(user.username, "account", account);
           emit(user.username, "payment", p);
 
-          l(
-            "liquid confirmed",
-            user.username,
-            account.asset,
-            p.amount,
-            p.tip
-          );
+          l("liquid confirmed", user.username, account.asset, p.amount, p.tip);
 
           notify(user, `${total} SAT payment confirmed`);
           callWebhook(p.invoice, p);
