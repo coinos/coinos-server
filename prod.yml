@@ -23,6 +23,8 @@ services:
       PUBLIC_COINOS_URL: "${PUBLIC_COINOS_URL}"
       PUBLIC_BTC: "${PUBLIC_BTC}"
       PUBLIC_SOCKET: "${PUBLIC_SOCKET}"
+      STRIPE: "${STRIPE}"
+      LAUNCH: "${LAUNCH}"
   app:
     depends_on:
       - cl
