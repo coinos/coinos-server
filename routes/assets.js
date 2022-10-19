@@ -120,7 +120,7 @@ app.post("/assets", auth, async (req, res) => {
     l(
       "attempting issuance",
       req.user.username,
-      contract,
+      JSON.stringify(contract),
       "address",
       address,
       "pubkey",
@@ -177,6 +177,7 @@ app.post("/assets", auth, async (req, res) => {
           as: "user"
         },
         order: [["balance", "DESC"]],
+        lock: transaction.LOCK.UPDATE,
         transaction
       });
 
@@ -199,103 +200,21 @@ app.post("/assets", auth, async (req, res) => {
       await account.reload({ transaction });
       emit(user.username, "account", account);
 
-      account = await db.Account.create(
-        {
-          asset,
-          contract,
-          domain,
-          user_id,
-          ticker,
-          precision,
-          name,
-          balance: 0,
-          network: "liquid",
-          pending: address ? 0 : Math.round(params.asset_amount * SATS)
-        },
-        { transaction }
-      );
-
-      emit(user.username, "account", account);
-      l(
-        "issued asset",
-        user.username,
-        params.asset_amount,
-        ticker,
-        name,
-        account.id
-      );
-
-      const { id: invoice_id } = await db.Invoice.create(
-        {
-          account_id: account.id,
-          user_id,
-          amount: Math.round(params.asset_amount * SATS),
-          address: asset_address,
-          currency: user.currency,
-          rate: store.rates[user.currency],
-          network: "liquid"
-        },
-        { transaction }
-      );
-
-      const asset_payment = await db.Payment.create(
-        {
-          account_id: account.id,
-          user_id,
-          invoice_id,
-          hash: txid,
-          amount: Math.round(params.asset_amount * SATS),
-          received: true,
-          confirmed: false,
-          address: asset_address,
-          network: "liquid"
-        },
-        { transaction }
-      );
-      emit(user.username, "payment", asset_payment);
-
+      let invoice;
+      let recipient = user;
       if (address) {
-        const asset_send = await db.Payment.create(
-          {
-            account_id: account.id,
-            user_id,
-            invoice_id,
-            hash: txid,
-            amount: -Math.round(params.asset_amount * SATS),
-            received: false,
-            confirmed: false,
-            address,
-            network: "liquid"
-          },
-          { transaction }
-        );
-        emit(user.username, "payment", asset_send);
+        invoice = await db.Invoice.findOne({
+          where: { address },
+          include: {
+            model: db.User,
+            as: "user"
+          }
+        });
+        recipient = invoice.user;
       }
 
-      store.issuances[txid] = {
-        user_id,
-        asset,
-        asset_amount: params.asset_amount,
-        asset_payment_id: asset_payment.id
-      };
-
-      if (token_amount) {
-        account = await db.Account.create(
-          {
-            asset: token,
-            user_id,
-            domain,
-            ticker: `${ticker}REISSUANCETOKEN`,
-            precision: 8,
-            name: `${name} Reissuance Token`,
-            balance: 0,
-            pending: address ? 0 : Math.round(token_amount * SATS)
-          },
-          { transaction }
-        );
-        emit(user.username, "account", account);
-
-        const { id: invoice_id } = await db.Invoice.create(
+      if (!invoice) {
+        invoice = await db.Invoice.create(
           {
             account_id: account.id,
             user_id,
@@ -307,10 +226,124 @@ app.post("/assets", auth, async (req, res) => {
           },
           { transaction }
         );
+      }
+
+      account = await db.Account.create(
+        {
+          asset,
+          contract,
+          domain,
+          user_id: invoice.user_id,
+          ticker,
+          precision,
+          name,
+          balance: 0,
+          network: "liquid",
+          pending: Math.round(params.asset_amount * SATS)
+        },
+        { transaction }
+      );
+
+      emit(recipient.username, "account", account);
+      l(
+        "issued asset",
+        user.username,
+        params.asset_amount,
+        ticker,
+        name,
+        account.id
+      );
+
+      const asset_payment = await db.Payment.create(
+        {
+          account_id: account.id,
+          user_id: invoice.user_id,
+          invoice_id: invoice.id,
+          hash: txid,
+          amount: Math.round(params.asset_amount * SATS),
+          received: true,
+          confirmed: false,
+          address: asset_address,
+          network: "liquid"
+        },
+        { transaction }
+      );
+      emit(recipient.username, "payment", asset_payment);
+
+      if (invoice.user_id !== user.id) {
+        const asset_send = await db.Payment.create(
+          {
+            account_id: account.id,
+            user_id,
+            invoice_id: invoice.id,
+            hash: txid,
+            amount: -Math.round(params.asset_amount * SATS),
+            received: false,
+            confirmed: false,
+            address,
+            network: "liquid"
+          },
+          { transaction }
+        );
+        emit(recipient.username, "payment", asset_send);
+      }
+
+      store.issuances[txid] = {
+        user_id,
+        asset,
+        asset_amount: params.asset_amount,
+        asset_payment_id: asset_payment.id
+      };
+
+      if (token_amount) {
+        invoice = null;
+        recipient = user;
+
+        if (address) {
+          invoice = await db.Invoice.findOne({
+            where: { address },
+            include: {
+              model: db.User,
+              as: "user"
+            }
+          });
+          recipient = invoice.user;
+        }
+
+        if (!invoice) {
+          invoice = await db.Invoice.create(
+            {
+              account_id: account.id,
+              user_id,
+              amount: Math.round(params.token_amount * SATS),
+              address: token_address,
+              currency: user.currency,
+              rate: store.rates[user.currency],
+              network: "liquid"
+            },
+            { transaction }
+          );
+        }
+
+        account = await db.Account.create(
+          {
+            asset: token,
+            user_id: invoice.user_id,
+            domain,
+            ticker: `${ticker}REISSUANCETOKEN`,
+            precision: 8,
+            name: `${name} Reissuance Token`,
+            balance: 0,
+            pending: address ? 0 : Math.round(token_amount * SATS)
+          },
+          { transaction }
+        );
+        emit(recipient.username, "account", account);
 
         const token_payment = await db.Payment.create(
           {
             account_id: account.id,
+            invoice_id: invoice.id,
             user_id,
             hash: txid,
             amount: Math.round(token_amount * SATS),
@@ -321,12 +354,13 @@ app.post("/assets", auth, async (req, res) => {
           },
           { transaction }
         );
-        emit(user.username, "payment", token_payment);
+        emit(recipient.username, "payment", token_payment);
 
-        if (address) {
+        if (invoice.user_id !== user.id) {
           const token_send = await db.Payment.create(
             {
               account_id: account.id,
+              invoice_id: invoice.id,
               user_id,
               hash: txid,
               amount: -Math.round(token_amount * SATS),
@@ -337,7 +371,7 @@ app.post("/assets", auth, async (req, res) => {
             },
             { transaction }
           );
-          emit(user.username, "payment", token_send);
+          emit(recipient.username, "payment", token_send);
         }
 
         store.issuances[txid].token = token;
