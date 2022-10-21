@@ -275,7 +275,6 @@ app.post("/assets", auth, async (req, res) => {
           {
             account_id: account.id,
             user_id,
-            invoice_id: invoice.id,
             hash: txid,
             amount: -Math.round(params.asset_amount * SATS),
             received: false,
