@@ -7,6 +7,7 @@ import config from "$config";
 import { l, warn, err } from "$lib/logging";
 import { liquidTx } from "$routes/liquid/fee";
 import { Transaction } from 'liquidjs-lib';
+import { requirePin } from "$lib/utils";
 
 import {
   computeConversionFee,
@@ -263,6 +264,7 @@ export default async (req, res) => {
   let { user } = req;
 
   try {
+    await requirePin(req);
     let result = await sendLiquid({ ...req.body, user })
     if (result instanceof Error) throw result;
     res.send(result);

@@ -1,7 +1,11 @@
 import { emit } from "$lib/sockets";
 import store from "$lib/store";
+import { requirePin } from "$lib/utils";
+
 export default async (req, res) => {
   try {
+    await requirePin(req);
+
     const { user } = req;
     let hash = await bc.sendRawTransaction(req.body.tx);
 

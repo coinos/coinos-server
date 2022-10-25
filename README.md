@@ -33,6 +33,7 @@ CERT=$(sudo base64 config/lnd/tls.cert | tr -d '\n')
 sed -i "s/LS0tL.*\"/$CERT\"/g" config/index.js
 MACAROON=$(sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n') 
 sed -i "s/AgED.*\"/$MACAROON\"/g" config/index.js
+curl localhost:3119/register -H "content-type: application/json" -d '{"user": { "username": "coinosfees", "password": "password"}}'
 ```
 
 After successful creation of all docker containers coinos ui will be available at http://localhost:8085 and coinos server will be available at http://localhost:3119

@@ -26,6 +26,8 @@ app.post("/send", auth, send);
 app.post("/sendToTokenHolders", auth, async (req, res, next) => {
   let { asset, amount } = req.body;
 
+
+
   let accounts = await db.Account.findAll({
     where: {
       asset,

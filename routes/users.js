@@ -46,7 +46,8 @@ app.get("/me", auth, async (req, res) => {
     });
     user.accounts = await req.user.getAccounts();
     user.payments = payments;
-    res.send(user);
+    user.haspin = !!user.pin;
+    res.send(pick(user, ...whitelist));
   } catch (e) {
     res.code(500).send(e.message);
   }
@@ -137,6 +138,7 @@ app.post("/user", auth, async (req, res) => {
       email,
       fiat,
       password,
+      newpin,
       pin,
       seed,
       tokens,
@@ -145,6 +147,8 @@ app.post("/user", auth, async (req, res) => {
       username
     } = req.body;
 
+    if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
+
     let exists = await db.User.findOne({
       where: { username }
     });
@@ -152,7 +156,7 @@ app.post("/user", auth, async (req, res) => {
     let token;
     if (user.username !== username && exists) {
       err("username taken", username, user.username, exists.username);
-      return res.code(500).send("Username taken");
+      throw new Error("Username taken");
     } else {
       store.sockets[username] = store.sockets[user.username];
       if (user.username !== username)
@@ -168,14 +172,14 @@ app.post("/user", auth, async (req, res) => {
     if (unit) user.unit = unit;
     user.currency = currency;
     user.currencies = currencies;
-
+    user.pin = newpin;
     user.tokens = tokens;
     user.twofa = twofa;
-    user.pin = pin;
     user.seed = seed;
     user.fiat = fiat;
     user.email = email;
     user.address = address;
+
 
     if (password && password === confirm) {
       user.password = await bcrypt.hash(password, 1);
@@ -186,6 +190,7 @@ app.post("/user", auth, async (req, res) => {
     res.send({ user, token });
   } catch (e) {
     err("error updating user", e.message);
+    res.code(500).send(e.message);
   }
 });
 

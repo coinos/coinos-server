@@ -5,6 +5,7 @@ import { toSats } from "$lib/utils";
 import store from "$lib/store";
 import config from "$config";
 import { l, warn, err } from "$lib/logging";
+import { requirePin } from "$lib/utils";
 
 const btc = config.liquid.btcasset;
 import {
@@ -14,6 +15,8 @@ import {
 
 export default async (req, res) => {
   try {
+    await requirePin(req);
+
     let { user } = req;
     let { address, memo, tx } = req.body;
     let { hex } = tx;
@@ -85,7 +88,7 @@ export default async (req, res) => {
 
       if (total > account.balance) {
         err("amount exceeds balance", amount, fee, account.balance);
-        throw new Error("low balance");
+        throw new Error("low");
       } else if (total + conversionFee > account.balance) {
         err(
           "total (after conversion fee) exceeds balance",
@@ -93,7 +96,7 @@ export default async (req, res) => {
           fee,
           account.balance
         );
-        throw new Error("low balance (after conversion fee)");
+        throw new Error("low");
       }
 
       await account.decrement(
@@ -179,7 +182,10 @@ export default async (req, res) => {
   } catch (e) {
     if (e.message.includes("Insufficient"))
       e.message =
-        "The coinos server hot wallet has insufficient funds to complete the payment, try again later";
+        "Our server has insufficient funds, try again later";
+
+    if (e.message === "low") e.message = "Insufficient funds in account"
+
     err("error sending bitcoin", e.message);
     console.log(e);
     return res.code(500).send(e.message);
