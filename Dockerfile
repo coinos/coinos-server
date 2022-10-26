@@ -9,6 +9,6 @@ RUN npm i -g pnpm
 COPY . /app
 WORKDIR /app
 
-RUN NODE_OPTIONS="" pnpm i
+RUN NODE_ENV=development NODE_OPTIONS="" pnpm i
 
 CMD ["pnpm", "start"]
