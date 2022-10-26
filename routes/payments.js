@@ -26,8 +26,6 @@ app.post("/send", auth, send);
 app.post("/sendToTokenHolders", auth, async (req, res, next) => {
   let { asset, amount } = req.body;
 
-
-
   let accounts = await db.Account.findAll({
     where: {
       asset,
@@ -103,19 +101,44 @@ setTimeout(async () => {
 }, 50);
 
 app.get("/payments", auth, async (req, res) => {
+  let { start, end, limit, offset, v2 } = req.query;
+
+  if (limit) limit = parseInt(limit);
+  if (offset) offset = parseInt(offset);
+
+  let dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  let where = {
+    account_id: req.user.account_id,
+    createdAt: { [Op.gte]: dayAgo }
+  };
+
+  if (start) where.createdAt[Op.gte] = new Date(start * 1000);
+  if (end) where.createdAt[Op.lte] = new Date(end * 1000);
+
   if (!req.user.account_id) return res.send([]);
+
+  let total = await db.Payment.count({
+    where
+  });
+
   let payments = await db.Payment.findAll({
-    where: {
-      account_id: req.user.account_id
-    },
+    where,
     order: [["id", "DESC"]],
     include: {
       model: db.Account,
       as: "account"
-    }
+    },
+    limit,
+    offset
   });
 
-  res.send(payments);
+
+  if (v2) {
+    res.send({ transactions: payments, total });
+  } else {
+    res.send(payments);
+  }
 });
 
 app.get("/payment/:redeemcode", async (req, res) => {
