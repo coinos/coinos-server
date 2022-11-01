@@ -106,21 +106,17 @@ app.get("/payments", auth, async (req, res) => {
   if (limit) limit = parseInt(limit);
   if (offset) offset = parseInt(offset);
 
-  let dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
   let where = {
     account_id: req.user.account_id,
-    createdAt: { [Op.gte]: dayAgo }
+    createdAt: {}
   };
 
-  if (start) where.createdAt[Op.gte] = new Date(start * 1000);
-  if (end) where.createdAt[Op.lte] = new Date(end * 1000);
+  if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
+  if (end) where.createdAt[Op.lte] = new Date(end);
 
   if (!req.user.account_id) return res.send([]);
 
-  let total = await db.Payment.count({
-    where
-  });
+  let total = await db.Payment.count({ where });
 
   let payments = await db.Payment.findAll({
     where,
@@ -132,7 +128,6 @@ app.get("/payments", auth, async (req, res) => {
     limit,
     offset
   });
-
 
   if (v2) {
     res.send({ transactions: payments, total });
