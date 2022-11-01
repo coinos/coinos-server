@@ -112,7 +112,7 @@ app.get("/payments", auth, async (req, res) => {
   };
 
   if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
-  if (end) where.createdAt[Op.lte] = new Date(end);
+  if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
 
   if (!req.user.account_id) return res.send([]);
 
