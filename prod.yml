@@ -87,7 +87,7 @@ services:
     depends_on:
       - bitcoin
       - tor 
-    image: lightninglabs/lnd:v0.15.2-beta
+    image: lightninglabs/lnd:v0.15.4-beta
     container_name: lnd
     volumes:
       - ./config/lnd:/root/.lnd
