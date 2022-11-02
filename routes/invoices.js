@@ -64,7 +64,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     let address, unconfidential, text;
 
     if (amount < 0) throw new Error("amount out of range");
-    if (tip > amount || tip > 1000000 || tip < 0)
+    if (tip > 5 * amount || tip > 1000000 || tip < 0)
       throw new Error("tip amount out of range");
 
     if (!user) ({ user } = req);
@@ -82,8 +82,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     if (!user) throw new Error("user not provided");
     if (!currency) currency = user.currency;
     if (!rate) rate = store.rates[currency];
-    if (tip > amount || tip > 1000000) throw new Error("tip is too large");
-    if (tip < 0 || amount < 0) throw new Error("invalid amount");
+    if (amount < 0) throw new Error("invalid amount");
 
     if (user.account.pubkey) {
       let { address, confidentialAddress } = await deriveAddress(
