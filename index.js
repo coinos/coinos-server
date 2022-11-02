@@ -17,6 +17,7 @@ import "./lib/notifications";
 import "./lib/mail";
 
 import "./routes/assets";
+import "./routes/locations";
 import "./routes/info";
 import "./routes/users";
 import "./routes/invoices";
