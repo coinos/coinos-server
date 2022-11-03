@@ -25,6 +25,7 @@ import {
 
 import send from "$lib/send";
 import sendInternal from "$lib/sendInternal";
+import register from "$lib/register";
 
 const logins = persist("data/logins.json");
 const recipients = persist("data/recipients.json");
