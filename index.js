@@ -22,6 +22,7 @@ import "./routes/info";
 import "./routes/users";
 import "./routes/invoices";
 import "./routes/payments";
+import "./routes/requests";
 import "./routes/lnurl";
 import "./routes/tickets";
 
