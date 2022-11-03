@@ -64,7 +64,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     let address, unconfidential, text;
 
     if (amount < 0) throw new Error("amount out of range");
-    if (tip > 5 * amount || tip > 1000000 || tip < 0)
+    if (tip > 5 * amount || tip < 0)
       throw new Error("tip amount out of range");
 
     if (!user) ({ user } = req);
