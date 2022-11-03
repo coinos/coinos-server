@@ -124,6 +124,11 @@ Payment.belongsTo(Payment, {
   foreignKey: "fee_payment_id"
 });
 
+Payment.belongsTo(User, {
+  as: "with",
+  foreignKey: "with_id"
+});
+
 db.Order = Order;
 
 export default db;

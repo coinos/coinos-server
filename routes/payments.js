@@ -125,6 +125,11 @@ app.get("/payments", auth, async (req, res) => {
       model: db.Account,
       as: "account"
     },
+    include: {
+      attrs: ["username", "profile"],
+      model: db.User,
+      as: "with"
+    },
     limit,
     offset
   });
