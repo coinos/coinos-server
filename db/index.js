@@ -13,6 +13,7 @@ import "./models/invoices";
 import "./models/keys";
 import "./models/payments";
 import "./models/orders";
+import "./models/requests";
 import "./models/users";
 import "./models/withdrawals";
 
