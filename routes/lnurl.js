@@ -213,7 +213,7 @@ app.post("/pay", auth, async (req, res, next) => {
   const {
     amount,
     comment,
-    params: { callback, k1 }
+    params: { callback }
   } = req.body;
 
   let url = `${callback}${callback.includes("?") ? "&" : "?"}amount=${amount *
