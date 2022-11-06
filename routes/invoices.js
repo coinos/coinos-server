@@ -8,18 +8,19 @@ import { err, l } from "$lib/logging";
 import bc from "$lib/bitcoin";
 import lq from "$lib/liquid";
 import { SATS, bip21, deriveAddress, derivePayRequest } from "$lib/utils";
+import { emit } from "$lib/sockets";
 
 app.get("/invoice", async (req, res, next) => {
   try {
     const invoice = await db.Invoice.findOne({
       where: {
-        uuid: req.query.uuid,
+        uuid: req.query.uuid
       },
       include: {
         model: db.User,
         as: "user",
-        attributes: ["username", "currency"],
-      },
+        attributes: ["username", "currency"]
+      }
     });
 
     res.send(invoice);
@@ -38,7 +39,7 @@ app.get("/invoice/:text", async (req, res, next) => {
         : text.startsWith("ln")
         ? { text }
         : {
-            [Op.or]: [{ unconfidential: text }, { address: text }],
+            [Op.or]: [{ unconfidential: text }, { address: text }]
           };
 
     const invoice = await db.Invoice.findOne({
@@ -46,8 +47,8 @@ app.get("/invoice/:text", async (req, res, next) => {
       include: {
         model: db.User,
         as: "user",
-        attributes: ["username", "currency"],
-      },
+        attributes: ["username", "currency"]
+      }
     });
 
     res.send(invoice);
@@ -60,23 +61,22 @@ app.get("/invoice/:text", async (req, res, next) => {
 app.post("/invoice", optionalAuth, async (req, res, next) => {
   try {
     let { type = "bech32", liquidAddress, id, invoice, user, tx } = req.body;
-    let { blindkey, currency, tip, amount, rate, network } = invoice;
+    let { blindkey, currency, tip, amount, rate, network, requester } = invoice;
     let address, unconfidential, text;
 
     if (amount < 0) throw new Error("amount out of range");
-    if (tip > 5 * amount || tip < 0)
-      throw new Error("tip amount out of range");
+    if (tip > 5 * amount || tip < 0) throw new Error("tip amount out of range");
 
     if (!user) ({ user } = req);
     else {
       user = await db.User.findOne({
         where: {
-          username: user.username,
+          username: user.username
         },
         include: {
           model: db.Account,
-          as: "account",
-        },
+          as: "account"
+        }
       });
     }
     if (!user) throw new Error("user not provided");
@@ -110,7 +110,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       rate,
       tip,
       unconfidential,
-      user_id: user.id,
+      user_id: user.id
     };
 
     if (network === "lightning") {
@@ -149,6 +149,13 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     if (invoice.unconfidential) {
       store.addresses[invoice.unconfidential] = user.username;
       if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
+    }
+
+    if (requester) {
+      emit(requester, "invoice", {
+        uuid: invoice.uuid,
+        user: { username: user.username, profile: user.profile }
+      });
     }
 
     res.send(invoice);
