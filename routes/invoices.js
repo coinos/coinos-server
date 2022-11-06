@@ -60,7 +60,7 @@ app.get("/invoice/:text", async (req, res, next) => {
 app.post("/invoice", optionalAuth, async (req, res, next) => {
   try {
     let { type = "bech32", liquidAddress, id, invoice, user, tx } = req.body;
-    let { blindkey, currency, tip, amount, rate, network } = invoice;
+    let { blindkey, currency, tip, amount, rate, network, recipient } = invoice;
     let address, unconfidential, text;
 
     if (amount < 0) throw new Error("amount out of range");
@@ -150,6 +150,10 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       store.addresses[invoice.unconfidential] = user.username;
       if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
     }
+
+    if (recipient) {
+      emit(recipient, "invoice", invoice.get({ plain: true {));
+    } 
 
     res.send(invoice);
   } catch (e) {
