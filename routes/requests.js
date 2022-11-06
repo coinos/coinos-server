@@ -10,7 +10,7 @@ app.post("/requests", auth, async (req, res) => {
 
     let request = await db.Request.create({ recipient_id, ...params });
     request = request.get({ plain: true });
-    request.requester = { username: req.user.username };
+    request.requester = { username: req.user.username, profile: req.user.profile };
     emit(username, "request", request);
 
     res.send(request);
