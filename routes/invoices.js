@@ -153,6 +153,9 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
 
     if (requester) {
       emit(requester, "invoice", {
+        amount: invoice.amount,
+        currency: invoice.currency,
+        rate: invoice.rate,
         uuid: invoice.uuid,
         user: { username: user.username, profile: user.profile }
       });
