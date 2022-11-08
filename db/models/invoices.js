@@ -129,7 +129,7 @@ const attributes = {
     field: "address"
   },
   received: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.DOUBLE,
     allowNull: false,
     defaultValue: 0,
     primaryKey: false,
@@ -145,6 +145,15 @@ const attributes = {
     autoIncrement: false,
     comment: null,
     field: "amount"
+  },
+  pending: {
+    type: DataTypes.DOUBLE,
+    allowNull: false,
+    defaultValue: 0,
+    primaryKey: false,
+    autoIncrement: false,
+    comment: null,
+    field: "pending"
   },
   webhook: {
     type: DataTypes.TEXT,
