@@ -21,6 +21,7 @@ import bc from "$lib/bitcoin";
 import lq from "$lib/liquid";
 import { emit } from "$lib/sockets";
 import register from "$lib/register";
+import { requirePin } from "$lib/utils";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -179,7 +180,6 @@ app.post("/user", auth, async (req, res) => {
     user.fiat = fiat;
     user.email = email;
     user.address = address;
-
 
     if (password && password === confirm) {
       user.password = await bcrypt.hash(password, 1);
@@ -645,4 +645,14 @@ app.post("/signMessage", auth, async function(req, res) {
   }
 
   res.code(500).send("Address not found for user");
+});
+
+app.post("/otpsecret", auth, async function(req, res) {
+  try {
+    await requirePin(req);
+    let { otpsecret } = req.user;
+    res.send({ secret: otpsecret });
+  } catch (e) {
+    res.code(500).send(e.message);
+  }
 });
