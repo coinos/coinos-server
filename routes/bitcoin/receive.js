@@ -104,9 +104,10 @@ zmqRawTx.on("message", async (topic, message, sequence) => {
               }
 
               await invoice.increment({ pending: value }, { transaction });
-              await invoice.save({ transaction });
+              await invoice.reload({ transaction });
+
               await account.increment({ pending: value }, { transaction });
-              await account.save({ transaction });
+              await account.reload({ transaction });
 
               if (config.bitcoin.walletpass)
                 await bc.walletPassphrase(config.bitcoin.walletpass, 300);
