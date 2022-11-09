@@ -4,7 +4,7 @@ services:
     depends_on:
       - app
     container_name: coinos
-    image: coinos-ui
+    image: coinos
     restart: always
     pull_policy: never
     environment:
