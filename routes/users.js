@@ -80,25 +80,25 @@ app.post("/register", async (req, res) => {
 });
 
 app.post("/disable2fa", auth, async (req, res) => {
-  let {
-    user,
-    body: { token }
-  } = req;
+  try {
+    let {
+      user,
+      body: { token }
+    } = req;
 
-  if (
-    user.twofa &&
-    (typeof token === "undefined" ||
-      !authenticator.check(token, user.otpsecret))
-  ) {
-    return res.code(401).send("2fa required");
+    if (user.twofa && !authenticator.check(token, user.otpsecret)) {
+      return res.code(401).send("2fa required");
+    }
+
+    user.twofa = false;
+    await user.save();
+    emit(user.username, "user", user);
+    emit(user.username, "otpsecret", user.otpsecret);
+    l("disabled 2fa", user.username);
+    res.send({});
+  } catch (e) {
+    res.code(500).send("Problem disabling 2fa");
   }
-
-  user.twofa = false;
-  await user.save();
-  emit(user.username, "user", user);
-  emit(user.username, "otpsecret", user.otpsecret);
-  l("disabled 2fa", user.username);
-  res.send({});
 });
 
 app.post("/2fa", auth, async (req, res) => {
@@ -186,6 +186,10 @@ app.post("/user", auth, async (req, res) => {
     }
 
     await user.save();
+
+    user = user.get({ plain: true });
+    user.haspin = !!user.pin;
+
     emit(user.username, "user", user);
     res.send({ user, token });
   } catch (e) {
