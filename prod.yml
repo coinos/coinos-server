@@ -4,18 +4,6 @@ services:
     depends_on:
       - app
     container_name: coinos
-    image: gcr.io/coinos-326717/github.com/asoltys/caddy-cloudflare:latest
-    restart: always
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./caddy:/data
-    networks:
-      default:
-        ipv4_address: 172.42.0.21
-  ui:
-    depends_on:
-      - app
-    container_name: ui
     image: coinos-ui
     restart: always
     pull_policy: never
