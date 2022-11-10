@@ -1,18 +1,5 @@
 version: '3.6'
 services:
-  coinos:
-    depends_on:
-      - app
-    container_name: coinos
-    image: coinos
-    restart: always
-    pull_policy: never
-    environment:
-      PUBLIC_COINOS_URL: "${PUBLIC_COINOS_URL}"
-      PUBLIC_BTC: "${PUBLIC_BTC}"
-      PUBLIC_SOCKET: "${PUBLIC_SOCKET}"
-      STRIPE: "${STRIPE}"
-      LAUNCH: "${LAUNCH}"
   app:
     depends_on:
       - cl
@@ -93,6 +80,7 @@ services:
     restart: always
     volumes:
       - ./config/tor:/etc/tor
+      - ./config/tordata:/var/lib/tor
     networks:
       default:
         ipv4_address: 172.42.0.27
