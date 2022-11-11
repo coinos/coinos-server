@@ -673,12 +673,19 @@ app.get("/contacts", auth, async function(req, res) {
         model: db.User,
         as: "with"
       },
-      attributes: ["createdAt"],
+      attributes: [
+        [Sequelize.fn("max", Sequelize.col("payments_model.createdAt")), "last"]
+      ],
       group: ["with_id"],
-      order: [['createdAt'], [{ model: db.User, as: "with" }, "username", "ASC"]]
+      order: [[{ model: db.User, as: "with" }, "username", "ASC"]]
     });
 
-    res.send(contacts.map(c => ({ ...c.with.get({ plain: true }), last: c.createdAt })));
+    res.send(
+      contacts.map(c => {
+        c = c.get({ plain: true });
+        return { ...c.with, last: c.last };
+      })
+    );
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);
