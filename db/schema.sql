@@ -70,7 +70,7 @@ CREATE TABLE `accounts` (
   `lightning_credits` double NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=21711 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=21826 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -136,6 +136,7 @@ CREATE TABLE `invoices` (
   `webhook` text DEFAULT NULL,
   `status` varchar(255) DEFAULT 'unpaid',
   `prompt` tinyint(1) NOT NULL DEFAULT 0,
+  `pending` bigint(20) DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `part_of_unconfidential` (`unconfidential`(10)),
   KEY `text_index` (`text`(100)),
@@ -146,7 +147,7 @@ CREATE TABLE `invoices` (
   KEY `uuid` (`uuid`(10)),
   CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `invoices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=48861 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=49257 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -163,7 +164,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12634 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=12640 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -285,17 +286,20 @@ CREATE TABLE `payments` (
   `path` varchar(255) DEFAULT NULL,
   `invoice_id` int(11) DEFAULT NULL,
   `fee_payment_id` int(11) DEFAULT NULL,
+  `with_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_redeemcode` (`redeemcode`),
   KEY `payments_invoice_id_foreign` (`invoice_id`),
   KEY `payments_user_id_foreign` (`user_id`),
   KEY `payments_account_id_foreign` (`account_id`),
   KEY `fk_payments` (`fee_payment_id`),
+  KEY `fk_with` (`with_id`),
   CONSTRAINT `fk_payments` FOREIGN KEY (`fee_payment_id`) REFERENCES `payments` (`id`),
+  CONSTRAINT `fk_with` FOREIGN KEY (`with_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `payments_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
   CONSTRAINT `payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
   CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30044 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=30344 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -333,6 +337,24 @@ CREATE TABLE `referrals` (
   CONSTRAINT `referrals_sponsor_id_foreign` FOREIGN KEY (`sponsor_id`) REFERENCES `users` (`id`),
   CONSTRAINT `referrals_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `requests`
+--
+
+DROP TABLE IF EXISTS `requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `requests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `requester_id` int(11) DEFAULT NULL,
+  `recipient_id` int(11) DEFAULT NULL,
+  `memo` text DEFAULT NULL,
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `updatedAt` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -394,7 +416,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`),
   KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=15479 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=15518 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -453,4 +475,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-10-14 17:10:15
+-- Dump completed on 2022-11-11 17:06:10
