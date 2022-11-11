@@ -673,12 +673,12 @@ app.get("/contacts", auth, async function(req, res) {
         model: db.User,
         as: "with"
       },
-      attributes: ["id"],
+      attributes: ["createdAt"],
       group: ["with_id"],
-      order: [[{ model: db.User, as: "with" }, "username", "ASC"]]
+      order: [['createdAt'], [{ model: db.User, as: "with" }, "username", "ASC"]]
     });
 
-    res.send(contacts.map(c => c.with));
+    res.send(contacts.map(c => ({ ...c.with.get({ plain: true }), last: c.createdAt })));
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);
