@@ -660,3 +660,27 @@ app.post("/otpsecret", auth, async function(req, res) {
     res.code(500).send(e.message);
   }
 });
+
+app.get("/contacts", auth, async function(req, res) {
+  try {
+    let contacts = await db.Payment.findAll({
+      where: {
+        user_id: req.user.id,
+        with_id: { [Sequelize.Op.ne]: null }
+      },
+      include: {
+        attributes: ["username", "profile"],
+        model: db.User,
+        as: "with"
+      },
+      attributes: ["id"],
+      group: ["with_id"],
+      order: [[{ model: db.User, as: "with" }, "username", "ASC"]]
+    });
+
+    res.send(contacts.map(c => c.with));
+  } catch (e) {
+    console.log(e);
+    res.code(500).send(e.message);
+  }
+});
