@@ -1,8 +1,8 @@
--- MariaDB dump 10.19  Distrib 10.6.1-MariaDB, for debian-linux-gnu (x86_64)
+-- MariaDB dump 10.19  Distrib 10.9.3-MariaDB, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: coinos
 -- ------------------------------------------------------
--- Server version	10.6.1-MariaDB-1:10.6.1+maria~focal
+-- Server version	10.9.3-MariaDB-1:10.9.3+maria~ubu2204
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -19,7 +19,7 @@
 -- Current Database: `coinos`
 --
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `coinos` /*!40100 DEFAULT CHARACTER SET latin1 */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `coinos` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
 
 USE `coinos`;
 
@@ -70,7 +70,7 @@ CREATE TABLE `accounts` (
   `lightning_credits` double NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `asset` (`asset`)
-) ENGINE=InnoDB AUTO_INCREMENT=21826 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=39380 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,6 +109,18 @@ CREATE TABLE `deposits` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `dupes`
+--
+
+DROP TABLE IF EXISTS `dupes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dupes` (
+  `id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `invoices`
 --
 
@@ -124,19 +136,19 @@ CREATE TABLE `invoices` (
   `rate` double DEFAULT NULL,
   `currency` varchar(255) NOT NULL,
   `address` varchar(255) DEFAULT NULL,
-  `received` bigint(20) NOT NULL DEFAULT 0,
-  `amount` bigint(20) DEFAULT NULL,
+  `received` bigint(20) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
   `tip` double DEFAULT NULL,
   `network` varchar(255) DEFAULT NULL,
   `unconfidential` varchar(255) DEFAULT NULL,
-  `uuid` varchar(255) DEFAULT uuid(),
+  `uuid` varchar(255) DEFAULT NULL,
   `memo` text DEFAULT NULL,
   `account_id` int(11) DEFAULT NULL,
   `path` varchar(255) DEFAULT NULL,
   `webhook` text DEFAULT NULL,
   `status` varchar(255) DEFAULT 'unpaid',
   `prompt` tinyint(1) NOT NULL DEFAULT 0,
-  `pending` bigint(20) DEFAULT 0,
+  `pending` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `part_of_unconfidential` (`unconfidential`(10)),
   KEY `text_index` (`text`(100)),
@@ -144,10 +156,9 @@ CREATE TABLE `invoices` (
   KEY `address_index` (`address`(100)),
   KEY `invoices_user_id_foreign` (`user_id`),
   KEY `invoices_account_id_foreign` (`account_id`),
-  KEY `uuid` (`uuid`(10)),
-  CONSTRAINT `invoices_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
-  CONSTRAINT `invoices_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=49257 DEFAULT CHARSET=latin1;
+  KEY `invoices_time_index` (`createdAt`),
+  KEY `uuid` (`uuid`(10))
+) ENGINE=InnoDB AUTO_INCREMENT=380855 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -164,7 +175,7 @@ CREATE TABLE `linkingkeys` (
   `createdAt` datetime NOT NULL,
   `updatedAt` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12640 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=26798 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -180,7 +191,7 @@ CREATE TABLE `lnurl_migrations` (
   `batch` int(11) DEFAULT NULL,
   `migration_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -194,7 +205,7 @@ CREATE TABLE `lnurl_migrations_lock` (
   `index` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `is_locked` int(11) DEFAULT NULL,
   PRIMARY KEY (`index`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -210,7 +221,7 @@ CREATE TABLE `migrations` (
   `batch` int(11) DEFAULT NULL,
   `migration_time` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -224,7 +235,7 @@ CREATE TABLE `migrations_lock` (
   `index` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `is_locked` int(11) DEFAULT NULL,
   PRIMARY KEY (`index`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -288,18 +299,124 @@ CREATE TABLE `payments` (
   `fee_payment_id` int(11) DEFAULT NULL,
   `with_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `accounts_hash_amount` (`account_id`,`amount`,`hash`(50)),
   KEY `idx_redeemcode` (`redeemcode`),
   KEY `payments_invoice_id_foreign` (`invoice_id`),
   KEY `payments_user_id_foreign` (`user_id`),
   KEY `payments_account_id_foreign` (`account_id`),
-  KEY `fk_payments` (`fee_payment_id`),
-  KEY `fk_with` (`with_id`),
-  CONSTRAINT `fk_payments` FOREIGN KEY (`fee_payment_id`) REFERENCES `payments` (`id`),
-  CONSTRAINT `fk_with` FOREIGN KEY (`with_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `payments_account_id_foreign` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`),
-  CONSTRAINT `payments_invoice_id_foreign` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
-  CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=30344 DEFAULT CHARSET=latin1;
+  KEY `payments_time_index` (`createdAt`),
+  KEY `hash` (`hash`(10)),
+  CONSTRAINT `fk_account_id` FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=215097 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `paymentsb`
+--
+
+DROP TABLE IF EXISTS `paymentsb`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `paymentsb` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `hash` text DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `rate` double DEFAULT NULL,
+  `currency` varchar(255) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `received` tinyint(1) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `tip` double NOT NULL DEFAULT 0,
+  `confirmed` tinyint(1) NOT NULL,
+  `fee` double NOT NULL DEFAULT 0,
+  `network` varchar(255) DEFAULT NULL,
+  `account_id` int(11) DEFAULT NULL,
+  `preimage` varchar(255) DEFAULT NULL,
+  `memo` text DEFAULT NULL,
+  `redeemed` tinyint(1) NOT NULL DEFAULT 0,
+  `redeemcode` varchar(255) DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `invoice_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `hash_2` (`hash`,`user_id`) USING HASH,
+  KEY `idx_redeemcode` (`redeemcode`),
+  KEY `payments_invoice_id_foreign` (`invoice_id`),
+  KEY `payments_user_id_foreign` (`user_id`),
+  KEY `payments_account_id_foreign` (`account_id`),
+  KEY `payments_time_index` (`createdAt`),
+  KEY `hash` (`hash`(10))
+) ENGINE=InnoDB AUTO_INCREMENT=146324 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `paymentsc`
+--
+
+DROP TABLE IF EXISTS `paymentsc`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `paymentsc` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `hash` text DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `rate` double DEFAULT NULL,
+  `currency` varchar(255) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `received` tinyint(1) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `tip` double NOT NULL DEFAULT 0,
+  `confirmed` tinyint(1) NOT NULL,
+  `fee` double NOT NULL DEFAULT 0,
+  `network` varchar(255) DEFAULT NULL,
+  `account_id` int(11) DEFAULT NULL,
+  `preimage` varchar(255) DEFAULT NULL,
+  `memo` text DEFAULT NULL,
+  `redeemed` tinyint(1) NOT NULL DEFAULT 0,
+  `redeemcode` varchar(255) DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `invoice_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_redeemcode` (`redeemcode`),
+  KEY `payments_invoice_id_foreign` (`invoice_id`),
+  KEY `payments_account_id_foreign` (`account_id`),
+  KEY `payments_time_index` (`createdAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `paymentsnew`
+--
+
+DROP TABLE IF EXISTS `paymentsnew`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `paymentsnew` (
+  `id` int(11) NOT NULL DEFAULT 0,
+  `user_id` int(11) DEFAULT NULL,
+  `hash` text DEFAULT NULL,
+  `createdAt` datetime NOT NULL,
+  `updatedAt` datetime NOT NULL,
+  `rate` double DEFAULT NULL,
+  `currency` varchar(255) DEFAULT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `received` tinyint(1) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `tip` double NOT NULL DEFAULT 0,
+  `confirmed` tinyint(1) NOT NULL,
+  `fee` double NOT NULL DEFAULT 0,
+  `network` varchar(255) DEFAULT NULL,
+  `account_id` int(11) DEFAULT NULL,
+  `preimage` varchar(255) DEFAULT NULL,
+  `memo` text DEFAULT NULL,
+  `redeemed` tinyint(1) NOT NULL DEFAULT 0,
+  `redeemcode` varchar(255) DEFAULT NULL,
+  `path` varchar(255) DEFAULT NULL,
+  `invoice_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -336,7 +453,7 @@ CREATE TABLE `referrals` (
   KEY `referrals_sponsor_id_foreign` (`sponsor_id`),
   CONSTRAINT `referrals_sponsor_id_foreign` FOREIGN KEY (`sponsor_id`) REFERENCES `users` (`id`),
   CONSTRAINT `referrals_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -353,8 +470,15 @@ CREATE TABLE `requests` (
   `memo` text DEFAULT NULL,
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `updatedAt` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=latin1;
+  `invoice_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_request_recipient` (`recipient_id`),
+  KEY `fk_request_requester` (`requester_id`),
+  KEY `fk_request_invoice` (`invoice_id`),
+  CONSTRAINT `fk_request_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_request_recipient` FOREIGN KEY (`recipient_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_request_requester` FOREIGN KEY (`requester_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -374,7 +498,7 @@ CREATE TABLE `urls` (
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
   `updatedAt` timestamp NOT NULL DEFAULT current_timestamp(),
   UNIQUE KEY `urls_hash_unique` (`hash`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -416,7 +540,7 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   KEY `ip` (`ip`),
   KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=15518 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=30199 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -475,4 +599,4 @@ CREATE TABLE `withdrawals` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-11-11 17:06:10
+-- Dump completed on 2022-11-12 23:34:52
