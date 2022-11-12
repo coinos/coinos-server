@@ -20,7 +20,7 @@ import "./models/withdrawals";
 import "./models/referrals";
 import "./models/waiting_list";
 
-const { User, Account, Payment, Invoice, Key, Order, Referral } = db;
+const { User, Account, Payment, Invoice, Key, Order, Referral, Request } = db;
 
 User.hasMany(Account, {
   as: "accounts",
@@ -106,6 +106,7 @@ User.hasMany(Referral, {
   as: "referral_codes",
   foreignKey: "sponsor_id"
 });
+
 User.hasMany(Referral, {
   as: "sponsors",
   foreignKey: "user_id"
@@ -115,6 +116,7 @@ Referral.belongsTo(User, {
   as: "sponsor",
   foreignKey: "sponsor_id"
 });
+
 Referral.belongsTo(User, {
   as: "user",
   foreignKey: "user_id"
@@ -128,6 +130,21 @@ Payment.belongsTo(Payment, {
 Payment.belongsTo(User, {
   as: "with",
   foreignKey: "with_id"
+});
+
+Request.belongsTo(User, {
+  as: "requester",
+  foreignKey: "requester_id"
+});
+
+Request.belongsTo(User, {
+  as: "recipient",
+  foreignKey: "recipient_id"
+});
+
+Request.belongsTo(Invoice, {
+  as: "invoice",
+  foreignKey: "invoice_id"
 });
 
 db.Order = Order;
