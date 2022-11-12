@@ -147,6 +147,12 @@ Request.belongsTo(Invoice, {
   foreignKey: "invoice_id"
 });
 
+Invoice.hasOne(Request, {
+  as: "request",
+  foreignKey: "invoice_id"
+});
+
+
 db.Order = Order;
 
 export default db;

@@ -12,6 +12,11 @@ app.get("/request/:id", auth, async (req, res) => {
         {
           attributes: ["username", "profile"],
           model: db.User,
+          as: "recipient"
+        },
+        {
+          attributes: ["username", "profile"],
+          model: db.User,
           as: "requester"
         },
         {

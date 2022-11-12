@@ -16,11 +16,17 @@ app.get("/invoice", async (req, res, next) => {
       where: {
         uuid: req.query.uuid
       },
-      include: {
-        model: db.User,
-        as: "user",
-        attributes: ["username", "currency", "profile"]
-      }
+      include: [
+        {
+          model: db.User,
+          as: "user",
+          attributes: ["username", "currency", "profile"]
+        },
+        {
+          model: db.Request,
+          as: "request"
+        }
+      ]
     });
 
     res.send(invoice);
@@ -160,7 +166,6 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
     }
 
     if (request_id) {
-      console.log("REQ ID", request_id)
       let request = await db.Request.findOne({
         where: { id: request_id },
 
@@ -170,17 +175,22 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
           attributes: ["username"]
         }
       });
-      request.invoice_id = invoice.id;
-      await request.save();
 
-      emit(request.requester.username, "invoice", {
-        amount: invoice.amount,
-        currency: invoice.currency,
-        rate: invoice.rate,
-        request_id,
-        uuid: invoice.uuid,
-        user: { username: user.username, profile: user.profile }
-      });
+      if (request) {
+        let existing = request.invoice_id;
+        request.invoice_id = invoice.id;
+        await request.save();
+
+        if (!existing)
+          emit(request.requester.username, "invoice", {
+          amount: invoice.amount,
+          currency: invoice.currency,
+          rate: invoice.rate,
+          request_id,
+          uuid: invoice.uuid,
+          user: { username: user.username, profile: user.profile }
+        });
+      }
     }
 
     res.send(invoice);
