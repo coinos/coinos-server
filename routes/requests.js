@@ -2,7 +2,7 @@ import app from "$app";
 import db from "$db";
 import { auth } from "$lib/passport";
 import { emit } from "$lib/sockets";
-import { Op } from "@sequelize/core";
+import { Op, col } from "@sequelize/core";
 
 app.get("/request/:id", auth, async (req, res) => {
   try {
@@ -40,26 +40,48 @@ app.get("/requests", auth, async (req, res) => {
     let invoices = (
       await db.Request.findAll({
         where: {
-          requester_id: req.user.id,
+          [Op.or]: {
+            recipient_id: req.user.id,
+            requester_id: req.user.id
+          },
           createdAt: { [Op.gt]: day }
-          //"$invoice.received$": { [Op.lt]: "$invoice.amount$" }
         },
         order: [["createdAt", "DESC"]],
-        include: {
-          model: db.Invoice,
-          as: "invoice",
-          include: {
+        include: [
+          {
+            model: db.Invoice,
+            as: "invoice",
+            where: { received: { [Op.lt]: col("invoice.amount") } },
+            include: {
+              model: db.User,
+              as: "user",
+              attributes: ["username", "profile"]
+            }
+          },
+          {
             model: db.User,
-            as: "user"
+            as: "requester",
+            attributes: ["username", "profile"]
           }
-        }
+        ]
       })
     )
-      .map(r => r.invoice && r.invoice.get({ plain: true }))
-      .filter(Boolean);
+      .map(
+        r =>
+          r.invoice && {
+            request_id: r.id,
+            requester: r.requester.get({ plain: true }),
+            ...r.invoice.get({ plain: true })
+          }
+      )
+      .filter(r => r);
 
     let requests = await db.Request.findAll({
-      where: { recipient_id: req.user.id, createdAt: { [Op.gt]: day }, invoice_id: { [Op.eq]: null } },
+      where: {
+        recipient_id: req.user.id,
+        createdAt: { [Op.gt]: day },
+        invoice_id: { [Op.eq]: null }
+      },
       order: [["createdAt", "DESC"]],
       include: {
         attributes: ["username", "profile"],
@@ -89,6 +111,25 @@ app.post("/requests", auth, async (req, res) => {
     emit(username, "request", request);
 
     res.send(request);
+  } catch (e) {
+    console.log(e);
+    res.code(500).send(e.message);
+  }
+});
+
+app.post("/requests/delete", auth, async (req, res) => {
+  try {
+    let r = await db.Request.findOne({
+      where: {
+        id: req.body.request_id,
+        [Op.or]: { requester_id: req.user.id, recipient_id: req.user.id }
+      }
+    });
+
+    if (!r) throw new Error("request not found");
+    await r.destroy();
+
+    res.send();
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);
