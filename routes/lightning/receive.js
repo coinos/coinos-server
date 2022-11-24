@@ -6,7 +6,6 @@ import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
 import { computeConversionFee } from "./conversionFee";
 import { sendLiquid } from "$routes/liquid/send";
-import lnd from "$lib/lnd";
 import ln from "$lib/ln";
 import { l, err, warn } from "$lib/logging";
 
@@ -131,35 +130,33 @@ const handlePayment = async msg => {
   }
 };
 
-if (config.lna.clightning) {
-  const poll = async ln => {
-    try {
-      const wait = async i => {
-        const {
-          bolt11: request,
-          pay_index,
-          status,
-          msatoshi_received,
-          payment_preimage: secret
-        } = await ln.waitanyinvoice(i);
+const poll = async ln => {
+  try {
+    const wait = async i => {
+      const {
+        bolt11: request,
+        pay_index,
+        status,
+        msatoshi_received,
+        payment_preimage: secret
+      } = await ln.waitanyinvoice(i);
 
-        let settled = status === "paid";
-        let received = parseInt(msatoshi_received / 1000);
+      let settled = status === "paid";
+      let received = parseInt(msatoshi_received / 1000);
 
-        await handlePayment({
-          request,
-          received,
-          secret
-        });
-        await wait(pay_index);
-      };
+      await handlePayment({
+        request,
+        received,
+        secret
+      });
+      await wait(pay_index);
+    };
 
-      const { invoices } = await ln.listinvoices();
-      await wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
-    } catch (e) {
-      err("problem waiting for c-lightning invoice", e.message);
-    }
-  };
+    const { invoices } = await ln.listinvoices();
+    await wait(Math.max(...invoices.map(i => i.pay_index).filter(n => n)));
+  } catch (e) {
+    err("problem waiting for c-lightning invoice", e.message);
+  }
+};
 
-  poll(ln);
-}
+poll(ln);

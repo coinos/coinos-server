@@ -5,7 +5,6 @@ import store from "$lib/store";
 
 import bc from "$lib/bitcoin";
 import lq from "$lib/liquid";
-import lnd from "$lib/lnd";
 import ln from "$lib/ln";
 
 import sequelize from "@sequelize/core";
@@ -50,15 +49,9 @@ app.get("/balances", async (req, res, next) => {
     let lnchannel;
     let lnwallet;
 
-    if (config.lna) {
-      if (config.lna.clightning) {
-        const funds = await ln.listfunds();
-        lnchannel = parseInt(
-          funds.channels.reduce((a, b) => a + b.channel_sat, 0)
-        );
-        lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
-      }
-    }
+    const funds = await ln.listfunds();
+    lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
+    lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
 
     let bitcoin, bitcoind;
     if (config.bitcoin) {

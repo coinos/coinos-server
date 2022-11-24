@@ -1,6 +1,5 @@
 import config from "$config";
 import { err } from "$lib/logging";
-import lnd from "$lib/lnd";
 import ln from "$lib/ln";
 import { v4 } from "uuid";
 

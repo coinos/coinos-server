@@ -6,7 +6,6 @@ import { optionalAuth, auth } from "$lib/passport";
 import { l, err, warn } from "$lib/logging";
 
 import ln from "$lib/ln";
-import lnd from "$lib/lnd";
 import persist from "$lib/persist";
 import { emit } from "$lib/sockets";
 
@@ -15,7 +14,6 @@ import lnurl from "lnurl";
 import jwt from "jsonwebtoken";
 import qs from "query-string";
 import bolt11 from "bolt11";
-
 
 import {
   computeConversionFee,
@@ -96,12 +94,10 @@ app.post("/withdraw", auth, async (req, res, next) => {
   } = req.body;
 
   let invoice;
-  if (config.lna.clightning) {
-    let label = new Date();
-    let desc = label;
+  let label = new Date();
+  let desc = label;
 
-    invoice = await ln.invoice(`${value}sats`, label, desc);
-  }
+  invoice = await ln.invoice(`${value}sats`, label, desc);
 
   const { payment_request: pr } = invoice;
   const url = `${callback}?k1=${k1}&pr=${pr}`;
@@ -394,10 +390,8 @@ lnurlServer.bindToHook(
         try {
           let amount;
 
-          if (config.lna.clightning) {
-            let { msatoshi } = await ln.decodepay(pr);
-            amount = parseInt(msatoshi / 1000);
-          } 
+          let { msatoshi } = await ln.decodepay(pr);
+          amount = parseInt(msatoshi / 1000);
           let conversionFee = computeConversionFee(amount);
 
           await db.transaction(async transaction => {
@@ -487,7 +481,6 @@ lnurlServer.bindToHook(
             setTimeout(async () => {
               try {
                 let { payments } = await ln.getPayments({
-                  lnd,
                   limit: 5
                 });
 
