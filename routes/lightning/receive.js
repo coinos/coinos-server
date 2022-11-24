@@ -6,7 +6,6 @@ import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
 import { computeConversionFee } from "./conversionFee";
 import { sendLiquid } from "$routes/liquid/send";
-import { subscribeToInvoices } from "lightning";
 import lnd from "$lib/lnd";
 import ln from "$lib/ln";
 import { l, err, warn } from "$lib/logging";
@@ -163,7 +162,4 @@ if (config.lna.clightning) {
   };
 
   poll(ln);
-} else {
-  const invoices = subscribeToInvoices({ lnd });
-  invoices.on("invoice_updated", handlePayment);
 }

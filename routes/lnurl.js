@@ -16,7 +16,6 @@ import jwt from "jsonwebtoken";
 import qs from "query-string";
 import bolt11 from "bolt11";
 
-import { createInvoice, decodePaymentRequest, getPayments } from "lightning";
 
 import {
   computeConversionFee,
@@ -102,8 +101,6 @@ app.post("/withdraw", auth, async (req, res, next) => {
     let desc = label;
 
     invoice = await ln.invoice(`${value}sats`, label, desc);
-  } else {
-    invoice = await createInvoice({ lnd, value });
   }
 
   const { payment_request: pr } = invoice;
@@ -400,12 +397,7 @@ lnurlServer.bindToHook(
           if (config.lna.clightning) {
             let { msatoshi } = await ln.decodepay(pr);
             amount = parseInt(msatoshi / 1000);
-          } else {
-            ({ num_satoshis: amount } = await decodePaymentRequest({
-              lnd,
-              request: pr
-            }));
-          }
+          } 
           let conversionFee = computeConversionFee(amount);
 
           await db.transaction(async transaction => {

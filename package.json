@@ -39,7 +39,6 @@
     "imap": "^0.8.19",
     "jsonwebtoken": "^8.5.1",
     "knex": "^2.3.0",
-    "lightning": "5",
     "liquidjs-lib": "6.0.2-liquid.8",
     "lnurl": "^0.24.2",
     "long": "^4.0.0",

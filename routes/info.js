@@ -8,7 +8,6 @@ import lq from "$lib/liquid";
 import lnd from "$lib/lnd";
 import ln from "$lib/ln";
 
-import { getChannelBalance, getChainBalance } from "lightning";
 import sequelize from "@sequelize/core";
 import { SATS } from "$lib/utils";
 
@@ -58,9 +57,6 @@ app.get("/balances", async (req, res, next) => {
           funds.channels.reduce((a, b) => a + b.channel_sat, 0)
         );
         lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
-      } else {
-        lnchannel = parseInt(await getChannelBalance({ lnd }).channel_balance);
-        lnwallet = parseInt(await getChainBalance({ lnd }).chain_balance);
       }
     }
 
