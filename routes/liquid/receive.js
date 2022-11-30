@@ -14,6 +14,7 @@ import bitcoin from "bitcoinjs-lib";
 import liquidJs from "liquidjs-lib";
 import { l, err, warn } from "$lib/logging";
 import lq from "$lib/liquid";
+import sendLightning from "$lib/send";
 
 const { Block, networks, Transaction } = liquidJs;
 
@@ -317,7 +318,7 @@ setInterval(async () => {
     for (let i = 0; i < arr.length; i++) {
       const hash = arr[i];
 
-      let account, invoice, address, user, total, p;
+      let account, invoice, address, user, total, p, conversions;
       await db.transaction(async transaction => {
         p = await db.Payment.findOne({
           where: { hash, confirmed: 0, received: 1 },
@@ -344,6 +345,7 @@ setInterval(async () => {
 
         if (p && p.account) {
           ({ account, invoice } = p);
+          conversions = await invoice.getConversions();
           total = p.amount + p.tip;
           p.confirmed = 1;
           await account.save({ transaction });
@@ -381,6 +383,17 @@ setInterval(async () => {
         delete queue[hash];
       });
 
+      user.account = p.account;
+
+      console.log("CONVERSIONS", conversions.length)
+
+      for (let i = 0; i < conversions.length; i++) {
+        console.log("sending lightning");
+        let conversion = conversions[i];
+        let result = await sendLightning(p.amount, "", conversion.text, user);
+        console.log("RESULT", result);
+      }
+
       let c = store.convert[address];
       if (address && c && p.account.asset === network.assetHash) {
         l(
@@ -389,8 +402,6 @@ setInterval(async () => {
           c.address,
           user.username
         );
-
-        user.account = p.account;
 
         sendLiquid({
           address: c.address,

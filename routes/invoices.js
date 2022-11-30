@@ -207,3 +207,12 @@ app.post(
     let { network, username } = req.params;
   }
 );
+
+app.post("/conversion", 
+  async (req, res, next) => {
+    let { invoice_id, text } = req.body;
+
+    let conversion = await db.Conversion.create({ invoice_id, text });
+    res.send(conversion);
+  }
+);

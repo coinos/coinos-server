@@ -8,6 +8,7 @@ db.authenticate().catch(err => {
 
 import "./models/accounts";
 import "./models/codes";
+import "./models/conversions";
 import "./models/deposits";
 import "./models/invoices";
 import "./models/keys";
@@ -20,7 +21,12 @@ import "./models/withdrawals";
 import "./models/referrals";
 import "./models/waiting_list";
 
-const { User, Account, Payment, Invoice, Key, Order, Referral, Request } = db;
+const { Conversion, User, Account, Payment, Invoice, Key, Order, Referral, Request } = db;
+
+Invoice.hasMany(Conversion, {
+  as: "conversions",
+  foreignKey: "invoice_id"
+}); 
 
 User.hasMany(Account, {
   as: "accounts",
@@ -152,6 +158,10 @@ Invoice.hasOne(Request, {
   foreignKey: "invoice_id"
 });
 
+Conversion.belongsTo(Invoice, {
+  as: "invoice",
+  foreignKey: "invoice_id"
+}); 
 
 db.Order = Order;
 
