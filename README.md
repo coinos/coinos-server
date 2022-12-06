@@ -11,7 +11,8 @@ The follow commands will set up bitcoin, liquid and lightning nodes in regtest m
 ```bash
 git clone https://github.com/coinos/coinos-server
 cd coinos-server
-cp -rf sampleconfig ./config
+cp -r sampleconfig config
+cp -r sampledata data
 sudo chown $(id -u):$(id -g) config/liquid
 sudo chown $(id -u):$(id -g) config/bitcoin
 cp .env.sample .env
@@ -27,23 +28,10 @@ docker exec -it liquid elements-cli createwallet coinos
 docker exec -it liquid elements-cli rescanblockchain
 docker exec -it liquid elements-cli sendtoaddress AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7 1000000
 docker exec -it liquid elements-cli generatetoaddress 1 AzpsKhC6xE9FEK4aWAzMnbvueMLiSa5ym1xpuYogFkHzWgMHSt8B79aNNbFppQzCSQ2yZ9E4nL6RQJU7
-docker exec -it lnd lncli create # set password to "password"
-sed -i "s/# wallet/wallet/g" config/lnd/lnd.conf
-CERT=$(sudo base64 config/lnd/tls.cert | tr -d '\n') 
-sed -i "s/LS0tL.*\"/$CERT\"/g" config/index.js
-MACAROON=$(sudo base64 config/lnd/data/chain/bitcoin/regtest/admin.macaroon | tr -d '\n') 
-sed -i "s/AgED.*\"/$MACAROON\"/g" config/index.js
 curl localhost:3119/register -H "content-type: application/json" -d '{"user": { "username": "coinosfees", "password": "password"}}'
 ```
 
 After successful creation of all docker containers coinos ui will be available at http://localhost:8085 and coinos server will be available at http://localhost:3119
-
-### Setup Lightning Channels
-
-    docker exec -it cl lightning-cli getinfo
-    docker exec -it lnd lncli --network=regtest --chain=bitcoin connect 029ba19ec5f65f82b1952fd535a86ff136ccc67ff7f91e19c3fcbc83a5224adaee@cl:9735
-    docker exec -it lnd lncli --network=regtest --chain=bitcoin openchannel 029ba19ec5f65f82b1952fd535a86ff136ccc67ff7f91e19c3fcbc83a5224adaee 10000000
-    docker exec -it bitcoin bitcoin-cli generatetoaddress 10 $(docker exec -it bitcoin bitcoin-cli getnewaddress "" "legacy")
 
 ### License
 

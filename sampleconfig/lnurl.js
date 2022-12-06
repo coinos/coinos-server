@@ -4,7 +4,7 @@ export default {
   host: "app",
   port: 3118,
   protocol: "http",
-  url: "https://desk.bobcat-liberty.ts.net",
+  url: "https://staging.coinos.io",
   endpoint: "/lnurl",
   listen: true,
   auth: {
@@ -16,16 +16,9 @@ export default {
     ]
   },
   lightning: {
-    backend: "lnd",
+    backend: "c-lightning",
     config: {
-      hostname: "lnd:9735",
-      cert: {
-        data: fs.readFileSync("/app/config/lnd/tls.cert", "utf8")
-      },
-      macaroon: {
-        data:
-          "0201036c6e6402f801030a100a1edc729d77423ec23fa75b85b781391201301a160a0761646472657373120472656164120577726974651a130a04696e666f120472656164120577726974651a170a08696e766f69636573120472656164120577726974651a210a086d616361726f6f6e120867656e6572617465120472656164120577726974651a160a076d657373616765120472656164120577726974651a170a086f6666636861696e120472656164120577726974651a160a076f6e636861696e120472656164120577726974651a140a057065657273120472656164120577726974651a180a067369676e6572120867656e657261746512047265616400000620aea455def2702fb1ec9838f1300255147ed20e825a539a1ee2e99e7049b04c11"
-      }
+      unixSockPath: "/app/config/lightning/regtest/lightning-rpc"
     }
   },
   store: {
