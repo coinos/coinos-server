@@ -13,6 +13,7 @@ git clone https://github.com/coinos/coinos-server
 cd coinos-server
 cp -r sampleconfig config
 cp -r sampledata data
+mkdir uploads
 sudo chown $(id -u):$(id -g) config/liquid
 sudo chown $(id -u):$(id -g) config/bitcoin
 cp .env.sample .env
