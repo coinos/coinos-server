@@ -1,19 +1,5 @@
 version: '3.6'
 services:
-  ui:
-    depends_on:
-      - app
-    container_name: ui
-    image: asoltys/coinos-ui:dev
-    ports:
-      - '8085:8085'
-    environment:
-      NODE_ENV: development
-    volumes:
-      - ../coinos-ui:/app
-    networks:
-      default:
-        ipv4_address: 172.18.0.27
   app:
     depends_on:
       - maria
