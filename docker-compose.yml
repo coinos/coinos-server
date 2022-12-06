@@ -121,6 +121,8 @@ services:
   electrs-liquid:
     image: ghcr.io/vulpemventures/electrs-liquid
     container_name: electrs
+    ports:
+      - '3012:3002'
     depends_on:
       - liquid
     entrypoint:
