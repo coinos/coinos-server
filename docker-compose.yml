@@ -38,7 +38,7 @@ services:
       default:
         ipv4_address: 172.18.0.22
   bitcoin:
-    image: ghcr.io/vulpemventures/bitcoin
+    image: asoltys/bitcoin
     container_name: bitcoin
     volumes:
       - ./config/bitcoin:/home/bitcoin/.bitcoin
