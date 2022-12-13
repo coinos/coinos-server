@@ -28,7 +28,7 @@ services:
     volumes:
       - ./mysql:/var/lib/mysql
   bitcoin:
-    image: ghcr.io/vulpemventures/bitcoin
+    image: asoltys/bitcoin
     container_name: bitcoin
     volumes:
       - ./config/bitcoin:/home/bitcoin/.bitcoin
