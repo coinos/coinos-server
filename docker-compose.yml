@@ -174,6 +174,15 @@ services:
     image: redis
     volumes:
       - ./config/redis:/data
+  eb:
+    container_name: eb
+    image: asoltys/electrs-batch
+    environment:
+      PORT: 7111
+      ELECTRS_URL: http://electrs:3002
+      CONCURRENCY: 10
+    ports:
+      - '7111:7111'
 networks: 
   default: 
     name: net
