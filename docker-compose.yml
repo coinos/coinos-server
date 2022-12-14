@@ -15,6 +15,7 @@ services:
       default:
         ipv4_address: 172.18.0.27
   app:
+    restart: always
     depends_on:
       - maria
       - bitcoin
@@ -77,6 +78,7 @@ services:
       default:
         ipv4_address: 172.18.0.31
   maria:
+    restart: always
     container_name: maria
     image: mariadb:10.6.1
     restart: always
@@ -147,6 +149,8 @@ services:
     volumes:
       - ./config/liquid/:/config
     restart: unless-stopped
+    ports:
+      - '3012:3002'
     networks:
       default:
         ipv4_address: 172.18.0.29
