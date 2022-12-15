@@ -152,7 +152,6 @@ Invoice.hasOne(Request, {
   foreignKey: "invoice_id"
 });
 
-
 db.Order = Order;
 
 export default db;
