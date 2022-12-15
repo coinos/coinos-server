@@ -154,7 +154,7 @@ app.get("/payment/:redeemcode", async (req, res) => {
     });
 
     payment = payment.get({ plain: true });
-    payment.redeemer = payment['with'];
+    payment.redeemer = payment["with"];
 
     if (!payment) fail("invalid code");
 
