@@ -9,6 +9,7 @@ import bc from "$lib/bitcoin";
 import lq from "$lib/liquid";
 import { SATS, bip21, deriveAddress, derivePayRequest } from "$lib/utils";
 import { emit } from "$lib/sockets";
+import bolt11 from "bolt11";
 
 app.get("/invoice", async (req, res, next) => {
   try {
@@ -211,8 +212,15 @@ app.post(
 app.post("/conversion", 
   async (req, res, next) => {
     let { invoice_id, text } = req.body;
-
+    console.log("HERE", invoice_id, text)
     let conversion = await db.Conversion.create({ invoice_id, text });
     res.send(conversion);
   }
 );
+
+app.post("/invoice/decode",
+  async (req, res, next) => {
+    let {text} = req.body;
+    res.send(bolt11.decode(text))
+  }
+)
