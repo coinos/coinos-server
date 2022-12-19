@@ -78,7 +78,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       request_id
     } = invoice;
     let address, unconfidential, text;
-
+    console.log("INSIDE INVOICE:", "liq:", liquidAddress, "id", id, "user:", user, tx)
     if (amount < 0) throw new Error("amount out of range");
     if (tip > 5 * amount || tip < 0) throw new Error("tip amount out of range");
 
