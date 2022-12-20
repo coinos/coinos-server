@@ -11,7 +11,7 @@ export default async (req, res) => {
   try {
     if (!memo) memo = "coinos";
     const invoice = await ln.invoice(
-      value ? `${value}sat` : "any",
+      value ? `${value}sat` : "ancpy",
       v4(),
       memo,
       360

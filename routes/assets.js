@@ -351,7 +351,6 @@ app.post("/assets", auth, async (req, res) => {
             address: token_address,
             network: "liquid"
           },
-          { transaction }
         );
         emit(recipient.username, "payment", token_payment);
 

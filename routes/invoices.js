@@ -165,7 +165,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       store.addresses[invoice.unconfidential] = user.username;
       if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
     }
-
+    console.log("INVOICE", invoice)
     if (request_id) {
       let request = await db.Request.findOne({
         where: { id: request_id },
@@ -212,7 +212,6 @@ app.post(
 app.post("/conversion", 
   async (req, res, next) => {
     let { invoice_id, text } = req.body;
-    console.log("HERE", invoice_id, text)
     let conversion = await db.Conversion.create({ invoice_id, text });
     res.send(conversion);
   }
