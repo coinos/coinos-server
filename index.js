@@ -15,6 +15,7 @@ import "./lib/sync";
 import "./lib/rates";
 import "./lib/notifications";
 import "./lib/mail";
+import "./lib/nostr";
 
 import "./routes/assets";
 import "./routes/locations";
