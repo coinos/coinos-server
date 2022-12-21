@@ -41,6 +41,12 @@ app.post('/echo', optionalAuth, async (req, res) => {
   res.send(req.body);
 }); 
 
+app.get('/nostr.json', async (req, res) => {
+  res.send({
+    names: {  adam: "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8", asoltys: "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8" }
+  });
+}); 
+
 app.listen({ host, port }, (e, address) => {
   e && err(e) && process.exit(1);
   l(`CoinOS Server listening on ${address}`);
