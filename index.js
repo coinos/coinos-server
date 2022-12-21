@@ -18,6 +18,7 @@ import "./lib/mail";
 import "./lib/nostr";
 
 import "./routes/assets";
+import "./routes/events";
 import "./routes/locations";
 import "./routes/info";
 import "./routes/users";
