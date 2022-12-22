@@ -28,3 +28,10 @@ app.get("/:pubkey/events", async (req, res) => {
     res.code(500).send("problem fetching user events");
   }
 });
+
+app.post('/nostr/send', async (req, res) => {
+  let { event } = req.body;
+  pool.send(["EVENT", event]);
+  res.send(event);
+});
+

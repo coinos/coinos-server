@@ -224,6 +224,15 @@ const attributes = {
     comment: null,
     field: "twofa"
   },
+  cipher: {
+    type: DataTypes.STRING(255),
+  },
+  pubkey: {
+    type: DataTypes.STRING(255),
+  },
+  salt: {
+    type: DataTypes.STRING(255),
+  },
   pin: {
     type: DataTypes.STRING(255),
     allowNull: true,

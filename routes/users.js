@@ -132,6 +132,8 @@ app.post("/user", auth, async (req, res) => {
     let { user } = req;
     let {
       address,
+      cipher,
+      pubkey,
       confirm,
       currencies,
       currency,
@@ -140,6 +142,7 @@ app.post("/user", auth, async (req, res) => {
       password,
       newpin,
       pin,
+      salt,
       seed,
       tokens,
       twofa,
@@ -170,6 +173,10 @@ app.post("/user", auth, async (req, res) => {
     }
 
     if (unit) user.unit = unit;
+    if (cipher) user.cipher = cipher;
+    if (pubkey) user.pubkey = pubkey;
+    if (salt) user.salt = salt;
+
     user.currency = currency;
     user.currencies = currencies;
     user.pin = newpin;
