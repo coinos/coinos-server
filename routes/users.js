@@ -57,7 +57,14 @@ app.get("/users/:username", async (req, res) => {
   const { username } = req.params;
 
   let user = await db.User.findOne({
-    attributes: ["username", "banner", "profile", "address", "currency"],
+    attributes: [
+      "username",
+      "banner",
+      "profile",
+      "address",
+      "currency",
+      "pubkey"
+    ],
     where: Sequelize.where(
       Sequelize.fn("lower", Sequelize.col("username")),
       username.toLowerCase()

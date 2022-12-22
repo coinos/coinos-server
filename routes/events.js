@@ -1,4 +1,5 @@
 import app from "$app";
+import db from "$db";
 import redis from "$lib/redis";
 import { pool } from "$lib/nostr";
 import store from "$lib/store";
@@ -12,6 +13,13 @@ app.get("/:pubkey/events", async (req, res) => {
       () => (store.fetching[pubkey] = false),
       500
     );
+
+    let user = await db.User.findOne({
+      where: { pubkey }
+    }); 
+
+    if (!user) user = { username: pubkey.substr(0,6), pubkey, anon: true }
+    await redis.set(`user:${pubkey}`, JSON.stringify(user));
 
     pool.subscribe(pubkey, {
       limit: 500,
