@@ -8,7 +8,10 @@ app.get("/:pubkey/events", async (req, res) => {
   try {
     let { pubkey } = req.params;
     store.fetching[pubkey] = true;
-    store.timeouts[pubkey] = setTimeout(() => (store.fetching[pubkey] = false), 500);
+    store.timeouts[pubkey] = setTimeout(
+      () => (store.fetching[pubkey] = false),
+      500
+    );
 
     pool.subscribe(pubkey, {
       limit: 500,
@@ -29,9 +32,8 @@ app.get("/:pubkey/events", async (req, res) => {
   }
 });
 
-app.post('/nostr/send', async (req, res) => {
+app.post("/nostr/send", async (req, res) => {
   let { event } = req.body;
   pool.send(["EVENT", event]);
   res.send(event);
 });
-
