@@ -1,7 +1,7 @@
 import app from "$app";
 import db from "$db";
 import redis from "$lib/redis";
-import { pool } from "$lib/nostr";
+import { coinos } from "$lib/nostr";
 import store from "$lib/store";
 import { wait } from "$lib/utils";
 
@@ -27,7 +27,7 @@ app.get("/nostr/:pubkey", async (req, res) => {
 
     let { since } = user;
 
-    pool.subscribe(pubkey, {
+    coinos.subscribe(pubkey, {
       since,
       kinds: [1],
       authors: [pubkey]
@@ -52,6 +52,6 @@ app.get("/nostr/:pubkey", async (req, res) => {
 
 app.post("/nostr/send", async (req, res) => {
   let { event } = req.body;
-  pool.send(["EVENT", event]);
+  coinos.send(["EVENT", event]);
   res.send(event);
 });
