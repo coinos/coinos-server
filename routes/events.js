@@ -40,7 +40,7 @@ app.get("/nostr/:pubkey", async (req, res) => {
     let ids = await redis.sMembers(pubkey);
 
     let events = ids.length ? (
-      await redis.mGet((id).map(k => "ev:" + k))
+      await redis.mGet((ids).map(k => "ev:" + k))
     ).map(JSON.parse) : [];
 
     res.send(events);
