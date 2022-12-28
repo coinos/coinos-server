@@ -56,6 +56,7 @@ app.get("/me", auth, async (req, res) => {
         500
       );
 
+      await wait(() => !!coinos, 100, 10);
       coinos.subscribe(`${pubkey}:follows`, {
         limit: 1,
         kinds: [3],

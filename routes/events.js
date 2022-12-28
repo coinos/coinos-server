@@ -37,9 +37,11 @@ app.get("/nostr/:pubkey", async (req, res) => {
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
 
     await wait(() => !store.fetching[pubkey], 100, 100);
-    let events = (
-      await redis.mGet((await redis.sMembers(pubkey)).map(k => "ev:" + k))
-    ).map(JSON.parse);
+    let ids = await redis.sMembers(pubkey);
+
+    let events = ids.length ? (
+      await redis.mGet((id).map(k => "ev:" + k))
+    ).map(JSON.parse) : [];
 
     res.send(events);
   } catch (e) {
