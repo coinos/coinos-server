@@ -5,33 +5,41 @@ import { pool } from "$lib/nostr";
 import store from "$lib/store";
 import { wait } from "$lib/utils";
 
-app.get("/:pubkey/events", async (req, res) => {
+app.get("/nostr/:pubkey", async (req, res) => {
   try {
     let { pubkey } = req.params;
+
     store.fetching[pubkey] = true;
     store.timeouts[pubkey] = setTimeout(
       () => (store.fetching[pubkey] = false),
       500
     );
 
-    let user = await db.User.findOne({
-      where: { pubkey }
-    }); 
+    let user = JSON.parse(await redis.get(`user:${pubkey}`));
 
-    if (!user) user = { username: pubkey.substr(0,6), pubkey, anon: true }
-    await redis.set(`user:${pubkey}`, JSON.stringify(user));
+    if (!user) {
+      user = await db.User.findOne({
+        where: { pubkey }
+      });
+    }
+
+    if (!user) user = { username: pubkey.substr(0, 6), pubkey, anon: true };
+
+    let { since } = user;
 
     pool.subscribe(pubkey, {
-      limit: 500,
+      since,
       kinds: [1],
       authors: [pubkey]
     });
 
-    let events = [];
-    await wait(() => !store.fetching[pubkey], 10, 10);
-    for (let id of await redis.sMembers(pubkey)) {
-      events.push(JSON.parse(await redis.get(`ev:${id}`)));
-    }
+    user.since = Math.round(Date.now() / 1000);
+    await redis.set(`user:${pubkey}`, JSON.stringify(user));
+
+    await wait(() => !store.fetching[pubkey], 100, 100);
+    let events = (
+      await redis.mGet((await redis.sMembers(pubkey)).map(k => "ev:" + k))
+    ).map(JSON.parse);
 
     res.send(events);
   } catch (e) {

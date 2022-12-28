@@ -1,8 +1,9 @@
 import app from "$app";
+import redis from "$lib/redis";
 import config from "$config";
 import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
-import { getUser } from "$lib/utils";
+import { getUser, wait } from "$lib/utils";
 import axios from "axios";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -21,6 +22,7 @@ import lq from "$lib/liquid";
 import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/utils";
+import { coinos } from "$lib/nostr";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -44,35 +46,84 @@ app.get("/me", auth, async (req, res) => {
         }
       ]
     });
+
+    let { pubkey } = user;
+
+    if (pubkey) {
+      store.fetching[pubkey] = true;
+      store.timeouts[pubkey] = setTimeout(
+        () => (store.fetching[pubkey] = false),
+        500
+      );
+
+      coinos.subscribe(`${pubkey}:follows`, {
+        limit: 1,
+        kinds: [3],
+        authors: [pubkey]
+      });
+
+      await wait(() => !store.fetching[pubkey], 100, 10);
+      user.follows = JSON.parse(await redis.get(`${pubkey}:follows`));
+      user.followers = await redis.sMembers(`${pubkey}:followers`);
+    }
+
     user.accounts = await req.user.getAccounts();
     user.payments = payments;
     user.haspin = !!user.pin;
+
     res.send(pick(user, ...whitelist));
   } catch (e) {
+    console.log("problem fetching user", e);
     res.code(500).send(e.message);
   }
 });
 
 app.get("/users/:username", async (req, res) => {
-  const { username } = req.params;
+  try {
+    const { username } = req.params;
 
-  let user = await db.User.findOne({
-    attributes: [
-      "username",
-      "banner",
-      "profile",
-      "address",
-      "currency",
-      "pubkey"
-    ],
-    where: Sequelize.where(
-      Sequelize.fn("lower", Sequelize.col("username")),
-      username.toLowerCase()
-    )
-  });
+    let user = await db.User.findOne({
+      attributes: [
+        "username",
+        "banner",
+        "profile",
+        "address",
+        "currency",
+        "pubkey"
+      ],
+      where: Sequelize.where(
+        Sequelize.fn("lower", Sequelize.col("username")),
+        username.toLowerCase()
+      )
+    });
 
-  if (user) res.send(user);
-  else res.code(500).send("User not found");
+    if (!user) return res.code(500).send("User not found");
+
+    user = user.get({ plain: true });
+    let { pubkey } = user;
+
+    if (pubkey) {
+      store.fetching[pubkey] = true;
+      store.timeouts[pubkey] = setTimeout(
+        () => (store.fetching[pubkey] = false),
+        500
+      );
+
+      coinos.subscribe(`${pubkey}:follows`, {
+        limit: 1,
+        kinds: [3],
+        authors: [pubkey]
+      });
+
+      await wait(() => !store.fetching[pubkey], 100, 10);
+      user.follows = JSON.parse(await redis.get(`${pubkey}:follows`));
+      user.followers = await redis.sMembers(`${pubkey}:followers`);
+    }
+
+    res.send(user);
+  } catch (e) {
+    res.code(500).send(e.message);
+  }
 });
 
 app.post("/register", async (req, res) => {
@@ -598,6 +649,49 @@ app.get("/contacts", auth, async function(req, res) {
         return { ...c.with, last: c.last };
       })
     );
+  } catch (e) {
+    console.log(e);
+    res.code(500).send(e.message);
+  }
+});
+
+app.post("/checkPassword", auth, async function(req, res) {
+  let { user } = req;
+  let result = await bcrypt.compare(req.body.password, user.password);
+  if (!result) return res.code(500).send("Invalid password");
+  res.send(result);
+});
+
+app.get("/:pubkey/follows", async (req, res) => {
+  try {
+    let { pubkey } = req.params;
+    let follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
+
+    if (follows.length) {
+      follows = await db.User.findAll({
+        where: { pubkey: follows.map(t => t[1]) }
+      });
+
+      res.send(follows);
+    }
+  } catch (e) {
+    console.log(e);
+    res.code(500).send(e.message);
+  }
+});
+
+app.get("/:pubkey/followers", async (req, res) => {
+  try {
+    let { pubkey } = req.params;
+    let followers = await redis.sMembers(`${pubkey}:followers`);
+
+    if (followers.length) {
+      followers = await db.User.findAll({
+        where: { pubkey: followers }
+      });
+
+      res.send(followers);
+    }
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);
