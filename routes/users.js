@@ -3,7 +3,7 @@ import redis from "$lib/redis";
 import config from "$config";
 import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
-import { getUser, wait } from "$lib/utils";
+import { getUser, uniq, wait } from "$lib/utils";
 import axios from "axios";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -99,9 +99,23 @@ app.get("/users/:username", async (req, res) => {
       )
     });
 
+    if (user) user = user.get({ plain: true });
+    else user = JSON.parse(await redis.get(`user:${username}`));
+
+    if (!user && username.length === 64) {
+      let newuser = {
+        username: username.substr(0, 6),
+        pubkey: username,
+        anon: true,
+        follows: [],
+        followers: []
+      };
+
+      user = JSON.parse(await redis.get(`user:${newuser.pubkey}`)) || newuser;
+    }
+
     if (!user) return res.code(500).send("User not found");
 
-    user = user.get({ plain: true });
     let { pubkey } = user;
 
     if (pubkey) {
@@ -125,6 +139,7 @@ app.get("/users/:username", async (req, res) => {
 
     res.send(user);
   } catch (e) {
+    console.log(e);
     res.code(500).send(e.message);
   }
 });
@@ -668,15 +683,19 @@ app.post("/checkPassword", auth, async function(req, res) {
 app.get("/:pubkey/follows", async (req, res) => {
   try {
     let { pubkey } = req.params;
-    let follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
+    let tags = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
 
-    if (follows.length) {
-      follows = await db.User.findAll({
-        where: { pubkey: follows.map(t => t[1]) }
-      });
-
-      res.send(follows);
+    let follows = [];
+    for (let f of tags) {
+      let [_, pubkey] = f;
+      let user = JSON.parse(await redis.get(`user:${pubkey}`));
+      if (user) follows.push(user);
     }
+
+    follows = uniq(follows, e => e.pubkey);
+    follows.sort((a, b) => a.username.localeCompare(b.username));
+
+    res.send(follows);
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);
@@ -686,15 +705,18 @@ app.get("/:pubkey/follows", async (req, res) => {
 app.get("/:pubkey/followers", async (req, res) => {
   try {
     let { pubkey } = req.params;
-    let followers = await redis.sMembers(`${pubkey}:followers`);
+    let pubkeys = await redis.sMembers(`${pubkey}:followers`);
 
-    if (followers.length) {
-      followers = await db.User.findAll({
-        where: { pubkey: followers }
-      });
-
-      res.send(followers);
+    let followers = [];
+    for (let pubkey of pubkeys) {
+      let user = JSON.parse(await redis.get(`user:${pubkey}`));
+      if (user) followers.push(user);
     }
+
+    followers = uniq(followers, e => e.pubkey);
+    followers.sort((a, b) => a.username.localeCompare(b.username));
+
+    res.send(followers);
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);

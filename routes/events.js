@@ -23,7 +23,7 @@ app.get("/nostr/:pubkey", async (req, res) => {
       });
     }
 
-    if (!user) user = { username: pubkey.substr(0, 6), pubkey, anon: true };
+    if (!user) user = { username: pubkey.substr(0, 6), pubkey, anon: true, follows: [], followers: [] };
 
     let { since } = user;
 
@@ -32,6 +32,9 @@ app.get("/nostr/:pubkey", async (req, res) => {
       kinds: [1],
       authors: [pubkey]
     });
+
+      coinos.subscribe(`${pubkey}:followers`, { since, kinds: [3], "#p": [pubkey] });
+
 
     user.since = Math.round(Date.now() / 1000);
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
