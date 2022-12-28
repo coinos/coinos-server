@@ -64,9 +64,10 @@ app.get("/me", auth, async (req, res) => {
       });
 
       await wait(() => !store.fetching[pubkey], 100, 10);
-      user.follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
-      user.followers = await redis.sMembers(`${pubkey}:followers`);
     }
+
+    user.follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
+    user.followers = await redis.sMembers(`${pubkey}:followers`);
 
     user.accounts = await req.user.getAccounts();
     user.payments = payments;
@@ -117,9 +118,10 @@ app.get("/users/:username", async (req, res) => {
       });
 
       await wait(() => !store.fetching[pubkey], 100, 10);
-      user.follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
-      user.followers = await redis.sMembers(`${pubkey}:followers`);
     }
+
+    user.follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
+    user.followers = await redis.sMembers(`${pubkey}:followers`);
 
     res.send(user);
   } catch (e) {
