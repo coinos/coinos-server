@@ -23,7 +23,14 @@ app.get("/nostr/:pubkey", async (req, res) => {
       });
     }
 
-    if (!user) user = { username: pubkey.substr(0, 6), pubkey, anon: true, follows: [], followers: [] };
+    if (!user)
+      user = {
+        username: pubkey.substr(0, 6),
+        pubkey,
+        anon: true,
+        follows: [],
+        followers: []
+      };
 
     let { since } = user;
 
@@ -33,8 +40,11 @@ app.get("/nostr/:pubkey", async (req, res) => {
       authors: [pubkey]
     });
 
-      coinos.subscribe(`${pubkey}:followers`, { since, kinds: [3], "#p": [pubkey] });
-
+    coinos.subscribe(`${pubkey}:followers`, {
+      since,
+      kinds: [3],
+      "#p": [pubkey]
+    });
 
     user.since = Math.round(Date.now() / 1000);
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
@@ -42,9 +52,9 @@ app.get("/nostr/:pubkey", async (req, res) => {
     await wait(() => !store.fetching[pubkey], 100, 100);
     let ids = await redis.sMembers(pubkey);
 
-    let events = ids.length ? (
-      await redis.mGet((ids).map(k => "ev:" + k))
-    ).map(JSON.parse) : [];
+    let events = ids.length
+      ? (await redis.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
+      : [];
 
     res.send(events);
   } catch (e) {
