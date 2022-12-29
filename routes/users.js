@@ -47,28 +47,6 @@ app.get("/me", auth, async (req, res) => {
       ]
     });
 
-    let { pubkey } = user;
-
-    if (pubkey) {
-      store.fetching[pubkey] = true;
-      store.timeouts[pubkey] = setTimeout(
-        () => (store.fetching[pubkey] = false),
-        500
-      );
-
-      await wait(() => !!coinos, 100, 10);
-      coinos.subscribe(`${pubkey}:follows`, {
-        limit: 1,
-        kinds: [3],
-        authors: [pubkey]
-      });
-
-      await wait(() => !store.fetching[pubkey], 100, 10);
-    }
-
-    user.follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
-    user.followers = await redis.sMembers(`${pubkey}:followers`);
-
     user.accounts = await req.user.getAccounts();
     user.payments = payments;
     user.haspin = !!user.pin;
@@ -106,36 +84,13 @@ app.get("/users/:username", async (req, res) => {
       let newuser = {
         username: username.substr(0, 6),
         pubkey: username,
-        anon: true,
-        follows: [],
-        followers: []
+        anon: true
       };
 
       user = JSON.parse(await redis.get(`user:${newuser.pubkey}`)) || newuser;
     }
 
     if (!user) return res.code(500).send("User not found");
-
-    let { pubkey } = user;
-
-    if (pubkey) {
-      store.fetching[pubkey] = true;
-      store.timeouts[pubkey] = setTimeout(
-        () => (store.fetching[pubkey] = false),
-        500
-      );
-
-      coinos.subscribe(`${pubkey}:follows`, {
-        limit: 1,
-        kinds: [3],
-        authors: [pubkey]
-      });
-
-      await wait(() => !store.fetching[pubkey], 100, 10);
-    }
-
-    user.follows = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
-    user.followers = await redis.sMembers(`${pubkey}:followers`);
 
     res.send(user);
   } catch (e) {
@@ -674,16 +629,42 @@ app.get("/contacts", auth, async function(req, res) {
 });
 
 app.post("/checkPassword", auth, async function(req, res) {
+  try {
   let { user } = req;
   let result = await bcrypt.compare(req.body.password, user.password);
-  if (!result) return res.code(500).send("Invalid password");
+  if (!result) throw new Error();
   res.send(result);
+  } catch(e) {
+    res.code(500).send("Invalid password");
+  } 
 });
 
+let since = {};
 app.get("/:pubkey/follows", async (req, res) => {
   try {
     let { pubkey } = req.params;
+    let { tagsonly } = req.query;
+
+    store.fetching[pubkey] = true;
+    store.timeouts[pubkey] = setTimeout(
+      () => (store.fetching[pubkey] = false),
+      500
+    );
+
+    let sub = `${pubkey}:follows`;
+    coinos.subscribe(sub, {
+      since: since[sub],
+      limit: 1,
+      kinds: [3],
+      authors: [pubkey]
+    });
+
+    since[sub] = Math.round(Date.now() / 1000);
+
+    await wait(() => !store.fetching[pubkey], 100, 10);
+
     let tags = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
+    if (tagsonly) return res.send(tags);
 
     let follows = [];
     for (let f of tags) {
@@ -705,6 +686,24 @@ app.get("/:pubkey/follows", async (req, res) => {
 app.get("/:pubkey/followers", async (req, res) => {
   try {
     let { pubkey } = req.params;
+
+    store.fetching[pubkey] = true;
+    store.timeouts[pubkey] = setTimeout(
+      () => (store.fetching[pubkey] = false),
+      500
+    );
+
+    let sub = `${pubkey}:followers`;
+    coinos.subscribe(sub, {
+      since: since[sub],
+      kinds: [3],
+      "#p": [pubkey]
+    });
+
+    since[sub] = Math.round(Date.now() / 1000);
+
+    await wait(() => !store.fetching[pubkey], 100, 10);
+
     let pubkeys = await redis.sMembers(`${pubkey}:followers`);
 
     let followers = [];
