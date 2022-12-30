@@ -1,19 +1,13 @@
 import app from "$app";
 import db from "$db";
 import redis from "$lib/redis";
-import { coinos } from "$lib/nostr";
+import { coinos, q } from "$lib/nostr";
 import store from "$lib/store";
 import { wait } from "$lib/utils";
 
 app.get("/nostr/:pubkey", async (req, res) => {
   try {
     let { pubkey } = req.params;
-
-    store.fetching[pubkey] = true;
-    store.timeouts[pubkey] = setTimeout(
-      () => (store.fetching[pubkey] = false),
-      500
-    );
 
     let user = JSON.parse(await redis.get(`user:${pubkey}`));
 
@@ -32,24 +26,13 @@ app.get("/nostr/:pubkey", async (req, res) => {
         followers: []
       };
 
-    let { since } = user;
-
-    coinos.subscribe(pubkey, {
-      since,
+    await q(pubkey, {
       kinds: [1],
       authors: [pubkey]
     });
 
-    coinos.subscribe(`${pubkey}:followers`, {
-      since,
-      kinds: [3],
-      "#p": [pubkey]
-    });
-
-    user.since = Math.round(Date.now() / 1000);
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
 
-    await wait(() => !store.fetching[pubkey], 100, 100);
     let ids = await redis.sMembers(pubkey);
 
     let events = ids.length

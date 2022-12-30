@@ -22,7 +22,7 @@ import lq from "$lib/liquid";
 import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/utils";
-import { coinos } from "$lib/nostr";
+import { coinos, q } from "$lib/nostr";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -630,38 +630,26 @@ app.get("/contacts", auth, async function(req, res) {
 
 app.post("/checkPassword", auth, async function(req, res) {
   try {
-  let { user } = req;
-  let result = await bcrypt.compare(req.body.password, user.password);
-  if (!result) throw new Error();
-  res.send(result);
-  } catch(e) {
+    let { user } = req;
+    let result = await bcrypt.compare(req.body.password, user.password);
+    if (!result) throw new Error();
+    res.send(result);
+  } catch (e) {
     res.code(500).send("Invalid password");
-  } 
+  }
 });
 
-let since = {};
 app.get("/:pubkey/follows", async (req, res) => {
   try {
     let { pubkey } = req.params;
     let { tagsonly } = req.query;
 
-    store.fetching[pubkey] = true;
-    store.timeouts[pubkey] = setTimeout(
-      () => (store.fetching[pubkey] = false),
-      500
-    );
-
     let sub = `${pubkey}:follows`;
-    coinos.subscribe(sub, {
-      since: since[sub],
+    await q(sub, {
       limit: 1,
       kinds: [3],
       authors: [pubkey]
     });
-
-    since[sub] = Math.round(Date.now() / 1000);
-
-    await wait(() => !store.fetching[pubkey], 100, 10);
 
     let tags = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
     if (tagsonly) return res.send(tags);
@@ -669,6 +657,13 @@ app.get("/:pubkey/follows", async (req, res) => {
     let follows = [];
     for (let f of tags) {
       let [_, pubkey] = f;
+
+      await q(`${pubkey}:profile:f1`, {
+        limit: 1,
+        kinds: [0],
+        authors: [pubkey]
+      });
+
       let user = JSON.parse(await redis.get(`user:${pubkey}`));
       if (user) follows.push(user);
     }
@@ -679,7 +674,7 @@ app.get("/:pubkey/follows", async (req, res) => {
     res.send(follows);
   } catch (e) {
     console.log(e);
-    res.code(500).send(e.message);
+    res.code(500).send(e && e.message);
   }
 });
 
@@ -687,28 +682,28 @@ app.get("/:pubkey/followers", async (req, res) => {
   try {
     let { pubkey } = req.params;
 
-    store.fetching[pubkey] = true;
-    store.timeouts[pubkey] = setTimeout(
-      () => (store.fetching[pubkey] = false),
-      500
-    );
-
     let sub = `${pubkey}:followers`;
-    coinos.subscribe(sub, {
-      since: since[sub],
+    await q(sub, {
       kinds: [3],
       "#p": [pubkey]
     });
 
-    since[sub] = Math.round(Date.now() / 1000);
-
-    await wait(() => !store.fetching[pubkey], 100, 10);
-
     let pubkeys = await redis.sMembers(`${pubkey}:followers`);
 
     let followers = [];
+
     for (let pubkey of pubkeys) {
       let user = JSON.parse(await redis.get(`user:${pubkey}`));
+      if (!user || !user.updated) {
+        await q(`${pubkey}:profile:f2`, {
+          limit: 1,
+          kinds: [0],
+          authors: [pubkey]
+        });
+
+        user = JSON.parse(await redis.get(`user:${pubkey}`));
+      }
+
       if (user) followers.push(user);
     }
 
@@ -718,6 +713,6 @@ app.get("/:pubkey/followers", async (req, res) => {
     res.send(followers);
   } catch (e) {
     console.log(e);
-    res.code(500).send(e.message);
+    res.code(500).send(e && e.message);
   }
 });
