@@ -253,7 +253,9 @@ const attributes = {
 const options = {
   tableName: "users",
   comment: "",
-  indexes: []
+  indexes: [],
+  charset: "utf8mb4",
+  collate: "utf8mb4_unicode_ci"
 };
 
 db["User"] = db.define("users_model", attributes, options);
