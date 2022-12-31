@@ -682,13 +682,7 @@ app.get("/:pubkey/followers", async (req, res) => {
   try {
     let { pubkey } = req.params;
 
-    let sub = `${pubkey}:followers`;
-    await q(sub, {
-      kinds: [3],
-      "#p": [pubkey]
-    });
-
-    let pubkeys = await redis.sMembers(`${pubkey}:followers`);
+    let pubkeys = await got(`https://coinos.io/nostr/followers?pubkey=${pubkey}`);
 
     let followers = [];
 
@@ -704,7 +698,13 @@ app.get("/:pubkey/followers", async (req, res) => {
         user = JSON.parse(await redis.get(`user:${pubkey}`));
       }
 
-      if (user) followers.push(user);
+      if (!user) user = {
+        username: pubkey.substr(0, 6),
+        pubkey,
+        anon: true
+      };
+
+      followers.push(user);
     }
 
     followers = uniq(followers, e => e.pubkey);
