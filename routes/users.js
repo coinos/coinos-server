@@ -103,7 +103,18 @@ app.get("/users/:username", async (req, res) => {
 app.post("/register", async (req, res) => {
   try {
     const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-    const user = await register(req.body.user, ip, false);
+    let { cipher, pubkey, password, username, salt } = req.body.user;
+
+    let user = {
+      cipher,
+      pubkey,
+      password,
+      username,
+      salt
+    };
+
+    user = await register(user, ip, false);
+    info("registered new user", username);
     res.send(pick(user, ...whitelist));
   } catch (e) {
     res.code(500).send(e.message);
@@ -683,7 +694,9 @@ app.get("/:pubkey/followers", async (req, res) => {
   try {
     let { pubkey } = req.params;
 
-    let pubkeys = await got(`https://coinos.io/nostr/followers?pubkey=${pubkey}`).json();
+    let pubkeys = await got(
+      `https://coinos.io/nostr/followers?pubkey=${pubkey}`
+    ).json();
 
     let followers = [];
 
@@ -699,11 +712,12 @@ app.get("/:pubkey/followers", async (req, res) => {
         user = JSON.parse(await redis.get(`user:${pubkey}`));
       }
 
-      if (!user) user = {
-        username: pubkey.substr(0, 6),
-        pubkey,
-        anon: true
-      };
+      if (!user)
+        user = {
+          username: pubkey.substr(0, 6),
+          pubkey,
+          anon: true
+        };
 
       followers.push(user);
     }

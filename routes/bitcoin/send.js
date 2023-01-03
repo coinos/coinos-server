@@ -187,7 +187,6 @@ export default async (req, res) => {
     if (e.message === "low") e.message = "Insufficient funds in account"
 
     err("error sending bitcoin", e.message);
-    console.log(e);
     return res.code(500).send(e.message);
   }
 };
