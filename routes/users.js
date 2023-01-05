@@ -24,6 +24,9 @@ import register from "$lib/register";
 import { requirePin } from "$lib/utils";
 import { coinos, q } from "$lib/nostr";
 import got from "got";
+import { bech32 } from "bech32";
+
+const { encode, decode, fromWords, toWords } = bech32;
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
@@ -61,7 +64,11 @@ app.get("/me", auth, async (req, res) => {
 
 app.get("/users/:username", async (req, res) => {
   try {
-    const { username } = req.params;
+    let { username } = req.params;
+
+    if (username.startsWith("npub")) {
+      username = Buffer.from(fromWords(decode(username).words)).toString("hex")
+    }
 
     let user = await db.User.findOne({
       attributes: [
@@ -72,10 +79,15 @@ app.get("/users/:username", async (req, res) => {
         "currency",
         "pubkey"
       ],
-      where: Sequelize.where(
-        Sequelize.fn("lower", Sequelize.col("username")),
-        username.toLowerCase()
-      )
+      where: {
+        [Sequelize.Op.or]: [
+          Sequelize.where(
+            Sequelize.fn("lower", Sequelize.col("username")),
+            username.toLowerCase()
+          ),
+          { pubkey: username }
+        ]
+      }
     });
 
     if (user) user = user.get({ plain: true });
@@ -695,7 +707,7 @@ app.get("/:pubkey/followers", async (req, res) => {
     let { pubkey } = req.params;
 
     let pubkeys = await got(
-      `https://coinos.io/nostr/followers?pubkey=${pubkey}`
+      `${config.nostr}/followers?pubkey=${pubkey}`
     ).json();
 
     let followers = [];

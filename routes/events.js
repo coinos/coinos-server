@@ -1,7 +1,7 @@
 import app from "$app";
 import db from "$db";
 import redis from "$lib/redis";
-import { coinos, q } from "$lib/nostr";
+import { coinos, pool, q } from "$lib/nostr";
 import store from "$lib/store";
 import { wait } from "$lib/utils";
 
@@ -48,6 +48,7 @@ app.get("/nostr/:pubkey", async (req, res) => {
 
 app.post("/nostr/send", async (req, res) => {
   let { event } = req.body;
-  coinos.send(["EVENT", event]);
+  pool.send(["EVENT", event]);
+  console.log("SENDING", JSON.stringify(event))
   res.send(event);
 });

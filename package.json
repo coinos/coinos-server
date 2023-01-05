@@ -7,6 +7,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@fastify/http-proxy": "^8.4.0",
     "@fastify/multipart": "^7.1.2",
     "@fastify/passport": "^2.2.0",
     "@fastify/secure-session": "^5.2.0",
@@ -16,6 +17,7 @@
     "async-mutex": "^0.2.4",
     "axios": "^0.21.1",
     "bcrypt": "^5.0.0",
+    "bech32": "^2.0.0",
     "bip32": "^2.0.5",
     "bip39": "^3.0.2",
     "bitcoinjs-lib": "6",

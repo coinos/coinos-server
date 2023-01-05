@@ -220,6 +220,21 @@ services:
     networks:
       default:
         ipv4_address: 172.18.2.2
+  api:
+    container_name: api
+    image: nostr-api
+    build: /home/adam/nostr-api
+    command: "pnpm dev"
+    volumes:
+      - "/home/adam/nostr-api:/app"
+      - "./config/nostr/data:/data"
+    environment:
+      DB: "/data/nostr.db"
+    ports:
+      - '9393:9393'
+    networks:
+      default:
+        ipv4_address: 172.18.2.4
 networks: 
   default: 
     name: net
