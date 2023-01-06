@@ -67,7 +67,7 @@ app.get("/users/:username", async (req, res) => {
     let { username } = req.params;
 
     if (username.startsWith("npub")) {
-      username = Buffer.from(fromWords(decode(username).words)).toString("hex")
+      username = Buffer.from(fromWords(decode(username).words)).toString("hex");
     }
 
     let user = await db.User.findOne({
@@ -188,37 +188,24 @@ app.post("/user", auth, async (req, res) => {
 
     l("updating user", user.username);
 
-    let {
-      address,
-      cipher,
-      pubkey,
-      confirm,
-      currencies,
-      currency,
-      email,
-      fiat,
-      password,
-      newpin,
-      pin,
-      salt,
-      seed,
-      tokens,
-      twofa,
-      unit,
-      username
-    } = req.body;
+    let { confirm, password, pin, newpin, username } = req.body;
 
     if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
+    if (typeof newpin !== 'undefined') user.pin = newpin;
+    if (!user.pin) user.pin = null;
 
-    let exists = await db.User.findOne({
-      where: { username }
-    });
+    let exists;
+
+    if (username)
+      exists = await db.User.findOne({
+        where: { username }
+      });
 
     let token;
     if (user.username !== username && exists) {
       err("username taken", username, user.username, exists.username);
       throw new Error("Username taken");
-    } else {
+    } else if (username) {
       store.sockets[username] = store.sockets[user.username];
       if (user.username !== username)
         l("changing username", user.username, username);
@@ -230,20 +217,24 @@ app.post("/user", auth, async (req, res) => {
       });
     }
 
-    if (unit) user.unit = unit;
-    if (cipher) user.cipher = cipher;
-    if (pubkey) user.pubkey = pubkey;
-    if (salt) user.salt = salt;
+    let attributes = [
+      "unit",
+      "cipher",
+      "pubkey",
+      "salt",
+      "currency",
+      "currencies",
+      "tokens",
+      "twofa",
+      "seed",
+      "fiat",
+      "email",
+      "address"
+    ];
 
-    user.currency = currency;
-    user.currencies = currencies;
-    user.pin = newpin;
-    user.tokens = tokens;
-    user.twofa = twofa;
-    user.seed = seed;
-    user.fiat = fiat;
-    user.email = email;
-    user.address = address;
+    for (let a of attributes) {
+      if (req.body[a]) user[a] = req.body[a];
+    }
 
     if (password && password === confirm) {
       user.password = await bcrypt.hash(password, 1);
@@ -257,6 +248,7 @@ app.post("/user", auth, async (req, res) => {
     emit(user.username, "user", user);
     res.send({ user, token });
   } catch (e) {
+    console.log(e);
     err("error updating user", e.message);
     res.code(500).send(e.message);
   }
@@ -617,8 +609,8 @@ app.post("/signMessage", auth, async function(req, res) {
 app.post("/otpsecret", auth, async function(req, res) {
   try {
     await requirePin(req);
-    let { otpsecret } = req.user;
-    res.send({ secret: otpsecret });
+    let { otpsecret, username } = req.user;
+    res.send({ secret: otpsecret, username });
   } catch (e) {
     res.code(500).send(e.message);
   }
