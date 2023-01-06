@@ -223,10 +223,11 @@ services:
   api:
     container_name: api
     image: nostr-api
+    restart: always
     build: ../nostr-api
     command: "pnpm dev"
     volumes:
-      - "/home/adam/nostr-api:/app"
+      - "../nostr-api:/app"
       - "./config/nostr/data:/data"
     environment:
       DB: "/data/nostr.db"
