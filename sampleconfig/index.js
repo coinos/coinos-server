@@ -16,6 +16,8 @@ const btcasset =
   "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225";
 
 export default {
+  nostr: "http://api:9393",
+  relay: "ws://nostr:8080",
   ipxapi: "4275|PqKjKaxIlzooToria2m4XFLzvHihSpsZMX4hvgxu",
   webhooks: {
     "http://172.18.0.1:5173/wallet/purchase": "horsey"
