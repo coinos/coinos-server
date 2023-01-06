@@ -49,6 +49,5 @@ app.get("/nostr/:pubkey", async (req, res) => {
 app.post("/nostr/send", async (req, res) => {
   let { event } = req.body;
   pool.send(["EVENT", event]);
-  console.log("SENDING", JSON.stringify(event))
   res.send(event);
 });

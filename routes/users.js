@@ -185,6 +185,8 @@ app.get("/exists", async (req, res) => {
 app.post("/user", auth, async (req, res) => {
   try {
     let { user } = req;
+    info("updating user", user.username);
+
     let {
       address,
       cipher,
