@@ -247,6 +247,9 @@ const attributes = {
   },
   phone: {
     type: DataTypes.STRING(255)
+  },
+  locktime: {
+    type: DataTypes.INTEGER(11)
   }
 };
 

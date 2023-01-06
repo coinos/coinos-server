@@ -4,13 +4,10 @@ import config from "$config";
 import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
 import { getUser, uniq, wait } from "$lib/utils";
-import axios from "axios";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
 import Sequelize from "@sequelize/core";
-import bitcoin from "bitcoinjs-lib";
-import liquid from "liquidjs-lib";
 import { fromBase58, fromPrivateKey } from "bip32";
 import { Mutex } from "async-mutex";
 import bip32 from "bip32";
@@ -191,7 +188,7 @@ app.post("/user", auth, async (req, res) => {
     let { confirm, password, pin, newpin, username } = req.body;
 
     if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
-    if (typeof newpin !== 'undefined') user.pin = newpin;
+    if (typeof newpin !== "undefined") user.pin = newpin;
     if (!user.pin) user.pin = null;
 
     let exists;
@@ -210,26 +207,22 @@ app.post("/user", auth, async (req, res) => {
       if (user.username !== username)
         l("changing username", user.username, username);
       user.username = username;
-
-      token = jwt.sign({ username }, config.jwt);
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 432000000)
-      });
     }
 
     let attributes = [
-      "unit",
+      "address",
       "cipher",
+      "currencies",
+      "currency",
+      "email",
+      "fiat",
+      "locktime",
       "pubkey",
       "salt",
-      "currency",
-      "currencies",
+      "seed",
       "tokens",
       "twofa",
-      "seed",
-      "fiat",
-      "email",
-      "address"
+      "unit"
     ];
 
     for (let a of attributes) {
@@ -356,8 +349,8 @@ let login = async (req, res) => {
 
       try {
         const url = `${callback}&sig=${sig}&key=${key}`;
-        const response = await axios.get(url);
-        res.send(response.data);
+        const response = await got(url).json();
+        res.send(response);
       } catch (e) {
         err("problem calling lnurl login", e.message);
         res.code(500).send(e.message);
@@ -393,7 +386,7 @@ let login = async (req, res) => {
       req.headers["x-forwarded-for"] || req.connection.remoteAddress
     );
 
-    let payload = { username: user.username };
+    let payload = { uuid: user.uuid };
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
     user.accounts = await user.getAccounts();
