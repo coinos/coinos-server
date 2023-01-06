@@ -1,5 +1,5 @@
 import db from "$db/db";
-import { DataTypes } from '@sequelize/core';
+import { DataTypes } from "@sequelize/core";
 
 const attributes = {
   id: {
@@ -140,7 +140,7 @@ const attributes = {
   unit: {
     type: DataTypes.STRING(255),
     allowNull: true,
-    defaultValue: 'SAT',
+    defaultValue: "SAT",
     primaryKey: false,
     autoIncrement: false,
     comment: null,
@@ -225,13 +225,13 @@ const attributes = {
     field: "twofa"
   },
   cipher: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(255)
   },
   pubkey: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(255)
   },
   salt: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.STRING(255)
   },
   pin: {
     type: DataTypes.STRING(255),

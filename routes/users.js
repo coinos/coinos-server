@@ -363,8 +363,7 @@ let login = async (req, res) => {
 
     if (
       !user ||
-      (user.password &&
-        !(await bcrypt.compare(password, user.password)))
+      (user.password && !(await bcrypt.compare(password, user.password)))
     ) {
       warn("invalid username or password attempt", username);
       return res.code(401).send({});
