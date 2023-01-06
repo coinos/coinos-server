@@ -342,7 +342,7 @@ app.post("/accounts", auth, async (req, res) => {
 
 let login = async (req, res) => {
   try {
-    const { params, sig, key } = req.body;
+    const { params, sig, key, password, username, token: twofa } = req.body;
 
     if (sig) {
       const { callback } = params;
@@ -359,16 +359,14 @@ let login = async (req, res) => {
       return;
     }
 
-    let twofa = req.body.token;
-
-    let user = await getUser(req.body.username);
+    let user = await getUser(username);
 
     if (
       !user ||
       (user.password &&
-        !(await bcrypt.compare(req.body.password, user.password)))
+        !(await bcrypt.compare(password, user.password)))
     ) {
-      warn("invalid username or password attempt", req.body.username);
+      warn("invalid username or password attempt", username);
       return res.code(401).send({});
     }
 
@@ -382,11 +380,11 @@ let login = async (req, res) => {
 
     l(
       "login",
-      req.body.username,
+      username,
       req.headers["x-forwarded-for"] || req.connection.remoteAddress
     );
 
-    let payload = { uuid: user.uuid };
+    let payload = { username, uuid: user.uuid };
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
     user.accounts = await user.getAccounts();
