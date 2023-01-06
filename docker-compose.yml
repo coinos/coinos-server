@@ -223,7 +223,7 @@ services:
   api:
     container_name: api
     image: nostr-api
-    build: /home/adam/nostr-api
+    build: ../nostr-api
     command: "pnpm dev"
     volumes:
       - "/home/adam/nostr-api:/app"
