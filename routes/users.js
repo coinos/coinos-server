@@ -126,7 +126,7 @@ app.post("/register", async (req, res) => {
     };
 
     user = await register(user, ip, false);
-    info("registered new user", username);
+    l("registered new user", username);
     res.send(pick(user, ...whitelist));
   } catch (e) {
     res.code(500).send(e.message);
@@ -185,7 +185,8 @@ app.get("/exists", async (req, res) => {
 app.post("/user", auth, async (req, res) => {
   try {
     let { user } = req;
-    info("updating user", user.username);
+
+    l("updating user", user.username);
 
     let {
       address,
