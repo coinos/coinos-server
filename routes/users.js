@@ -76,7 +76,8 @@ app.get("/users/:username", async (req, res) => {
         "currency",
         "pubkey",
         "display",
-        "prompt"
+        "prompt",
+        "uuid"
       ],
       where: {
         [Sequelize.Op.or]: [
