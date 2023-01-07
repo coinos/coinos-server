@@ -619,7 +619,7 @@ app.get("/contacts", auth, async function(req, res) {
         with_id: { [Sequelize.Op.ne]: null }
       },
       include: {
-        attributes: ["username", "profile"],
+        attributes: ["username", "profile", "uuid"],
         model: db.User,
         as: "with"
       },
@@ -666,9 +666,7 @@ app.get("/:pubkey/follows", async (req, res) => {
         kinds: [3],
         authors: [pubkey]
       },
-      60000,
-      3600,
-      60000
+      { timeout: 60000, eager: 60000 }
     ).catch(nada);
 
     let tags = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
@@ -722,9 +720,7 @@ app.get("/:pubkey/followers", async (req, res) => {
     q(
       `${pubkey}:followers`,
       { kinds: [3], "#p": [pubkey] },
-      60000,
-      3600,
-      60000
+      { timeout: 60000, eager: 60000 }
     ).catch(nada);
 
     for (let pubkey of pubkeys) {

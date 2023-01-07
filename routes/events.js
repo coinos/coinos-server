@@ -5,6 +5,25 @@ import { coinos, pool, q } from "$lib/nostr";
 import store from "$lib/store";
 import { nada, wait } from "$lib/utils";
 
+app.get("/event/:id", async (req, res) => {
+  try {
+    let event = JSON.parse(await redis.get(`ev:${req.params.id}`));
+    let { pubkey } = event;
+
+    event.user = JSON.parse(await redis.get(`user:${pubkey}`)) || {
+      username: pubkey.substr(0, 6),
+      pubkey,
+      anon: true,
+      follows: [],
+      followers: []
+    };
+
+    res.send(event);
+  } catch (e) {
+    res.code(500).send("Problem fetching event");
+  }
+});
+
 app.get("/nostr/:pubkey", async (req, res) => {
   try {
     let { pubkey } = req.params;
@@ -26,10 +45,14 @@ app.get("/nostr/:pubkey", async (req, res) => {
         followers: []
       };
 
-    q(`${pubkey}:notes`, {
-      kinds: [1],
-      authors: [pubkey]
-    }).catch(nada);
+    q(
+      `${pubkey}:notes`,
+      {
+        kinds: [1],
+        authors: [pubkey]
+      },
+      { since: 0 }
+    ).catch(nada);
 
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
 
@@ -39,7 +62,7 @@ app.get("/nostr/:pubkey", async (req, res) => {
       ? (await redis.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
       : [];
 
-    res.send(events);
+    res.send(events.map(e => ({ ...e, user })));
   } catch (e) {
     console.log(e);
     res.code(500).send("problem fetching user events");
