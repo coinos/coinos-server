@@ -3,7 +3,7 @@ import db from "$db";
 import redis from "$lib/redis";
 import { coinos, pool, q } from "$lib/nostr";
 import store from "$lib/store";
-import { wait } from "$lib/utils";
+import { nada, wait } from "$lib/utils";
 
 app.get("/nostr/:pubkey", async (req, res) => {
   try {
@@ -29,12 +29,11 @@ app.get("/nostr/:pubkey", async (req, res) => {
     q(`${pubkey}:notes`, {
       kinds: [1],
       authors: [pubkey]
-    }).catch(console.log);
+    }).catch(nada);
 
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
 
     let ids = await redis.sMembers(pubkey);
-    console.log("IDS", ids);
 
     let events = ids.length
       ? (await redis.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
