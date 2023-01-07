@@ -250,6 +250,12 @@ const attributes = {
   },
   locktime: {
     type: DataTypes.INTEGER(11)
+  },
+  prompt: {
+    type: DataTypes.BOOLEAN
+  },
+  display: {
+    type: DataTypes.STRING(255)
   }
 };
 

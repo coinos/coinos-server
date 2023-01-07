@@ -26,14 +26,15 @@ app.get("/nostr/:pubkey", async (req, res) => {
         followers: []
       };
 
-    await q(pubkey, {
+    q(`${pubkey}:notes`, {
       kinds: [1],
       authors: [pubkey]
-    });
+    }).catch(console.log);
 
     await redis.set(`user:${pubkey}`, JSON.stringify(user));
 
     let ids = await redis.sMembers(pubkey);
+    console.log("IDS", ids);
 
     let events = ids.length
       ? (await redis.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)

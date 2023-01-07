@@ -3,7 +3,7 @@ import redis from "$lib/redis";
 import config from "$config";
 import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
-import { getUser, uniq, wait } from "$lib/utils";
+import { getUser, nada, uniq, wait } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
@@ -74,7 +74,9 @@ app.get("/users/:username", async (req, res) => {
         "profile",
         "address",
         "currency",
-        "pubkey"
+        "pubkey",
+        "display",
+        "prompt"
       ],
       where: {
         [Sequelize.Op.or]: [
@@ -214,9 +216,11 @@ app.post("/user", auth, async (req, res) => {
       "cipher",
       "currencies",
       "currency",
+      "display",
       "email",
       "fiat",
       "locktime",
+      "prompt",
       "pubkey",
       "salt",
       "seed",
@@ -654,11 +658,17 @@ app.get("/:pubkey/follows", async (req, res) => {
     let { tagsonly } = req.query;
 
     let sub = `${pubkey}:follows`;
-    await q(sub, {
-      limit: 1,
-      kinds: [3],
-      authors: [pubkey]
-    });
+    q(
+      sub,
+      {
+        limit: 1,
+        kinds: [3],
+        authors: [pubkey]
+      },
+      60000,
+      3600,
+      60000
+    ).catch(nada);
 
     let tags = JSON.parse(await redis.get(`${pubkey}:follows`)) || [];
     if (tagsonly) return res.send(tags);
@@ -667,14 +677,22 @@ app.get("/:pubkey/follows", async (req, res) => {
     for (let f of tags) {
       let [_, pubkey] = f;
 
-      await q(`${pubkey}:profile:f1`, {
+      q(`${pubkey}:profile:f1`, {
         limit: 1,
         kinds: [0],
         authors: [pubkey]
-      });
+      }).catch(nada);
 
       let user = JSON.parse(await redis.get(`user:${pubkey}`));
-      if (user) follows.push(user);
+
+      if (!user)
+        user = {
+          username: pubkey.substr(0, 6),
+          pubkey,
+          anon: true
+        };
+
+      follows.push(user);
     }
 
     follows = uniq(follows, e => e.pubkey);
@@ -691,20 +709,31 @@ app.get("/:pubkey/followers", async (req, res) => {
   try {
     let { pubkey } = req.params;
 
-    let pubkeys = await got(
-      `${config.nostr}/followers?pubkey=${pubkey}`
-    ).json();
+    let pubkeys = [
+      ...new Set([
+        ...(await got(`${config.nostr}/followers?pubkey=${pubkey}`).json()),
+        ...(await redis.sMembers(`${pubkey}:followers`))
+      ])
+    ];
 
     let followers = [];
+
+    q(
+      `${pubkey}:followers`,
+      { kinds: [3], "#p": [pubkey] },
+      60000,
+      3600,
+      60000
+    ).catch(nada);
 
     for (let pubkey of pubkeys) {
       let user = JSON.parse(await redis.get(`user:${pubkey}`));
       if (!user || !user.updated) {
-        await q(`${pubkey}:profile:f2`, {
+        q(`${pubkey}:profile:f2`, {
           limit: 1,
           kinds: [0],
           authors: [pubkey]
-        });
+        }).catch(nada);
 
         user = JSON.parse(await redis.get(`user:${pubkey}`));
       }
