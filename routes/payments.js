@@ -267,7 +267,6 @@ app.post("/checkRedeemCode", auth, async function(req, res) {
 });
 
 app.get("/payments/:hash", auth, async function(req, res) {
-  console.log(req.params.hash)
   try {
     let payment = await db.Payment.findOne({
       where: { user_id: req.user.id, hash: req.params.hash }
