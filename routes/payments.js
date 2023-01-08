@@ -128,7 +128,7 @@ app.get("/payments", auth, async (req, res) => {
       as: "account"
     },
     include: {
-      attributes: ["username", "profile"],
+      attributes: ["username", "profile", "uuid"],
       model: db.User,
       as: "with"
     },
