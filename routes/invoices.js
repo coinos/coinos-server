@@ -20,7 +20,7 @@ app.get("/invoice", async (req, res, next) => {
         {
           model: db.User,
           as: "user",
-          attributes: ["username", "currency", "profile"]
+          attributes: ["username", "currency", "profile", "uuid"]
         },
         {
           model: db.Request,
@@ -53,7 +53,7 @@ app.get("/invoice/:text", async (req, res, next) => {
       include: {
         model: db.User,
         as: "user",
-        attributes: ["username", "currency", "profile"]
+        attributes: ["username", "currency", "profile", "uuid"]
       }
     });
 

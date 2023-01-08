@@ -143,7 +143,7 @@ app.get("/payments", auth, async (req, res) => {
   }
 });
 
-app.get("/payment/:redeemcode", async (req, res) => {
+app.get("/voucher/:redeemcode", async (req, res) => {
   try {
     const { redeemcode } = req.params;
     let payment = await db.Payment.findOne({
@@ -264,4 +264,17 @@ app.post("/checkRedeemCode", auth, async function(req, res) {
 
   const payment = await db.Payment.findOne({ where: { redeemcode } });
   res.send(payment);
+});
+
+app.get("/payments/:hash", auth, async function(req, res) {
+  console.log(req.params.hash)
+  try {
+    let payment = await db.Payment.findOne({
+      where: { user_id: req.user.id, hash: req.params.hash }
+    });
+
+    return payment.get({ plain: true });
+  } catch (e) {
+    console.log(e);
+  }
 });
