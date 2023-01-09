@@ -1,6 +1,5 @@
 import app from "$app";
 import config from "$config";
-import db from "$db";
 import store from "$lib/store";
 import { optionalAuth, auth } from "$lib/passport";
 import { l, err, warn } from "$lib/logging";
@@ -9,11 +8,9 @@ import ln from "$lib/ln";
 import persist from "$lib/persist";
 import { emit } from "$lib/sockets";
 
-import axios from "axios";
 import lnurl from "lnurl";
 import jwt from "jsonwebtoken";
 import qs from "query-string";
-import bolt11 from "bolt11";
 
 import {
   computeConversionFee,

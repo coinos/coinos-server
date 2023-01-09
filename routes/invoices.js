@@ -1,13 +1,8 @@
 import app from "$app";
-import db from "$db";
 import store from "$lib/store";
 import { optionalAuth } from "$lib/passport";
-import { Op } from "@sequelize/core";
-import axios from "axios";
 import { err, l } from "$lib/logging";
-import bc from "$lib/bitcoin";
-import lq from "$lib/liquid";
-import { SATS, bip21, deriveAddress, derivePayRequest } from "$lib/utils";
+import { SATS, derivePayRequest } from "$lib/utils";
 import { emit } from "$lib/sockets";
 
 app.get("/invoice", async (req, res, next) => {

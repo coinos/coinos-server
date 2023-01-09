@@ -1,4 +1,3 @@
-import db from "$db";
 import { emit } from "$lib/sockets";
 
 export default async (req, res) => {

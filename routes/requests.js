@@ -1,8 +1,6 @@
 import app from "$app";
-import db from "$db";
 import { auth } from "$lib/passport";
 import { emit } from "$lib/sockets";
-import { Op, col } from "@sequelize/core";
 
 app.get("/request/:id", auth, async (req, res) => {
   try {

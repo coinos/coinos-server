@@ -1,212 +1,41 @@
 version: '3.6'
 services:
-  ui:
-    depends_on:
-      - app
-    container_name: ui
-    image: asoltys/coinos-ui:dev
-    ports:
-      - '8085:8085'
-    environment:
-      NODE_ENV: development
-    volumes:
-      - ../coinos-ui:/app
-    networks:
-      default:
-        ipv4_address: 172.18.0.27
   app:
-    restart: always
-    depends_on:
-      - maria
-      - bitcoin
-      - liquid
-      - lnd
-    container_name: app
     image: cs
+    container_name: app
+    depends_on:
+      - rd
+      - bc
+      - cl
     build: .
     command: "pnpm dev"
-    ports:
-      - '3119:3119'
     environment:
-      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
+      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
     volumes:
       - ./:/app
       - ./logs:/logs
-    extra_hosts:
-      - host.docker.internal:host-gateway
-    networks:
-      default:
-        ipv4_address: 172.18.0.22
-  bitcoin:
+    restart: always
+  bc:
     image: asoltys/bitcoin
-    container_name: bitcoin
-    ports:
-      - '18443:18443'
+    container_name: bc
     volumes:
       - ./config/bitcoin:/home/bitcoin/.bitcoin
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.23
-  liquid:
-    image: ghcr.io/vulpemventures/elements
-    container_name: liquid
-    volumes:
-      - ./config/liquid:/home/elements/.elements
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.24
-  lnd:
-    image: lightninglabs/lnd:v0.15.1-beta
-    container_name: lnd
-    volumes:
-      - ./config/lnd:/root/.lnd
-      - ./config/bitcoin:/root/.bitcoin
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.25
-  clightning:
+    restart: always
+  cl:
     image: elementsproject/lightningd:latest
     container_name: cl
     environment:
       LIGHTNINGD_NETWORK: regtest
     volumes:
       - ./config/lightning:/root/.lightning
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.31
-  lb:
-    image: elementsproject/lightningd:latest
-    container_name: lb
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./config/lb:/root/.lightning
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.36
-  lc:
-    image: elementsproject/lightningd:latest
-    container_name: lc
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./config/lc:/root/.lightning
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.37
-  maria:
     restart: always
-    container_name: maria
-    image: mariadb:10.6.1
-    restart: always
-    environment:
-      MARIADB_ROOT_PASSWORD: ${ROOT_PASSWORD}
-    volumes:
-      - ./mysql:/var/lib/mysql
-    ports:
-      - 3307:3306
-    networks:
-      default:
-        ipv4_address: 172.18.0.26
-  electrsb:
-    depends_on:
-      - bitcoin
-    image: ghcr.io/vulpemventures/electrs
-    container_name: electrsb
-    entrypoint:
-      - /build/electrs
-    command:
-      - -vvvv
-      - --network
-      - regtest
-      - --daemon-dir
-      - /config
-      - --daemon-rpc-addr
-      - bitcoin:18443
-      - --cookie
-      - admin1:123
-      - --http-addr
-      - 0.0.0.0:3095
-      - --electrum-rpc-addr
-      - 0.0.0.0:60400
-      - --cors
-      - "*"
-    volumes:
-      - ./config/bitcoin/:/config
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.28
-  electrs-liquid:
-    image: ghcr.io/vulpemventures/electrs-liquid
-    container_name: electrs
-    depends_on:
-      - liquid
-    entrypoint:
-      - /build/electrs
-    command:
-      - --jsonrpc-import
-      - -vvvv
-      - --parent-network
-      - regtest
-      - --network
-      - liquidregtest
-      - --daemon-dir
-      - /config
-      - --daemon-rpc-addr
-      - liquid:7040
-      - --cookie
-      - admin1:123
-      - --http-addr
-      - 0.0.0.0:3002
-      - --electrum-rpc-addr
-      - 0.0.0.0:60401
-      - --cors
-      - "*"
-    volumes:
-      - ./config/liquid/:/config
-    restart: unless-stopped
-    ports:
-      - '3012:3002'
-    networks:
-      default:
-        ipv4_address: 172.18.0.29
-  esplora:
-    image: vulpemventures/esplora:latest
-    container_name: esplora
-    depends_on:
-      - electrs-liquid
-    environment:
-      API_URL: ${LIQUID_ELECTRS_URL}
-      NATIVE_ASSET_ID: 5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225
-      IS_ELEMENTS: 1
-    ports:
-      - ${LIQUID_ESPLORA_PORT}:5000
-    restart: unless-stopped
-    networks:
-      default:
-        ipv4_address: 172.18.0.30
-  redis:
-    container_name: redis
+  rd:
     image: redis
+    container_name: rd
     volumes:
       - ./config/redis:/data
-  eb:
-    container_name: eb
-    image: asoltys/electrs-batch
-    environment:
-      PORT: 7111
-      ELECTRS_URL: http://electrs:3002
-      CONCURRENCY: 10
-    ports:
-      - '7111:7111'
+    restart: always
   nostr:
     container_name: nostr
     image: asoltys/nostr-rs-relay
@@ -216,27 +45,4 @@ services:
       - "./config/nostr/data:/usr/src/app/db" 
       - "./config/nostr/config.toml:/usr/src/app/config.toml" 
     ports:
-      - '7001:8080'
-    networks:
-      default:
-        ipv4_address: 172.18.2.2
-  api:
-    container_name: api
-    image: nostr-api
-    restart: always
-    build: ../nostr-api
-    command: "pnpm dev"
-    volumes:
-      - "../nostr-api:/app"
-      - "./config/nostr/data:/data"
-    environment:
-      DB: "/data/nostr.db"
-    ports:
-      - '9393:9393'
-    networks:
-      default:
-        ipv4_address: 172.18.2.4
-networks: 
-  default: 
-    name: net
-    external: true
+      - '8080:8080'

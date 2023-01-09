@@ -1,11 +1,9 @@
-import db from "$db";
 import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import config from "$config";
 import { notify } from "$lib/notifications";
 import { callWebhook } from "$lib/webhooks";
 import { computeConversionFee } from "./conversionFee";
-import { sendLiquid } from "$routes/liquid/send";
 import ln from "$lib/ln";
 import { l, err, warn } from "$lib/logging";
 
@@ -101,29 +99,6 @@ const handlePayment = async msg => {
         payment.tip
       );
     });
-
-    let c = store.convert[msg.request];
-    if (msg.request && c) {
-      l(
-        "lightning detected for conversion request",
-        msg.request,
-        c.address,
-        user.username
-      );
-
-      user.account = account;
-
-      try {
-        sendLiquid({
-          address: c.address,
-          amount: total - 100,
-          user,
-          limit: total
-        });
-      } catch (e) {
-        err("problem sending liquid payment", e.message, e.stack);
-      }
-    }
   } catch (e) {
     console.log(e);
     err("problem receiving lightning payment", e.message);
