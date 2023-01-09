@@ -20,7 +20,7 @@ services:
     image: asoltys/bitcoin
     container_name: bc
     volumes:
-      - ./config/bitcoin:/home/bitcoin/.bitcoin
+      - ./data/bitcoin:/home/bitcoin/.bitcoin
     restart: always
   cl:
     image: elementsproject/lightningd:latest
@@ -28,13 +28,13 @@ services:
     environment:
       LIGHTNINGD_NETWORK: regtest
     volumes:
-      - ./config/lightning:/root/.lightning
+      - ./data/lightning:/root/.lightning
     restart: always
   rd:
     image: redis
     container_name: rd
     volumes:
-      - ./config/redis:/data
+      - ./data/redis:/data
     restart: always
   nostr:
     container_name: nostr
@@ -42,7 +42,7 @@ services:
     restart: always
     user: 100:100
     volumes:
-      - "./config/nostr/data:/usr/src/app/db" 
-      - "./config/nostr/config.toml:/usr/src/app/config.toml" 
+      - "./data/nostr/data:/usr/src/app/db" 
+      - "./data/nostr/data.toml:/usr/src/app/config.toml" 
     ports:
       - '8080:8080'

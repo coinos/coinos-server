@@ -15,7 +15,6 @@ import "./routes/invoices";
 import "./routes/payments";
 import "./routes/users";
 import "./routes/requests";
-import "./routes/lnurl";
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
