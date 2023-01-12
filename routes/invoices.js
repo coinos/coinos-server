@@ -78,7 +78,6 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       request_id
     } = invoice;
     let address, unconfidential, text;
-    console.log("INSIDE INVOICE:", "liq:", liquidAddress, "id", id, "user:", user, tx)
     if (amount < 0) throw new Error("amount out of range");
     if (tip > 5 * amount || tip < 0) throw new Error("tip amount out of range");
 
@@ -165,7 +164,6 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       store.addresses[invoice.unconfidential] = user.username;
       if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
     }
-    console.log("INVOICE", invoice)
     if (request_id) {
       let request = await db.Request.findOne({
         where: { id: request_id },
