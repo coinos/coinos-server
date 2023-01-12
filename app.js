@@ -1,4 +1,5 @@
-import fastify from "fastify";
-import pino from "pino";
+import { Elysia } from 'elysia'
 
-export default fastify({ logger: pino(), disableRequestLogging: true, maxParamLength: 500 });
+const app = new Elysia()
+
+export default app;

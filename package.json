@@ -7,15 +7,10 @@
     "dev": "bun --hot index.js"
   },
   "dependencies": {
-    "@fastify/multipart": "^7.1.2",
-    "@fastify/passport": "^2.2.0",
-    "@fastify/secure-session": "^5.2.0",
-    "@fastify/static": "^6.5.0",
-    "@fastify/websocket": "^7.0.1",
     "bcrypt": "^5.0.0",
     "clightning-client": "^0.1.2",
     "date-fns": "^2.21.3",
-    "fastify": "^4.5.3",
+    "elysia": "^0.1.2",
     "file-type": "^18.0.0",
     "got": "^12.5.3",
     "jsonwebtoken": "^8.5.1",
