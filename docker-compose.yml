@@ -12,6 +12,8 @@ services:
     environment:
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
+    ports:
+      - '3119:3119'
     volumes:
       - ./:/app
       - ./logs:/logs
