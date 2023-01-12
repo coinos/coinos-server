@@ -1,6 +1,6 @@
-import config from "$config";
-import { err } from "$lib/logging";
-import ln from "$lib/ln";
+import config from "config";
+import { err } from "lib/logging";
+import ln from "lib/ln";
 import { v4 } from "uuid";
 
 export default async (req, res) => {

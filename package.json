@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "bun index.js",
-    "dev": "nodemon index.js"
+    "dev": "bun --hot index.js"
   },
   "dependencies": {
     "@fastify/multipart": "^7.1.2",

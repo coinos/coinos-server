@@ -1,6 +1,6 @@
-import { err } from "$lib/logging";
-import sendInternal from "$lib/sendInternal";
-import { requirePin } from "$lib/utils";
+import { err } from "lib/logging";
+import sendInternal from "lib/sendInternal";
+import { requirePin } from "lib/utils";
 
 export default async (req, res, next) => {
   try {

@@ -1,14 +1,14 @@
-import app from "$app";
-import config from "$config";
-import store from "$lib/store";
+import app from "app";
+import config from "config";
+import store from "lib/store";
 
-import { auth, adminAuth, optionalAuth } from "$lib/passport";
+import { auth, adminAuth, optionalAuth } from "lib/passport";
 import fs from "fs";
 import { join } from "path";
 import send from "./send";
-import { err, l, warn } from "$lib/logging";
-import { fail } from "$lib/utils";
-import { emit } from "$lib/sockets";
+import { err, l, warn } from "lib/logging";
+import { fail } from "lib/utils";
+import { emit } from "lib/sockets";
 
 import lnRoutes from "./lightning/index";
 import "./lightning/receive";

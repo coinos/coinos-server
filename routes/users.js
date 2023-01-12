@@ -1,17 +1,17 @@
-import app from "$app";
-import { g, s } from "$lib/redis";
-import config from "$config";
-import store from "$lib/store";
-import { auth, optionalAuth } from "$lib/passport";
-import { getUser, nada, uniq, wait } from "$lib/utils";
+import app from "app";
+import { g, s } from "lib/redis";
+import config from "config";
+import store from "lib/store";
+import { auth, optionalAuth } from "lib/passport";
+import { getUser, nada, uniq, wait } from "lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
-import whitelist from "$lib/whitelist";
-import { l, err, warn } from "$lib/logging";
-import { emit } from "$lib/sockets";
-import register from "$lib/register";
-import { requirePin } from "$lib/utils";
+import whitelist from "lib/whitelist";
+import { l, err, warn } from "lib/logging";
+import { emit } from "lib/sockets";
+import register from "lib/register";
+import { requirePin } from "lib/utils";
 import got from "got";
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});

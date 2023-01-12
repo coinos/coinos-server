@@ -1,5 +1,5 @@
-import app from "$app";
-import redis from "$lib/redis";
+import app from "app";
+import redis from "lib/redis";
 import got from "got";
 
 let locations = [];

@@ -3,12 +3,9 @@ FROM jarredsumner/bun:edge
 ARG NODE_ENV=production
 ENV NODE_ENV $NODE_ENV
 
-RUN apk add --update inotify-tools npm vips-dev
-RUN npm i -g pnpm
+RUN apk add --update inotify-tools vips-dev
 
 COPY . /app
 WORKDIR /app
 
-RUN NODE_ENV=development NODE_OPTIONS="" pnpm i
-
-CMD ["pnpm", "start"]
+CMD ["bun", "start"]

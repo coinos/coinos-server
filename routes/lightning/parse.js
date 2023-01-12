@@ -1,5 +1,5 @@
-import ln from "$lib/ln";
-import store from "$lib/store";
+import ln from "lib/ln";
+import store from "lib/store";
 
 export default async (req, res) => {
   let { payreq } = req.body;

@@ -1,6 +1,6 @@
-import { err } from "$lib/logging";
-import send from "$lib/send";
-import { requirePin } from "$lib/utils";
+import { err } from "lib/logging";
+import send from "lib/send";
+import { requirePin } from "lib/utils";
 
 export default async (req, res) => {
   let { amount, route, memo, payreq } = req.body;

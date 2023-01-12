@@ -1,11 +1,11 @@
-import store from "$lib/store";
-import { emit } from "$lib/sockets";
-import config from "$config";
-import { notify } from "$lib/notifications";
-import { callWebhook } from "$lib/webhooks";
+import store from "lib/store";
+import { emit } from "lib/sockets";
+import config from "config";
+import { notify } from "lib/notifications";
+import { callWebhook } from "lib/webhooks";
 import { computeConversionFee } from "./conversionFee";
-import ln from "$lib/ln";
-import { l, err, warn } from "$lib/logging";
+import ln from "lib/ln";
+import { l, err, warn } from "lib/logging";
 
 const handlePayment = async msg => {
   try {

@@ -1,11 +1,11 @@
-import app from "$app";
-import store from "$lib/store";
-import { optionalAuth } from "$lib/passport";
-import { err, l } from "$lib/logging";
-import { SATS, derivePayRequest } from "$lib/utils";
-import { emit } from "$lib/sockets";
+import app from "app";
+import store from "lib/store";
+import { optionalAuth } from "lib/passport";
+import { err, l } from "lib/logging";
+import { SATS, derivePayRequest } from "lib/utils";
+import { emit } from "lib/sockets";
 import { v4 } from "uuid";
-import { rd, g, s } from "$lib/redis";
+import { rd, g, s } from "lib/redis";
 
 app.get("/invoice", async ({ query: { id } }, res) => {
   let invoice = await g(`invoice:${id}`);

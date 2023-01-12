@@ -1,0 +1,6 @@
+{
+  "watch": ["lib", "routes", "index.js"],
+  "ext": ".js",
+  "ignore": [],
+  "exec": "bun index.js"
+}

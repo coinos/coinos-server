@@ -8,9 +8,8 @@ services:
       - bc
       - cl
     build: .
-    command: "pnpm dev"
+    command: "bun run dev"
     environment:
-      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
     ports:
       - '3119:3119'
@@ -33,7 +32,7 @@ services:
       - ./data/lightning:/root/.lightning
     restart: always
   rd:
-    image: redis
+    image: eqalpha/keydb
     container_name: rd
     volumes:
       - ./data/redis:/data

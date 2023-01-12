@@ -1,7 +1,7 @@
-import app from "$app";
-import { auth } from "$lib/passport";
-import { emit } from "$lib/sockets";
-import { g, rd } from "$lib/redis";
+import app from "app";
+import { auth } from "lib/passport";
+import { emit } from "lib/sockets";
+import { g, rd } from "lib/redis";
 
 app.get("/request/:id", auth, async ({ params: { id } }, res) => {
   try {

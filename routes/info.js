@@ -1,14 +1,14 @@
-import app from "$app";
+import app from "app";
 import db from "$db";
-import config from "$config";
-import store from "$lib/store";
+import config from "config";
+import store from "lib/store";
 
-import bc from "$lib/bitcoin";
-import lq from "$lib/liquid";
-import ln from "$lib/ln";
+import bc from "lib/bitcoin";
+import lq from "lib/liquid";
+import ln from "lib/ln";
 
 import sequelize from "@sequelize/core";
-import { SATS } from "$lib/utils";
+import { SATS } from "lib/utils";
 
 const { Op } = sequelize;
 
