@@ -1,5 +1,5 @@
 import app from "$app";
-import redis from "$lib/redis";
+import { g, s } from "$lib/redis";
 import config from "$config";
 import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
@@ -13,30 +13,25 @@ import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/utils";
 import got from "got";
-import { bech32 } from "bech32";
-
-const { encode, decode, fromWords, toWords } = bech32;
 
 const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
 
 app.get("/me", auth, async (req, res) => {
   try {
-    let user = req.user.get({ plain: true });
-    user.haspin = !!user.pin;
-    res.send(pick(user, ...whitelist));
+    res.send(pick(req.user, ...whitelist));
   } catch (e) {
     console.log("problem fetching user", e);
     res.code(500).send(e.message);
   }
 });
 
-app.get("/users/:key", async (req, res) => {
+app.get("/users/:key", async ({ params: { key } }, res) => {
   try {
     if (key.startsWith("npub")) {
       key = Buffer.from(fromWords(decode(key).words)).toString("hex");
     }
 
-    user = JSON.parse(await redis.get(`user:${key}`));
+    let user = await g(`user:${key}`);
 
     if (!user && key.length === 64) {
       user = {
@@ -46,6 +41,7 @@ app.get("/users/:key", async (req, res) => {
       };
     }
 
+    console.log(user)
     if (!user) return res.code(500).send("User not found");
 
     let whitelist = [
@@ -69,7 +65,7 @@ app.get("/users/:key", async (req, res) => {
 
 app.post("/register", async (req, res) => {
   try {
-    const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
     let { cipher, pubkey, password, username, salt } = req.body.user;
 
     let user = {
@@ -127,14 +123,6 @@ app.post("/2fa", auth, async (req, res) => {
 
   l("enabled 2fa", user.username);
   res.send({});
-});
-
-app.get("/exists", async (req, res) => {
-  let exists = await db.User.findOne({
-    where: { username: req.query.username }
-  });
-
-  res.send(!!exists);
 });
 
 app.post("/user", auth, async (req, res) => {
@@ -303,6 +291,7 @@ app.post("/accounts", auth, async (req, res) => {
 let login = async (req, res) => {
   try {
     const { params, sig, key, password, username, token: twofa } = req.body;
+    l("logging in", username);
 
     if (sig) {
       const { callback } = params;
@@ -340,18 +329,17 @@ let login = async (req, res) => {
     l(
       "login",
       username,
-      req.headers["x-forwarded-for"] || req.connection.remoteAddress
+      req.headers["x-forwarded-for"] || req.socket.remoteAddress
     );
 
     let payload = { username, uuid: user.uuid };
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-    user.accounts = await user.getAccounts();
-    user.keys = await user.getKeys();
     user = pick(user, ...whitelist);
     res.send({ user, token });
   } catch (e) {
-    err("login error", e.message, req.connection.remoteAddress);
+    console.log(e);
+    err("login error", e.message, req.socket.remoteAddress);
     res.code(401).send({});
   }
 };
@@ -424,35 +412,13 @@ app.post("/otpsecret", auth, async function(req, res) {
   }
 });
 
-app.get("/contacts", auth, async function(req, res) {
-  try {
-    let contacts = await db.Payment.findAll({
-      where: {
-        user_id: req.user.id,
-        with_id: { [Sequelize.Op.ne]: null }
-      },
-      include: {
-        attributes: ["username", "profile", "uuid"],
-        model: db.User,
-        as: "with"
-      },
-      attributes: [
-        [Sequelize.fn("max", Sequelize.col("payments_model.createdAt")), "last"]
-      ],
-      group: ["with_id"],
-      order: [[{ model: db.User, as: "with" }, "username", "ASC"]]
-    });
-
-    res.send(
-      contacts.map(c => {
-        c = c.get({ plain: true });
-        return { ...c.with, last: c.last };
-      })
-    );
-  } catch (e) {
-    console.log(e);
-    res.code(500).send(e.message);
-  }
+app.get("/contacts", auth, async function({ user: { uuid } }, res) {
+  let payments = await g(`${uuid}:payments`) || [];
+  res.send(
+    Promise.all(
+      [...new Set(payments.map(p => p.with_id))].map(id => g(`user:${id}`))
+    )
+  );
 });
 
 app.post("/checkPassword", auth, async function(req, res) {

@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node index.js",
+    "start": "bun index.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
@@ -30,6 +30,7 @@
     "postmark": "^3.0.11",
     "pump": "^3.0.0",
     "query-string": "^6.13.1",
+    "readable-stream-clone": "^0.0.7",
     "redis": "^4.3.1",
     "sharp": "^0.31.1",
     "uuid": "8",

@@ -4,64 +4,25 @@ import { optionalAuth } from "$lib/passport";
 import { err, l } from "$lib/logging";
 import { SATS, derivePayRequest } from "$lib/utils";
 import { emit } from "$lib/sockets";
+import { v4 } from "uuid";
+import { rd, g, s } from "$lib/redis";
 
-app.get("/invoice", async (req, res, next) => {
-  try {
-    const invoice = await db.Invoice.findOne({
-      where: {
-        uuid: req.query.uuid
-      },
-      include: [
-        {
-          model: db.User,
-          as: "user",
-          attributes: ["username", "currency", "profile", "uuid"]
-        },
-        {
-          model: db.Request,
-          as: "request"
-        }
-      ]
-    });
-
-    res.send(invoice);
-  } catch (e) {
-    err("invoice not found", e);
-    res.code(500).send("Invoice not found");
-  }
+app.get("/invoice", async ({ query: { id } }, res) => {
+  let invoice = await g(`invoice:${id}`);
+  invoice.user = await g(`user:${invoice.user_id}`);
+  res.send(invoice);
 });
 
-app.get("/invoice/:text", async (req, res, next) => {
-  try {
-    let { text } = req.params;
-    let where =
-      text.split("-").length > 4
-        ? { uuid: text }
-        : text.startsWith("ln")
-        ? { text }
-        : {
-            [Op.or]: [{ unconfidential: text }, { address: text }]
-          };
-
-    const invoice = await db.Invoice.findOne({
-      where,
-      include: {
-        model: db.User,
-        as: "user",
-        attributes: ["username", "currency", "profile", "uuid"]
-      }
-    });
-
-    res.send(invoice);
-  } catch (e) {
-    err("invoice not found", e);
-    res.code(500).send("Invoice not found");
-  }
-});
-
-app.post("/invoice", optionalAuth, async (req, res, next) => {
-  try {
-    let { type = "bech32", liquidAddress, id, invoice, user, tx } = req.body;
+app.post(
+  "/invoice",
+  optionalAuth,
+  async (
+    {
+      body: { type = "bech32", liquidAddress, id, invoice, user, tx },
+      user: me
+    },
+    res
+  ) => {
     let {
       blindkey,
       currency,
@@ -71,49 +32,24 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       network,
       request_id
     } = invoice;
-    let address, unconfidential, text;
+    let text;
 
     if (amount < 0) throw new Error("amount out of range");
     if (tip > 5 * amount || tip < 0) throw new Error("tip amount out of range");
+    tip = tip || 0;
 
-    if (!user) ({ user } = req);
-    else {
-      user = await db.User.findOne({
-        where: {
-          username: user.username
-        },
-        include: {
-          model: db.Account,
-          as: "account"
-        }
-      });
-    }
+    if (!user) user = me;
     if (!user) throw new Error("user not provided");
+
+    user = await g(`user:${user.id}`);
+
     if (!currency) currency = user.currency;
     if (!rate) rate = store.rates[currency];
     if (amount < 0) throw new Error("invalid amount");
 
-    if (user.account.pubkey) {
-      let { address, confidentialAddress } = await deriveAddress(
-        user.account,
-        type
-      );
-      if (confidentialAddress) {
-        address = confidentialAddress;
-        unconfidential = address;
-      } else {
-        address = address;
-      }
-    } else if (network !== "lightning") {
-      address = await { bitcoin: bc, liquid: lq }[network].getNewAddress();
-      if (network === "liquid")
-        ({ unconfidential } = await lq.getAddressInfo(address));
-    }
-
     invoice = {
       ...invoice,
-      account_id: user.account.id,
-      address,
+      id: v4(),
       amount,
       currency,
       rate,
@@ -122,83 +58,29 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
       user_id: user.id
     };
 
-    if (network === "lightning") {
-      invoice.text = await derivePayRequest(invoice);
-    } else {
-      invoice.text = bip21(invoice, user.account);
-    }
-
-    if (liquidAddress) {
-      if (network === "lightning") {
-        l("conversion request for", liquidAddress, invoice.text);
-        store.convert[invoice.text] = { address: liquidAddress, tx };
-      } else if (network === "liquid") {
-        l("conversion request for", liquidAddress, invoice.unconfidential);
-        store.convert[invoice.unconfidential] = { address: liquidAddress, tx };
-      } else {
-        l("conversion request for", liquidAddress, invoice.address);
-        store.convert[invoice.address] = { address: liquidAddress, tx };
-      }
-    }
+    invoice.text = await derivePayRequest(invoice);
 
     l(
       "creating invoice",
       user.username,
-      invoice.network,
-      invoice.amount,
-      invoice.tip,
-      invoice.currency,
-      invoice.text && `${invoice.text.substr(0, 8)}..${invoice.text.substr(-6)}`
+      network,
+      amount,
+      tip,
+      currency,
+      `${text.substr(0, 8)}..${text.substr(-6)}`
     );
 
-    if (!invoice.tip) invoice.tip = 0;
-
-    invoice = await db.Invoice.create(invoice);
-    store.addresses[invoice.address] = user.username;
-    if (invoice.unconfidential) {
-      store.addresses[invoice.unconfidential] = user.username;
-      if (blindkey) await lq.importBlindingKey(invoice.address, blindkey);
-    }
+    await rd.lPush(`${id}:invoices`, invoice.id);
 
     if (request_id) {
-      let request = await db.Request.findOne({
-        where: { id: request_id },
+      let request = await g(`request:${request_id}`);
+      let { invoice_id: prev } = request;
+      request.invoice_id = invoice.id;
+      await s(`request:${request_id}`, request);
 
-        include: {
-          model: db.User,
-          as: "requester",
-          attributes: ["username"]
-        }
-      });
-
-      if (request) {
-        let existing = request.invoice_id;
-        request.invoice_id = invoice.id;
-        await request.save();
-
-        if (!existing)
-          emit(request.requester.username, "invoice", {
-            amount: invoice.amount,
-            currency: invoice.currency,
-            rate: invoice.rate,
-            request_id,
-            uuid: invoice.uuid,
-            user: { username: user.username, profile: user.profile }
-          });
-      }
+      if (!prev) emit(request.requester.username, "invoice", invoice);
     }
 
     res.send(invoice);
-  } catch (e) {
-    err(e.message, e.stack);
-    res.code(500).send(`Problem during invoice creation: ${e.message}`);
-  }
-});
-
-app.post(
-  "/:username/:network/invoice",
-  optionalAuth,
-  async (req, res, next) => {
-    let { network, username } = req.params;
   }
 );

@@ -18,7 +18,7 @@ import "./routes/requests";
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
-app.listen({ host, port }, (e, address) => {
-  e && err(e) && process.exit(1);
-  l(`CoinOS Server listening on ${address}`);
+
+app.listen({ host, port }, (e, h) => {
+  if (e) return err("Failed to start:", e.message);
 });
