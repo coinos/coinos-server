@@ -1,6 +1,7 @@
 import app from "$app";
 import config from "$config";
 import store from "$lib/store";
+import { g, rd } from "$lib/redis";
 
 import { auth, adminAuth, optionalAuth } from "$lib/passport";
 import fs from "fs";
@@ -22,7 +23,7 @@ app.post("/lightning/send", auth, lnRoutes.send);
 app.get(
   "/payments",
   auth,
-  async ({ uuid, query: { start, end, limit, offset } }, res) => {
+  async ({ user: { id }, query: { start, end, limit, offset } }, res) => {
     if (limit) limit = parseInt(limit);
     if (offset) offset = parseInt(offset);
 
@@ -30,8 +31,10 @@ app.get(
     // if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
     // if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
 
-    let payments = await redis.get(`${uuid}:payments`);
-    res.send({ payments, total });
+    let payments = (await rd.lRange(`${id}:payments`, 0, -1)) || [];
+    payments = await Promise.all(payments.map(id => g(`payment:${id}`)));
+    payments = payments.filter(p => p);
+    res.send({ payments, total: payments.length });
   }
 );
 

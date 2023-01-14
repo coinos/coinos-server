@@ -84,72 +84,53 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/disable2fa", auth, async (req, res) => {
-  try {
-    let {
-      user,
-      body: { token }
-    } = req;
-
-    if (user.twofa && !authenticator.check(token, user.otpsecret)) {
-      return res.code(401).send("2fa required");
-    }
-
-    user.twofa = false;
-    await user.save();
-    emit(user.username, "user", user);
-    emit(user.username, "otpsecret", user.otpsecret);
-    l("disabled 2fa", user.username);
-    res.send({});
-  } catch (e) {
-    res.code(500).send("Problem disabling 2fa");
-  }
-});
-
-app.post("/2fa", auth, async (req, res) => {
-  let { user } = req;
-  try {
-    const isValid = authenticator.check(req.body.token, req.user.otpsecret);
-    if (isValid) {
-      user.twofa = true;
-      user.save();
-      emit(user.username, "user", req.user);
-    } else {
-      return res.code(500).send("Invalid token");
-    }
-  } catch (e) {
-    err("error setting up 2fa", e);
+app.post("/disable2fa", auth, async ({ user, body: { token } }, res) => {
+  let { id, twofa, username, otpsecret } = user;
+  if (twofa && !authenticator.check(token, otpsecret)) {
+    return res.code(401).send("2fa required");
   }
 
-  l("enabled 2fa", user.username);
+  user.twofa = false;
+  await s(`user:${id}`, user);
+  emit(username, "user", user);
+  emit(username, "otpsecret", user.otpsecret);
+  l("disabled 2fa", username);
   res.send({});
 });
 
-app.post("/user", auth, async (req, res) => {
+app.post("/2fa", auth, async ({ user, body: { token } }, res) => {
+  let { id, otpsecret, username } = user;
+  const isValid = authenticator.check(token, otpsecret);
+  if (isValid) {
+    user.twofa = true;
+    await s(`user:${id}`, user);
+    emit(username, "user", user);
+  } else {
+    return res.code(500).send("Invalid token");
+  }
+
+  l("enabled 2fa", username);
+  res.send({});
+});
+
+app.post("/user", auth, async ({ user, body: { confirm, password, pin, newpin, username }}, res) => {
   try {
     let { user } = req;
 
     l("updating user", user.username);
-
-    let { confirm, password, pin, newpin, username } = req.body;
 
     if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
     if (typeof newpin !== "undefined") user.pin = newpin;
     if (!user.pin) user.pin = null;
 
     let exists;
-
-    if (username)
-      exists = await db.User.findOne({
-        where: { username }
-      });
+    if (username) exists = await g(`user:${username}`);
 
     let token;
     if (user.username !== username && exists) {
       err("username taken", username, user.username, exists.username);
       throw new Error("Username taken");
     } else if (username) {
-      store.sockets[username] = store.sockets[user.username];
       if (user.username !== username)
         l("changing username", user.username, username);
       user.username = username;
@@ -193,99 +174,6 @@ app.post("/user", auth, async (req, res) => {
     err("error updating user", e.message);
     res.code(500).send(e.message);
   }
-});
-
-app.post("/keys", auth, async (req, res) => {
-  const { key: hex } = req.body;
-  const key = await db.Key.create({
-    user_id: req.user.id,
-    hex
-  });
-  emit(req.user.username, "key", key);
-  res.send(key);
-});
-
-app.post("/keys/delete", auth, async (req, res) => {
-  const { hex } = req.body;
-  (
-    await db.Key.findOne({
-      where: {
-        user_id: req.user.id,
-        hex
-      }
-    })
-  ).destroy();
-});
-
-app.post("/updateSeeds", auth, async (req, res) => {
-  let { user } = req;
-  let { seeds } = req.body;
-  let keys = Object.keys(seeds);
-
-  for (let i = 0; i < keys.length; i++) {
-    let id = keys[i];
-    let seed = seeds[id];
-    await db.Account.update(
-      { seed },
-      {
-        where: { id, user_id: user.id }
-      }
-    );
-
-    const account = await db.Account.findOne({
-      where: { id }
-    });
-
-    emit(user.username, "account", account);
-  }
-
-  res.send({});
-});
-
-app.post("/accounts/delete", auth, async (req, res) => {
-  const { id } = req.body;
-  const account = await db.Account.findOne({ where: { id } });
-  if (account) await account.destroy();
-  res.send({});
-});
-
-app.post("/accounts", auth, async (req, res) => {
-  const {
-    name,
-    seed,
-    pubkey,
-    ticker,
-    precision,
-    path,
-    privkey,
-    network
-  } = req.body;
-  const { user } = req;
-
-  let account = await db.Account.create({
-    user_id: user.id,
-    asset: config.liquid.btcasset,
-    balance: 0,
-    pending: 0,
-    name,
-    ticker,
-    precision,
-    pubkey,
-    privkey,
-    seed,
-    path,
-    network
-  });
-
-  emit(user.username, "account", account);
-
-  if (pubkey) user.index++;
-  user.account_id = account.id;
-  await user.save();
-  user.account = account;
-  emit(user.username, "user", user);
-
-  res.send(account);
 });
 
 let login = async (req, res) => {
@@ -337,7 +225,6 @@ let login = async (req, res) => {
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
     user = pick(user, whitelist);
-    console.log("SENDING", user, token)
     res.send({ user, token });
   } catch (e) {
     console.log(e);

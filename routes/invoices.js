@@ -9,7 +9,6 @@ import ln from "$lib/ln";
 app.get("/invoice", async ({ query: { id } }, res) => {
   let invoice = await g(`invoice:${id}`);
   invoice.user = await g(`user:${invoice.user_id}`);
-  console.log("INV", invoice)
   res.send(invoice);
 });
 
@@ -48,7 +47,8 @@ app.post(
       rate,
       tip,
       user_id,
-      text
+      text,
+      received: 0
     };
 
     l(

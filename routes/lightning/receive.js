@@ -1,3 +1,4 @@
+import { v4 } from "uuid";
 import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import config from "$config";
@@ -35,7 +36,9 @@ let handle = async () => {
     let amount = parseInt(received) - tip;
     if (amount < 0) throw new Error("amount out of range");
 
+    let id = v4();
     let payment = {
+      id,
       user_id,
       hash,
       memo,
@@ -44,7 +47,8 @@ let handle = async () => {
       secret,
       rate,
       tip,
-      invoice_id: invoice.id
+      invoice_id: invoice.id,
+      created_at: Date.now()
     };
 
     total = amount + tip;
@@ -64,6 +68,10 @@ let handle = async () => {
     await t();
 
     payment.invoice = invoice;
+
+    await s(`payment:${id}`, payment);
+    await rd.lPush(`${user.id}:payments`, id);
+
     callWebhook(invoice, payment);
 
     emit(user.username, "payment", payment);
