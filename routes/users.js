@@ -3,7 +3,7 @@ import { g, s } from "$lib/redis";
 import config from "$config";
 import store from "$lib/store";
 import { auth, optionalAuth } from "$lib/passport";
-import { getUser, nada, uniq, wait } from "$lib/utils";
+import { nada, pick, uniq, wait } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
@@ -14,11 +14,9 @@ import register from "$lib/register";
 import { requirePin } from "$lib/utils";
 import got from "got";
 
-const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
-
 app.get("/me", auth, async (req, res) => {
   try {
-    res.send(pick(req.user, ...whitelist));
+    res.send(pick(req.user, whitelist));
   } catch (e) {
     console.log("problem fetching user", e);
     res.code(500).send(e.message);
@@ -32,6 +30,9 @@ app.get("/users/:key", async ({ params: { key } }, res) => {
     }
 
     let user = await g(`user:${key}`);
+    if (typeof user === "string") {
+      user = await g(`user:${user}`);
+    }
 
     if (!user && key.length === 64) {
       user = {
@@ -41,7 +42,6 @@ app.get("/users/:key", async ({ params: { key } }, res) => {
       };
     }
 
-    console.log(user)
     if (!user) return res.code(500).send("User not found");
 
     let whitelist = [
@@ -53,10 +53,10 @@ app.get("/users/:key", async ({ params: { key } }, res) => {
       "pubkey",
       "display",
       "prompt",
-      "uuid"
+      "id"
     ];
 
-    res.send(pick(user, ...whitelist));
+    res.send(pick(user, whitelist));
   } catch (e) {
     console.log(e);
     res.code(500).send(e.message);
@@ -78,7 +78,7 @@ app.post("/register", async (req, res) => {
 
     user = await register(user, ip, false);
     l("registered new user", username);
-    res.send(pick(user, ...whitelist));
+    res.send(pick(user, whitelist));
   } catch (e) {
     res.code(500).send(e.message);
   }
@@ -308,7 +308,8 @@ let login = async (req, res) => {
       return;
     }
 
-    let user = await getUser(username);
+    let id = await g(`user:${username}`);
+    let user = await g(`user:${id}`);
 
     if (
       !user ||
@@ -332,10 +333,11 @@ let login = async (req, res) => {
       req.headers["x-forwarded-for"] || req.socket.remoteAddress
     );
 
-    let payload = { username, uuid: user.uuid };
+    let payload = { username, id: user.id };
     let token = jwt.sign(payload, config.jwt);
     res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-    user = pick(user, ...whitelist);
+    user = pick(user, whitelist);
+    console.log("SENDING", user, token)
     res.send({ user, token });
   } catch (e) {
     console.log(e);
@@ -413,7 +415,7 @@ app.post("/otpsecret", auth, async function(req, res) {
 });
 
 app.get("/contacts", auth, async function({ user: { uuid } }, res) {
-  let payments = await g(`${uuid}:payments`) || [];
+  let payments = (await g(`${uuid}:payments`)) || [];
   res.send(
     Promise.all(
       [...new Set(payments.map(p => p.with_id))].map(id => g(`user:${id}`))

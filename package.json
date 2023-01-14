@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "bun index.js",
+    "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
