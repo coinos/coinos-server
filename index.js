@@ -60,10 +60,10 @@ app.post("/password", auth, users.password);
 app.post("/otpsecret", auth, users.otpsecret);
 app.get("/contacts", auth, users.contacts);
 
-app.get("/request/:id", requests.get);
-app.get("/requests", requests.list);
-app.post("/requests", requests.create);
-app.post("/requests/delete", requests.destroy);
+app.get("/request/:id", auth, requests.get);
+app.get("/requests", auth, requests.list);
+app.post("/requests", auth, requests.create);
+app.post("/requests/delete", auth, requests.destroy);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;

@@ -11,12 +11,12 @@ export default {
     }
   },
 
-  async list({ user: { uuid } }, res) {
+  async list({ user: { id } }, res) {
     try {
       const day = new Date(new Date().setDate(new Date().getDate() - 1));
 
-      let invoices = await db.lRange(`${uuid}:invoices`, 0, -1);
-      let requests = await db.lRange(`${uuid}:requests`, 0, -1);
+      let invoices = await db.lRange(`${id}:invoices`, 0, -1);
+      let requests = await db.lRange(`${id}:requests`, 0, -1);
 
       res.send({ invoices, requests });
     } catch (e) {
