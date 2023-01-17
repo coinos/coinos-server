@@ -1,21 +1,17 @@
-import app from "$app";
 import store from "$lib/store";
-import { optionalAuth } from "$lib/passport";
 import { l } from "$lib/logging";
 import { emit } from "$lib/sockets";
-import { rd, g, s } from "$lib/redis";
+import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 
-app.get("/invoice", async ({ query: { id } }, res) => {
-  let invoice = await g(`invoice:${id}`);
-  invoice.user = await g(`user:${invoice.user_id}`);
-  res.send(invoice);
-});
+export default {
+  async get({ query: { id } }, res) {
+    let invoice = await g(`invoice:${id}`);
+    invoice.user = await g(`user:${invoice.uid}`);
+    res.send(invoice);
+  },
 
-app.post(
-  "/invoice",
-  optionalAuth,
-  async ({ body: { invoice, user }, user: me }, res) => {
+  async create({ body: { invoice, user }, user: me }, res) {
     let { currency, tip, amount, rate, request_id } = invoice;
 
     if (amount < 0) throw new Error("amount out of range");
@@ -23,8 +19,8 @@ app.post(
     tip = tip || 0;
 
     if (!user) user = me;
-    let user_id = await g(`user:${user.username}`);
-    user = await g(`user:${user_id}`);
+    let uid = await g(`user:${user.username}`);
+    user = await g(`user:${uid}`);
 
     if (!user) throw new Error("user not provided");
 
@@ -46,9 +42,10 @@ app.post(
       currency,
       rate,
       tip,
-      user_id,
+      uid,
       text,
-      received: 0
+      received: 0,
+      created: Date.now()
     };
 
     l(
@@ -61,7 +58,7 @@ app.post(
     );
 
     await s(`invoice:${id}`, invoice);
-    await rd.lPush(`${user.id}:invoices`, id);
+    await db.lPush(`${uid}:invoices`, id);
 
     if (request_id) {
       let request = await g(`request:${request_id}`);
@@ -74,4 +71,4 @@ app.post(
 
     res.send(invoice);
   }
-);
+};
