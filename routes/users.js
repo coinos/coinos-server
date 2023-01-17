@@ -1,4 +1,3 @@
-import app from "$app";
 import { g, s } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";

@@ -1,4 +1,4 @@
-import app from "$app";
+import app from "$lib/app";
 import { auth, optional } from "$lib/auth";
 
 import { fillPool } from "$lib/nostr";
