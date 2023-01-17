@@ -5,8 +5,8 @@ import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 
 export default {
-  async get({ query: { id } }, res) {
-    let invoice = await g(`invoice:${id}`);
+  async get({ query: { hash } }, res) {
+    let invoice = await g(`invoice:${hash}`);
     invoice.user = await g(`user:${invoice.uid}`);
     res.send(invoice);
   },
@@ -28,7 +28,7 @@ export default {
     if (!rate) rate = store.rates[currency];
     if (amount < 0) throw new Error("invalid amount");
 
-    let { payment_hash: id, bolt11: text } = await ln.invoice(
+    let { payment_hash: hash, bolt11: text } = await ln.invoice(
       amount ? `${amount + tip}sat` : "any",
       new Date(),
       "",
@@ -37,7 +37,7 @@ export default {
 
     invoice = {
       ...invoice,
-      id,
+      hash,
       amount,
       currency,
       rate,
@@ -57,8 +57,8 @@ export default {
       `${text.substr(0, 8)}..${text.substr(-6)}`
     );
 
-    await s(`invoice:${id}`, invoice);
-    await db.lPush(`${uid}:invoices`, id);
+    await s(`invoice:${hash}`, invoice);
+    await db.lPush(`${uid}:invoices`, hash);
 
     if (request_id) {
       let request = await g(`request:${request_id}`);

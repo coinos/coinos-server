@@ -1,5 +1,7 @@
 import app from "$app";
 import { auth, optional } from "$lib/auth";
+
+import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import { getRates, sendRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
@@ -12,6 +14,8 @@ import invoices from "$routes/invoices";
 import users from "$routes/users";
 import payments from "$routes/payments";
 import requests from "$routes/requests";
+
+listenForLightning();
 
 getLocations();
 getRates();
