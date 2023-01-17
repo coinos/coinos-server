@@ -117,69 +117,58 @@ export default {
     res.send({});
   },
 
-  async update(
-    { user, body: { confirm, password, pin, newpin, username } },
-    res
-  ) {
-    try {
-      let { user } = req;
+  async update({ user, body }, res) {
+    l("updating user", user.username);
 
-      l("updating user", user.username);
+    let { confirm, password, pin, newpin, username } = body;
 
-      if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
-      if (typeof newpin !== "undefined") user.pin = newpin;
-      if (!user.pin) user.pin = null;
+    if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
+    if (typeof newpin !== "undefined") user.pin = newpin;
+    if (!user.pin) user.pin = null;
 
-      let exists;
-      if (username) exists = await g(`user:${username}`);
+    let exists;
+    if (username) exists = await g(`user:${username}`);
 
-      let token;
-      if (user.username !== username && exists) {
-        err("username taken", username, user.username, exists.username);
-        throw new Error("Username taken");
-      } else if (username) {
-        if (user.username !== username)
-          l("changing username", user.username, username);
-        user.username = username;
-      }
-
-      let attributes = [
-        "address",
-        "cipher",
-        "currencies",
-        "currency",
-        "display",
-        "email",
-        "fiat",
-        "locktime",
-        "prompt",
-        "pubkey",
-        "salt",
-        "seed",
-        "tokens",
-        "twofa",
-        "unit"
-      ];
-
-      for (let a of attributes) {
-        if (req.body[a]) user[a] = req.body[a];
-      }
-
-      if (password && password === confirm) {
-        user.password = await bcrypt.hash(password, 1);
-      }
-
-      await s(`user:${user.id}`, user);
-
-      user.haspin = !!user.pin;
-
-      emit(user.username, "user", user);
-      res.send({ user, token });
-    } catch (e) {
-      console.log(e);
-      err("error updating user", e.message);
-      res.code(500).send(e.message);
+    let token;
+    if (user.username !== username && exists) {
+      err("username taken", username, user.username, exists.username);
+      throw new Error("Username taken");
+    } else if (username) {
+      if (user.username !== username)
+        l("changing username", user.username, username);
+      user.username = username;
     }
+
+    let attributes = [
+      "address",
+      "cipher",
+      "currencies",
+      "currency",
+      "display",
+      "email",
+      "fiat",
+      "locktime",
+      "prompt",
+      "pubkey",
+      "salt",
+      "seed",
+      "tokens",
+      "twofa",
+    ];
+
+    for (let a of attributes) {
+      if (body[a]) user[a] = body[a];
+    }
+
+    if (password && password === confirm) {
+      user.password = await bcrypt.hash(password, 1);
+    }
+
+    user.haspin = !!user.pin;
+    await s(`user:${user.id}`, user);
+
+    emit(user.username, "user", user);
+    res.send({ user, token });
   },
 
   async login(req, res) {

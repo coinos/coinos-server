@@ -1,7 +1,7 @@
 import { nada, uniq } from "$lib/utils";
 import config from "$config";
 import { g, s, db } from "$lib/db";
-import { q } from "$lib/nostr";
+import { pool, q } from "$lib/nostr";
 
 export default {
   async event({ params: { id } }, res) {

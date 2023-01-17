@@ -4,7 +4,7 @@ services:
     image: cs
     container_name: app
     depends_on:
-      - rd
+      - db
       - bc
       - cl
     command: "pnpm dev"
