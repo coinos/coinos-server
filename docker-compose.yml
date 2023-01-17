@@ -39,12 +39,6 @@ services:
     volumes:
       - ./data/lightningb:/root/.lightning
     restart: always
-  db:
-    image: eqalpha/keydb
-    container_name: db
-    volumes:
-      - ./data/db:/data
-    restart: always
   clc:
     image: elementsproject/lightningd:latest
     container_name: clc
@@ -53,11 +47,11 @@ services:
     volumes:
       - ./data/lightningc:/root/.lightning
     restart: always
-  rd:
+  db:
     image: eqalpha/keydb
-    container_name: rd
+    container_name: db
     volumes:
-      - ./data/redis:/data
+      - ./data/db:/data
     restart: always
   nostr:
     container_name: nostr
