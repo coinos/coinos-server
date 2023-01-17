@@ -101,9 +101,7 @@ export default {
   async followers({ params: { pubkey } }, res) {
     try {
       let pubkeys = [
-        ...new Set([
-          ...(await db.sMembers(`${pubkey}:followers`))
-        ])
+        ...new Set([...(await db.sMembers(`${pubkey}:followers`))])
       ];
 
       let followers = [];

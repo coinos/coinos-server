@@ -153,7 +153,7 @@ export default {
       "salt",
       "seed",
       "tokens",
-      "twofa",
+      "twofa"
     ];
 
     for (let a of attributes) {
