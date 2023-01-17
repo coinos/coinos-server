@@ -1,5 +1,5 @@
 node_modules/
-.pnpm-store
+.pnpm*
 uploads
 data
 config.js
