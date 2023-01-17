@@ -1,6 +1,7 @@
 import app from "$app";
 import { auth, optional } from "$lib/auth";
 
+import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import { getRates, sendRates } from "$lib/rates";
@@ -15,6 +16,7 @@ import users from "$routes/users";
 import payments from "$routes/payments";
 import requests from "$routes/requests";
 
+fillPool();
 listenForLightning();
 
 getLocations();

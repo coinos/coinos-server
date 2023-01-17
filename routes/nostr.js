@@ -1,9 +1,14 @@
+import { nada, uniq } from "$lib/utils";
+import config from "$config";
+import { g, s, db } from "$lib/db";
+import { q } from "$lib/nostr";
+
 export default {
   async event({ params: { id } }, res) {
-    let event = JSON.parse(await g(`ev:${id}`));
+    let event = await g(`ev:${id}`);
     let { pubkey } = event;
 
-    event.user = JSON.parse(await g(`user:${pubkey}`)) || {
+    event.user = (await g(`user:${pubkey}`)) || {
       username: pubkey.substr(0, 6),
       pubkey,
       anon: true,
@@ -15,13 +20,7 @@ export default {
   },
 
   async notes({ params: { pubkey } }, res) {
-    let user = JSON.parse(await g(`user:${pubkey}`));
-
-    if (!user) {
-      user = await db.User.findOne({
-        where: { pubkey }
-      });
-    }
+    let user = await g(`user:${pubkey}`);
 
     if (!user)
       user = {
@@ -40,7 +39,7 @@ export default {
 
     q(`${pubkey}:notes`, params, opts).catch(nada);
 
-    await g(`user:${pubkey}`, JSON.stringify(user));
+    await s(`user:${pubkey}`, user);
 
     let ids = await db.sMembers(pubkey);
 
@@ -57,7 +56,7 @@ export default {
     res.send(event);
   },
 
-  async follows({ params: { pubkey }, query: { tagsOnly } }, res) {
+  async follows({ params: { pubkey }, query: { tagsonly } }, res) {
     let sub = `${pubkey}:follows`,
       params = {
         limit: 1,
@@ -68,7 +67,7 @@ export default {
 
     q(sub, params, opts).catch(nada);
 
-    let tags = JSON.parse(await g(`${pubkey}:follows`)) || [];
+    let tags = (await g(`${pubkey}:follows`)) || [];
     if (tagsonly) return res.send(tags);
 
     let follows = [];
@@ -81,7 +80,7 @@ export default {
         authors: [pubkey]
       }).catch(nada);
 
-      let user = JSON.parse(await g(`user:${pubkey}`));
+      let user = await g(`user:${pubkey}`);
 
       if (!user)
         user = {
@@ -99,11 +98,10 @@ export default {
     res.send(follows);
   },
 
-  async followers({ params: { pubkey}}, res) {
+  async followers({ params: { pubkey } }, res) {
     try {
       let pubkeys = [
         ...new Set([
-          ...(await got(`${config.nostr}/followers?pubkey=${pubkey}`).json()),
           ...(await db.sMembers(`${pubkey}:followers`))
         ])
       ];
@@ -117,7 +115,7 @@ export default {
       ).catch(nada);
 
       for (let pubkey of pubkeys) {
-        let user = JSON.parse(await g(`user:${pubkey}`));
+        let user = await g(`user:${pubkey}`);
         if (!user || !user.updated) {
           q(`${pubkey}:profile:f2`, {
             limit: 1,
@@ -125,7 +123,7 @@ export default {
             authors: [pubkey]
           }).catch(nada);
 
-          user = JSON.parse(await g(`user:${pubkey}`));
+          user = await g(`user:${pubkey}`);
         }
 
         if (!user)

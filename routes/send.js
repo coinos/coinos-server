@@ -8,7 +8,7 @@ export default async (req, res, next) => {
     let payment = await sendInternal(req.body, req.user);
     res.send(payment);
   } catch (e) {
-    console.log(e)
+    console.log(e);
     err("problem sending internal payment", e.message);
     return res.code(500).send(e.message);
   }
