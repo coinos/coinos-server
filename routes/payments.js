@@ -1,16 +1,91 @@
+import config from "$config";
+import store from "$lib/store";
 import { emit } from "$lib/sockets";
-import { db, g, s } from "$lib/db";
+import { v4 } from "uuid";
+import { notify } from "$lib/notifications";
+import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
 import { fail } from "$lib/utils";
 import ln from "$lib/ln";
-import sendInternal from "$lib/sendInternal";
 import { requirePin } from "$lib/auth";
+import { callWebhook } from "$lib/webhooks";
+
+const { HOSTNAME: hostname } = process.env;
 
 export default {
-  async send(req, res) {
-    await requirePin(req);
-    let payment = await sendInternal(req.body, req.user);
-    res.send(payment);
+  async send({ body, user }, res) {
+    let { amount, hash, memo, tip } = body;
+    await requirePin({ body, user });
+    if (!hash) fail("invoice hash required");
+
+    let { id: uid } = user;
+    amount = parseInt(amount);
+
+    if (!amount || amount < 0) fail("Amount must be greater than zero");
+
+    await t(`balance:${uid}`, async (balance) => {
+      await new Promise(r => setTimeout(r, 100));
+      if (balance < amount) fail("Insufficient funds");
+      return balance - amount;
+    });
+
+    let fee = 0;
+    let invoice = await g(`invoice:${hash}`);
+    user = await g(`user:${uid}`);
+
+    await s(`user:${uid}`, user);
+
+    let p1 = {
+      hash,
+      amount: -amount,
+      memo,
+      uid,
+      rate: store.rates[user.currency],
+      currency: user.currency,
+      type: "internal",
+      created: Date.now()
+    };
+
+    await s(`payment:${hash}`, p1);
+    await db.lPush(`${uid}:payments`, hash);
+
+    l("sent internal", user.username, -p1.amount);
+    emit(user.id, "payment", p1);
+
+    ({ uid } = invoice);
+    if (uid !== user.id) {
+      let recipient = await g(`user:${uid}`);
+
+      let p2 = {
+        hash,
+        amount,
+        uid: recipient.id,
+        rate: store.rates[recipient.currency],
+        currency: recipient.currency,
+        memo,
+        type: "internal",
+        with_id: user.id,
+        created: Date.now()
+      };
+
+      let { tip } = invoice;
+      if (tip) {
+        p2.tip = tip;
+        p2.amount -= tip;
+      }
+
+      invoice.received += amount;
+      await s(`invoice:${hash}`, invoice);
+      await s(`payment:${hash}`, p2);
+      await db.lPush(`${recipient.id}:payments`, hash);
+
+      l("received internal", recipient.username, amount);
+      emit(recipient.username, "payment", p2);
+      notify(recipient, `Received ${amount} sats`);
+      callWebhook(invoice, p2);
+    }
+
+    res.send(p1);
   },
 
   async list({ user: { id }, query: { start, end, limit, offset } }, res) {
@@ -21,7 +96,7 @@ export default {
     // if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
     // if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
 
-    let payments = (await db.lrange(`${id}:payments`, 0, -1)) || [];
+    let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
     payments = payments.filter(p => p);
     res.send({ payments, total: payments.length });

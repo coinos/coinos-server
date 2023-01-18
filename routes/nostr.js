@@ -41,7 +41,7 @@ export default {
 
     await s(`user:${pubkey}`, user);
 
-    let ids = await db.smembers(pubkey);
+    let ids = await db.sMembers(pubkey);
 
     let events = ids.length
       ? (await db.mget(ids.map(k => "ev:" + k))).map(JSON.parse)
@@ -101,7 +101,7 @@ export default {
   async followers({ params: { pubkey } }, res) {
     try {
       let pubkeys = [
-        ...new Set([...(await db.smembers(`${pubkey}:followers`))])
+        ...new Set([...(await db.sMembers(`${pubkey}:followers`))])
       ];
 
       let followers = [];

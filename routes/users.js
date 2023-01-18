@@ -19,6 +19,7 @@ export default {
   async me({ user }, res) {
     try {
       user.balance = await g(`balance:${user.id}`);
+      console.log("USER BAL", user.id, user.balance)
       res.send(pick(user, whitelist));
     } catch (e) {
       console.log("problem fetching user", e);

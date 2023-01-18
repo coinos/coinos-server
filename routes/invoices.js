@@ -58,7 +58,7 @@ export default {
     );
 
     await s(`invoice:${hash}`, invoice);
-    await db.lpush(`${uid}:invoices`, hash);
+    await db.lPush(`${uid}:invoices`, hash);
 
     if (request_id) {
       let request = await g(`request:${request_id}`);
