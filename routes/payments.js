@@ -21,7 +21,7 @@ export default {
     // if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
     // if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
 
-    let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
+    let payments = (await db.lrange(`${id}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
     payments = payments.filter(p => p);
     res.send({ payments, total: payments.length });

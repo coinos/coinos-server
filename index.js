@@ -8,6 +8,7 @@ import { getRates, sendRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 
 import email from "$routes/email";
+import info from "$routes/info";
 import locations from "$routes/locations";
 import nostr from "$routes/nostr";
 import rates from "$routes/rates";
@@ -25,6 +26,7 @@ getRates();
 setInterval(sendRates, 1000);
 setInterval(sendHeartbeat, 2000);
 
+app.get("/balances", info.balances);
 app.post("/email", email.send);
 
 app.get("/rate", rates.last);

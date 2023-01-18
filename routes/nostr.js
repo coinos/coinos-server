@@ -41,10 +41,10 @@ export default {
 
     await s(`user:${pubkey}`, user);
 
-    let ids = await db.sMembers(pubkey);
+    let ids = await db.smembers(pubkey);
 
     let events = ids.length
-      ? (await db.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
+      ? (await db.mget(ids.map(k => "ev:" + k))).map(JSON.parse)
       : [];
 
     res.send(events.map(e => ({ ...e, user })));
@@ -101,7 +101,7 @@ export default {
   async followers({ params: { pubkey } }, res) {
     try {
       let pubkeys = [
-        ...new Set([...(await db.sMembers(`${pubkey}:followers`))])
+        ...new Set([...(await db.smembers(`${pubkey}:followers`))])
       ];
 
       let followers = [];
