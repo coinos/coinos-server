@@ -12,80 +12,104 @@ import { callWebhook } from "$lib/webhooks";
 
 const { HOSTNAME: hostname } = process.env;
 
+let debit = async (user, amount, memo, to) => {
+  let { id: uid, currency, username } = user;
+  to = to && to.id;
+
+  amount = parseInt(amount);
+
+  if (!amount || amount < 0) fail("Amount must be greater than zero");
+
+  await t(`balance:${uid}`, async balance => {
+    await new Promise(r => setTimeout(r, 100));
+    if (balance < amount) fail("Insufficient funds");
+    return balance - amount;
+  });
+
+  let fee = 0;
+
+  let hash = v4();
+
+  let p = {
+    hash,
+    amount: -amount,
+    memo,
+    uid,
+    rate: store.rates[currency],
+    currency,
+    type: "internal",
+    to,
+    created: Date.now()
+  };
+
+  if (!to) delete p.to;
+
+  await s(`payment:${hash}`, p);
+  await db.lPush(`${uid}:payments`, hash);
+
+  l("sent internal", user.username, amount);
+  emit(user.id, "payment", p);
+
+  return p;
+};
+
+let credit = async (hash, amount, memo, from) => {
+  let invoice = await g(`invoice:${hash}`);
+  let user = await g(`user:${invoice.uid}`);
+
+  let { id: uid, currency, username } = user;
+  from = from.id;
+
+  let p = {
+    hash,
+    amount,
+    uid,
+    rate: store.rates[currency],
+    currency,
+    memo,
+    type: memo === "pot" ? "pot" : "internal",
+    from,
+    created: Date.now()
+  };
+
+  let { tip } = invoice;
+  if (tip) {
+    p.tip = tip;
+    p.amount -= tip;
+  }
+
+  invoice.received += amount;
+  await s(`invoice:${hash}`, invoice);
+  await s(`payment:${hash}`, p);
+  await db.lPush(`${uid}:payments`, hash);
+
+  l("received internal", username, amount);
+  emit(username, "payment", p);
+  notify(user, `Received ${amount} sats`);
+  callWebhook(invoice, p);
+
+  return p;
+};
+
 export default {
   async send({ body, user }, res) {
-    let { amount, hash, memo, tip } = body;
+    let { amount, hash, name, memo, tip } = body;
     await requirePin({ body, user });
-    if (!hash) fail("invoice hash required");
 
-    let { id: uid } = user;
-    amount = parseInt(amount);
+    let invoice, recipient;
 
-    if (!amount || amount < 0) fail("Amount must be greater than zero");
+    let p = await debit(user, amount, memo, recipient);
 
-    await t(`balance:${uid}`, async (balance) => {
-      await new Promise(r => setTimeout(r, 100));
-      if (balance < amount) fail("Insufficient funds");
-      return balance - amount;
-    });
-
-    let fee = 0;
-    let invoice = await g(`invoice:${hash}`);
-    user = await g(`user:${uid}`);
-
-    await s(`user:${uid}`, user);
-
-    let p1 = {
-      hash,
-      amount: -amount,
-      memo,
-      uid,
-      rate: store.rates[user.currency],
-      currency: user.currency,
-      type: "internal",
-      created: Date.now()
-    };
-
-    await s(`payment:${hash}`, p1);
-    await db.lPush(`${uid}:payments`, hash);
-
-    l("sent internal", user.username, -p1.amount);
-    emit(user.id, "payment", p1);
-
-    ({ uid } = invoice);
-    if (uid !== user.id) {
-      let recipient = await g(`user:${uid}`);
-
-      let p2 = {
-        hash,
-        amount,
-        uid: recipient.id,
-        rate: store.rates[recipient.currency],
-        currency: recipient.currency,
-        memo,
-        type: "internal",
-        with_id: user.id,
-        created: Date.now()
-      };
-
-      let { tip } = invoice;
-      if (tip) {
-        p2.tip = tip;
-        p2.amount -= tip;
-      }
-
-      invoice.received += amount;
-      await s(`invoice:${hash}`, invoice);
-      await s(`payment:${hash}`, p2);
-      await db.lPush(`${recipient.id}:payments`, hash);
-
-      l("received internal", recipient.username, amount);
-      emit(recipient.username, "payment", p2);
-      notify(recipient, `Received ${amount} sats`);
-      callWebhook(invoice, p2);
+    if (hash) {
+      await credit(hash, amount, memo, user);
+    } else {
+      let pot = name || v4();
+      await db.incrBy(`pot:${pot}`, amount);
+      await db.lPush(`pot:${pot}:payments`, p.hash);
+      l("funded pot", pot);
     }
 
-    res.send(p1);
+    res.send(p);
   },
 
   async list({ user: { id }, query: { start, end, limit, offset } }, res) {
@@ -225,5 +249,39 @@ export default {
     let alias = node ? node.alias : payee.substr(0, 12);
 
     res.send({ alias, amount: Math.round(msatoshi / 1000) });
+  },
+
+  async pot({ params: { name } }, res) {
+    let amount = await g(`pot:${name}`);
+    let payments = (await db.lRange(`pot:${name}:payments`, 0, -1)) || [];
+    payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
+
+    await Promise.all(
+      payments.map(async p => (p.user = await g(`user:${p.uid}`)))
+    );
+
+    payments = payments.filter(p => p);
+    res.send({ amount, payments });
+  },
+
+  async withdraw({ body: { name, amount }, user }, res) {
+    amount = parseInt(amount)
+    await t(`pot:${name}`, async balance => {
+      await new Promise(r => setTimeout(r, 100));
+      console.log("BAL", balance, amount)
+      if (balance < amount) fail("Insufficient funds");
+      return balance - amount;
+    });
+
+    let hash = v4();
+    await s(`invoice:${hash}`, {
+      uid: user.id,
+      received: 0
+    });
+
+    let payment = await credit(hash, amount, "pot", { id: name });
+    await db.lPush(`pot:${name}:payments`, hash);
+
+    res.send({ payment });
   }
 };
