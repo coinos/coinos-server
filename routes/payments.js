@@ -268,7 +268,6 @@ export default {
     amount = parseInt(amount)
     await t(`pot:${name}`, async balance => {
       await new Promise(r => setTimeout(r, 100));
-      console.log("BAL", balance, amount)
       if (balance < amount) fail("Insufficient funds");
       return balance - amount;
     });
