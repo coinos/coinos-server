@@ -265,7 +265,7 @@ export default {
   },
 
   async withdraw({ body: { name, amount }, user }, res) {
-    amount = parseInt(amount)
+    amount = parseInt(amount);
     await t(`pot:${name}`, async balance => {
       await new Promise(r => setTimeout(r, 100));
       if (balance < amount) fail("Insufficient funds");
@@ -282,5 +282,10 @@ export default {
     await db.lPush(`pot:${name}:payments`, hash);
 
     res.send({ payment });
+  },
+
+  async bitcoin({ body }, res) {
+    console.log(body);
+    res.send({});
   }
 };

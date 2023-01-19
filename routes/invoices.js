@@ -2,6 +2,8 @@ import store from "$lib/store";
 import { l } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import { db, g, s } from "$lib/db";
+import { bip21, fail } from "$lib/utils";
+import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
 export default {
@@ -12,41 +14,49 @@ export default {
   },
 
   async create({ body: { invoice, user }, user: me }, res) {
-    let { currency, tip, amount, rate, request_id } = invoice;
+    let { currency, tip, amount, rate, request_id, type } = invoice;
 
-    if (amount < 0) throw new Error("amount out of range");
-    if (tip > 5 * amount || tip < 0) throw new Error("tip amount out of range");
+    if (amount < 0) fail("amount out of range");
+    if (tip > 5 * amount || tip < 0) fail("tip amount out of range");
     tip = tip || 0;
 
     if (!user) user = me;
     let uid = await g(`user:${user.username}`);
     user = await g(`user:${uid}`);
 
-    if (!user) throw new Error("user not provided");
+    if (!user) fail("user not provided");
 
     if (!currency) currency = user.currency;
     if (!rate) rate = store.rates[currency];
-    if (amount < 0) throw new Error("invalid amount");
+    if (amount < 0) fail("invalid amount");
 
-    let { payment_hash: hash, bolt11: text } = await ln.invoice(
-      amount ? `${amount + tip}sat` : "any",
-      new Date(),
-      "",
-      3600
-    );
+    let hash, text;
+    if (type === "lightning") {
+      let amt = amount ? `${amount + tip}sat` : "any";
+      let r = await ln.invoice(amt, new Date(), "", 3600);
+
+      hash = r.payment_hash;
+      text = r.bolt11;
+    } else if (type === "bitcoin") {
+      hash = await bc.getNewAddress();
+      text = bip21(hash, invoice);
+    } else {
+      fail("unrecognized type");
+    }
 
     invoice = {
       ...invoice,
-      hash,
       amount,
+      hash,
+      text,
       currency,
       rate,
       tip,
       uid,
-      text,
       received: 0,
       created: Date.now()
     };
+
 
     l(
       "creating invoice",
@@ -54,7 +64,7 @@ export default {
       amount,
       tip,
       currency,
-      `${text.substr(0, 8)}..${text.substr(-6)}`
+      invoice.hash
     );
 
     await s(`invoice:${hash}`, invoice);

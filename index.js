@@ -50,6 +50,7 @@ app.get("/payments/:hash", auth, payments.get);
 app.post("/lightning/send", auth, payments.sendLightning);
 app.get("/pot/:name", payments.pot);
 app.post("/withdraw", auth, payments.withdraw);
+app.post("/bitcoin", payments.bitcoin);
 
 app.get("/voucher/:id", payments.voucher);
 app.post("/redeem", optional, payments.redeem);
