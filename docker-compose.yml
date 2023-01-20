@@ -48,6 +48,14 @@ services:
     volumes:
       - ./data/lightningc:/root/.lightning
     restart: always
+  cld:
+    image: elementsproject/lightningd:latest
+    container_name: cld
+    environment:
+      LIGHTNINGD_NETWORK: regtest
+    volumes:
+      - ./data/lightningd:/root/.lightning
+    restart: always
   db:
     image: eqalpha/keydb
     container_name: db

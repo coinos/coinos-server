@@ -18,16 +18,14 @@ export default {
     let { amount, hash, name, memo, tip } = body;
     await requirePin({ body, user });
 
-    let invoice, recipient;
-
-    let p = await debit(user, amount, memo, recipient);
+    let p = await debit(hash, amount, memo, user);
 
     if (hash) {
       await credit(hash, amount, memo, user.id);
     } else {
       let pot = name || v4();
       await db.incrBy(`pot:${pot}`, amount);
-      await db.lPush(`pot:${pot}:payments`, p.hash);
+      await db.lPush(`pot:${pot}:payments`, p.id);
       l("funded pot", pot);
     }
 
@@ -43,8 +41,13 @@ export default {
     // if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
 
     let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
-    payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
-    payments = payments.filter(p => p);
+    payments = await Promise.all(
+      payments.map(async id => {
+        let p = await g(`payment:${id}`);
+        if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+        return p;
+      })
+    );
     res.send({ payments, total: payments.length });
   },
 
@@ -52,7 +55,7 @@ export default {
     res.send(await g(`payment:${hash}`));
   },
 
-  async query({ body: { payreq } }, res) {
+  async parse({ body: { payreq } }, res) {
     let hour = 1000 * 60 * 60;
     let { last } = store.nodes;
     let { nodes } = store;
@@ -61,11 +64,14 @@ export default {
     store.nodes = nodes;
 
     let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
-    let { msatoshi, payee } = await ln.decodepay(payreq);
+    let decoded = await ln.decodepay(payreq);
+    let { msatoshi, payee, routes } = decoded;
     let node = nodes.find(n => n.nodeid === payee);
     let alias = node ? node.alias : payee.substr(0, 12);
+    let r = await ln.getroute(payee, msatoshi, 5);
+    console.log(routes, r);
 
-    res.send({ alias, amount: Math.round(msatoshi / 1000) });
+    res.send({ alias, amount: Math.round(msatoshi / 1000), routes });
   },
 
   async pot({ params: { name } }, res) {
@@ -108,7 +114,13 @@ export default {
         if (confirmations > 0) {
           await confirm(address, txid, vout);
         } else {
-          await credit(address, sats(amount), "", `${txid}:${vout}`, types.bitcoin);
+          await credit(
+            address,
+            sats(amount),
+            "",
+            `${txid}:${vout}`,
+            types.bitcoin
+          );
         }
       }
     }

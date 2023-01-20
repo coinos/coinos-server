@@ -4,6 +4,7 @@ import { emit } from "$lib/sockets";
 import { db, g, s } from "$lib/db";
 import { bip21, fail } from "$lib/utils";
 import { types } from "$lib/payments";
+import { v4 } from "uuid";
 
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
@@ -33,6 +34,7 @@ export default {
     if (amount < 0) fail("invalid amount");
 
     let hash, text;
+    console.log("TYPE", type)
     if (type === types.lightning) {
       let amt = amount ? `${amount + tip}sat` : "any";
       let r = await ln.invoice(amt, new Date(), "", 3600);
@@ -42,6 +44,8 @@ export default {
     } else if (type === types.bitcoin) {
       hash = await bc.getNewAddress();
       text = bip21(hash, invoice);
+    } else if (type === types.internal) {
+      hash = v4();
     } else {
       fail("unrecognized type");
     }

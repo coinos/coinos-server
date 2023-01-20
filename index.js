@@ -47,7 +47,7 @@ app.post("/invoice", optional, invoices.create);
 app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", auth, payments.get);
-app.post("/query", auth, payments.query);
+app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
 app.post("/take", auth, payments.take);
 app.post("/bitcoin", payments.bitcoin);
