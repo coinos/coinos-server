@@ -2,97 +2,19 @@ import config from "$config";
 import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
-import { notify } from "$lib/notifications";
 import { db, g, s, t } from "$lib/db";
-import { l, err, warn } from "$lib/logging";
-import { fail } from "$lib/utils";
-import ln from "$lib/ln";
+import { l, err } from "$lib/logging";
+import { fail, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
-import { callWebhook } from "$lib/webhooks";
+import { debit, credit, confirm, types } from "$lib/payments";
+
+import bc from "$lib/bitcoin";
+import ln from "$lib/ln";
 
 const { HOSTNAME: hostname } = process.env;
 
-let debit = async (user, amount, memo, to) => {
-  let { id: uid, currency, username } = user;
-  to = to && to.id;
-
-  amount = parseInt(amount);
-
-  if (!amount || amount < 0) fail("Amount must be greater than zero");
-
-  await t(`balance:${uid}`, async balance => {
-    await new Promise(r => setTimeout(r, 100));
-    if (balance < amount) fail("Insufficient funds");
-    return balance - amount;
-  });
-
-  let fee = 0;
-
-  let hash = v4();
-
-  let p = {
-    hash,
-    amount: -amount,
-    memo,
-    uid,
-    rate: store.rates[currency],
-    currency,
-    type: "internal",
-    to,
-    created: Date.now()
-  };
-
-  if (!to) delete p.to;
-
-  await s(`payment:${hash}`, p);
-  await db.lPush(`${uid}:payments`, hash);
-
-  l("sent internal", user.username, amount);
-  emit(user.id, "payment", p);
-
-  return p;
-};
-
-let credit = async (hash, amount, memo, from) => {
-  let invoice = await g(`invoice:${hash}`);
-  let user = await g(`user:${invoice.uid}`);
-
-  let { id: uid, currency, username } = user;
-  from = from.id;
-
-  let p = {
-    hash,
-    amount,
-    uid,
-    rate: store.rates[currency],
-    currency,
-    memo,
-    type: memo === "pot" ? "pot" : "internal",
-    from,
-    created: Date.now()
-  };
-
-  let { tip } = invoice;
-  if (tip) {
-    p.tip = tip;
-    p.amount -= tip;
-  }
-
-  invoice.received += amount;
-  await s(`invoice:${hash}`, invoice);
-  await s(`payment:${hash}`, p);
-  await db.lPush(`${uid}:payments`, hash);
-
-  l("received internal", username, amount);
-  emit(username, "payment", p);
-  notify(user, `Received ${amount} sats`);
-  callWebhook(invoice, p);
-
-  return p;
-};
-
 export default {
-  async send({ body, user }, res) {
+  async create({ body, user }, res) {
     let { amount, hash, name, memo, tip } = body;
     await requirePin({ body, user });
 
@@ -101,7 +23,7 @@ export default {
     let p = await debit(user, amount, memo, recipient);
 
     if (hash) {
-      await credit(hash, amount, memo, user);
+      await credit(hash, amount, memo, user.id);
     } else {
       let pot = name || v4();
       await db.incrBy(`pot:${pot}`, amount);
@@ -126,116 +48,11 @@ export default {
     res.send({ payments, total: payments.length });
   },
 
-  async voucher(req, res) {
-    try {
-      const { redeemcode } = req.params;
-      let payment = await g(`voucher:${id}`);
-
-      payment = payment.get({ plain: true });
-      payment.redeemer = payment["with"];
-
-      if (!payment) fail("invalid code");
-
-      res.send(payment);
-    } catch (e) {
-      res.code(500).send(e.message);
-    }
-  },
-
   async get({ params: { hash } }, res) {
     res.send(await g(`payment:${hash}`));
   },
 
-  async redeem({ body: { redeemcode } }, res) {
-    try {
-      await db.transaction(async transaction => {
-        if (!redeemcode) fail("no code provided");
-
-        let { user } = req;
-
-        const source = await db.Payment.findOne({
-          where: {
-            redeemcode: req.body.redeemcode
-          },
-          include: {
-            model: db.Account,
-            as: "account"
-          },
-          lock: transaction.LOCK.UPDATE,
-          transaction
-        });
-
-        l("redeeming", redeemcode);
-
-        if (!source) fail("Invalid code");
-        if (source.redeemed) fail("Voucher has already been redeemed");
-        let { amount } = source;
-        amount = -amount;
-
-        if (!user) {
-          const ip =
-            req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-
-          user = await register(
-            {
-              username: redeemcode.substr(0, 8),
-              password: ""
-            },
-            ip,
-            false
-          );
-
-          let payload = { username: user.username };
-          let token = jwt.sign(payload, config.jwt);
-          res.cookie("token", token, {
-            expires: new Date(Date.now() + 432000000)
-          });
-
-          return res.send({ user });
-        }
-
-        let account = await getAccount(source.account.asset, user, transaction);
-        let { hash, memo, confirmed, fee, network } = source;
-
-        source.redeemed = true;
-        (source.with_id = user.id), await source.save({ transaction });
-
-        let payment = await db.Payment.create(
-          {
-            amount,
-            account_id: account.id,
-            user_id: user.id,
-            hash: "Voucher " + redeemcode,
-            memo,
-            rate: store.rates[user.currency],
-            currency: user.currency,
-            confirmed,
-            network,
-            received: true,
-            fee,
-            with_id: source.user_id
-          },
-          { transaction }
-        );
-
-        await account.increment({ balance: amount }, { transaction });
-        await account.reload({ transaction });
-
-        payment = payment.get({ plain: true });
-        payment.account = account.get({ plain: true });
-        emit(user.username, "payment", payment);
-        emit(user.username, "account", account);
-
-        res.send({ payment });
-      });
-    } catch (e) {
-      console.log(e);
-      err("problem redeeming", e.message);
-      return res.code(500).send("There was a problem redeeming the voucher");
-    }
-  },
-
-  async sendLightning({ body: { payreq } }, res) {
+  async query({ body: { payreq } }, res) {
     let hour = 1000 * 60 * 60;
     let { last } = store.nodes;
     let { nodes } = store;
@@ -264,7 +81,7 @@ export default {
     res.send({ amount, payments });
   },
 
-  async withdraw({ body: { name, amount }, user }, res) {
+  async take({ body: { name, amount }, user }, res) {
     amount = parseInt(amount);
     await t(`pot:${name}`, async balance => {
       await new Promise(r => setTimeout(r, 100));
@@ -278,14 +95,23 @@ export default {
       received: 0
     });
 
-    let payment = await credit(hash, amount, "pot", { id: name });
-    await db.lPush(`pot:${name}:payments`, hash);
+    let payment = await credit(hash, amount, "", name, types.pot);
+    await db.lPush(`${name}:payments`, hash);
 
     res.send({ payment });
   },
 
-  async bitcoin({ body }, res) {
-    console.log(body);
+  async bitcoin({ body: { txid, wallet } }, res) {
+    if (wallet === config.bitcoin.wallet) {
+      let { confirmations, details } = await bc.getTransaction(txid);
+      for (let { address, amount, vout } of details) {
+        if (confirmations > 0) {
+          await confirm(address, txid, vout);
+        } else {
+          await credit(address, sats(amount), "", `${txid}:${vout}`, types.bitcoin);
+        }
+      }
+    }
     res.send({});
   }
 };

@@ -3,6 +3,8 @@ import { l } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import { db, g, s } from "$lib/db";
 import { bip21, fail } from "$lib/utils";
+import { types } from "$lib/payments";
+
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
@@ -31,13 +33,13 @@ export default {
     if (amount < 0) fail("invalid amount");
 
     let hash, text;
-    if (type === "lightning") {
+    if (type === types.lightning) {
       let amt = amount ? `${amount + tip}sat` : "any";
       let r = await ln.invoice(amt, new Date(), "", 3600);
 
       hash = r.payment_hash;
       text = r.bolt11;
-    } else if (type === "bitcoin") {
+    } else if (type === types.bitcoin) {
       hash = await bc.getNewAddress();
       text = bip21(hash, invoice);
     } else {
@@ -57,15 +59,7 @@ export default {
       created: Date.now()
     };
 
-
-    l(
-      "creating invoice",
-      user.username,
-      amount,
-      tip,
-      currency,
-      invoice.hash
-    );
+    l("creating invoice", user.username, amount, tip, currency, invoice.hash);
 
     await s(`invoice:${hash}`, invoice);
     await db.lPush(`${uid}:invoices`, hash);

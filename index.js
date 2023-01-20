@@ -44,16 +44,13 @@ app.get("/locations", locations.list);
 app.get("/invoice", invoices.get);
 app.post("/invoice", optional, invoices.create);
 
-app.post("/send", auth, payments.send);
+app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", auth, payments.get);
-app.post("/lightning/send", auth, payments.sendLightning);
+app.post("/query", auth, payments.query);
 app.get("/pot/:name", payments.pot);
-app.post("/withdraw", auth, payments.withdraw);
+app.post("/take", auth, payments.take);
 app.post("/bitcoin", payments.bitcoin);
-
-app.get("/voucher/:id", payments.voucher);
-app.post("/redeem", optional, payments.redeem);
 
 app.get("/me", auth, users.me);
 app.get("/users/:key", users.get);
