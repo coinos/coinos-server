@@ -4,7 +4,7 @@ import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err } from "$lib/logging";
-import { fail, sats } from "$lib/utils";
+import { fail, btc, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
 
@@ -15,15 +15,41 @@ const { HOSTNAME: hostname } = process.env;
 
 export default {
   async create({ body, user }, res) {
-    let { amount, hash, name, memo, tip } = body;
+    let { amount, hash, maxfee, name, memo, payreq, tip } = body;
+
+    amount = parseInt(amount);
+    maxfee = parseInt(maxfee);
+    tip = parseInt(tip);
+
     await requirePin({ body, user });
 
-    let p = await debit(hash, amount, memo, user);
+    let p;
 
-    if (hash) {
+    if (payreq) {
+      p = await debit(
+        hash,
+        amount + maxfee,
+        maxfee,
+        memo,
+        user,
+        types.lightning
+      );
+
+      let r = await ln.pay(payreq);
+
+      p.amount = -amount;
+      p.hash = r.payment_hash;
+      p.fee = r.msatoshi_sent - r.msatoshi;
+      p.preimage = r.payment_preimage;
+
+      await s(`payment:${p.id}`, p);
+      await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+    } else if (hash) {
+      p = await debit(hash, amount, 0, memo, user);
       await credit(hash, amount, memo, user.id);
     } else {
       let pot = name || v4();
+      p = await debit(hash, amount, 0, memo, user);
       await db.incrBy(`pot:${pot}`, amount);
       await db.lPush(`pot:${pot}:payments`, p.id);
       l("funded pot", pot);
@@ -65,13 +91,11 @@ export default {
 
     let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
     let decoded = await ln.decodepay(payreq);
-    let { msatoshi, payee, routes } = decoded;
+    let { msatoshi, payee } = decoded;
     let node = nodes.find(n => n.nodeid === payee);
     let alias = node ? node.alias : payee.substr(0, 12);
-    let r = await ln.getroute(payee, msatoshi, 5);
-    console.log(routes, r);
 
-    res.send({ alias, amount: Math.round(msatoshi / 1000), routes });
+    res.send({ alias, amount: Math.round(msatoshi / 1000) });
   },
 
   async pot({ params: { name } }, res) {
@@ -90,7 +114,6 @@ export default {
   async take({ body: { name, amount }, user }, res) {
     amount = parseInt(amount);
     await t(`pot:${name}`, async balance => {
-      await new Promise(r => setTimeout(r, 100));
       if (balance < amount) fail("Insufficient funds");
       return balance - amount;
     });
@@ -125,5 +148,74 @@ export default {
       }
     }
     res.send({});
+  },
+
+  async fee(req, res) {
+    let { amount, address, feeRate, subtract } = req.body;
+    let subtractFeeFromOutputs = subtract ? [0] : [];
+    let replaceable = true;
+    let outs = [{ [address]: btc(amount) }];
+    let count = await bc.getBlockCount();
+
+    let raw = await bc.createRawTransaction([], outs, 0, replaceable);
+    let tx = await bc.fundRawTransaction(raw, {
+      feeRate,
+      subtractFeeFromOutputs,
+      replaceable
+    });
+
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+    let { hex } = await bc.signRawTransactionWithWallet(tx.hex);
+    let { vsize } = await bc.decodeRawTransaction(hex);
+    feeRate = Math.round((sats(tx.fee) * 1000) / vsize);
+
+    res.send({ feeRate, tx });
+  },
+
+  async send(req, res) {
+    await requirePin(req);
+
+    let { user } = req;
+    let { address, memo, tx } = req.body;
+    let { hex, fee } = tx;
+
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+    ({ hex } = await bc.signRawTransactionWithWallet(hex));
+
+    let r = await bc.testMempoolAccept([hex]);
+    if (!r[0].allowed) fail("transaction rejected");
+
+    fee = sats(fee);
+    if (fee < 0) fail("fee cannot be negative");
+
+    tx = await bc.decodeRawTransaction(hex);
+    let { txid } = tx;
+
+    let total = 0;
+    let change = 0;
+
+    for (let {
+      scriptPubKey: { address },
+      value
+    } of tx.vout) {
+      total += sats(value);
+      if (
+        (await bc.getAddressInfo(address)).ismine &&
+        !(await g(`invoice:${address}`))
+      )
+        change += sats(value);
+    }
+
+    total = total - change + fee;
+    let amount = total - fee;
+
+    await debit(txid, amount, fee, null, user, types.bitcoin, txid);
+    await bc.sendRawTransaction(hex);
+
+    res.send({ txid });
   }
 };

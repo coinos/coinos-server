@@ -50,7 +50,10 @@ app.get("/payments/:hash", auth, payments.get);
 app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
 app.post("/take", auth, payments.take);
+
 app.post("/bitcoin", payments.bitcoin);
+app.post("/bitcoin/fee", auth, payments.fee);
+app.post("/bitcoin/send", auth, payments.send);
 
 app.get("/me", auth, users.me);
 app.get("/users/:key", users.get);

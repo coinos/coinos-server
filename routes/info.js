@@ -15,7 +15,7 @@ export default {
     for await (let keys of stream) {
       for (let k of keys) b += parseInt(await db.get(k));
     }
-    console.log(b)
+    console.log(b);
 
     const funds = await ln.listfunds();
     lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));

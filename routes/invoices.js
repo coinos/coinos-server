@@ -34,7 +34,6 @@ export default {
     if (amount < 0) fail("invalid amount");
 
     let hash, text;
-    console.log("TYPE", type)
     if (type === types.lightning) {
       let amt = amount ? `${amount + tip}sat` : "any";
       let r = await ln.invoice(amt, new Date(), "", 3600);
