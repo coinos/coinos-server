@@ -40,7 +40,7 @@ export default {
       p.amount = -amount;
       p.hash = r.payment_hash;
       p.fee = r.msatoshi_sent - r.msatoshi;
-      p.preimage = r.payment_preimage;
+      p.ref = r.payment_preimage;
 
       await s(`payment:${p.id}`, p);
       await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
