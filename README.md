@@ -6,13 +6,9 @@ This repository contains the code for the API server. The frontend code is at <a
 
 ## Install
 
-The following commands will set up bitcoin and lightning nodes in regtest mode, along with a coinos api server and database. You'll need to have <a href="https://docs.docker.com/get-docker/">docker</a>.
+Make sure you have <a href="https://docs.docker.com/get-docker/">docker</a> then run the setup script:
 
 ```bash
-cp -r sampledata data
-docker compose up -d
-docker run -it -v $(pwd):/app --entrypoint pnpm cs i
 chmod +x setup.sh
 ./setup.sh
 ```
-
