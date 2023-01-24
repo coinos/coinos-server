@@ -1,5 +1,5 @@
 import { g, s } from "$lib/db";
-import { invoice } from "$lib/invoices";
+import { generate } from "$lib/invoices";
 
 export default {
   async get({ query: { hash } }, res) {
@@ -9,6 +9,6 @@ export default {
   },
 
   async create({ body: { invoice, user }, user: sender }, res) {
-    res.send(await invoice({ invoice, user, sender }));
+    res.send(await generate({ invoice, user, sender }));
   }
 };

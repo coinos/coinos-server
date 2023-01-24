@@ -3,7 +3,7 @@ import { l } from "$lib/logging";
 import { fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
-import { invoice } from "$lib/invoices";
+import { generate } from "$lib/invoices";
 import { bech32 } from "bech32";
 
 export default {
@@ -50,7 +50,7 @@ export default {
       let uid = await g(`lnurl:${id}`);
       let user = await g(`user:${uid}`);
 
-      ({ text: pr } = await invoice({
+      ({ text: pr } = await generate({
         invoice: {
           amount,
           type: types.lightning
