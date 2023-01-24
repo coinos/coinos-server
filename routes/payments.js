@@ -8,12 +8,11 @@ import { fail, btc, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
 import { bech32 } from "bech32";
+import { invoice } from "$lib/invoices";
 import got from "got";
 
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
-
-const { HOSTNAME: hostname } = process.env;
 
 export default {
   async create({ body, user }, res) {
@@ -227,7 +226,6 @@ export default {
     let r = await got(url).json();
     if (r.tag !== "payRequest") fail("not an ln address");
     let enc = bech32.encode("lnurl", bech32.toWords(Buffer.from(url)), 20000);
-    console.log(enc);
     res.send(enc);
   },
 
@@ -239,13 +237,43 @@ export default {
     res.send(await got(url).json());
   },
 
-  async lnurl({ params: { code }, query: { amount } }, res) {
-    let { uid } = await g(`code:${code}`);
+  async lnurlp({ params: { username } }, res) {
+    let uid = await g(`user:${username}`);
+    if (!uid) fail("user not found");
 
-    let url = Buffer.from(
-      bech32.fromWords(bech32.decode(text, 20000).words)
-    ).toString();
+    let id = v4();
+    await s(`lnurl:${id}`, uid);
+    let { URL } = process.env;
+    let host = URL.split("/").at(-1);
 
-    res.send(await got(url).json());
+    res.send({
+      metadata: [
+        ["text/plain", `Paying ${username}@${host}`],
+        ["text/identifier", `${username}@${host}`]
+      ],
+      callback: `${host}/lnurl/${id}`,
+      tag: "payRequest"
+    });
+  },
+
+  async lnurl({ params: { id }, query: { amount } }, res) {
+    let pr = await g(`lnurlp:${id}`);
+
+    if (!pr) {
+      let uid = await g(`lnurl:${id}`);
+      let user = await g(`user:${uid}`);
+
+      ({ text: pr } = await invoice({
+        invoice: {
+          amount,
+          type: types.lightning
+        },
+        user
+      }));
+
+      await s(`lnurlp:${id}`, pr);
+    }
+
+    res.send({ pr });
   }
 };

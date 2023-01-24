@@ -12,6 +12,7 @@ services:
     environment:
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
+      URL: http://localhost:3119
     ports:
       - '3119:3119'
     volumes:

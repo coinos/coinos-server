@@ -10,6 +10,7 @@ import { sendHeartbeat } from "$lib/sockets";
 import email from "$routes/email";
 import info from "$routes/info";
 import locations from "$routes/locations";
+import lnurl from "$routes/lnurl";
 import nostr from "$routes/nostr";
 import rates from "$routes/rates";
 import invoices from "$routes/invoices";
@@ -50,9 +51,11 @@ app.get("/payments/:hash", auth, payments.get);
 app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
 app.post("/take", auth, payments.take);
-app.get("/encode", payments.encode);
-app.get("/decode", payments.decode);
-app.get("/lnurl/:code", payments.lnurl);
+
+app.get("/encode", lnurl.encode);
+app.get("/decode", lnurl.decode);
+app.get("/lnurlp/:username", lnurl.lnurlp);
+app.get("/lnurl/:id", lnurl.lnurl);
 
 app.post("/bitcoin", payments.bitcoin);
 app.post("/bitcoin/fee", auth, payments.fee);
