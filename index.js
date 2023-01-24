@@ -50,6 +50,9 @@ app.get("/payments/:hash", auth, payments.get);
 app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
 app.post("/take", auth, payments.take);
+app.get("/encode", payments.encode);
+app.get("/decode", payments.decode);
+app.get("/lnurl/:code", payments.lnurl);
 
 app.post("/bitcoin", payments.bitcoin);
 app.post("/bitcoin/fee", auth, payments.fee);

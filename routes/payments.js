@@ -7,6 +7,8 @@ import { l, err } from "$lib/logging";
 import { fail, btc, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
+import { bech32 } from "bech32";
+import got from "got";
 
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
@@ -217,5 +219,33 @@ export default {
     await bc.sendRawTransaction(hex);
 
     res.send({ txid });
+  },
+
+  async encode({ query: { address } }, res) {
+    let [name, domain] = address.split("@");
+    let url = `https://${domain}/.well-known/lnurlp/${name}`;
+    let r = await got(url).json();
+    if (r.tag !== "payRequest") fail("not an ln address");
+    let enc = bech32.encode("lnurl", bech32.toWords(Buffer.from(url)), 20000);
+    console.log(enc);
+    res.send(enc);
+  },
+
+  async decode({ query: { text } }, res) {
+    let url = Buffer.from(
+      bech32.fromWords(bech32.decode(text, 20000).words)
+    ).toString();
+
+    res.send(await got(url).json());
+  },
+
+  async lnurl({ params: { code }, query: { amount } }, res) {
+    let { uid } = await g(`code:${code}`);
+
+    let url = Buffer.from(
+      bech32.fromWords(bech32.decode(text, 20000).words)
+    ).toString();
+
+    res.send(await got(url).json());
   }
 };
