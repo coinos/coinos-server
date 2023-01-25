@@ -1,4 +1,5 @@
 export default {
+  db: "redis://db",
   nostr: "ws://nostr:8080",
   relays: [
     "ws://nostr:8080",
