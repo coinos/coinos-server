@@ -1,5 +1,4 @@
 node_modules/
 .pnpm*
-uploads
 data
 config.js
