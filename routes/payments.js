@@ -111,9 +111,12 @@ export default {
 
   async take({ body: { name, amount }, user }, res) {
     amount = parseInt(amount);
-    await t(`pot:${name}`, async balance => {
+    await t(`pot:${name}`, async (balance, db) => {
       if (balance < amount) fail("Insufficient funds");
-      return balance - amount;
+      await db
+        .multi()
+        .decrBy(`pot:${name}`, amount)
+        .exec();
     });
 
     let hash = v4();
@@ -211,10 +214,11 @@ export default {
     total = total - change + fee;
     let amount = total - fee;
 
+    if (change && !amount) fail("Cannot send to unregistered coinos address");
+
     await debit(txid, amount, fee, null, user, types.bitcoin, txid);
     await bc.sendRawTransaction(hex);
 
     res.send({ txid });
-  },
-
+  }
 };
