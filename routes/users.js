@@ -2,7 +2,7 @@ import app from "$app";
 import redis from "$lib/redis";
 import config from "$config";
 import store from "$lib/store";
-import { auth, optionalAuth } from "$lib/passport";
+import { auth, adminAuth, optionalAuth } from "$lib/passport";
 import { getUser, nada, uniq, wait } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -32,20 +32,20 @@ app.get("/me", auth, async (req, res) => {
     let user = req.user.get({ plain: true });
     let payments = await req.user.getPayments({
       where: {
-        account_id: user.account_id
+        account_id: user.account_id,
       },
       order: [["id", "DESC"]],
       limit: 12,
       include: [
         {
           model: db.Account,
-          as: "account"
+          as: "account",
         },
         {
           model: db.Payment,
-          as: "fee_payment"
-        }
-      ]
+          as: "fee_payment",
+        },
+      ],
     });
 
     user.accounts = await req.user.getAccounts();
@@ -57,6 +57,26 @@ app.get("/me", auth, async (req, res) => {
     console.log("problem fetching user", e);
     res.code(500).send(e.message);
   }
+});
+
+app.get("/admin/migrate/:username", adminAuth, async (req, res) => {
+  let { username } = req.params;
+  let { zero } = req.query;
+  let user = await db.User.findOne({ where: { username } });
+  let account = await db.Account.findOne({
+    where: { user_id: user.id, pubkey: null, asset: config.liquid.btcasset },
+    order: [["balance", "DESC"]],
+  });
+
+  user = user.get({ plain: true });
+  user.balance = account.balance;
+
+  if (zero) {
+    account.balance = 0;
+    await account.save();
+  }
+
+  res.send(user);
 });
 
 app.get("/users/:username", async (req, res) => {
@@ -77,7 +97,7 @@ app.get("/users/:username", async (req, res) => {
         "pubkey",
         "display",
         "prompt",
-        "uuid"
+        "uuid",
       ],
       where: {
         [Sequelize.Op.or]: [
@@ -85,9 +105,9 @@ app.get("/users/:username", async (req, res) => {
             Sequelize.fn("lower", Sequelize.col("username")),
             username.toLowerCase()
           ),
-          { pubkey: username }
-        ]
-      }
+          { pubkey: username },
+        ],
+      },
     });
 
     if (user) user = user.get({ plain: true });
@@ -97,7 +117,7 @@ app.get("/users/:username", async (req, res) => {
       let newuser = {
         username: username.substr(0, 6),
         pubkey: username,
-        anon: true
+        anon: true,
       };
 
       user = JSON.parse(await redis.get(`user:${newuser.pubkey}`)) || newuser;
@@ -122,7 +142,7 @@ app.post("/register", async (req, res) => {
       pubkey,
       password,
       username,
-      salt
+      salt,
     };
 
     user = await register(user, ip, false);
@@ -137,7 +157,7 @@ app.post("/disable2fa", auth, async (req, res) => {
   try {
     let {
       user,
-      body: { token }
+      body: { token },
     } = req;
 
     if (user.twofa && !authenticator.check(token, user.otpsecret)) {
@@ -176,7 +196,7 @@ app.post("/2fa", auth, async (req, res) => {
 
 app.get("/exists", async (req, res) => {
   let exists = await db.User.findOne({
-    where: { username: req.query.username }
+    where: { username: req.query.username },
   });
 
   res.send(!!exists);
@@ -198,7 +218,7 @@ app.post("/user", auth, async (req, res) => {
 
     if (username)
       exists = await db.User.findOne({
-        where: { username }
+        where: { username },
       });
 
     let token;
@@ -227,7 +247,7 @@ app.post("/user", auth, async (req, res) => {
       "seed",
       "tokens",
       "twofa",
-      "unit"
+      "unit",
     ];
 
     for (let a of attributes) {
@@ -256,7 +276,7 @@ app.post("/keys", auth, async (req, res) => {
   const { key: hex } = req.body;
   const key = await db.Key.create({
     user_id: req.user.id,
-    hex
+    hex,
   });
   emit(req.user.username, "key", key);
   res.send(key);
@@ -268,8 +288,8 @@ app.post("/keys/delete", auth, async (req, res) => {
     await db.Key.findOne({
       where: {
         user_id: req.user.id,
-        hex
-      }
+        hex,
+      },
     })
   ).destroy();
 });
@@ -285,12 +305,12 @@ app.post("/updateSeeds", auth, async (req, res) => {
     await db.Account.update(
       { seed },
       {
-        where: { id, user_id: user.id }
+        where: { id, user_id: user.id },
       }
     );
 
     const account = await db.Account.findOne({
-      where: { id }
+      where: { id },
     });
 
     emit(user.username, "account", account);
@@ -307,16 +327,8 @@ app.post("/accounts/delete", auth, async (req, res) => {
 });
 
 app.post("/accounts", auth, async (req, res) => {
-  const {
-    name,
-    seed,
-    pubkey,
-    ticker,
-    precision,
-    path,
-    privkey,
-    network
-  } = req.body;
+  const { name, seed, pubkey, ticker, precision, path, privkey, network } =
+    req.body;
   const { user } = req;
 
   let account = await db.Account.create({
@@ -331,7 +343,7 @@ app.post("/accounts", auth, async (req, res) => {
     privkey,
     seed,
     path,
-    network
+    network,
   });
 
   emit(user.username, "account", account);
@@ -414,14 +426,14 @@ app.post("/logout", optionalAuth, async (req, res) => {
   if (username) {
     l("logging out", username);
     let i = req.user.subscriptions.findIndex(
-      s => JSON.stringify(s) === subscription
+      (s) => JSON.stringify(s) === subscription
     );
     if (i > -1) {
       req.user.subscriptions.splice(i, 1);
     }
     await req.user.save();
     Object.keys(logins).map(
-      k => logins[k]["username"] === username && delete logins[k]
+      (k) => logins[k]["username"] === username && delete logins[k]
     );
   }
 
@@ -441,15 +453,15 @@ app.post("/account", auth, async (req, res) => {
     privkey,
     path,
     hide,
-    index
+    index,
   } = req.body;
 
   try {
-    await db.transaction(async transaction => {
+    await db.transaction(async (transaction) => {
       let account = await db.Account.findOne({
         where: { id, user_id: user.id },
         lock: transaction.LOCK.UPDATE,
-        transaction
+        transaction,
       });
 
       let params = {
@@ -462,14 +474,14 @@ app.post("/account", auth, async (req, res) => {
         path,
         hide,
         index,
-        privkey
+        privkey,
       };
 
       if (!account || (account.pubkey && !pubkey)) delete params.pubkey;
 
       await db.Account.update(params, {
         where: { id, user_id: user.id },
-        transaction
+        transaction,
       });
 
       await account.reload({ transaction });
@@ -488,7 +500,7 @@ app.post("/shiftAccount", auth, async (req, res) => {
 
   try {
     const account = await db.Account.findOne({
-      where: { id }
+      where: { id },
     });
 
     if (account.user_id !== user.id)
@@ -498,14 +510,14 @@ app.post("/shiftAccount", auth, async (req, res) => {
     await user.save();
     let payments = await db.Payment.findAll({
       where: {
-        account_id: id
+        account_id: id,
       },
       order: [["id", "DESC"]],
       limit: 12,
       include: {
         model: db.Account,
-        as: "account"
-      }
+        as: "account",
+      },
     });
 
     user = user.get({ plain: true });
@@ -522,16 +534,18 @@ app.post("/shiftAccount", auth, async (req, res) => {
   }
 });
 
-app.get("/vapidPublicKey", function(req, res) {
+app.get("/vapidPublicKey", function (req, res) {
   res.send(config.vapid.publicKey);
 });
 
-app.post("/subscribe", auth, async function(req, res) {
+app.post("/subscribe", auth, async function (req, res) {
   let { subscriptions } = req.user;
   let { subscription } = req.body;
   if (!subscriptions) subscriptions = [];
   if (
-    !subscriptions.find(s => JSON.stringify(s) === JSON.stringify(subscription))
+    !subscriptions.find(
+      (s) => JSON.stringify(s) === JSON.stringify(subscription)
+    )
   )
     subscriptions.push(subscription);
   req.user.subscriptions = subscriptions;
@@ -540,7 +554,7 @@ app.post("/subscribe", auth, async function(req, res) {
   res.sendStatus(201);
 });
 
-app.post("/password", auth, async function(req, res) {
+app.post("/password", auth, async function (req, res) {
   const { user } = req;
   const { password } = req.body;
 
@@ -548,7 +562,7 @@ app.post("/password", auth, async function(req, res) {
   res.send(await bcrypt.compare(password, user.password));
 });
 
-app.get("/isInternal", auth, async function(req, res) {
+app.get("/isInternal", auth, async function (req, res) {
   let { user } = req;
   let { address } = req.query;
   if (!address) throw new Error("Address not provided");
@@ -558,8 +572,8 @@ app.get("/isInternal", auth, async function(req, res) {
     include: {
       attributes: ["username"],
       model: db.User,
-      as: "user"
-    }
+      as: "user",
+    },
   });
 
   if (invoice) {
@@ -578,21 +592,21 @@ app.get("/isInternal", auth, async function(req, res) {
   res.send(false);
 });
 
-app.get("/invoices", auth, async function(req, res) {
+app.get("/invoices", auth, async function (req, res) {
   let invoices = await db.Invoice.findAll({
-    where: { user_id: req.user.id }
+    where: { user_id: req.user.id },
   });
   res.send(invoices);
 });
 
-app.post("/signMessage", auth, async function(req, res) {
+app.post("/signMessage", auth, async function (req, res) {
   let { address, message } = req.body;
 
   let invoices = await db.Invoice.findAll({
-    where: { user_id: req.user.id }
+    where: { user_id: req.user.id },
   });
 
-  if (invoices.find(i => i.address === address)) {
+  if (invoices.find((i) => i.address === address)) {
     if (config.bitcoin.walletpass)
       await bc.walletPassphrase(config.bitcoin.walletpass, 300);
     return res.send(await bc.signMessage(address, message));
@@ -601,7 +615,7 @@ app.post("/signMessage", auth, async function(req, res) {
   res.code(500).send("Address not found for user");
 });
 
-app.post("/otpsecret", auth, async function(req, res) {
+app.post("/otpsecret", auth, async function (req, res) {
   try {
     await requirePin(req);
     let { otpsecret, username } = req.user;
@@ -611,27 +625,30 @@ app.post("/otpsecret", auth, async function(req, res) {
   }
 });
 
-app.get("/contacts", auth, async function(req, res) {
+app.get("/contacts", auth, async function (req, res) {
   try {
     let contacts = await db.Payment.findAll({
       where: {
         user_id: req.user.id,
-        with_id: { [Sequelize.Op.ne]: null }
+        with_id: { [Sequelize.Op.ne]: null },
       },
       include: {
         attributes: ["username", "profile", "uuid"],
         model: db.User,
-        as: "with"
+        as: "with",
       },
       attributes: [
-        [Sequelize.fn("max", Sequelize.col("payments_model.createdAt")), "last"]
+        [
+          Sequelize.fn("max", Sequelize.col("payments_model.createdAt")),
+          "last",
+        ],
       ],
       group: ["with_id"],
-      order: [[{ model: db.User, as: "with" }, "username", "ASC"]]
+      order: [[{ model: db.User, as: "with" }, "username", "ASC"]],
     });
 
     res.send(
-      contacts.map(c => {
+      contacts.map((c) => {
         c = c.get({ plain: true });
         return { ...c.with, last: c.last };
       })
@@ -642,7 +659,7 @@ app.get("/contacts", auth, async function(req, res) {
   }
 });
 
-app.post("/checkPassword", auth, async function(req, res) {
+app.post("/checkPassword", auth, async function (req, res) {
   try {
     let { user } = req;
     let result = await bcrypt.compare(req.body.password, user.password);
@@ -664,7 +681,7 @@ app.get("/:pubkey/follows", async (req, res) => {
       {
         limit: 1,
         kinds: [3],
-        authors: [pubkey]
+        authors: [pubkey],
       },
       { timeout: 60000, eager: 60000 }
     ).catch(nada);
@@ -679,7 +696,7 @@ app.get("/:pubkey/follows", async (req, res) => {
       q(`${pubkey}:profile:f1`, {
         limit: 1,
         kinds: [0],
-        authors: [pubkey]
+        authors: [pubkey],
       }).catch(nada);
 
       let user = JSON.parse(await redis.get(`user:${pubkey}`));
@@ -688,13 +705,13 @@ app.get("/:pubkey/follows", async (req, res) => {
         user = {
           username: pubkey.substr(0, 6),
           pubkey,
-          anon: true
+          anon: true,
         };
 
       follows.push(user);
     }
 
-    follows = uniq(follows, e => e.pubkey);
+    follows = uniq(follows, (e) => e.pubkey);
     follows.sort((a, b) => a.username.localeCompare(b.username));
 
     res.send(follows);
@@ -711,8 +728,8 @@ app.get("/:pubkey/followers", async (req, res) => {
     let pubkeys = [
       ...new Set([
         ...(await got(`${config.nostr}/followers?pubkey=${pubkey}`).json()),
-        ...(await redis.sMembers(`${pubkey}:followers`))
-      ])
+        ...(await redis.sMembers(`${pubkey}:followers`)),
+      ]),
     ];
 
     let followers = [];
@@ -729,7 +746,7 @@ app.get("/:pubkey/followers", async (req, res) => {
         q(`${pubkey}:profile:f2`, {
           limit: 1,
           kinds: [0],
-          authors: [pubkey]
+          authors: [pubkey],
         }).catch(nada);
 
         user = JSON.parse(await redis.get(`user:${pubkey}`));
@@ -739,13 +756,13 @@ app.get("/:pubkey/followers", async (req, res) => {
         user = {
           username: pubkey.substr(0, 6),
           pubkey,
-          anon: true
+          anon: true,
         };
 
       followers.push(user);
     }
 
-    followers = uniq(followers, e => e.pubkey);
+    followers = uniq(followers, (e) => e.pubkey);
     followers.sort((a, b) => a.username.localeCompare(b.username));
 
     res.send(followers);
