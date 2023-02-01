@@ -200,6 +200,8 @@ export default {
           let { balance } = user;
           if (!user) fail();
 
+          uid = user.uuid;
+
           user = {
             ...pick(user, fields),
             id: uid,
