@@ -22,6 +22,7 @@ import { requirePin } from "$lib/utils";
 import { coinos, q } from "$lib/nostr";
 import got from "got";
 import { bech32 } from "bech32";
+import { v4 } from "uuid";
 
 const { encode, decode, fromWords, toWords } = bech32;
 
@@ -77,6 +78,38 @@ app.get("/admin/migrate/:username", adminAuth, async (req, res) => {
   }
 
   res.send(user);
+});
+
+app.post("/admin/credit", adminAuth, async (req, res) => {
+  let { amount, username, source } = req.body;
+  let user = await db.User.findOne({ where: { username } });
+  let account = await db.Account.findOne({
+    where: { user_id: user.id, pubkey: null, asset: config.liquid.btcasset },
+    order: [["balance", "DESC"]],
+  });
+
+  await account.increment({ balance: amount });
+
+  let p = await db.Payment.create({
+    amount,
+    account_id: account.id,
+    user_id: user.id,
+    rate: store.rates[user.currency],
+    currency: user.currency,
+    confirmed: true,
+    hash: `#${v4().substr(0, 6)} Payment from ${source}`,
+    network: "COINOS",
+    received: true,
+  });
+
+  p = p.get({ plain: true });
+  p.account = account.get({ plain: true });
+
+  emit(username, "payment", p);
+  emit(username, "account", p.account);
+
+  l("credited", username, amount);
+  res.send({});
 });
 
 app.get("/users/:username", async (req, res) => {
