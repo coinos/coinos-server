@@ -58,21 +58,27 @@ export default {
 
   async list({ user: { id }, query: { start, end, limit, offset } }, res) {
     if (limit) limit = parseInt(limit);
-    if (offset) offset = parseInt(offset);
-
-    // if (start || end) where.createdAt = {};
-    // if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
-    // if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
+    offset = parseInt(offset) || 0;
 
     let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
-    payments = await Promise.all(
-      payments.map(async id => {
-        let p = await g(`payment:${id}`);
-        if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
-        return p;
-      })
-    );
-    res.send({ payments, total: payments.length });
+    payments = (
+      await Promise.all(
+        payments.map(async id => {
+          let p = await g(`payment:${id}`);
+          if (p.created < start || p.created > end) return;
+          if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+          return p;
+        })
+      )
+    )
+      .filter(p => p)
+      .sort((a, b) => b.created - a.created);
+
+    let total = payments.length;
+
+    if (limit) payments = payments.slice(offset, offset + limit);
+
+    res.send({ payments, total });
   },
 
   async get({ params: { hash } }, res) {

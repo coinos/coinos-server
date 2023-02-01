@@ -1,7 +1,7 @@
-import { g, s } from "$lib/db";
+import { g, s, db } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";
-import { nada, pick, uniq, wait } from "$lib/utils";
+import { fields, nada, pick, uniq, wait } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
@@ -10,6 +10,10 @@ import { l, err, warn } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/utils";
+import { v4 } from "uuid";
+import { parseISO } from "date-fns";
+import { types } from "$lib/payments";
+
 import got from "got";
 import upload from "$lib/upload";
 
@@ -172,26 +176,83 @@ export default {
 
   async login(req, res) {
     try {
-      const { params, sig, key, password, username, token: twofa } = req.body;
+      const { username, password, token: twofa } = req.body;
       l("logging in", username);
 
-      if (sig) {
-        const { callback } = params;
+      let uid = await g(`user:${username}`);
+      let user = await g(`user:${uid}`);
 
+      if (!(user && user.migrated)) {
+        let { classic } = config;
         try {
-          const url = `${callback}&sig=${sig}&key=${key}`;
-          const response = await got(url).json();
-          res.send(response);
+          let { token } = await got
+            .post(`${classic}/login`, { json: { username, password } })
+            .json();
+          if (!token) fail();
+
+          user = await got(`${classic}/admin/migrate/${username}?zero=true`, {
+            headers: { authorization: `Bearer ${config.admin}` }
+          }).json();
+
+          let { balance } = user;
+          if (!user) fail();
+
+          uid = v4();
+          user = {
+            ...pick(user, fields),
+            id: uid,
+            about: user.address,
+            migrated: true
+          };
+
+          await s(`user:${username}`, uid);
+          await s(`user:${uid}`, user);
+          await s(`balance:${uid}`, balance);
+
+          let payments = await got(`${classic}/payments`, {
+            headers: { authorization: `Bearer ${token}` }
+          }).json();
+
+          for (let p of payments) {
+            let n = pick(p, ["amount", "fee", "confirmed", "rate", "currency"]);
+            n.id = v4();
+            n.created = parseISO(p.createdAt).getTime();
+            n.type = p.network;
+            if (!["bitcoin", "lightning"].includes(n.type))
+              n.type = types.internal;
+
+            if (n.type === types.internal) {
+              if (!p.with) continue;
+
+              let id = await g(`user:${p.with.username}`);
+              let u = await g(`user:${id}`);
+              if (!u) {
+                u = await got(`${classic}/admin/migrate/${p.with.username}`, {
+                  headers: { authorization: `Bearer ${config.admin}` }
+                }).json();
+
+                u = { id: v4(), about: u.address, ...pick(u, fields) };
+                delete u.address;
+
+                await s(`user:${p.with.username}`, u.id);
+                await s(`user:${u.id}`, u);
+
+                l("added missing user", u.username);
+              }
+
+              if (!(u && u.id)) continue;
+              n.ref = u.id;
+            }
+
+            await s(`payment:${n.id}`, n);
+            await db.lPush(`${uid}:payments`, n.id);
+          }
+
+          l("migrated user", user.username);
         } catch (e) {
-          err("problem calling lnurl login", e.message);
-          res.code(500).send(e.message);
+          console.log(e);
         }
-
-        return;
       }
-
-      let id = await g(`user:${username}`);
-      let user = await g(`user:${id}`);
 
       if (
         !user ||
@@ -215,7 +276,7 @@ export default {
         req.headers["x-forwarded-for"] || req.socket.remoteAddress
       );
 
-      let payload = { username, id: user.id };
+      let payload = { username, id: uid };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       user = pick(user, whitelist);
