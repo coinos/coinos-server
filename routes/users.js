@@ -235,7 +235,7 @@ export default {
                   headers: { authorization: `Bearer ${config.admin}` }
                 }).json();
 
-                u = { id: v4(), about: u.address, ...pick(u, fields) };
+                u = { id: u.uuid, about: u.address, ...pick(u, fields) };
                 delete u.address;
 
                 await s(`user:${p.with.username}`, u.id);

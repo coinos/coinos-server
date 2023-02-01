@@ -13,6 +13,7 @@ export default {
       invoice = await got(`${config.classic}/invoice/${hash}`).json();
       invoice.id = invoice.uuid;
       invoice.classic = true;
+      invoice.user.id = invoice.user.uuid;
       invoice.user.username += "@classic";
     }
 
