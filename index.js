@@ -42,8 +42,9 @@ app.post("/event", nostr.broadcast);
 
 app.get("/locations", locations.list);
 
-app.get("/invoice", invoices.get);
+app.get("/invoice/:hash", invoices.get);
 app.post("/invoice", optional, invoices.create);
+app.get("/invoice/classic/:username", invoices.classic);
 
 app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);

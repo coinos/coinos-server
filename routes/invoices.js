@@ -1,14 +1,38 @@
 import { g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
+import got from "got";
+import config from "$config";
 
 export default {
-  async get({ query: { hash } }, res) {
+  async get({ params: { hash } }, res) {
     let invoice = await g(`invoice:${hash}`);
-    invoice.user = await g(`user:${invoice.uid}`);
+
+    if (invoice) {
+      invoice.user = await g(`user:${invoice.uid}`);
+    } else {
+      invoice = await got(`${config.classic}/invoice/${hash}`).json();
+      invoice.id = invoice.uuid;
+      invoice.classic = true;
+      invoice.user.username += "@classic";
+    }
+
     res.send(invoice);
   },
 
   async create({ body: { invoice, user }, user: sender }, res) {
     res.send(await generate({ invoice, user, sender }));
+  },
+
+  async classic({ params: { username } }, res) {
+    let invoice = await got
+      .post(`${config.classic}/invoice`, {
+        json: {
+          invoice: { amount: 0, network: "lightning" },
+          user: { username }
+        }
+      })
+      .json();
+
+    res.send(invoice);
   }
 };

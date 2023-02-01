@@ -7,13 +7,14 @@ import { l, err } from "$lib/logging";
 import { fail, btc, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
+import got from "got";
 
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
 export default {
   async create({ body, user }, res) {
-    let { amount, hash, maxfee, name, memo, payreq, tip } = body;
+    let { amount, hash, maxfee, name, memo, payreq, tip, username } = body;
 
     amount = parseInt(amount);
     maxfee = parseInt(maxfee);
@@ -23,7 +24,18 @@ export default {
 
     let p;
 
-    if (payreq) {
+    if (username.endsWith("@classic")) {
+      let { username: source } = user;
+      username = username.replace("@classic", "");
+      p = await debit(hash, amount, 0, memo, user, types.classic);
+
+      await got
+        .post(`${config.classic}/admin/credit`, {
+            json: { username, amount, source },
+          headers: { authorization: `Bearer ${config.admin}` }
+        })
+        .json();
+    } else if (payreq) {
       p = await debit(
         hash,
         amount + maxfee,

@@ -183,11 +183,14 @@ export default {
       let user = await g(`user:${uid}`);
 
       if (!(user && user.migrated)) {
+        uid = user ? user.id : v4();
+
         let { classic } = config;
         try {
           let { token } = await got
             .post(`${classic}/login`, { json: { username, password } })
             .json();
+
           if (!token) fail();
 
           user = await got(`${classic}/admin/migrate/${username}?zero=true`, {
@@ -197,7 +200,6 @@ export default {
           let { balance } = user;
           if (!user) fail();
 
-          uid = v4();
           user = {
             ...pick(user, fields),
             id: uid,
