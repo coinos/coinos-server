@@ -24,7 +24,7 @@ export default {
 
     let p;
 
-    if (username.endsWith("@classic")) {
+    if (username && username.endsWith("@classic")) {
       let { username: source } = user;
       username = username.replace("@classic", "");
       p = await debit(hash, amount, 0, memo, user, types.classic);
