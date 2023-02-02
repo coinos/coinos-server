@@ -59,7 +59,7 @@ export default {
       await credit(hash, amount, memo, user.id);
     } else {
       let pot = name || v4();
-      p = await debit(hash, amount, 0, memo, user);
+      p = await debit(hash, amount, 0, memo, user, types.pot);
       await db.incrBy(`pot:${pot}`, amount);
       await db.lPush(`pot:${pot}:payments`, p.id);
       l("funded pot", pot);
