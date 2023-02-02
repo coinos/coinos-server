@@ -144,7 +144,7 @@ export default {
     });
 
     let payment = await credit(hash, amount, "", name, types.pot);
-    await db.lPush(`${name}:payments`, hash);
+    await db.lPush(`pot:${name}:payments`, hash);
 
     res.send({ payment });
   },
