@@ -44,7 +44,7 @@ export default {
     let ids = await db.sMembers(pubkey);
 
     let events = ids.length
-      ? (await db.mget(ids.map(k => "ev:" + k))).map(JSON.parse)
+      ? (await db.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
       : [];
 
     res.send(events.map(e => ({ ...e, user })));

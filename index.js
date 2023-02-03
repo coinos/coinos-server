@@ -69,6 +69,7 @@ app.post("/disable2fa", users.disable2fa);
 app.post("/2fa", auth, users.enable2fa);
 app.post("/user", auth, users.update);
 app.post("/upload/:type", auth, users.upload);
+app.get('/users/delete/:username', users.del);
 
 app.post("/login", users.login);
 app.post("/logout", optional, users.logout);

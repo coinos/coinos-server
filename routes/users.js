@@ -237,7 +237,8 @@ export default {
               if (!p.with) continue;
 
               let id = await g(`user:${p.with.username}`);
-              let u = await g(`user:${id}`);
+              let u = id && await g(`user:${id}`);
+
               if (!u) {
                 u = await got(`${classic}/admin/migrate/${p.with.username}`, {
                   headers: { authorization: `Bearer ${config.admin}` }
@@ -372,5 +373,22 @@ export default {
     await s(`${id}:contacts`, contacts);
 
     res.send(contacts);
+  },
+
+  async del({ params: { username }, headers: { authorization } }, res) {
+    if (!(authorization && authorization.includes(config.admin)))
+      return res.code(401).send("unauthorized");
+
+    let { id, pubkey } = await g(`user:${await g(`user:${username}`)}`);
+    let invoices = await db.lRange(`${id}:invoices`, 0, -1);
+    let payments = await db.lRange(`${id}:payments`, 0, -1);
+
+    for (let { id } of invoices) db.del(`invoice:${id}`);
+    for (let { id } of payments) db.del(`payment:${id}`);
+    db.del(`user:${username}`);
+    db.del(`user:${id}`);
+    db.del(`user:${pubkey}`);
+
+    res.send({});
   }
 };
