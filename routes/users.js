@@ -23,6 +23,7 @@ export default {
   async me({ user }, res) {
     try {
       user.balance = await g(`balance:${user.id}`);
+      user.prompt = !!user.prompt;
       res.send(pick(user, whitelist));
     } catch (e) {
       console.log("problem fetching user", e);
@@ -33,7 +34,9 @@ export default {
   async get({ params: { key } }, res) {
     try {
       if (key.startsWith("npub")) {
-        key = Buffer.from(fromWords(decode(key).words)).toString("hex");
+        try {
+          key = Buffer.from(fromWords(decode(key).words)).toString("hex");
+        } catch (e) {}
       }
 
       let user = await g(`user:${key}`);
@@ -43,7 +46,9 @@ export default {
 
       if (!user && key.length === 64) {
         user = {
-          username: key.substr(0, 6),
+          currency: "USD",
+          username: key,
+          display: key.substr(0, 6),
           pubkey: key,
           anon: true
         };
@@ -62,6 +67,8 @@ export default {
         "prompt",
         "id"
       ];
+
+      user.prompt = !!user.prompt;
 
       res.send(pick(user, whitelist));
     } catch (e) {
@@ -197,7 +204,7 @@ export default {
             headers: { authorization: `Bearer ${config.admin}` }
           }).json();
 
-          let { balance } = user;
+          let { balance, pubkey } = user;
           if (!user) fail();
 
           uid = user.uuid;
@@ -209,6 +216,7 @@ export default {
             migrated: true
           };
 
+          await s(`user:${pubkey}`, uid);
           await s(`user:${username}`, uid);
           await s(`user:${uid}`, user);
           await s(`balance:${uid}`, balance);
@@ -238,6 +246,7 @@ export default {
                 u = { id: u.uuid, about: u.address, ...pick(u, fields) };
                 delete u.address;
 
+                await s(`user:${u.pubkey}`, u.id);
                 await s(`user:${p.with.username}`, u.id);
                 await s(`user:${u.id}`, u);
 
@@ -346,12 +355,22 @@ export default {
     }
   },
 
-  async contacts({ user: { uuid } }, res) {
-    let payments = (await g(`${uuid}:payments`)) || [];
-    res.send(
-      Promise.all(
-        [...new Set(payments.map(p => p.with_id))].map(id => g(`user:${id}`))
-      )
-    );
+  async contacts({ user: { id } }, res) {
+    let i = (await g(`${id}:cindex`)) || 0;
+    let payments = (await db.lRange(`${id}:payments`, i, -1)) || [];
+    await db.incrBy(`${id}:cindex`, payments.length);
+
+    let contacts = (await g(`${id}:contacts`)) || [];
+
+    for (let { ref } of (
+      await Promise.all(payments.map(async id => await g(`payment:${id}`)))
+    ).filter(p => p.type === types.internal && p.ref)) {
+      !~contacts.findIndex(({ id }) => id === ref) &&
+        contacts.push(await g(`user:${ref}`));
+    }
+
+    await s(`${id}:contacts`, contacts);
+
+    res.send(contacts);
   }
 };

@@ -31,7 +31,7 @@ export default {
 
       await got
         .post(`${config.classic}/admin/credit`, {
-            json: { username, amount, source },
+          json: { username, amount, source },
           headers: { authorization: `Bearer ${config.admin}` }
         })
         .json();
