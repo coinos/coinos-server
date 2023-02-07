@@ -6,56 +6,16 @@ services:
     container_name: app
     depends_on:
       - db
-      - bc
-      - cl
     command: "pnpm dev"
     environment:
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
-      URL: http://localhost:3119
+      URL: https://coinos.io
     ports:
       - '3119:3119'
     volumes:
       - ./:/app
       - ./logs:/logs
-    restart: always
-  bc:
-    image: asoltys/bitcoin
-    container_name: bc
-    volumes:
-      - ./data/bitcoin:/home/bitcoin/.bitcoin
-    restart: always
-  cl:
-    image: elementsproject/lightningd:latest
-    container_name: cl
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./data/lightning:/root/.lightning
-    restart: always
-  clb:
-    image: elementsproject/lightningd:latest
-    container_name: clb
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./data/lightningb:/root/.lightning
-    restart: always
-  clc:
-    image: elementsproject/lightningd:latest
-    container_name: clc
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./data/lightningc:/root/.lightning
-    restart: always
-  cld:
-    image: elementsproject/lightningd:latest
-    container_name: cld
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./data/lightningd:/root/.lightning
     restart: always
   db:
     image: eqalpha/keydb
@@ -63,13 +23,7 @@ services:
     volumes:
       - ./data/db:/data
     restart: always
-  nostr:
-    container_name: nostr
-    image: asoltys/nostr-rs-relay
-    restart: always
-    user: 100:100
-    volumes:
-      - "./data/nostr/data:/usr/src/app/db" 
-      - "./data/nostr/config.toml:/usr/src/app/config.toml" 
-    ports:
-      - '8082:8080'
+networks:
+  default:
+    name: net
+    external: true
