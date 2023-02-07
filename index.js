@@ -1,45 +1,90 @@
-import app from "./app";
-import persist from "./lib/persist";
-import config from "./config/index";
-import store from "./lib/store";
-import { l, err } from "./lib/logging";
-import { optionalAuth } from "$lib/passport";
+import app from "$lib/app";
+import { auth, optional } from "$lib/auth";
 
-import "./db";
-import "./lib/redis";
-import "./lib/sockets";
-import "./lib/webhooks";
-import "./lib/passport";
-import "./lib/upload";
-import "./lib/sync";
-import "./lib/rates";
-import "./lib/notifications";
-import "./lib/mail";
+import { fillPool } from "$lib/nostr";
+import { listenForLightning } from "$lib/lightning";
+import { getLocations } from "$lib/locations";
+import { getRates, sendRates } from "$lib/rates";
+import { sendHeartbeat } from "$lib/sockets";
 
-import "./routes/assets";
-import "./routes/locations";
-import "./routes/info";
-import "./routes/users";
-import "./routes/invoices";
-import "./routes/payments";
-import "./routes/requests";
-import "./routes/lnurl";
-import "./routes/tickets";
+import email from "$routes/email";
+import info from "$routes/info";
+import locations from "$routes/locations";
+import lnurl from "$routes/lnurl";
+import nostr from "$routes/nostr";
+import rates from "$routes/rates";
+import invoices from "$routes/invoices";
+import users from "$routes/users";
+import payments from "$routes/payments";
+import requests from "$routes/requests";
 
-if (config.bitcoin) store.networks.push("bitcoin");
-if (config.liquid) store.networks.push("liquid");
-if (config.lna) store.networks.push("lightning");
+fillPool();
+listenForLightning();
+
+getLocations();
+getRates();
+
+setInterval(sendRates, 1000);
+setInterval(sendHeartbeat, 2000);
+
+app.get("/balances", info.balances);
+app.post("/email", email.send);
+
+app.get("/rate", rates.last);
+app.get("/rates", rates.index);
+
+app.get("/nostr.json", nostr.identities);
+app.get("/:pubkey/followers", nostr.followers);
+app.get("/:pubkey/follows", nostr.follows);
+app.get("/:pubkey/notes", nostr.notes);
+app.get("/event/:id", nostr.event);
+app.post("/event", nostr.broadcast);
+
+app.get("/locations", locations.list);
+
+app.get("/invoice/:hash", invoices.get);
+app.post("/invoice", optional, invoices.create);
+app.get("/invoice/classic/:username", invoices.classic);
+
+app.post("/payments", auth, payments.create);
+app.get("/payments", auth, payments.list);
+app.get("/payments/:hash", auth, payments.get);
+app.post("/parse", payments.parse);
+app.get("/pot/:name", payments.pot);
+app.post("/take", auth, payments.take);
+
+app.get("/encode", lnurl.encode);
+app.get("/decode", lnurl.decode);
+app.get("/lnurlp/:username", lnurl.lnurlp);
+app.get("/lnurl/:id", lnurl.lnurl);
+
+app.post("/bitcoin", payments.bitcoin);
+app.post("/bitcoin/fee", auth, payments.fee);
+app.post("/bitcoin/send", auth, payments.send);
+
+app.get("/me", auth, users.me);
+app.get("/users/:key", users.get);
+app.post("/register", users.create);
+app.post("/disable2fa", auth, users.disable2fa);
+app.post("/2fa", auth, users.enable2fa);
+app.post("/user", auth, users.update);
+app.post("/upload/:type", auth, users.upload);
+app.get('/users/delete/:username', users.del);
+
+app.post("/login", users.login);
+app.post("/logout", optional, users.logout);
+
+app.post("/subscribe", auth, users.subscribe);
+app.post("/password", auth, users.password);
+app.post("/otpsecret", auth, users.otpsecret);
+app.get("/contacts", auth, users.contacts);
+
+app.get("/request/:id", auth, requests.get);
+app.get("/requests", auth, requests.list);
+app.post("/requests", auth, requests.create);
+app.post("/requests/delete", auth, requests.destroy);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
 
-app.post('/echo', optionalAuth, async (req, res) => {
-  console.log(req.user.username)
-  console.log(req.body)
-  res.send(req.body);
-}); 
-
-app.listen({ host, port }, (e, address) => {
-  e && err(e) && process.exit(1);
-  l(`CoinOS Server listening on ${address}`);
-});
+app.listen({ host, port });

@@ -1,163 +1,258 @@
-import app from "$app";
-import db from "$db";
 import config from "$config";
 import store from "$lib/store";
-
-import { auth, adminAuth, optionalAuth } from "$lib/passport";
-import fs from "fs";
-import { join } from "path";
-import { Op } from "@sequelize/core";
-import send from "./send";
-import { l, warn } from "$lib/logging";
-import { fail } from "$lib/utils";
+import { emit } from "$lib/sockets";
+import { v4 } from "uuid";
+import { db, g, s, t } from "$lib/db";
+import { l, err } from "$lib/logging";
+import { fail, btc, sats } from "$lib/utils";
+import { requirePin } from "$lib/auth";
+import { debit, credit, confirm, types } from "$lib/payments";
+import got from "got";
 
 import bc from "$lib/bitcoin";
-import lq from "$lib/liquid";
+import ln from "$lib/ln";
 
-import btcRoutes from "./bitcoin/index";
-import lnRoutes from "./lightning/index";
-import lqRoutes from "./liquid/index";
+export default {
+  async create({ body, user }, res) {
+    let { amount, hash, maxfee, name, memo, payreq, tip, username } = body;
 
-import "./bitcoin/receive";
-import "./lightning/receive";
-import "./liquid/receive";
+    amount = parseInt(amount);
+    maxfee = parseInt(maxfee);
+    tip = parseInt(tip);
 
-app.post("/send", auth, send);
-app.post("/sendToTokenHolders", auth, async (req, res, next) => {
-  let { asset, amount } = req.body;
+    await requirePin({ body, user });
 
-  let accounts = await db.Account.findAll({
-    where: {
-      asset,
-      "$user.username$": { [Op.ne]: "gh" }
-    },
+    let p;
 
-    include: [{ model: db.User, as: "user" }]
-  });
+    if (username && username.endsWith("@classic")) {
+      let { username: source } = user;
+      username = username.replace("@classic", "");
+      p = await debit(hash, amount, 0, memo, user, types.classic);
 
-  let totalTokens = accounts.reduce((a, b) => a + b.balance, 0);
+      await got
+        .post(`${config.classic}/admin/credit`, {
+          json: { username, amount, source },
+          headers: { authorization: `Bearer ${config.admin}` }
+        })
+        .json();
+    } else if (payreq) {
+      p = await debit(
+        hash,
+        amount + maxfee,
+        maxfee,
+        memo,
+        user,
+        types.lightning
+      );
 
-  let totalSats = Math.floor(amount / totalTokens);
+      let r = await ln.pay(payreq);
 
-  if (totalSats < 1) throw new Error("amount is too low to distribute");
+      p.amount = -amount;
+      p.hash = r.payment_hash;
+      p.fee = r.msatoshi_sent - r.msatoshi;
+      p.ref = r.payment_preimage;
 
-  for (let i = 0; i < accounts.length; i++) {
-    let account = accounts[i];
-    console.log(account.user.username, account.balance);
-  }
-  accounts.map(({ balance, user: { username } }) => ({ username, balance }));
+      await s(`payment:${p.id}`, p);
+      await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+    } else if (hash) {
+      p = await debit(hash, amount, 0, memo, user);
+      await credit(hash, amount, memo, user.id);
+    } else {
+      let pot = name || v4();
+      p = await debit(hash, amount, 0, memo, user, types.pot);
+      await db.incrBy(`pot:${pot}`, amount);
+      await db.lPush(`pot:${pot}:payments`, p.id);
+      l("funded pot", pot);
+    }
 
-  res.send({ success: "it worked" });
-});
+    res.send(p);
+  },
 
-app.get("/except", adminAuth, (req, res) => {
-  let s = fs.createWriteStream("exceptions", { flags: "a" });
-  store.unaccounted.map(tx => s.write(tx.txid + "\n"));
-  l("updated exceptions");
-  res.send("updated exceptions");
-});
+  async list({ user: { id }, query: { start, end, limit, offset } }, res) {
+    if (limit) limit = parseInt(limit);
+    offset = parseInt(offset) || 0;
 
-app.post("/lightning/parse", lnRoutes.parse);
-app.post("/lightning/channel", lnRoutes.channel);
-app.post("/lightning/query", auth, lnRoutes.query);
-app.post("/lightning/send", auth, lnRoutes.send);
+    let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
+    payments = (
+      await Promise.all(
+        payments.map(async id => {
+          let p = await g(`payment:${id}`);
+          if (p.created < start || p.created > end) return;
+          if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+          return p;
+        })
+      )
+    )
+      .filter(p => p)
+      .sort((a, b) => b.created - a.created);
 
-if (config.lnurl) {
-  let { channelRequest } = await import("$routes/lightning/channelRequest");
-  app.post("/lightning/channelRequest", channelRequest);
-}
+    let total = payments.length;
 
-app.post("/bitcoin/broadcast", optionalAuth, btcRoutes.broadcast);
-app.get("/bitcoin/generate", auth, btcRoutes.generate);
-app.post("/bitcoin/sweep", auth, btcRoutes.sweep);
-app.post("/bitcoin/fee", auth, btcRoutes.fee);
-app.post("/bitcoin/send", auth, btcRoutes.send);
+    if (limit) payments = payments.slice(offset, offset + limit);
 
-setTimeout(async () => {
-  try {
-    const address = await bc.getNewAddress();
-    const { hdkeypath } = await bc.getAddressInfo(address);
-    const parts = hdkeypath.split("/");
-    store.bcAddressIndex = parts[parts.length - 1].replace("'", "");
-  } catch (e) {
-    console.error(e);
-  }
-}, 50);
+    res.send({ payments, total });
+  },
 
-app.post("/liquid/broadcast", optionalAuth, lqRoutes.broadcast);
-app.get("/liquid/generate", auth, lqRoutes.generate);
-app.post("/liquid/fee", auth, lqRoutes.fee);
-app.post("/liquid/send", auth, lqRoutes.send);
+  async get({ params: { hash } }, res) {
+    res.send(await g(`payment:${hash}`));
+  },
 
-setTimeout(async () => {
-  try {
-    const address = await lq.getNewAddress();
-    const { hdkeypath } = await lq.getAddressInfo(address);
-    const parts = hdkeypath.split("/");
-    store.lqAddressIndex = parts[parts.length - 1].slice(0, -1);
-  } catch (e) {
-    warn("Problem getting liquid address index", e.message);
-  }
-}, 50);
+  async parse({ body: { payreq } }, res) {
+    let hour = 1000 * 60 * 60;
+    let { last } = store.nodes;
+    let { nodes } = store;
 
-app.get("/payments", auth, async (req, res) => {
-  let { start, end, limit, offset, v2 } = req.query;
+    if (!last || last > Date.now() - hour) ({ nodes } = await ln.listnodes());
+    store.nodes = nodes;
 
-  if (limit) limit = parseInt(limit);
-  if (offset) offset = parseInt(offset);
+    let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
+    let decoded = await ln.decodepay(payreq);
+    let { msatoshi, payee } = decoded;
+    let node = nodes.find(n => n.nodeid === payee);
+    let alias = node ? node.alias : payee.substr(0, 12);
 
-  let where = {
-    account_id: req.user.account_id,
-  };
+    res.send({ alias, amount: Math.round(msatoshi / 1000) });
+  },
 
-  if (start || end) where.createdAt = {};
-  if (start) where.createdAt[Op.gte] = new Date(parseInt(start));
-  if (end) where.createdAt[Op.lte] = new Date(parseInt(end));
+  async pot({ params: { name } }, res) {
+    let amount = await g(`pot:${name}`);
+    let payments = (await db.lRange(`pot:${name}:payments`, 0, -1)) || [];
+    payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
 
-  if (!req.user.account_id) return res.send([]);
+    await Promise.all(
+      payments.map(async p => (p.user = await g(`user:${p.uid}`)))
+    );
 
-  let total = await db.Payment.count({ where });
+    payments = payments.filter(p => p);
+    res.send({ amount, payments });
+  },
 
-  let payments = await db.Payment.findAll({
-    where,
-    order: [["id", "DESC"]],
-    include: {
-      model: db.Account,
-      as: "account"
-    },
-    include: {
-      attributes: ["username", "profile"],
-      model: db.User,
-      as: "with"
-    },
-    limit,
-    offset
-  });
-
-  if (v2) {
-    res.send({ transactions: payments, total });
-  } else {
-    res.send(payments);
-  }
-});
-
-app.get("/payment/:redeemcode", async (req, res) => {
-  try {
-    const { redeemcode } = req.params;
-    let payment = await db.Payment.findOne({
-      where: {
-        redeemcode
-      },
-      include: {
-        model: db.Account,
-        as: "account"
-      }
+  async take({ body: { name, amount }, user }, res) {
+    amount = parseInt(amount);
+    await t(`pot:${name}`, async (balance, db) => {
+      if (balance < amount) fail("Insufficient funds");
+      await db
+        .multi()
+        .decrBy(`pot:${name}`, amount)
+        .exec();
     });
 
-    if (!payment) fail("invalid code");
+    let hash = v4();
+    await s(`invoice:${hash}`, {
+      uid: user.id,
+      received: 0
+    });
 
-    res.send(payment);
-  } catch (e) {
-    res.code(500).send(e.message);
+    let payment = await credit(hash, amount, "", name, types.pot);
+    await db.lPush(`pot:${name}:payments`, hash);
+
+    res.send({ payment });
+  },
+
+  async bitcoin({ body: { txid, wallet } }, res) {
+    if (wallet === config.bitcoin.wallet) {
+      let { confirmations, details } = await bc.getTransaction(txid);
+      for (let { address, amount, vout } of details) {
+        if (confirmations > 0) {
+          await confirm(address, txid, vout);
+        } else {
+          await credit(
+            address,
+            sats(amount),
+            "",
+            `${txid}:${vout}`,
+            types.bitcoin
+          );
+        }
+      }
+    }
+    res.send({});
+  },
+
+  async fee(req, res) {
+    let { amount, address, feeRate, subtract } = req.body;
+    let subtractFeeFromOutputs = subtract ? [0] : [];
+    let replaceable = true;
+    let outs = [{ [address]: btc(amount) }];
+    let count = await bc.getBlockCount();
+
+    let raw = await bc.createRawTransaction([], outs, 0, replaceable);
+    let tx = await bc.fundRawTransaction(raw, {
+      feeRate,
+      subtractFeeFromOutputs,
+      replaceable
+    });
+
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+    let { hex } = await bc.signRawTransactionWithWallet(tx.hex);
+    let { vsize } = await bc.decodeRawTransaction(hex);
+    feeRate = Math.round((sats(tx.fee) * 1000) / vsize);
+
+    res.send({ feeRate, tx });
+  },
+
+  async send(req, res) {
+    await requirePin(req);
+
+    let { user } = req;
+    let { address, memo, tx } = req.body;
+    let { hex, fee } = tx;
+
+    if (config.bitcoin.walletpass)
+      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+
+    ({ hex } = await bc.signRawTransactionWithWallet(hex));
+
+    let r = await bc.testMempoolAccept([hex]);
+    if (!r[0].allowed) fail("transaction rejected");
+
+    fee = sats(fee);
+    if (fee < 0) fail("fee cannot be negative");
+
+    tx = await bc.decodeRawTransaction(hex);
+    let { txid } = tx;
+
+    let total = 0;
+    let change = 0;
+
+    for (let {
+      scriptPubKey: { address },
+      value
+    } of tx.vout) {
+      total += sats(value);
+      if (
+        (await bc.getAddressInfo(address)).ismine &&
+        !(await g(`invoice:${address}`))
+      )
+        change += sats(value);
+    }
+
+    total = total - change + fee;
+    let amount = total - fee;
+
+    if (change && !amount) fail("Cannot send to unregistered coinos address");
+
+    await debit(txid, amount, fee, null, user, types.bitcoin, txid);
+    await bc.sendRawTransaction(hex);
+
+    res.send({ txid });
+  },
+
+  async del({ params: { username }, headers: { authorization } }, res) {
+    if (!authorization.includes(config.admin))
+      return res.code(401).send("unauthorized");
+    let { id, pubkey } = await g(`user:${await g(`user:${username}`)}`);
+    let invoices = await db.lRange(`${id}:invoices`, 0, -1);
+    let payments = await db.lRange(`${id}:payments`, 0, -1);
+
+    for (let { id } of invoices) db.del(`invoice:${id}`);
+    for (let { id } of payments) db.del(`payment:${id}`);
+    db.del(`user:${username}`);
+    db.del(`user:${id}`);
+    db.del(`user:${pubkey}`);
+
+    res.send({});
   }
-});
+};

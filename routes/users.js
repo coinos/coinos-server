@@ -1,693 +1,394 @@
-import app from "$app";
+import { g, s, db } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";
-import { auth, optionalAuth } from "$lib/passport";
-import { getUser } from "$lib/utils";
-import axios from "axios";
+import { fields, nada, pick, uniq, wait } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
-import getAccount from "$lib/account";
-import Sequelize from "@sequelize/core";
-import bitcoin from "bitcoinjs-lib";
-import liquid from "liquidjs-lib";
-import { fromBase58, fromPrivateKey } from "bip32";
-import { Mutex } from "async-mutex";
-import bip32 from "bip32";
 import whitelist from "$lib/whitelist";
 import { l, err, warn } from "$lib/logging";
-import db from "$db";
-import bc from "$lib/bitcoin";
-import lq from "$lib/liquid";
 import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/utils";
+import { v4 } from "uuid";
+import { parseISO } from "date-fns";
+import { types } from "$lib/payments";
 
-const pick = (O, ...K) => K.reduce((o, k) => ((o[k] = O[k]), o), {});
+import got from "got";
+import upload from "$lib/upload";
 
-app.get("/me", auth, async (req, res) => {
-  try {
-    let user = req.user.get({ plain: true });
-    let payments = await req.user.getPayments({
-      where: {
-        account_id: user.account_id
-      },
-      order: [["id", "DESC"]],
-      limit: 12,
-      include: [
-        {
-          model: db.Account,
-          as: "account"
-        },
-        {
-          model: db.Payment,
-          as: "fee_payment"
-        }
-      ]
-    });
-    user.accounts = await req.user.getAccounts();
-    user.payments = payments;
-    user.haspin = !!user.pin;
-    res.send(pick(user, ...whitelist));
-  } catch (e) {
-    res.code(500).send(e.message);
-  }
-});
+export default {
+  upload,
 
-app.get("/users/:username", async (req, res) => {
-  const { username } = req.params;
+  async me({ user }, res) {
+    try {
+      user.balance = await g(`balance:${user.id}`);
+      user.prompt = !!user.prompt;
+      res.send(pick(user, whitelist));
+    } catch (e) {
+      console.log("problem fetching user", e);
+      res.code(500).send(e.message);
+    }
+  },
 
-  const user = await db.User.findOne({
-    attributes: ["username", "banner", "profile", "address", "currency"],
-    where: Sequelize.where(
-      Sequelize.fn("lower", Sequelize.col("username")),
-      username.toLowerCase()
-    )
-  });
+  async get({ params: { key } }, res) {
+    try {
+      if (key.startsWith("npub")) {
+        try {
+          key = Buffer.from(fromWords(decode(key).words)).toString("hex");
+        } catch (e) {}
+      }
 
-  if (user) res.send(user);
-  else res.code(500).send("User not found");
-});
+      let user = await g(`user:${key}`);
+      if (typeof user === "string") {
+        user = await g(`user:${user}`);
+      }
 
-app.post("/register", async (req, res) => {
-  try {
-    const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-    const user = await register(req.body.user, ip, false);
-    res.send(pick(user, ...whitelist));
-  } catch (e) {
-    res.code(500).send(e.message);
-  }
-});
+      if (!user && key.length === 64) {
+        user = {
+          currency: "USD",
+          username: key,
+          display: key.substr(0, 6),
+          pubkey: key,
+          anon: true
+        };
+      }
 
-app.post("/disable2fa", auth, async (req, res) => {
-  try {
-    let {
-      user,
-      body: { token }
-    } = req;
+      if (!user) return res.code(500).send("User not found");
 
-    if (user.twofa && !authenticator.check(token, user.otpsecret)) {
+      let whitelist = [
+        "username",
+        "banner",
+        "profile",
+        "address",
+        "currency",
+        "pubkey",
+        "display",
+        "prompt",
+        "id"
+      ];
+
+      user.prompt = !!user.prompt;
+
+      res.send(pick(user, whitelist));
+    } catch (e) {
+      console.log(e);
+      res.code(500).send(e.message);
+    }
+  },
+
+  async create(req, res) {
+    try {
+      const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      let { cipher, pubkey, password, username, salt } = req.body.user;
+
+      let user = {
+        cipher,
+        pubkey,
+        password,
+        username,
+        salt
+      };
+
+      user = await register(user, ip, false);
+      l("registered new user", username);
+      res.send(pick(user, whitelist));
+    } catch (e) {
+      res.code(500).send(e.message);
+    }
+  },
+
+  async disable2fa({ user, body: { token } }, res) {
+    let { id, twofa, username, otpsecret } = user;
+    if (twofa && !authenticator.check(token, otpsecret)) {
       return res.code(401).send("2fa required");
     }
 
     user.twofa = false;
-    await user.save();
-    emit(user.username, "user", user);
-    emit(user.username, "otpsecret", user.otpsecret);
-    l("disabled 2fa", user.username);
+    await s(`user:${id}`, user);
+    emit(username, "user", user);
+    emit(username, "otpsecret", user.otpsecret);
+    l("disabled 2fa", username);
     res.send({});
-  } catch (e) {
-    res.code(500).send("Problem disabling 2fa");
-  }
-});
+  },
 
-app.post("/2fa", auth, async (req, res) => {
-  let { user } = req;
-  try {
-    const isValid = authenticator.check(req.body.token, req.user.otpsecret);
+  async enable2fa({ user, body: { token } }, res) {
+    let { id, otpsecret, username } = user;
+    const isValid = authenticator.check(token, otpsecret);
     if (isValid) {
       user.twofa = true;
-      user.save();
-      emit(user.username, "user", req.user);
+      await s(`user:${id}`, user);
+      emit(username, "user", user);
     } else {
       return res.code(500).send("Invalid token");
     }
-  } catch (e) {
-    err("error setting up 2fa", e);
-  }
 
-  l("enabled 2fa", user.username);
-  res.send({});
-});
+    l("enabled 2fa", username);
+    res.send({});
+  },
 
-app.get("/exists", async (req, res) => {
-  let exists = await db.User.findOne({
-    where: { username: req.query.username }
-  });
+  async update({ user, body }, res) {
+    l("updating user", user.username);
 
-  res.send(!!exists);
-});
-
-app.post("/user", auth, async (req, res) => {
-  try {
-    let { user } = req;
-    let {
-      address,
-      confirm,
-      currencies,
-      currency,
-      email,
-      fiat,
-      password,
-      newpin,
-      pin,
-      seed,
-      tokens,
-      twofa,
-      unit,
-      username
-    } = req.body;
+    let { confirm, password, pin, newpin, username } = body;
 
     if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
+    if (typeof newpin !== "undefined") user.pin = newpin;
+    if (!user.pin || user.pin === "undefined") delete user.pin;
 
-    let exists = await db.User.findOne({
-      where: { username }
-    });
+    let exists;
+    if (username) exists = await g(`user:${username}`);
 
     let token;
     if (user.username !== username && exists) {
       err("username taken", username, user.username, exists.username);
       throw new Error("Username taken");
-    } else {
-      store.sockets[username] = store.sockets[user.username];
+    } else if (username) {
       if (user.username !== username)
         l("changing username", user.username, username);
       user.username = username;
-
-      token = jwt.sign({ username }, config.jwt);
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 432000000)
-      });
     }
 
-    if (unit) user.unit = unit;
-    user.currency = currency;
-    user.currencies = currencies;
-    user.pin = newpin;
-    user.tokens = tokens;
-    user.twofa = twofa;
-    user.seed = seed;
-    user.fiat = fiat;
-    user.email = email;
-    user.address = address;
+    let attributes = [
+      "address",
+      "cipher",
+      "currencies",
+      "currency",
+      "display",
+      "email",
+      "fiat",
+      "locktime",
+      "prompt",
+      "pubkey",
+      "salt",
+      "seed",
+      "tokens",
+      "twofa"
+    ];
+
+    for (let a of attributes) {
+      if (body[a]) user[a] = body[a];
+    }
 
     if (password && password === confirm) {
       user.password = await bcrypt.hash(password, 1);
     }
 
-    await user.save();
-
-    user = user.get({ plain: true });
     user.haspin = !!user.pin;
+    await s(`user:${user.id}`, user);
 
     emit(user.username, "user", user);
     res.send({ user, token });
-  } catch (e) {
-    err("error updating user", e.message);
-    res.code(500).send(e.message);
-  }
-});
+  },
 
-app.post("/keys", auth, async (req, res) => {
-  const { key: hex } = req.body;
-  const key = await db.Key.create({
-    user_id: req.user.id,
-    hex
-  });
-  emit(req.user.username, "key", key);
-  res.send(key);
-});
+  async login(req, res) {
+    try {
+      const { username, password, token: twofa } = req.body;
+      l("logging in", username);
 
-app.post("/keys/delete", auth, async (req, res) => {
-  const { hex } = req.body;
-  (
-    await db.Key.findOne({
-      where: {
-        user_id: req.user.id,
-        hex
-      }
-    })
-  ).destroy();
-});
+      let uid = await g(`user:${username}`);
+      let user = await g(`user:${uid}`);
 
-app.post("/updateSeeds", auth, async (req, res) => {
-  let { user } = req;
-  let { seeds } = req.body;
-  let keys = Object.keys(seeds);
+      if (!(user && user.migrated)) {
+        uid = user ? user.id : v4();
 
-  for (let i = 0; i < keys.length; i++) {
-    let id = keys[i];
-    let seed = seeds[id];
-    await db.Account.update(
-      { seed },
-      {
-        where: { id, user_id: user.id }
-      }
-    );
+        let { classic } = config;
+        try {
+          let { token } = await got
+            .post(`${classic}/login`, { json: { username, password } })
+            .json();
 
-    const account = await db.Account.findOne({
-      where: { id }
-    });
+          if (!token) fail();
 
-    emit(user.username, "account", account);
-  }
+          user = await got(`${classic}/admin/migrate/${username}?zero=true`, {
+            headers: { authorization: `Bearer ${config.admin}` }
+          }).json();
 
-  res.send({});
-});
+          let { balance, pubkey } = user;
+          if (!user) fail();
 
-app.post("/accounts/delete", auth, async (req, res) => {
-  const { id } = req.body;
-  const account = await db.Account.findOne({ where: { id } });
-  if (account) await account.destroy();
-  res.send({});
-});
+          uid = user.uuid;
 
-app.post("/accounts", auth, async (req, res) => {
-  const {
-    name,
-    seed,
-    pubkey,
-    ticker,
-    precision,
-    path,
-    privkey,
-    network
-  } = req.body;
-  const { user } = req;
+          user = {
+            ...pick(user, fields),
+            id: uid,
+            about: user.address,
+            migrated: true
+          };
 
-  let account = await db.Account.create({
-    user_id: user.id,
-    asset: config.liquid.btcasset,
-    balance: 0,
-    pending: 0,
-    name,
-    ticker,
-    precision,
-    pubkey,
-    privkey,
-    seed,
-    path,
-    network
-  });
+          await s(`user:${pubkey}`, uid);
+          await s(`user:${username}`, uid);
+          await s(`user:${uid}`, user);
+          await s(`balance:${uid}`, balance);
 
-  emit(user.username, "account", account);
+          let payments = await got(`${classic}/payments`, {
+            headers: { authorization: `Bearer ${token}` }
+          }).json();
 
-  if (pubkey) user.index++;
-  user.account_id = account.id;
-  await user.save();
-  user.account = account;
-  emit(user.username, "user", user);
+          for (let p of payments) {
+            let n = pick(p, ["amount", "fee", "confirmed", "rate", "currency"]);
+            n.id = v4();
+            n.created = parseISO(p.createdAt).getTime();
+            n.type = p.network;
+            if (!["bitcoin", "lightning"].includes(n.type))
+              n.type = types.internal;
 
-  res.send(account);
-});
+            if (n.type === types.internal) {
+              if (!p.with) continue;
 
-let login = async (req, res) => {
-  try {
-    const { params, sig, key } = req.body;
+              let id = await g(`user:${p.with.username}`);
+              let u = id && (await g(`user:${id}`));
 
-    if (sig) {
-      const { callback } = params;
+              if (!u) {
+                u = await got(`${classic}/admin/migrate/${p.with.username}`, {
+                  headers: { authorization: `Bearer ${config.admin}` }
+                }).json();
 
-      try {
-        const url = `${callback}&sig=${sig}&key=${key}`;
-        const response = await axios.get(url);
-        res.send(response.data);
-      } catch (e) {
-        err("problem calling lnurl login", e.message);
-        res.code(500).send(e.message);
+                u = { id: u.uuid, about: u.address, ...pick(u, fields) };
+                delete u.address;
+
+                await s(`user:${u.pubkey}`, u.id);
+                await s(`user:${p.with.username}`, u.id);
+                await s(`user:${u.id}`, u);
+
+                l("added missing user", u.username);
+              }
+
+              if (!(u && u.id)) continue;
+              n.ref = u.id;
+            }
+
+            await s(`payment:${n.id}`, n);
+            await db.lPush(`${uid}:payments`, n.id);
+          }
+
+          l("migrated user", user.username);
+        } catch (e) {
+          console.log(e);
+        }
       }
 
-      return;
-    }
-
-    let twofa = req.body.token;
-
-    let user = await getUser(req.body.username);
-
-    if (
-      !user ||
-      (user.password &&
-        !(await bcrypt.compare(req.body.password, user.password)))
-    ) {
-      warn("invalid username or password attempt", req.body.username);
-      return res.code(401).send({});
-    }
-
-    if (
-      user.twofa &&
-      (typeof twofa === "undefined" ||
-        !authenticator.check(twofa, user.otpsecret))
-    ) {
-      return res.code(401).send("2fa required");
-    }
-
-    l(
-      "login",
-      req.body.username,
-      req.headers["x-forwarded-for"] || req.connection.remoteAddress
-    );
-
-    let payload = { username: user.username };
-    let token = jwt.sign(payload, config.jwt);
-    res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
-    user.accounts = await user.getAccounts();
-    user.keys = await user.getKeys();
-    user = pick(user, ...whitelist);
-    res.send({ user, token });
-  } catch (e) {
-    err("login error", e.message, req.connection.remoteAddress);
-    res.code(401).send({});
-  }
-};
-
-app.post("/login", login);
-app.post("/taboggan", login);
-app.post("/doggin", login);
-
-app.post("/logout", optionalAuth, async (req, res) => {
-  let { subscription } = req.body;
-  if (!subscription) return res.send({});
-
-  const { username } = req.user;
-
-  if (username) {
-    l("logging out", username);
-    let i = req.user.subscriptions.findIndex(
-      s => JSON.stringify(s) === subscription
-    );
-    if (i > -1) {
-      req.user.subscriptions.splice(i, 1);
-    }
-    await req.user.save();
-    Object.keys(logins).map(
-      k => logins[k]["username"] === username && delete logins[k]
-    );
-  }
-
-  res.send({});
-});
-
-app.post("/account", auth, async (req, res) => {
-  const { user } = req;
-  const {
-    id,
-    name,
-    ticker,
-    precision,
-    domain,
-    seed,
-    pubkey,
-    privkey,
-    path,
-    hide,
-    index
-  } = req.body;
-
-  try {
-    await db.transaction(async transaction => {
-      let account = await db.Account.findOne({
-        where: { id, user_id: user.id },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
-
-      let params = {
-        name,
-        ticker,
-        precision,
-        domain,
-        seed,
-        pubkey,
-        path,
-        hide,
-        index,
-        privkey
-      };
-
-      if (!account || (account.pubkey && !pubkey)) delete params.pubkey;
-
-      await db.Account.update(params, {
-        where: { id, user_id: user.id },
-        transaction
-      });
-
-      await account.reload({ transaction });
-      emit(user.username, "account", account);
-      res.send({});
-    });
-  } catch (e) {
-    err("problem updating account", e.message);
-    return res.code(500).send("There was a problem updating the account");
-  }
-});
-
-app.post("/shiftAccount", auth, async (req, res) => {
-  let { user } = req;
-  let { id } = req.body;
-
-  try {
-    const account = await db.Account.findOne({
-      where: { id }
-    });
-
-    if (account.user_id !== user.id)
-      return res.code(500).send("Failed to open wallet");
-
-    user.account_id = account.id;
-    await user.save();
-    let payments = await db.Payment.findAll({
-      where: {
-        account_id: id
-      },
-      order: [["id", "DESC"]],
-      limit: 12,
-      include: {
-        model: db.Account,
-        as: "account"
-      }
-    });
-
-    user = user.get({ plain: true });
-    user.payments = payments;
-    user.account = account.get({ plain: true });
-
-    emit(user.username, "account", user.account);
-    emit(user.username, "user", user);
-
-    res.send(user);
-  } catch (e) {
-    err("problem switching account", e.message);
-    return res.code(500).send("There was a problem switching accounts");
-  }
-});
-
-app.get("/vapidPublicKey", function(req, res) {
-  res.send(config.vapid.publicKey);
-});
-
-app.post("/subscribe", auth, async function(req, res) {
-  let { subscriptions } = req.user;
-  let { subscription } = req.body;
-  if (!subscriptions) subscriptions = [];
-  if (
-    !subscriptions.find(s => JSON.stringify(s) === JSON.stringify(subscription))
-  )
-    subscriptions.push(subscription);
-  req.user.subscriptions = subscriptions;
-  l("subscribing", req.user.username);
-  await req.user.save();
-  res.sendStatus(201);
-});
-
-let redeeming = {};
-app.post("/redeem", optionalAuth, async function(req, res) {
-  const { redeemcode } = req.body;
-  try {
-    await db.transaction(async transaction => {
-      if (redeeming[redeemcode]) fail("redemption in progress");
-      redeeming[redeemcode] = true;
-      if (!redeemcode) fail("no code provided");
-
-      let { user } = req;
-
-      const source = await db.Payment.findOne({
-        where: {
-          redeemcode: req.body.redeemcode
-        },
-        include: {
-          model: db.Account,
-          as: "account"
-        },
-        lock: transaction.LOCK.UPDATE,
-        transaction
-      });
-
-      l("redeeming", redeemcode);
-
-      if (!source) fail("Invalid code");
-      if (source.redeemed) fail("Voucher has already been redeemed");
-      let { amount } = source;
-      amount = -amount;
-
-      if (!user) {
-        const ip =
-          req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-
-        user = await register(
-          {
-            username: redeemcode.substr(0, 8),
-            password: ""
-          },
-          ip,
-          false
-        );
-
-        let payload = { username: user.username };
-        let token = jwt.sign(payload, config.jwt);
-        res.cookie("token", token, {
-          expires: new Date(Date.now() + 432000000)
-        });
-
-        delete redeeming[redeemcode];
-        return res.send({ user });
+      if (
+        !user ||
+        (user.password && !(await bcrypt.compare(password, user.password)))
+      ) {
+        warn("invalid username or password attempt", username);
+        return res.code(401).send({});
       }
 
-      let account = await getAccount(source.account.asset, user, transaction);
-      let { hash, memo, confirmed, fee, network } = source;
+      if (
+        user.twofa &&
+        (typeof twofa === "undefined" ||
+          !authenticator.check(twofa, user.otpsecret))
+      ) {
+        return res.code(401).send("2fa required");
+      }
 
-      source.redeemed = true;
-      await source.save({ transaction });
-
-      let payment = await db.Payment.create(
-        {
-          amount,
-          account_id: account.id,
-          user_id: user.id,
-          hash: "Voucher " + redeemcode,
-          memo,
-          rate: store.rates[user.currency],
-          currency: user.currency,
-          confirmed,
-          network,
-          received: true,
-          fee
-        },
-        { transaction }
+      l(
+        "login",
+        username,
+        req.headers["x-forwarded-for"] || req.socket.remoteAddress
       );
 
-      await account.increment({ balance: amount }, { transaction });
-      await account.reload({ transaction });
-
-      payment = payment.get({ plain: true });
-      payment.account = account.get({ plain: true });
-      emit(user.username, "payment", payment);
-      emit(user.username, "account", account);
-
-      res.send({ payment });
-    });
-  } catch (e) {
-    delete redeeming[redeemcode];
-    console.log(e);
-    err("problem redeeming", e.message);
-    return res.code(500).send("There was a problem redeeming the voucher");
-  }
-});
-
-app.post("/checkRedeemCode", auth, async function(req, res) {
-  const { redeemcode } = req.body;
-
-  const payment = await db.Payment.findOne({ where: { redeemcode } });
-  res.send(payment);
-});
-
-app.post("/password", auth, async function(req, res) {
-  const { user } = req;
-  const { password } = req.body;
-
-  if (!user.password) return res.send(true);
-  res.send(await bcrypt.compare(password, user.password));
-});
-
-app.get("/isInternal", auth, async function(req, res) {
-  let { user } = req;
-  let { address } = req.query;
-  if (!address) throw new Error("Address not provided");
-
-  let invoice = await db.Invoice.findOne({
-    where: { address },
-    include: {
-      attributes: ["username"],
-      model: db.User,
-      as: "user"
-    }
-  });
-
-  if (invoice) {
-    let info;
-    try {
-      info = await bc.getAddressInfo(address);
+      let payload = { username, id: uid };
+      let token = jwt.sign(payload, config.jwt);
+      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      user = pick(user, whitelist);
+      res.send({ user, token });
     } catch (e) {
-      info = await lq.getAddressInfo(address);
+      console.log(e);
+      err("login error", e.message, req.socket.remoteAddress);
+      res.code(401).send({});
     }
-    if (info.ismine) {
-      emit(user.username, "to", invoice.user);
-      return res.send(true);
+  },
+
+  async logout(req, res) {
+    let { subscription } = req.body;
+    if (!subscription) return res.send({});
+
+    const { username } = req.user;
+
+    if (username) {
+      l("logging out", username);
+      let i = req.user.subscriptions.findIndex(
+        s => JSON.stringify(s) === subscription
+      );
+      if (i > -1) {
+        req.user.subscriptions.splice(i, 1);
+      }
+      await req.user.save();
+      Object.keys(logins).map(
+        k => logins[k]["username"] === username && delete logins[k]
+      );
     }
+
+    res.send({});
+  },
+
+  async subscribe({ body, user }, res) {
+    let { subscriptions } = user;
+    let { subscription } = body;
+    if (!subscriptions) subscriptions = [];
+    if (
+      !subscriptions.find(
+        s => JSON.stringify(s) === JSON.stringify(subscription)
+      )
+    )
+      subscriptions.push(subscription);
+    user.subscriptions = subscriptions;
+    l("subscribing", user.username);
+    await user.save();
+    res.sendStatus(201);
+  },
+
+  async password({ body: { password }, user }, res) {
+    if (!user.password) return res.send(true);
+    res.send(await bcrypt.compare(password, user.password));
+  },
+
+  async otpsecret(req, res) {
+    try {
+      await requirePin(req);
+      let { otpsecret, username } = req.user;
+      res.send({ secret: otpsecret, username });
+    } catch (e) {
+      res.code(500).send(e.message);
+    }
+  },
+
+  async contacts({ user: { id } }, res) {
+    let i = (await g(`${id}:cindex`)) || 0;
+    let payments = (await db.lRange(`${id}:payments`, i, -1)) || [];
+    await db.incrBy(`${id}:cindex`, payments.length);
+
+    let contacts = (await g(`${id}:contacts`)) || [];
+
+    for (let { ref } of (
+      await Promise.all(payments.map(async id => await g(`payment:${id}`)))
+    ).filter(p => p.type === types.internal && p.ref)) {
+      !~contacts.findIndex(({ id }) => id === ref) &&
+        contacts.push(await g(`user:${ref}`));
+    }
+
+    await s(`${id}:contacts`, contacts);
+
+    res.send(contacts);
+  },
+
+  async del({ params: { username }, headers: { authorization } }, res) {
+    if (!(authorization && authorization.includes(config.admin)))
+      return res.code(401).send("unauthorized");
+
+    let { id, pubkey } = await g(`user:${await g(`user:${username}`)}`);
+    let invoices = await db.lRange(`${id}:invoices`, 0, -1);
+    let payments = await db.lRange(`${id}:payments`, 0, -1);
+
+    for (let { id } of invoices) db.del(`invoice:${id}`);
+    for (let { id } of payments) db.del(`payment:${id}`);
+    db.del(`user:${username}`);
+    db.del(`user:${id}`);
+    db.del(`user:${pubkey}`);
+
+    res.send({});
   }
-
-  res.send(false);
-});
-
-app.get("/invoices", auth, async function(req, res) {
-  let invoices = await db.Invoice.findAll({
-    where: { user_id: req.user.id }
-  });
-  res.send(invoices);
-});
-
-app.post("/signMessage", auth, async function(req, res) {
-  let { address, message } = req.body;
-
-  let invoices = await db.Invoice.findAll({
-    where: { user_id: req.user.id }
-  });
-
-  if (invoices.find(i => i.address === address)) {
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
-    return res.send(await bc.signMessage(address, message));
-  }
-
-  res.code(500).send("Address not found for user");
-});
-
-app.post("/otpsecret", auth, async function(req, res) {
-  try {
-    await requirePin(req);
-    let { otpsecret } = req.user;
-    res.send({ secret: otpsecret });
-  } catch (e) {
-    res.code(500).send(e.message);
-  }
-});
-
-app.get("/contacts", auth, async function(req, res) {
-  try {
-    let contacts = await db.Payment.findAll({
-      where: {
-        user_id: req.user.id,
-        with_id: { [Sequelize.Op.ne]: null }
-      },
-      include: {
-        attributes: ["username", "profile"],
-        model: db.User,
-        as: "with"
-      },
-      attributes: [
-        [Sequelize.fn("max", Sequelize.col("payments_model.createdAt")), "last"]
-      ],
-      group: ["with_id"],
-      order: [[{ model: db.User, as: "with" }, "username", "ASC"]]
-    });
-
-    res.send(
-      contacts.map(c => {
-        c = c.get({ plain: true });
-        return { ...c.with, last: c.last };
-      })
-    );
-  } catch (e) {
-    console.log(e);
-    res.code(500).send(e.message);
-  }
-});
+};
