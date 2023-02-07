@@ -17,6 +17,8 @@ import { types } from "$lib/payments";
 import got from "got";
 import upload from "$lib/upload";
 
+let { classic } = config;
+
 export default {
   upload,
 
@@ -189,10 +191,9 @@ export default {
       let uid = await g(`user:${username}`);
       let user = await g(`user:${uid}`);
 
-      if (!(user && user.migrated)) {
+      if (classic && !(user && user.migrated)) {
         uid = user ? user.id : v4();
 
-        let { classic } = config;
         try {
           let { token } = await got
             .post(`${classic}/login`, { json: { username, password } })
