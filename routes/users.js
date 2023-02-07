@@ -347,6 +347,10 @@ export default {
     res.send(await bcrypt.compare(password, user.password));
   },
 
+  async pin({ body: { pin }, user }, res) {
+    res.send(!user.pin || user.pin === pin);
+  },
+
   async otpsecret(req, res) {
     try {
       await requirePin(req);

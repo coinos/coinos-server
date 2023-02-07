@@ -76,6 +76,7 @@ app.post("/logout", optional, users.logout);
 
 app.post("/subscribe", auth, users.subscribe);
 app.post("/password", auth, users.password);
+app.post("/pin", auth, users.pin);
 app.post("/otpsecret", auth, users.otpsecret);
 app.get("/contacts", auth, users.contacts);
 
