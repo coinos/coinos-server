@@ -1,8 +1,8 @@
 alias=coinos
 rgb=006000
-bitcoin-rpcconnect=bitcoin
+bitcoin-rpcconnect=bc
 bitcoin-rpcport=18443
 bitcoin-rpcuser=admin1
 bitcoin-rpcpassword=123
 network=regtest
-addr=172.18.0.31:9735
+addr=cl:9735
