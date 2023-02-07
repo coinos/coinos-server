@@ -65,7 +65,7 @@ app.post("/bitcoin/send", auth, payments.send);
 app.get("/me", auth, users.me);
 app.get("/users/:key", users.get);
 app.post("/register", users.create);
-app.post("/disable2fa", users.disable2fa);
+app.post("/disable2fa", auth, users.disable2fa);
 app.post("/2fa", auth, users.enable2fa);
 app.post("/user", auth, users.update);
 app.post("/upload/:type", auth, users.upload);

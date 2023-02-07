@@ -134,7 +134,7 @@ export default {
 
     if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
     if (typeof newpin !== "undefined") user.pin = newpin;
-    if (!user.pin) user.pin = null;
+    if (!user.pin || user.pin === "undefined") delete user.pin;
 
     let exists;
     if (username) exists = await g(`user:${username}`);
@@ -237,7 +237,7 @@ export default {
               if (!p.with) continue;
 
               let id = await g(`user:${p.with.username}`);
-              let u = id && await g(`user:${id}`);
+              let u = id && (await g(`user:${id}`));
 
               if (!u) {
                 u = await got(`${classic}/admin/migrate/${p.with.username}`, {

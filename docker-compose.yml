@@ -72,4 +72,4 @@ services:
       - "./data/nostr/data:/usr/src/app/db" 
       - "./data/nostr/config.toml:/usr/src/app/config.toml" 
     ports:
-      - '8080:8080'
+      - '8082:8080'
