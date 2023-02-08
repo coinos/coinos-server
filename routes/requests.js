@@ -1,10 +1,13 @@
 import { emit } from "$lib/sockets";
-import { g, db } from "$lib/db";
+import { g, s, db } from "$lib/db";
+import { v4 } from "uuid";
 
 export default {
   async get({ params: { id } }, res) {
     try {
-      res.send({ request: await g(id) });
+      let request = await g(`request:${id}`);
+      request.recipient = await g(`user:${request.recipient_id}`);
+      res.send({ request });
     } catch (e) {
       console.log(e);
       res.code(500).send(e.message);
@@ -29,16 +32,18 @@ export default {
     { body: { recipient, ...params }, user: { username, profile } },
     res
   ) {
-    let { id: recipient_id } = await g(`user:${recipient}`);
+    let recipient_id = await g(`user:${recipient}`);
 
-    let request = { recipient_id, ...params };
-    request.requester = {
-      username,
-      profile
+    let id = v4();
+    let request = {
+      id,
+      recipient_id,
+      requester: { username, profile },
+      ...params
     };
 
+    await s(`request:${id}`, request);
     emit(recipient, "request", request);
-
     res.send(request);
   },
 
