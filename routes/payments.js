@@ -36,6 +36,9 @@ export default {
         })
         .json();
     } else if (payreq) {
+      let { msatoshi } = await ln.decode(payreq);
+      if (msatoshi) amount = Math.round(msatoshi * 1000);
+
       p = await debit(
         hash,
         amount + maxfee,
@@ -45,7 +48,7 @@ export default {
         types.lightning
       );
 
-      let r = await ln.pay(payreq);
+      let r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
 
       p.amount = -amount;
       p.hash = r.payment_hash;

@@ -26,7 +26,7 @@ services:
       - ./data/bitcoin:/home/bitcoin/.bitcoin
     restart: always
   cl:
-    image: elementsproject/lightningd:latest
+    image: elementsproject/lightningd:v22.11.1
     container_name: cl
     environment:
       LIGHTNINGD_NETWORK: regtest
@@ -34,7 +34,7 @@ services:
       - ./data/lightning:/root/.lightning
     restart: always
   clb:
-    image: elementsproject/lightningd:latest
+    image: elementsproject/lightningd:v22.11.1
     container_name: clb
     environment:
       LIGHTNINGD_NETWORK: regtest
@@ -42,7 +42,7 @@ services:
       - ./data/lightningb:/root/.lightning
     restart: always
   clc:
-    image: elementsproject/lightningd:latest
+    image: elementsproject/lightningd:v22.11.1
     container_name: clc
     environment:
       LIGHTNINGD_NETWORK: regtest
@@ -50,7 +50,7 @@ services:
       - ./data/lightningc:/root/.lightning
     restart: always
   cld:
-    image: elementsproject/lightningd:latest
+    image: elementsproject/lightningd:v22.11.1
     container_name: cld
     environment:
       LIGHTNINGD_NETWORK: regtest
