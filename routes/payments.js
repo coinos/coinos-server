@@ -27,7 +27,7 @@ export default {
     if (username && username.endsWith("@classic")) {
       let { username: source } = user;
       username = username.replace("@classic", "");
-      p = await debit(hash, amount, 0, memo, user, types.classic);
+      p = await debit(hash, amount, 0, username, user, types.classic);
 
       await got
         .post(`${config.classic}/admin/credit`, {
