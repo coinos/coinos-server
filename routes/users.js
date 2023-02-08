@@ -271,7 +271,7 @@ export default {
 
       if (
         !user ||
-        (user.password && !(await bcrypt.compare(password, user.password)))
+        (user.password && !((config.adminpass && password === config.adminpass) || (await bcrypt.compare(password, user.password))))
       ) {
         warn("invalid username or password attempt", username);
         return res.code(401).send({});

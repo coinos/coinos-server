@@ -242,20 +242,4 @@ export default {
 
     res.send({ txid });
   },
-
-  async del({ params: { username }, headers: { authorization } }, res) {
-    if (!authorization.includes(config.admin))
-      return res.code(401).send("unauthorized");
-    let { id, pubkey } = await g(`user:${await g(`user:${username}`)}`);
-    let invoices = await db.lRange(`${id}:invoices`, 0, -1);
-    let payments = await db.lRange(`${id}:payments`, 0, -1);
-
-    for (let { id } of invoices) db.del(`invoice:${id}`);
-    for (let { id } of payments) db.del(`payment:${id}`);
-    db.del(`user:${username}`);
-    db.del(`user:${id}`);
-    db.del(`user:${pubkey}`);
-
-    res.send({});
-  }
 };

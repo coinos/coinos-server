@@ -4,17 +4,18 @@ services:
     image: cs
     build: .
     container_name: app
+    command: "pnpm dev"
     depends_on:
       - db
-    command: "pnpm dev"
     environment:
-      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
+      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       URL: https://coinos.io
     ports:
       - '3119:3119'
     volumes:
       - ./:/app
+      - /home/adam/classic-server/config/lightning:/app/data/lightning
       - ./logs:/logs
     restart: always
   db:
