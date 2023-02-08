@@ -5,6 +5,15 @@ import { v4 } from "uuid";
 import got from "got";
 import { generate } from "$lib/invoices";
 import { bech32 } from "bech32";
+import { fields, pick } from "$lib/utils";
+import { types } from "$lib/payments";
+import crypto from "crypto";
+
+import config from "$config";
+let { admin, classic } = config;
+
+let { URL } = process.env;
+let host = URL.split("/").at(-1);
 
 export default {
   async encode({ query: { address } }, res) {
@@ -26,20 +35,41 @@ export default {
 
   async lnurlp({ params: { username } }, res) {
     let uid = await g(`user:${username}`);
-    if (!uid) fail("user not found");
+    if (!uid) {
+      let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
+        headers: { authorization: `Bearer ${admin}` },
+      }).json();
+
+      if (!u) fail("user not found");
+      let { balance, pubkey } = u;
+
+      uid = u.uuid;
+
+      u = { id: uid, about: u.address, ...pick(u, fields) };
+      delete u.address;
+
+      await s(`user:${pubkey}`, uid);
+      await s(`user:${username}`, uid);
+      await s(`user:${uid}`, u);
+      await s(`balance:${uid}`, balance);
+
+      l("added missing user", username);
+    }
+
+    let metadata = JSON.stringify([
+      ["text/plain", `Paying ${username}@${host}`],
+      ["text/identifier", `${username}@${host}`],
+    ]);
 
     let id = v4();
     await s(`lnurl:${id}`, uid);
-    let { URL } = process.env;
-    let host = URL.split("/").at(-1);
 
     res.send({
-      metadata: [
-        ["text/plain", `Paying ${username}@${host}`],
-        ["text/identifier", `${username}@${host}`]
-      ],
-      callback: `${URL}/lnurl/${id}`,
-      tag: "payRequest"
+      minSendable: 1000,
+      maxSendable: 100000000,
+      metadata,
+      callback: `${URL}/api/lnurl/${id}`,
+      tag: "payRequest",
     });
   },
 
@@ -49,18 +79,30 @@ export default {
     if (!pr) {
       let uid = await g(`lnurl:${id}`);
       let user = await g(`user:${uid}`);
+      let { username } = user;
+
+      let metadata = JSON.stringify([
+        ["text/plain", `Paying ${username}@${host}`],
+        ["text/identifier", `${username}@${host}`],
+      ]);
+
+      let memo = crypto
+        .createHash("sha256")
+        .update(Buffer.from(metadata, "utf8"))
+        .digest("hex");
 
       ({ text: pr } = await generate({
         invoice: {
-          amount,
-          type: types.lightning
+          amount: Math.round(amount / 1000),
+          type: types.lightning,
         },
-        user
+        memo,
+        user,
       }));
 
       await s(`lnurlp:${id}`, pr);
     }
 
-    res.send({ pr });
-  }
+    res.send({ pr, routes: [] });
+  },
 };
