@@ -1,5 +1,6 @@
 import { g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
+import { fail } from "$lib/utils";
 import got from "got";
 import config from "$config";
 
@@ -11,6 +12,7 @@ export default {
       invoice.user = await g(`user:${invoice.uid}`);
     } else {
       invoice = await got(`${config.classic}/invoice/${hash}`).json();
+      fail("invoice not found");
       invoice.id = invoice.uuid;
       invoice.classic = true;
       invoice.user.id = invoice.user.uuid;
