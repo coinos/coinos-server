@@ -59,6 +59,7 @@ export default {
       if (!user) return res.code(500).send("User not found");
 
       let whitelist = [
+        "anon",
         "username",
         "banner",
         "profile",

@@ -8,6 +8,8 @@ export default {
     let request = await g(`request:${id}`);
     if (!request) fail("request not found");
     request.recipient = await g(`user:${request.recipient_id}`);
+    request.requester = await g(`user:${request.requester_id}`);
+    request.invoice = await g(`invoice:${request.invoice_id}`);
     res.send({ request });
   },
 
@@ -29,7 +31,10 @@ export default {
         })
       );
 
-      res.send({ invoices, requests });
+      let sent = requests.filter(r => r.requester_id === id);
+      let received = requests.filter(r => r.recipient_id === id);
+
+      res.send({ invoices, sent, received });
     } catch (e) {
       console.log(e);
       res.code(500).send(e.message);
