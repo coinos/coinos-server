@@ -17,7 +17,7 @@ export default {
     let { amount, hash, maxfee, name, memo, payreq, tip, username } = body;
 
     amount = parseInt(amount);
-    maxfee = parseInt(maxfee);
+    maxfee = maxfee ? parseInt(maxfee) : 0;
     tip = parseInt(tip);
 
     await requirePin({ body, user });
@@ -36,36 +36,44 @@ export default {
         })
         .json();
     } else if (payreq) {
-      let { msatoshi } = await ln.decode(payreq);
-      if (msatoshi) amount = Math.round(msatoshi * 1000);
+      let { msatoshi, payment_hash } = await ln.decode(payreq);
+      if (msatoshi) amount = Math.round(msatoshi / 1000);
+      let invoice = await g(`invoice:${payment_hash}`);
 
-      p = await debit(
-        hash,
-        amount + maxfee,
-        maxfee,
-        memo,
-        user,
-        types.lightning
-      );
+      if (invoice) hash = payment_hash;
+      else {
+        p = await debit(
+          hash,
+          amount + maxfee,
+          maxfee,
+          memo,
+          user,
+          types.lightning
+        );
 
-      let r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
+        let r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
 
-      p.amount = -amount;
-      p.hash = r.payment_hash;
-      p.fee = r.msatoshi_sent - r.msatoshi;
-      p.ref = r.payment_preimage;
+        p.amount = -amount;
+        p.hash = r.payment_hash;
+        p.fee = r.msatoshi_sent - r.msatoshi;
+        p.ref = r.payment_preimage;
 
-      await s(`payment:${p.id}`, p);
-      await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
-    } else if (hash) {
-      p = await debit(hash, amount, 0, memo, user);
-      await credit(hash, amount, memo, user.id);
-    } else {
-      let pot = name || v4();
-      p = await debit(hash, amount, 0, memo, user, types.pot);
-      await db.incrBy(`pot:${pot}`, amount);
-      await db.lPush(`pot:${pot}:payments`, p.id);
-      l("funded pot", pot);
+        await s(`payment:${p.id}`, p);
+        await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+      }
+    }
+
+    if (!p) {
+      if (hash) {
+        p = await debit(hash, amount, 0, memo, user);
+        await credit(hash, amount, memo, user.id);
+      } else {
+        let pot = name || v4();
+        p = await debit(hash, amount, 0, memo, user, types.pot);
+        await db.incrBy(`pot:${pot}`, amount);
+        await db.lPush(`pot:${pot}:payments`, p.id);
+        l("funded pot", pot);
+      }
     }
 
     res.send(p);
@@ -242,5 +250,5 @@ export default {
     await bc.sendRawTransaction(hex);
 
     res.send({ txid });
-  },
+  }
 };

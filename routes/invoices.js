@@ -3,13 +3,17 @@ import { generate } from "$lib/invoices";
 import { fail } from "$lib/utils";
 import got from "got";
 import config from "$config";
+import ln from "$lib/ln";
 
 export default {
   async get({ params: { hash } }, res) {
+    if (hash.startsWith("ln")) ({ payment_hash: hash } = await ln.decode(hash));
+
     let invoice = await g(`invoice:${hash}`);
 
     if (invoice) {
       invoice.user = await g(`user:${invoice.uid}`);
+      invoice.id = hash;
     } else {
       invoice = await got(`${config.classic}/invoice/${hash}`).json();
       if (!invoice) fail("invoice not found");
