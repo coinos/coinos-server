@@ -2,3 +2,4 @@ node_modules/
 .pnpm*
 data
 config.js
+docker-compose.yml
