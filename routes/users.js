@@ -34,6 +34,7 @@ export default {
   },
 
   async get({ params: { key } }, res) {
+    key = key.toLowerCase();
     try {
       if (key.startsWith("npub")) {
         try {
