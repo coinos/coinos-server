@@ -86,17 +86,12 @@ export default {
         ["text/identifier", `${username}@${host}`]
       ]);
 
-      let memo = crypto
-        .createHash("sha256")
-        .update(Buffer.from(metadata, "utf8"))
-        .digest("hex");
-
       ({ text: pr } = await generate({
         invoice: {
           amount: Math.round(amount / 1000),
           type: types.lightning
         },
-        memo,
+        memo: metadata,
         user
       }));
 

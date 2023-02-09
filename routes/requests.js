@@ -17,10 +17,8 @@ export default {
     try {
       const day = new Date(new Date().setDate(new Date().getDate() - 1));
 
-      let invoices = await db.lRange(`${id}:invoices`, 0, -1);
       let requests = await db.lRange(`${id}:requests`, 0, -1);
 
-      invoices = await Promise.all(invoices.map(id => g(`invoice:${id}`)));
       requests = await Promise.all(requests.map(id => g(`request:${id}`)));
 
       requests = await Promise.all(
@@ -32,7 +30,21 @@ export default {
       );
 
       let sent = requests.filter(r => r.requester_id === id);
-      let received = requests.filter(r => r.recipient_id === id);
+
+      let received = requests
+        .filter(r => r.recipient_id === id)
+        .filter(r => !r.invoice_id);
+
+      let invoices = [];
+      for (let r of sent) {
+        if (!r.invoice_id) continue;
+
+        let invoice = await g(`invoice:${r.invoice_id}`);
+        if (!invoice) continue;
+
+        invoice.request = r;
+        if (invoice.amount < invoice.received) invoices.push(invoice);
+      }
 
       res.send({ invoices, sent, received });
     } catch (e) {
