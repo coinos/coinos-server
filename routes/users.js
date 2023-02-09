@@ -220,7 +220,7 @@ export default {
           };
 
           await s(`user:${pubkey}`, uid);
-          await s(`user:${username}`, uid);
+          await s(`user:${username.toLowerCase()}`, uid);
           await s(`user:${uid}`, user);
           await s(`balance:${uid}`, balance);
 
@@ -251,7 +251,7 @@ export default {
                 delete u.address;
 
                 await s(`user:${u.pubkey}`, u.id);
-                await s(`user:${p.with.username}`, u.id);
+                await s(`user:${p.with.username.toLowerCase()}`, u.id);
                 await s(`user:${u.id}`, u);
 
                 l("added missing user", u.username);
@@ -401,5 +401,15 @@ export default {
     db.del(`user:${pubkey}`);
 
     res.send({});
+  },
+
+  async lower(req, res) {
+    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
+      let u = await g(k);
+      await db.del(k);
+      await s(k.toLowerCase(), u);
+    }
+
+    res.send("ok");
   }
 };

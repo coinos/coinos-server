@@ -49,7 +49,7 @@ export default {
       delete u.address;
 
       await s(`user:${pubkey}`, uid);
-      await s(`user:${username}`, uid);
+      await s(`user:${username.toLowerCase()}`, uid);
       await s(`user:${uid}`, u);
       await s(`balance:${uid}`, balance);
 
