@@ -187,7 +187,7 @@ export default {
 
   async login(req, res) {
     try {
-      const { username, password, token: twofa } = req.body;
+      let { username, password, token: twofa } = req.body;
       l("logging in", username);
 
       username = username.toLowerCase();
