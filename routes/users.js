@@ -190,6 +190,7 @@ export default {
       const { username, password, token: twofa } = req.body;
       l("logging in", username);
 
+      username = username.toLowerCase();
       let uid = await g(`user:${username}`);
       let user = await g(`user:${uid}`);
 
@@ -220,7 +221,7 @@ export default {
           };
 
           await s(`user:${pubkey}`, uid);
-          await s(`user:${username.toLowerCase()}`, uid);
+          await s(`user:${username}`, uid);
           await s(`user:${uid}`, user);
           await s(`balance:${uid}`, balance);
 
