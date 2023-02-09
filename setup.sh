@@ -1,4 +1,5 @@
-cp sampleconfig.js config.js
+cp config.js.sample config.js
+cp compose.yml.sample compose.yml
 cp -r sampledata data
 docker compose up -d
 docker run -it -v $(pwd):/app --entrypoint pnpm cs i
