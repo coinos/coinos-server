@@ -369,13 +369,13 @@ export default {
     if (!(authorization && authorization.includes(config.admin)))
       return res.code(401).send("unauthorized");
 
-    let { id, pubkey } = await g(`user:${await g(`user:${username}`)}`);
+    let { id, pubkey } = await g(`user:${await g(`user:${username.toLowerCase()}`)}`);
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
     let payments = await db.lRange(`${id}:payments`, 0, -1);
 
     for (let { id } of invoices) db.del(`invoice:${id}`);
     for (let { id } of payments) db.del(`payment:${id}`);
-    db.del(`user:${username}`);
+    db.del(`user:${username.toLowerCase()}`);
     db.del(`user:${id}`);
     db.del(`user:${pubkey}`);
 
@@ -383,10 +383,9 @@ export default {
   },
 
   async lower(req, res) {
-    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
-      let u = await g(k);
-      await db.del(k);
-      await s(k.toLowerCase(), u);
+    for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
+      let b = await g(k);
+      if (b < 0) console.log(k, b)
     }
 
     res.send("ok");

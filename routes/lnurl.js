@@ -34,7 +34,7 @@ export default {
   },
 
   async lnurlp({ params: { username } }, res) {
-    let uid = await g(`user:${username}`);
+    let uid = await g(`user:${username.toLowerCase()}`);
     if (!uid) {
       let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
         headers: { authorization: `Bearer ${admin}` }
