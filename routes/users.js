@@ -141,14 +141,14 @@ export default {
     if (!user.pin || user.pin === "undefined") delete user.pin;
 
     let exists;
-    if (username) exists = await g(`user:${username}`);
+    if (username) exists = await g(`user:${username.toLowerCase()}`);
 
     let token;
-    if (user.username !== username && exists) {
+    if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
       err("username taken", username, user.username, exists.username);
       throw new Error("Username taken");
     } else if (username) {
-      if (user.username !== username)
+      if (user.username.toLowerCase() !== username.toLowerCase())
         l("changing username", user.username, username);
       user.username = username;
     }
@@ -181,7 +181,7 @@ export default {
     user.haspin = !!user.pin;
     await s(`user:${user.id}`, user);
 
-    emit(user.username, "user", user);
+    emit(user.id, "user", user);
     res.send({ user, token });
   },
 
@@ -240,11 +240,11 @@ export default {
             if (n.type === types.internal) {
               if (!p.with) continue;
 
-              let id = await g(`user:${p.with.username}`);
+              let id = await g(`user:${p.with.username.toLowerCase()}`);
               let u = id && (await g(`user:${id}`));
 
               if (!u) {
-                u = await got(`${classic}/admin/migrate/${p.with.username}`, {
+                u = await got(`${classic}/admin/migrate/${p.with.username.toLowerCase()}`, {
                   headers: { authorization: `Bearer ${config.admin}` }
                 }).json();
 
@@ -298,7 +298,7 @@ export default {
         req.headers["x-forwarded-for"] || req.socket.remoteAddress
       );
 
-      let payload = { username, id: uid };
+      let payload = { id: uid };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       user = pick(user, whitelist);
@@ -308,29 +308,6 @@ export default {
       err("login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }
-  },
-
-  async logout(req, res) {
-    let { subscription } = req.body;
-    if (!subscription) return res.send({});
-
-    const { username } = req.user;
-
-    if (username) {
-      l("logging out", username);
-      let i = req.user.subscriptions.findIndex(
-        s => JSON.stringify(s) === subscription
-      );
-      if (i > -1) {
-        req.user.subscriptions.splice(i, 1);
-      }
-      await req.user.save();
-      Object.keys(logins).map(
-        k => logins[k]["username"] === username && delete logins[k]
-      );
-    }
-
-    res.send({});
   },
 
   async subscribe({ body, user }, res) {
@@ -388,6 +365,7 @@ export default {
   },
 
   async del({ params: { username }, headers: { authorization } }, res) {
+    username = username.toLowerCase();
     if (!(authorization && authorization.includes(config.admin)))
       return res.code(401).send("unauthorized");
 
