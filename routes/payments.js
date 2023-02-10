@@ -40,9 +40,11 @@ export default {
       if (msatoshi) amount = Math.round(msatoshi / 1000);
       let invoice = await g(`invoice:${payment_hash}`);
 
-      if (invoice.uid === user.id) fail("Cannot send to self");
+      if (invoice) {
+        if (invoice.uid === user.id) fail("Cannot send to self");
+        hash = payment_hash;
+      } 
 
-      if (invoice) hash = payment_hash;
       else {
         p = await debit(
           hash,
