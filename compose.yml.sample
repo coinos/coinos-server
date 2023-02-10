@@ -1,8 +1,7 @@
 version: '3.6'
 services:
   app:
-    image: cs
-    build: .
+    image: asoltys/coinos
     container_name: app
     depends_on:
       - db
