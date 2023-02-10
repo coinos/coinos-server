@@ -1,0 +1,8 @@
+alias=coinos
+rgb=006000
+bitcoin-rpcconnect=bc
+bitcoin-rpcport=18443
+bitcoin-rpcuser=admin1
+bitcoin-rpcpassword=123
+network=regtest
+addr=clb:9735

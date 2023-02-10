@@ -41,22 +41,6 @@ services:
     volumes:
       - ./data/lightningb:/root/.lightning
     restart: always
-  clc:
-    image: elementsproject/lightningd:v22.11.1
-    container_name: clc
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./data/lightningc:/root/.lightning
-    restart: always
-  cld:
-    image: elementsproject/lightningd:v22.11.1
-    container_name: cld
-    environment:
-      LIGHTNINGD_NETWORK: regtest
-    volumes:
-      - ./data/lightningd:/root/.lightning
-    restart: always
   db:
     image: eqalpha/keydb
     container_name: db
