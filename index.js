@@ -73,7 +73,6 @@ app.post("/upload/:type", auth, users.upload);
 app.get('/users/delete/:username', users.del);
 
 app.post("/login", users.login);
-app.post("/logout", optional, users.logout);
 
 app.post("/subscribe", auth, users.subscribe);
 app.post("/password", auth, users.password);
