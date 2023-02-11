@@ -43,9 +43,7 @@ export default {
       if (invoice) {
         if (invoice.uid === user.id) fail("Cannot send to self");
         hash = payment_hash;
-      } 
-
-      else {
+      } else {
         p = await debit(
           hash,
           amount + maxfee,
@@ -109,7 +107,9 @@ export default {
   },
 
   async get({ params: { hash } }, res) {
-    res.send(await g(`payment:${hash}`));
+    let p = await g(`payment:${hash}`);
+    if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+    res.send(p);
   },
 
   async parse({ body: { payreq } }, res) {

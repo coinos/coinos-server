@@ -244,9 +244,12 @@ export default {
               let u = id && (await g(`user:${id}`));
 
               if (!u) {
-                u = await got(`${classic}/admin/migrate/${p.with.username.toLowerCase()}`, {
-                  headers: { authorization: `Bearer ${config.admin}` }
-                }).json();
+                u = await got(
+                  `${classic}/admin/migrate/${p.with.username.toLowerCase()}`,
+                  {
+                    headers: { authorization: `Bearer ${config.admin}` }
+                  }
+                ).json();
 
                 u = { id: u.uuid, about: u.address, ...pick(u, fields) };
                 delete u.address;
@@ -369,7 +372,9 @@ export default {
     if (!(authorization && authorization.includes(config.admin)))
       return res.code(401).send("unauthorized");
 
-    let { id, pubkey } = await g(`user:${await g(`user:${username.toLowerCase()}`)}`);
+    let { id, pubkey } = await g(
+      `user:${await g(`user:${username.toLowerCase()}`)}`
+    );
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
     let payments = await db.lRange(`${id}:payments`, 0, -1);
 
@@ -385,7 +390,7 @@ export default {
   async lower(req, res) {
     for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
       let b = await g(k);
-      if (b < 0) console.log(k, b)
+      if (b < 0) console.log(k, b);
     }
 
     res.send("ok");
