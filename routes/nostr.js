@@ -52,6 +52,7 @@ export default {
 
   async broadcast(req, res) {
     let { event } = req.body;
+    console.log("sending", event)
     pool.send(["EVENT", event]);
     res.send(event);
   },
