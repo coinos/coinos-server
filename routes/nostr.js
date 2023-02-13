@@ -52,7 +52,6 @@ export default {
 
   async broadcast(req, res) {
     let { event } = req.body;
-    console.log("sending", event)
     pool.send(["EVENT", event]);
     res.send(event);
   },
@@ -81,7 +80,8 @@ export default {
         authors: [pubkey]
       }).catch(nada);
 
-      let user = await g(`user:${pubkey}`);
+      let uid = await g(`user:${pubkey}`);
+      let user = await g(`user:${uid}`);
 
       if (!user)
         user = {
@@ -114,15 +114,17 @@ export default {
       ).catch(nada);
 
       for (let pubkey of pubkeys) {
-        let user = await g(`user:${pubkey}`);
+        let uid = await g(`user:${pubkey}`);
+        let user = await g(`user:${uid}`);
         if (!user || !user.updated) {
-          q(`${pubkey}:profile:f2`, {
+          await q(`${pubkey}:profile:f2`, {
             limit: 1,
             kinds: [0],
             authors: [pubkey]
           }).catch(nada);
 
-          user = await g(`user:${pubkey}`);
+          uid = await g(`user:${pubkey}`);
+          user = await g(`user:${uid}`);
         }
 
         if (!user)
