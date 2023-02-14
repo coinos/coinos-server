@@ -160,6 +160,7 @@ export default {
       "currency",
       "display",
       "email",
+      "phone",
       "fiat",
       "locktime",
       "prompt",
