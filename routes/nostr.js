@@ -20,7 +20,8 @@ export default {
   },
 
   async notes({ params: { pubkey } }, res) {
-    let user = await g(`user:${pubkey}`);
+    let uid = await g(`user:${pubkey}`);
+    let user = await g(`user:${uid}`);
 
     if (!user)
       user = {
@@ -38,8 +39,6 @@ export default {
       opts = { since: 0 };
 
     q(`${pubkey}:notes`, params, opts).catch(nada);
-
-    await s(`user:${pubkey}`, user);
 
     let ids = await db.sMembers(pubkey);
 
