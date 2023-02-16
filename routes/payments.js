@@ -259,7 +259,7 @@ export default {
 
   async buy({ body: { amount, number, year, month, cvc }, user }, res) {
     let stripe = "https://api.stripe.com/v1";
-    let { STRIPE: username } = process.env;
+    let { stripe: username } = config;
 
     let form = {
       "card[number]": number,

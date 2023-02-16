@@ -3,4 +3,3 @@ node_modules/
 data
 config.js
 compose.yml
-.env
