@@ -49,6 +49,37 @@ export default {
     res.send(events.map(e => ({ ...e, user })));
   },
 
+  async messages({ params: { pubkey, since = 0 } }, res) {
+    let params = {
+      kinds: [4],
+      authors: [pubkey]
+    };
+
+    let opts = { since };
+
+    await q(`${pubkey}:messages`, params, opts).catch(nada);
+
+    params = {
+      kinds: [4],
+      "#p": [pubkey]
+    };
+
+    await q(`${pubkey}:messages`, params, opts).catch(nada);
+
+    let messages = await db.sMembers(`${pubkey}:messages`);
+    messages = await Promise.all(
+      messages.map(async id => {
+        let m = await g(`ev:${id}`);
+        let k = m.pubkey === pubkey ? m.tags[0].p : m.pubkey;
+        let uid = await g(`user:${k}`);
+        m.user = await g(`user:${uid}`);
+        return m;
+      })
+    );
+
+    res.send(messages);
+  },
+
   async broadcast(req, res) {
     let { event } = req.body;
     pool.send(["EVENT", event]);

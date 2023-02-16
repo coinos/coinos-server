@@ -171,7 +171,7 @@ export default {
     ];
 
     for (let a of attributes) {
-      if (body[a]) user[a] = body[a];
+      if (typeof body[a] !== "undefined") user[a] = body[a];
     }
 
     if (password && password === confirm) {

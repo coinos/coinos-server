@@ -37,6 +37,7 @@ app.get("/nostr.json", nostr.identities);
 app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);
 app.get("/:pubkey/notes", nostr.notes);
+app.get("/:a/:b/:since/messages", nostr.messages);
 app.get("/event/:id", nostr.event);
 app.post("/event", nostr.broadcast);
 
@@ -52,6 +53,7 @@ app.get("/payments/:hash", auth, payments.get);
 app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
 app.post("/take", auth, payments.take);
+app.post("/buy", auth, payments.buy);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);

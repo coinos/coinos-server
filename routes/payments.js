@@ -253,4 +253,34 @@ export default {
 
     res.send({ txid });
   },
+
+  async buy({ body: { amount, number, month, year, cvc } }, res) {
+    let stripe = "https://api.stripe.com/v1";
+    let { STRIPE: username } = process.env;
+
+    let { id: source } = await got.post(`${stripe}/tokens`, {
+      form: {
+        "card[number]": number,
+        "card[exp_month]": month,
+        "card[exp_year]": year,
+        "card[cvc]": cvc
+      },
+      username
+    });
+
+    let { status } = await got.post(`${stripe}/charges`, {
+      form: {
+        amount,
+        currency: "cad",
+        source,
+        description: "starter coupon"
+      },
+      username
+    });
+
+    if (status !== "succeeded")
+      throw error(500, { message: "Card payment failed" });
+
+    res.send(status);
+  }
 };
