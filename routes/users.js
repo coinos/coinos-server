@@ -230,7 +230,7 @@ export default {
           }).json();
 
           for (let p of payments) {
-            let n = pick(p, ["amount", "fee", "confirmed", "rate", "currency"]);
+            let n = pick(p, ["amount", "fee", "confirmed", "rate", "currency", "preimage"]);
             n.id = v4();
             n.created = parseISO(p.createdAt).getTime();
             n.type = p.network;
