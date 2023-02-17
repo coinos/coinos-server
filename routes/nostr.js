@@ -70,7 +70,7 @@ export default {
     messages = await Promise.all(
       messages.map(async id => {
         let m = await g(`ev:${id}`);
-        let k = m.pubkey === pubkey ? m.tags[0].p : m.pubkey;
+        let k = m.pubkey === pubkey ? m.tags[0][1] : m.pubkey;
         let uid = await g(`user:${k}`);
         m.user = await g(`user:${uid}`);
         return m;
