@@ -210,7 +210,7 @@ export default {
             headers: { authorization: `Bearer ${config.admin}` }
           }).json();
 
-          let { balance, pubkey } = user;
+          let { balance } = user;
           if (!user) fail();
 
           uid = user.uuid;
