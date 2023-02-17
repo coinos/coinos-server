@@ -70,9 +70,13 @@ export default {
     messages = await Promise.all(
       messages.map(async id => {
         let m = await g(`ev:${id}`);
-        let k = m.pubkey === pubkey ? m.tags[0][1] : m.pubkey;
-        let uid = await g(`user:${k}`);
-        m.user = await g(`user:${uid}`);
+
+        let aid = await g(`user:${m.pubkey}`);
+        m.author = await g(`user:${aid}`);
+
+        let rid = await g(`user:${m.tags[0][1]}`); 
+        m.recipient = await g(`user:${rid}`);
+
         return m;
       })
     );
