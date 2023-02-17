@@ -388,11 +388,11 @@ export default {
   },
 
   async lower(req, res) {
-    for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
-      let b = await g(k);
-      if (b < 0) console.log(k, b);
+    for await (let k of db.scanIterator({ MATCH: "payment:*" })) {
+      let p = await g(k);
+      if (p.ref && p.ref.startsWith('2dad97')) console.log(k, p);
     }
 
     res.send("ok");
-  }
+  },
 };
