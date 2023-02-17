@@ -222,7 +222,6 @@ export default {
             migrated: true
           };
 
-          await s(`user:${pubkey}`, uid);
           await s(`user:${username}`, uid);
           await s(`user:${uid}`, user);
           await s(`balance:${uid}`, balance);
