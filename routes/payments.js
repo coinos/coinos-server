@@ -257,6 +257,8 @@ export default {
   },
 
   async buy({ body: { amount, number, year, month, cvc }, user }, res) {
+    if (!user.eligible) fail("not eligible");
+
     let stripe = "https://api.stripe.com/v1";
     let { stripe: username } = config;
 
