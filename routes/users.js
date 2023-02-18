@@ -34,7 +34,7 @@ export default {
   },
 
   async get({ params: { key } }, res) {
-    key = key.toLowerCase();
+    key = key.toLowerCase().replace(/\s/g, "");
     try {
       if (key.startsWith("npub")) {
         try {
@@ -192,7 +192,7 @@ export default {
       let { username, password, token: twofa } = req.body;
       l("logging in", username);
 
-      username = username.toLowerCase();
+      username = username.toLowerCase().replace(/\s/g, "");
       let uid = await g(`user:${username}`);
       let user = await g(`user:${uid}`);
 
