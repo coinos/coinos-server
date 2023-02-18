@@ -66,7 +66,7 @@ export default {
 
     res.send({
       minSendable: 1000,
-      maxSendable: 100000000,
+      maxSendable: 100000000000,
       metadata,
       callback: `${URL}/api/lnurl/${id}`,
       tag: "payRequest"
