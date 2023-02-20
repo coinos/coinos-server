@@ -6,16 +6,10 @@ export default {
     let lnchannel;
     let lnwallet;
 
-    const stream = db.scanStream({
-      match: "balance:*",
-      count: 100
-    });
-
     let b = 0;
-    for await (let keys of stream) {
-      for (let k of keys) b += parseInt(await db.get(k));
+      for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
+      b += parseInt(await db.get(k));
     }
-    console.log(b);
 
     const funds = await ln.listfunds();
     lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
