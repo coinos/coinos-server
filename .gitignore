@@ -19,7 +19,7 @@ build.json
 build.sh
 watcher.sh
 logs
-docker-compose.mainnet.yml
+compose.yml
 assets.json
 lm.yml
 lt.yml
