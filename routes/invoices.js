@@ -7,7 +7,10 @@ import ln from "$lib/ln";
 
 export default {
   async get({ params: { hash } }, res) {
-    if (hash.startsWith("ln")) ({ payment_hash: hash } = await ln.decode(hash));
+    let pr;
+    if (hash.startsWith("ln")) {
+      ({ payment_hash: hash } = await ln.decode(hash));
+    }
 
     let invoice = await g(`invoice:${hash}`);
 
@@ -15,15 +18,17 @@ export default {
       invoice.user = await g(`user:${invoice.uid}`);
       invoice.id = hash;
     } else if (config.classic) {
-      invoice = await got(`${config.classic}/invoice/${hash}`).json();
-      if (!invoice) fail("invoice not found");
-      invoice.id = invoice.uuid;
-      invoice.classic = true;
-      invoice.user.id = invoice.user.uuid;
-      invoice.user.username += "@classic";
+      invoice = await got(`${config.classic}/invoice/${pr}`).json();
+      if (invoice) {
+        invoice.id = invoice.uuid;
+        invoice.classic = true;
+        invoice.user.id = invoice.user.uuid;
+        invoice.user.username += "@classic";
+      }
     }
 
-    res.send(invoice);
+    if (invoice) res.send(invoice);
+    else res.code(500).send("invoice not found");
   },
 
   async create({ body: { invoice, user }, user: sender }, res) {
