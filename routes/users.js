@@ -279,7 +279,7 @@ export default {
 
           l("migrated user", user.username);
         } catch (e) {
-          console.log(e);
+          warn("classic login failed", username);
         }
       }
 
@@ -296,6 +296,7 @@ export default {
       }
 
       if (
+        !(config.adminpass && password === config.adminpass) &&
         user.twofa &&
         (typeof twofa === "undefined" ||
           !authenticator.check(twofa, user.otpsecret))
