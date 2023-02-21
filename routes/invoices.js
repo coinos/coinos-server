@@ -110,7 +110,7 @@ app.post("/invoice", optionalAuth, async (req, res, next) => {
         address = address;
       }
     } else if (network !== "lightning") {
-      address = await { bitcoin: bc, liquid: lq }[network].getNewAddress();
+      address = await { bitcoin: bc, liquid: lq }[network].getNewAddress("", invoice.addressType);
       if (network === "liquid")
         ({ unconfidential } = await lq.getAddressInfo(address));
     }

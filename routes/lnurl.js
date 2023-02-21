@@ -317,28 +317,7 @@ lnurlServer.bindToHook(
   async (req, res, next) => {
     try {
       let user;
-      const { amount: msats, key, tag, pr, k1 } = req.query;
-
-      if (msats) {
-        let amount = Math.round(msats / 1000);
-        const parts = req.originalUrl.split("/");
-        const secret = parts[parts.length - 1].split("?")[0];
-        let user_id = lnurlPayments[secret];
-
-        if (user_id) {
-          let account = await db.Account.findOne({
-            where: {
-              user_id,
-              asset: config.liquid.btcasset,
-              pubkey: null
-            }
-          });
-
-          if (account.balance < amount) {
-            throw new Error("Insufficient funds");
-          }
-        }
-      }
+      const { key, tag, pr, k1 } = req.query;
 
       if (tag === "login") {
         let username = logins[k1];

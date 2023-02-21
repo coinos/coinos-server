@@ -9,10 +9,8 @@ services:
     container_name: clapp
     image: gcr.io/coinos-326717/github.com/coinos/coinos-server:prod
     restart: always
-    command: "pnpm dev"
     environment:
-      # NODE_ENV: production
-      NODE_ENV: development
+      NODE_ENV: production
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js --openssl-legacy-provider"
       HOSTNAME: "${HOSTNAME}"
     volumes:
