@@ -74,7 +74,7 @@ export default {
         let aid = await g(`user:${m.pubkey}`);
         m.author = await g(`user:${aid}`);
 
-        let rid = await g(`user:${m.tags[0][1]}`); 
+        let rid = await g(`user:${m.tags[0][1]}`);
         m.recipient = await g(`user:${rid}`);
 
         return m;

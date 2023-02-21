@@ -231,7 +231,14 @@ export default {
           }).json();
 
           for (let p of payments) {
-            let n = pick(p, ["amount", "fee", "confirmed", "rate", "currency", "preimage"]);
+            let n = pick(p, [
+              "amount",
+              "fee",
+              "confirmed",
+              "rate",
+              "currency",
+              "preimage"
+            ]);
             n.id = v4();
             n.created = parseISO(p.createdAt).getTime();
             n.type = p.network;
@@ -391,9 +398,9 @@ export default {
   async lower(req, res) {
     for await (let k of db.scanIterator({ MATCH: "payment:*" })) {
       let p = await g(k);
-      if (p.ref && p.ref.startsWith('2dad97')) console.log(k, p);
+      if (p.ref && p.ref.startsWith("2dad97")) console.log(k, p);
     }
 
     res.send("ok");
-  },
+  }
 };

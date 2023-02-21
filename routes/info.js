@@ -7,7 +7,7 @@ export default {
     let lnwallet;
 
     let b = 0;
-      for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
+    for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
       b += parseInt(await db.get(k));
     }
 

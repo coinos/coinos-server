@@ -14,7 +14,7 @@ export default {
     if (invoice) {
       invoice.user = await g(`user:${invoice.uid}`);
       invoice.id = hash;
-    } else if(config.classic) {
+    } else if (config.classic) {
       invoice = await got(`${config.classic}/invoice/${hash}`).json();
       if (!invoice) fail("invoice not found");
       invoice.id = invoice.uuid;
