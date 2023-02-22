@@ -4,7 +4,7 @@ import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err } from "$lib/logging";
-import { fail, btc, sats } from "$lib/utils";
+import { bail, fail, btc, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
 import got from "got";
@@ -143,7 +143,7 @@ export default {
 
   async pot({ params: { name } }, res) {
     let amount = await g(`pot:${name}`);
-    if (!amount) fail("pot not found");
+    if (!amount) return bail(res, "pot not found");
     let payments = (await db.lRange(`pot:${name}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
 
