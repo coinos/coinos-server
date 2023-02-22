@@ -1,5 +1,5 @@
 import { g, s } from "$lib/db";
-import { l } from "$lib/logging";
+import { l, warn } from "$lib/logging";
 import { bail, fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
@@ -19,12 +19,14 @@ export default {
   async encode({ query: { address } }, res) {
     let [name, domain] = address.split("@");
     let url = `https://${domain}/.well-known/lnurlp/${name}`;
-    
+
     try {
       let r = await got(url).json();
       if (r.tag !== "payRequest") fail("not an ln address");
     } catch (e) {
-      return bail(res, "failed to lookup lightning address");
+      let m = `failed to lookup lightning address ${address}`;
+      warn(m);
+      return bail(res, m);
     }
 
     let enc = bech32.encode("lnurl", bech32.toWords(Buffer.from(url)), 20000);
