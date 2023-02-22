@@ -1,6 +1,6 @@
 import { g, s } from "$lib/db";
 import { l } from "$lib/logging";
-import { fail } from "$lib/utils";
+import { bail, fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
 import { generate } from "$lib/invoices";
@@ -19,8 +19,14 @@ export default {
   async encode({ query: { address } }, res) {
     let [name, domain] = address.split("@");
     let url = `https://${domain}/.well-known/lnurlp/${name}`;
-    let r = await got(url).json();
-    if (r.tag !== "payRequest") fail("not an ln address");
+    
+    try {
+      let r = await got(url).json();
+      if (r.tag !== "payRequest") fail("not an ln address");
+    } catch (e) {
+      return bail(res, "failed to lookup lightning address");
+    }
+
     let enc = bech32.encode("lnurl", bech32.toWords(Buffer.from(url)), 20000);
     res.send(enc);
   },
@@ -37,7 +43,7 @@ export default {
     let uid = await g(`user:${username.toLowerCase()}`);
     if (!uid) {
       let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
-        headers: { authorization: `Bearer ${admin}` }
+        headers: { authorization: `Bearer ${admin}` },
       }).json();
 
       if (!u) fail("user not found");
@@ -58,7 +64,7 @@ export default {
 
     let metadata = JSON.stringify([
       ["text/plain", `Paying ${username}@${host}`],
-      ["text/identifier", `${username}@${host}`]
+      ["text/identifier", `${username}@${host}`],
     ]);
 
     let id = v4();
@@ -69,7 +75,7 @@ export default {
       maxSendable: 100000000000,
       metadata,
       callback: `${URL}/api/lnurl/${id}`,
-      tag: "payRequest"
+      tag: "payRequest",
     });
   },
 
@@ -83,21 +89,21 @@ export default {
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
-        ["text/identifier", `${username}@${host}`]
+        ["text/identifier", `${username}@${host}`],
       ]);
 
       ({ text: pr } = await generate({
         invoice: {
           amount: Math.round(amount / 1000),
-          type: types.lightning
+          type: types.lightning,
         },
         memo: metadata,
-        user
+        user,
       }));
 
       await s(`lnurlp:${id}`, pr);
     }
 
     res.send({ pr, routes: [] });
-  }
+  },
 };
