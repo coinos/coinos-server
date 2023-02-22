@@ -3,7 +3,7 @@ import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
-import { l, err } from "$lib/logging";
+import { l, err, warn } from "$lib/logging";
 import { bail, fail, btc, sats } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
@@ -225,50 +225,55 @@ export default {
   },
 
   async send(req, res) {
-    await requirePin(req);
+    try {
+      await requirePin(req);
 
-    let { user } = req;
-    let { address, memo, tx } = req.body;
-    let { hex, fee } = tx;
+      let { user } = req;
+      let { address, memo, tx } = req.body;
+      let { hex, fee } = tx;
 
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+      if (config.bitcoin.walletpass)
+        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
 
-    ({ hex } = await bc.signRawTransactionWithWallet(hex));
+      ({ hex } = await bc.signRawTransactionWithWallet(hex));
 
-    let r = await bc.testMempoolAccept([hex]);
-    if (!r[0].allowed) fail("transaction rejected");
+      let r = await bc.testMempoolAccept([hex]);
+      if (!r[0].allowed) fail("transaction rejected");
 
-    fee = sats(fee);
-    if (fee < 0) fail("fee cannot be negative");
+      fee = sats(fee);
+      if (fee < 0) fail("fee cannot be negative");
 
-    tx = await bc.decodeRawTransaction(hex);
-    let { txid } = tx;
+      tx = await bc.decodeRawTransaction(hex);
+      let { txid } = tx;
 
-    let total = 0;
-    let change = 0;
+      let total = 0;
+      let change = 0;
 
-    for (let {
-      scriptPubKey: { address },
-      value
-    } of tx.vout) {
-      total += sats(value);
-      if (
-        (await bc.getAddressInfo(address)).ismine &&
-        !(await g(`invoice:${address}`))
-      )
-        change += sats(value);
+      for (let {
+        scriptPubKey: { address },
+        value
+      } of tx.vout) {
+        total += sats(value);
+        if (
+          (await bc.getAddressInfo(address)).ismine &&
+          !(await g(`invoice:${address}`))
+        )
+          change += sats(value);
+      }
+
+      total = total - change + fee;
+      let amount = total - fee;
+
+      if (change && !amount) fail("Cannot send to unregistered coinos address");
+
+      await debit(txid, amount, fee, null, user, types.bitcoin, txid);
+      await bc.sendRawTransaction(hex);
+
+      res.send({ txid });
+    } catch (e) {
+      warn("payment failed", e.message);
+      res.code(500).send(e.message);
     }
-
-    total = total - change + fee;
-    let amount = total - fee;
-
-    if (change && !amount) fail("Cannot send to unregistered coinos address");
-
-    await debit(txid, amount, fee, null, user, types.bitcoin, txid);
-    await bc.sendRawTransaction(hex);
-
-    res.send({ txid });
   },
 
   async buy({ body: { amount, number, year, month, cvc }, user }, res) {
