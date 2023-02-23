@@ -178,50 +178,66 @@ export default {
   },
 
   async bitcoin({ body: { txid, wallet } }, res) {
-    if (wallet === config.bitcoin.wallet) {
-      let { confirmations, details } = await bc.getTransaction(txid);
-      if (details.category === "receive") {
-        for (let { address, amount, vout } of details) {
-          let p = await g(`payment:${txid}:${vout}`);
-          if (!p || confirmations < 1) {
-            await credit(
-              address,
-              sats(amount),
-              "",
-              `${txid}:${vout}`,
-              types.bitcoin
-            );
-          } else {
-            await confirm(address, txid, vout);
+    try {
+      if (wallet === config.bitcoin.wallet) {
+        let { confirmations, details } = await bc.getTransaction(txid);
+        if (details.category === "receive") {
+          for (let { address, amount, vout } of details) {
+            let p = await g(`payment:${txid}:${vout}`);
+            if (!p || confirmations < 1) {
+              await credit(
+                address,
+                sats(amount),
+                "",
+                `${txid}:${vout}`,
+                types.bitcoin
+              );
+            } else {
+              await confirm(address, txid, vout);
+            }
           }
         }
       }
+      res.send({});
+    } catch (e) {
+      warn(`problem processing ${txid}`);
+      bail(res, e.message);
     }
-    res.send({});
   },
 
   async fee(req, res) {
-    let { amount, address, feeRate, subtract } = req.body;
-    let subtractFeeFromOutputs = subtract ? [0] : [];
-    let replaceable = true;
-    let outs = [{ [address]: btc(amount) }];
-    let count = await bc.getBlockCount();
+    try {
+      let { amount, address, feeRate, subtract } = req.body;
 
-    let raw = await bc.createRawTransaction([], outs, 0, replaceable);
-    let tx = await bc.fundRawTransaction(raw, {
-      feeRate,
-      subtractFeeFromOutputs,
-      replaceable
-    });
+      let subtractFeeFromOutputs = subtract ? [0] : [];
+      let replaceable = true;
+      let outs = [{ [address]: btc(amount) }];
+      let count = await bc.getBlockCount();
 
-    if (config.bitcoin.walletpass)
-      await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+      let { feerate: min } = await bc.estimateSmartFee(40);
+      let { feerate: max } = await bc.estimateSmartFee(1);
 
-    let { hex } = await bc.signRawTransactionWithWallet(tx.hex);
-    let { vsize } = await bc.decodeRawTransaction(hex);
-    feeRate = Math.round((sats(tx.fee) * 1000) / vsize);
+      if (feeRate) feeRate = btc(feeRate);
+      else feeRate = max;
 
-    res.send({ feeRate, tx });
+      let raw = await bc.createRawTransaction([], outs, 0, replaceable);
+
+      let tx = await bc.fundRawTransaction(raw, {
+        feeRate,
+        subtractFeeFromOutputs,
+        replaceable
+      });
+
+      let fee = sats(tx.fee);
+
+      min = sats(min);
+      max = Math.round(sats(max) * 2);
+      feeRate = sats(feeRate);
+
+      res.send({ feeRate, min, max, fee, tx });
+    } catch (e) {
+      bail(res, "problem estimating fee");
+    }
   },
 
   async send(req, res) {
