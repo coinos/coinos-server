@@ -14,11 +14,10 @@ import ln from "$lib/ln";
 
 export default {
   async create({ body, user }, res) {
-    let { amount, hash, maxfee, name, memo, payreq, tip, username } = body;
+    let { amount, hash, maxfee, name, memo, payreq, username } = body;
 
     amount = parseInt(amount);
     maxfee = maxfee ? parseInt(maxfee) : 0;
-    tip = parseInt(tip);
 
     await requirePin({ body, user });
 
@@ -181,20 +180,19 @@ export default {
     try {
       if (wallet === config.bitcoin.wallet) {
         let { confirmations, details } = await bc.getTransaction(txid);
-        if (details.category === "receive") {
-          for (let { address, amount, vout } of details) {
-            let p = await g(`payment:${txid}:${vout}`);
-            if (!p || confirmations < 1) {
-              await credit(
-                address,
-                sats(amount),
-                "",
-                `${txid}:${vout}`,
-                types.bitcoin
-              );
-            } else {
-              await confirm(address, txid, vout);
-            }
+        for (let { address, amount, category, vout } of details) {
+          if (category !== "receive") continue;
+          let p = await g(`payment:${txid}:${vout}`);
+          if (!p || confirmations < 1) {
+            await credit(
+              address,
+              sats(amount),
+              "",
+              `${txid}:${vout}`,
+              types.bitcoin
+            );
+          } else {
+            await confirm(address, txid, vout);
           }
         }
       }
@@ -205,14 +203,17 @@ export default {
     }
   },
 
-  async fee(req, res) {
+  async fee({ body: { amount, address, feeRate, subtract }, user }, res) {
     try {
-      let { amount, address, feeRate, subtract } = req.body;
-
       let subtractFeeFromOutputs = subtract ? [0] : [];
       let replaceable = true;
-      let outs = [{ [address]: btc(amount) }];
-      let count = await bc.getBlockCount();
+
+      let ourfee = Math.round(amount * config.fee);
+      let credit = await g(`credit:bitcoin:${user.id}`);
+      let covered = Math.min(credit, ourfee) || 0;
+      ourfee -= covered;
+
+      if (subtract) amount -= ourfee;
 
       let { feerate: min } = await bc.estimateSmartFee(40);
       let { feerate: max } = await bc.estimateSmartFee(1);
@@ -220,6 +221,7 @@ export default {
       if (feeRate) feeRate = btc(feeRate);
       else feeRate = max;
 
+      let outs = [{ [address]: btc(amount) }];
       let raw = await bc.createRawTransaction([], outs, 0, replaceable);
 
       let tx = await bc.fundRawTransaction(raw, {
@@ -236,6 +238,7 @@ export default {
 
       res.send({ feeRate, min, max, fee, tx });
     } catch (e) {
+      console.log(e);
       bail(res, "problem estimating fee");
     }
   },
@@ -245,7 +248,7 @@ export default {
       await requirePin(req);
 
       let { user } = req;
-      let { address, memo, tx } = req.body;
+      let { address, memo, tx, subtract } = req.body;
       let { hex, fee } = tx;
 
       if (config.bitcoin.walletpass)
@@ -279,6 +282,8 @@ export default {
 
       total = total - change + fee;
       let amount = total - fee;
+
+      console.log("AMOUNT", amount);
 
       if (change && !amount) fail("Cannot send to unregistered coinos address");
 
