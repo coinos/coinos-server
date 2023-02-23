@@ -231,7 +231,7 @@ export default {
       let fee = sats(tx.fee);
 
       min = sats(min);
-      max = Math.round(sats(max) * 2);
+      max = Math.round(sats(max) * 1.2);
       feeRate = sats(feeRate);
 
       res.send({ feeRate, min, max, fee, tx });
