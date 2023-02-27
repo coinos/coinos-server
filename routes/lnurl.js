@@ -56,7 +56,6 @@ export default {
       u = { id: uid, about: u.address, ...pick(u, fields) };
       delete u.address;
 
-      await s(`user:${pubkey}`, uid);
       await s(`user:${username.toLowerCase()}`, uid);
       await s(`user:${uid}`, u);
       await s(`balance:${uid}`, balance);
