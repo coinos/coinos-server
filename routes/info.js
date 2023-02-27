@@ -6,9 +6,9 @@ export default {
     let lnchannel;
     let lnwallet;
 
-    let b = 0;
+    let total = 0;
     for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
-      b += parseInt(await db.get(k));
+      total += parseInt(await db.get(k));
     }
 
     const funds = await ln.listfunds();
@@ -18,7 +18,7 @@ export default {
     const info = {
       lnchannel,
       lnwallet,
-      total: lnchannel + lnwallet
+      total
     };
 
     res.send(info);
