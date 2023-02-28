@@ -6,6 +6,8 @@ import { pool, q } from "$lib/nostr";
 export default {
   async event({ params: { id } }, res) {
     let event = await g(`ev:${id}`);
+    if (!event) return bail("event not found");
+
     let { pubkey } = event;
 
     event.user = (await g(`user:${pubkey}`)) || {
