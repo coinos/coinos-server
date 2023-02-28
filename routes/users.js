@@ -21,8 +21,9 @@ let { classic } = config;
 
 export default {
   upload,
-
+  
   async me({ user }, res) {
+    
     try {
       user.balance = await g(`balance:${user.id}`);
       user.prompt = !!user.prompt;
@@ -196,6 +197,7 @@ export default {
       let user = await g(`user:${uid}`);
 
       if (classic && !(user && user.migrated)) {
+        
         uid = user ? user.id : v4();
 
         try {
@@ -262,7 +264,6 @@ export default {
               if (!(u && u.id)) continue;
               n.ref = u.id;
             }
-
             await s(`payment:${n.id}`, n);
             await db.lPush(`${uid}:payments`, n.id);
           }
@@ -272,7 +273,6 @@ export default {
           console.log(e);
         }
       }
-
       if (
         !user ||
         (user.password &&
@@ -284,7 +284,7 @@ export default {
         warn("invalid username or password attempt", username);
         return res.code(401).send({});
       }
-
+      
       if (
         user.twofa &&
         (typeof twofa === "undefined" ||
@@ -292,7 +292,7 @@ export default {
       ) {
         return res.code(401).send("2fa required");
       }
-
+      
       l(
         "login",
         username,

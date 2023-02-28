@@ -12,7 +12,7 @@
     "@fastify/secure-session": "^5.2.0",
     "@fastify/static": "^6.5.0",
     "@fastify/websocket": "^7.0.1",
-    "bcrypt": "^5.0.0",
+    "bcrypt": "^5.1.0",
     "bech32": "^2.0.0",
     "clightning-client": "^0.1.2",
     "date-fns": "^2.21.3",

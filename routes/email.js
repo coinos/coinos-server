@@ -2,6 +2,7 @@ import config from "$config";
 
 export default {
   async send({ body }, res) {
+    
     try {
       let postmark = await import("postmark");
       let client = new postmark.ServerClient(config.postmark);

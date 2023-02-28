@@ -16,11 +16,9 @@ export default {
   async list({ user: { id } }, res) {
     try {
       const day = new Date(new Date().setDate(new Date().getDate() - 1));
-
       let requests = await db.lRange(`${id}:requests`, 0, -1);
-
       requests = await Promise.all(requests.map(id => g(`request:${id}`)));
-
+      
       requests = await Promise.all(
         requests.map(async r => {
           r.requester = await g(`user:${r.requester_id}`);
