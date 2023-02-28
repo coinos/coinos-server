@@ -1,25 +1,18 @@
 import config from "$config";
+import sendgrid from "@sendgrid/mail";
 
 export default {
   async send({ body }, res) {
-    
-    try {
-      let postmark = await import("postmark");
-      let client = new postmark.ServerClient(config.postmark);
+    sendgrid.setApiKey(config.sendgrid);
+    const msg = {
+      to: "support@coinos.io",
+      from: "support@coinos.io",
+      subject: body.subject || "Email Signup",
+      text: JSON.stringify(body),
+      html: JSON.stringify(body)
+    };
 
-      await client.sendEmail({
-        From: "support@coinos.io",
-        To: "support@coinos.io",
-        Subject: body.subject || "Email Signup",
-        HtmlBody: JSON.stringify(body),
-        TextBody: JSON.stringify(body),
-        MessageStream: "outbound"
-      });
-
+      await sendgrid.send(msg);
       res.send({ ok: true });
-    } catch (e) {
-      console.log("problem sending email", e);
-      res.code(500).send(e.message);
-    }
   }
 };

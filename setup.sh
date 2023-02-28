@@ -1,6 +1,7 @@
 cp config.js.sample config.js
 cp compose.yml.sample compose.yml
 cp -r sampledata data
+sudo chown 100:100 data/nostr/data
 docker compose up -d
 docker run -it -v $(pwd):/app --entrypoint pnpm cs i
 docker exec -it bc bitcoin-cli createwallet coinos

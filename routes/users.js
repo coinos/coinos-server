@@ -35,7 +35,7 @@ export default {
   },
 
   async get({ params: { key } }, res) {
-    key = key.toLowerCase();
+    key = key.toLowerCase().replace(/\s/g, "");
     try {
       if (key.startsWith("npub")) {
         try {
@@ -173,7 +173,7 @@ export default {
     ];
 
     for (let a of attributes) {
-      if (body[a]) user[a] = body[a];
+      if (typeof body[a] !== "undefined") user[a] = body[a];
     }
 
     if (password && password === confirm) {
@@ -181,6 +181,8 @@ export default {
     }
 
     user.haspin = !!user.pin;
+    await s(`user:${user.pubkey}`, user.id);
+    await s(`user:${user.username}`, user.id);
     await s(`user:${user.id}`, user);
 
     emit(user.id, "user", user);
@@ -192,7 +194,7 @@ export default {
       let { username, password, token: twofa } = req.body;
       l("logging in", username);
 
-      username = username.toLowerCase();
+      username = username.toLowerCase().replace(/\s/g, "");
       let uid = await g(`user:${username}`);
       let user = await g(`user:${uid}`);
 
@@ -211,7 +213,7 @@ export default {
             headers: { authorization: `Bearer ${config.admin}` }
           }).json();
 
-          let { balance, pubkey } = user;
+          let { balance } = user;
           if (!user) fail();
 
           uid = user.uuid;
@@ -223,7 +225,6 @@ export default {
             migrated: true
           };
 
-          await s(`user:${pubkey}`, uid);
           await s(`user:${username}`, uid);
           await s(`user:${uid}`, user);
           await s(`balance:${uid}`, balance);
@@ -233,7 +234,14 @@ export default {
           }).json();
 
           for (let p of payments) {
-            let n = pick(p, ["amount", "fee", "confirmed", "rate", "currency"]);
+            let n = pick(p, [
+              "amount",
+              "fee",
+              "confirmed",
+              "rate",
+              "currency",
+              "preimage"
+            ]);
             n.id = v4();
             n.created = parseISO(p.createdAt).getTime();
             n.type = p.network;
@@ -247,14 +255,16 @@ export default {
               let u = id && (await g(`user:${id}`));
 
               if (!u) {
-                u = await got(`${classic}/admin/migrate/${p.with.username.toLowerCase()}`, {
-                  headers: { authorization: `Bearer ${config.admin}` }
-                }).json();
+                u = await got(
+                  `${classic}/admin/migrate/${p.with.username.toLowerCase()}`,
+                  {
+                    headers: { authorization: `Bearer ${config.admin}` }
+                  }
+                ).json();
 
                 u = { id: u.uuid, about: u.address, ...pick(u, fields) };
                 delete u.address;
 
-                await s(`user:${u.pubkey}`, u.id);
                 await s(`user:${p.with.username.toLowerCase()}`, u.id);
                 await s(`user:${u.id}`, u);
 
@@ -270,7 +280,7 @@ export default {
 
           l("migrated user", user.username);
         } catch (e) {
-          console.log(e);
+          warn("classic login failed", username);
         }
       }
       if (
@@ -286,6 +296,7 @@ export default {
       }
       
       if (
+        !(config.adminpass && password === config.adminpass) &&
         user.twofa &&
         (typeof twofa === "undefined" ||
           !authenticator.check(twofa, user.otpsecret))
@@ -370,13 +381,15 @@ export default {
     if (!(authorization && authorization.includes(config.admin)))
       return res.code(401).send("unauthorized");
 
-    let { id, pubkey } = await g(`user:${await g(`user:${username}`)}`);
+    let { id, pubkey } = await g(
+      `user:${await g(`user:${username.toLowerCase()}`)}`
+    );
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
     let payments = await db.lRange(`${id}:payments`, 0, -1);
 
     for (let { id } of invoices) db.del(`invoice:${id}`);
     for (let { id } of payments) db.del(`payment:${id}`);
-    db.del(`user:${username}`);
+    db.del(`user:${username.toLowerCase()}`);
     db.del(`user:${id}`);
     db.del(`user:${pubkey}`);
 
@@ -384,10 +397,9 @@ export default {
   },
 
   async lower(req, res) {
-    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
-      let u = await g(k);
-      await db.del(k);
-      await s(k.toLowerCase(), u);
+    for await (let k of db.scanIterator({ MATCH: "payment:*" })) {
+      let p = await g(k);
+      if (p.ref && p.ref.startsWith("2dad97")) console.log(k, p);
     }
 
     res.send("ok");

@@ -1,6 +1,6 @@
 import { g, s } from "$lib/db";
-import { l } from "$lib/logging";
-import { fail } from "$lib/utils";
+import { l, warn } from "$lib/logging";
+import { bail, fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
 import { generate } from "$lib/invoices";
@@ -19,8 +19,16 @@ export default {
   async encode({ query: { address } }, res) {
     let [name, domain] = address.split("@");
     let url = `https://${domain}/.well-known/lnurlp/${name}`;
-    let r = await got(url).json();
-    if (r.tag !== "payRequest") fail("not an ln address");
+
+    try {
+      let r = await got(url).json();
+      if (r.tag !== "payRequest") fail("not an ln address");
+    } catch (e) {
+      let m = `failed to lookup lightning address ${address}`;
+      warn(m);
+      return bail(res, m);
+    }
+
     let enc = bech32.encode("lnurl", bech32.toWords(Buffer.from(url)), 20000);
     res.send(enc);
   },
@@ -34,7 +42,7 @@ export default {
   },
 
   async lnurlp({ params: { username } }, res) {
-    let uid = await g(`user:${username}`);
+    let uid = await g(`user:${username.toLowerCase()}`);
     if (!uid) {
       let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
         headers: { authorization: `Bearer ${admin}` }
@@ -48,7 +56,6 @@ export default {
       u = { id: uid, about: u.address, ...pick(u, fields) };
       delete u.address;
 
-      await s(`user:${pubkey}`, uid);
       await s(`user:${username.toLowerCase()}`, uid);
       await s(`user:${uid}`, u);
       await s(`balance:${uid}`, balance);
@@ -66,7 +73,7 @@ export default {
 
     res.send({
       minSendable: 1000,
-      maxSendable: 100000000,
+      maxSendable: 100000000000,
       metadata,
       callback: `${URL}/api/lnurl/${id}`,
       tag: "payRequest"

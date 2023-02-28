@@ -6,6 +6,8 @@ import { pool, q } from "$lib/nostr";
 export default {
   async event({ params: { id } }, res) {
     let event = await g(`ev:${id}`);
+    if (!event) return bail("event not found");
+
     let { pubkey } = event;
 
     event.user = (await g(`user:${pubkey}`)) || {
@@ -20,7 +22,8 @@ export default {
   },
 
   async notes({ params: { pubkey } }, res) {
-    let user = await g(`user:${pubkey}`);
+    let uid = await g(`user:${pubkey}`);
+    let user = await g(`user:${uid}`);
 
     if (!user)
       user = {
@@ -39,8 +42,6 @@ export default {
 
     q(`${pubkey}:notes`, params, opts).catch(nada);
 
-    await s(`user:${pubkey}`, user);
-
     let ids = await db.sMembers(pubkey);
 
     let events = ids.length
@@ -48,6 +49,41 @@ export default {
       : [];
 
     res.send(events.map(e => ({ ...e, user })));
+  },
+
+  async messages({ params: { pubkey, since = 0 } }, res) {
+    let params = {
+      kinds: [4],
+      authors: [pubkey]
+    };
+
+    let opts = { since };
+
+    await q(`${pubkey}:messages`, params, opts).catch(nada);
+
+    params = {
+      kinds: [4],
+      "#p": [pubkey]
+    };
+
+    await q(`${pubkey}:messages`, params, opts).catch(nada);
+
+    let messages = await db.sMembers(`${pubkey}:messages`);
+    messages = await Promise.all(
+      messages.map(async id => {
+        let m = await g(`ev:${id}`);
+
+        let aid = await g(`user:${m.pubkey}`);
+        m.author = await g(`user:${aid}`);
+
+        let rid = await g(`user:${m.tags[0][1]}`);
+        m.recipient = await g(`user:${rid}`);
+
+        return m;
+      })
+    );
+
+    res.send(messages);
   },
 
   async broadcast(req, res) {
@@ -80,7 +116,8 @@ export default {
         authors: [pubkey]
       }).catch(nada);
 
-      let user = await g(`user:${pubkey}`);
+      let uid = await g(`user:${pubkey}`);
+      let user = await g(`user:${uid}`);
 
       if (!user)
         user = {
@@ -113,15 +150,17 @@ export default {
       ).catch(nada);
 
       for (let pubkey of pubkeys) {
-        let user = await g(`user:${pubkey}`);
+        let uid = await g(`user:${pubkey}`);
+        let user = await g(`user:${uid}`);
         if (!user || !user.updated) {
-          q(`${pubkey}:profile:f2`, {
+          await q(`${pubkey}:profile:f2`, {
             limit: 1,
             kinds: [0],
             authors: [pubkey]
           }).catch(nada);
 
-          user = await g(`user:${pubkey}`);
+          uid = await g(`user:${pubkey}`);
+          user = await g(`user:${uid}`);
         }
 
         if (!user)
