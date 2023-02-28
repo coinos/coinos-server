@@ -1,6 +1,7 @@
 import { g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
-import { fail } from "$lib/utils";
+import { fail, pick } from "$lib/utils";
+import whitelist from "$lib/whitelist";
 import got from "got";
 import config from "$config";
 import ln from "$lib/ln";
@@ -15,7 +16,7 @@ export default {
     let invoice = await g(`invoice:${hash}`);
 
     if (invoice) {
-      invoice.user = await g(`user:${invoice.uid}`);
+      invoice.user = pick(await g(`user:${invoice.uid}`), whitelist);
       invoice.id = hash;
     } else if (config.classic) {
       invoice = await got(`${config.classic}/invoice/${pr}`).json();
