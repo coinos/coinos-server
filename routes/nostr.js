@@ -1,4 +1,4 @@
-import { nada, uniq } from "$lib/utils";
+import { bail, nada, uniq } from "$lib/utils";
 import config from "$config";
 import { g, s, db } from "$lib/db";
 import { pool, q } from "$lib/nostr";
