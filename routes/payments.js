@@ -348,5 +348,29 @@ export default {
     } else fail("Card payment failed");
 
     res.send({ status });
+  },
+
+  async proxy({ body: { method, params } }, res) {
+    try {
+      let whitelist = [
+        "getblock",
+        "getblockhash",
+        "estimatesmartfee",
+        "echo",
+        "getblockchaininfo",
+        "getnetworkinfo"
+      ];
+
+      if (!whitelist.includes(method)) fail("unsupported method");
+
+      if (method === "estimatesmartfee" || method === "getblockhash")
+        params[0] = parseInt(params[0]);
+
+      if (method === "getblock") params[1] = parseInt(params[1]);
+
+      res.send(await bc[method](...params));
+    } catch (e) {
+      bail(res, e.message);
+    }
   }
 };
