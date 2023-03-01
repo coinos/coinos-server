@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        color: #2D2E32;
+      }
+      
+      p{
+      	line-height: 1.7;
+      }
+      
+      .container{
+      	width: 600px;
+        margin: 0 auto;
+        background: white;
+        padding-top: 60px;
+      }
+      
+      .logo {
+        width: 100%;
+          margin: 0 auto;
+        text-align: center;
+      } 
+
+      .logo img {
+        width: 200px;
+        margin: 0 auto;
+      }
+      
+      .link{
+        display: block;
+      	margin-top: 30px;
+        color: #0f828a;
+        text-decoration: none;
+      }
+      
+      hr{
+      	border-color: whitesmoke;
+        margin-bottom: 30px;
+      }
+      
+      .confirm-container{
+      	display: flex;
+        justify-content: flex-end;
+      }
+
+      .confirm {
+      	display: flex;
+        align-items: center;
+        justify-content: center;
+      	width: 120px;
+        margin: 40px 0;
+        text-decoration: none;
+        border-radius: 30px;
+        padding: 0.8rem 1.5rem !important;
+        color: #444444;
+        font-weight: bold;
+        background: rgb(143,238,245);
+        background: linear-gradient(90deg, rgba(143,238,245,1) 0%, rgba(127,228,235,1) 50%, rgba(110,216,224,1) 100%);
+        border: 0px solid white;
+      }
+      
+      .footer p{
+      	font-size: 13px;
+      }
+
+      .footer .social {
+      	display: flex;
+        justify-content: flex-start;
+        margin-bottom: 20px;
+      }
+      
+      .footer .social a{
+        margin-right: 20px;
+      }
+      
+      .footer .visit{
+      	color: #2D2E32;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+
+  <body>
+  <div class="container">
+      <div class="logo">
+        <img src="" />
+      </div>
+      <p>Hello,</p>
+      <p>Please click on the confirmation button or on the following link to confirm your email.</p>
+      <a class="link" href="<%= url %>/activate/<%= ticket %>"><%= url %>/activate/<%= ticket %></a>
+      <div class="confirm-container">
+        <a class="confirm" href="<%= url %>/activate/<%= ticket %>">Confirm email</a>
+      </div>
+      <hr/>
+      <div class="footer">
+        <a class="visit" href="<%= url %>">Visit website</a>
+        <p>© Coinos</p>
+      </div>
+    </div>
+  </body>
+</html>
