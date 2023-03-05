@@ -13,11 +13,13 @@ import { requirePin } from "$lib/utils";
 import { v4 } from "uuid";
 import { parseISO } from "date-fns";
 import { types } from "$lib/payments";
+import { bech32 } from "bech32";
 
 import got from "got";
 import upload from "$lib/upload";
 
 let { classic } = config;
+const { encode, decode, fromWords, toWords } = bech32;
 
 export default {
   upload,
@@ -26,6 +28,7 @@ export default {
     try {
       user.balance = await g(`balance:${user.id}`);
       user.prompt = !!user.prompt;
+      user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
       res.send(pick(user, whitelist));
     } catch (e) {
       console.log("problem fetching user", e);
@@ -66,12 +69,14 @@ export default {
         "profile",
         "address",
         "currency",
+        "npub",
         "pubkey",
         "display",
         "prompt",
         "id"
       ];
 
+      user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
       user.prompt = !!user.prompt;
 
       res.send(pick(user, whitelist));
