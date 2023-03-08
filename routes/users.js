@@ -28,7 +28,7 @@ export default {
     try {
       user.balance = await g(`balance:${user.id}`);
       user.prompt = !!user.prompt;
-      user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
+      if (user.pubkey) user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
       res.send(pick(user, whitelist));
     } catch (e) {
       console.log("problem fetching user", e);
@@ -76,7 +76,7 @@ export default {
         "id"
       ];
 
-      user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
+      if (user.pubkey) user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
       user.prompt = !!user.prompt;
 
       res.send(pick(user, whitelist));

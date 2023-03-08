@@ -14,82 +14,82 @@ import ln from "$lib/ln";
 
 export default {
   async create({ body, user }, res) {
-    let { amount, hash, maxfee, name, memo, payreq, username } = body;
+    try {
+      let { amount, hash, maxfee, name, memo, payreq, username } = body;
 
-    amount = parseInt(amount);
-    maxfee = maxfee ? parseInt(maxfee) : 0;
+      amount = parseInt(amount);
+      maxfee = maxfee ? parseInt(maxfee) : 0;
 
-    await requirePin({ body, user });
+      await requirePin({ body, user });
 
-    let p;
+      let p;
 
-    if (username && username.endsWith("@classic")) {
-      let { username: source } = user;
-      username = username.replace("@classic", "");
-      p = await debit(hash, amount, 0, username, user, types.classic);
+      if (username && username.endsWith("@classic")) {
+        let { username: source } = user;
+        username = username.replace("@classic", "");
+        p = await debit(hash, amount, 0, username, user, types.classic);
 
-      await got
-        .post(`${config.classic}/admin/credit`, {
-          json: { username, amount, source },
-          headers: { authorization: `Bearer ${config.admin}` },
-        })
-        .json();
-    } else if (payreq) {
-      let { msatoshi, payment_hash } = await ln.decode(payreq);
-      if (msatoshi) amount = Math.round(msatoshi / 1000);
-      let invoice = await g(`invoice:${payment_hash}`);
+        await got
+          .post(`${config.classic}/admin/credit`, {
+            json: { username, amount, source },
+            headers: { authorization: `Bearer ${config.admin}` },
+          })
+          .json();
+      } else if (payreq) {
+        let { msatoshi, payment_hash } = await ln.decode(payreq);
+        if (msatoshi) amount = Math.round(msatoshi / 1000);
+        let invoice = await g(`invoice:${payment_hash}`);
 
-      if (invoice) {
-        if (invoice.uid === user.id) fail("Cannot send to self");
-        hash = payment_hash;
-      } else {
-        p = await debit(
-          hash,
-          amount + maxfee,
-          maxfee,
-          memo,
-          user,
-          types.lightning
-        );
+        if (invoice) {
+          if (invoice.uid === user.id) fail("Cannot send to self");
+          hash = payment_hash;
+        } else {
+          p = await debit(hash, amount, maxfee, memo, user, types.lightning);
 
-        let r;
-        try {
-          r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
+          let r;
+          try {
+            r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
 
-          p.amount = -amount;
-          p.hash = r.payment_hash;
-          p.fee = Math.round((r.msatoshi_sent - r.msatoshi) / 1000);
-          p.ref = r.payment_preimage;
+            p.amount = -amount;
+            p.hash = r.payment_hash;
+            p.fee = Math.round((r.msatoshi_sent - r.msatoshi) / 1000);
+            p.ref = r.payment_preimage;
 
-          await s(`payment:${p.id}`, p);
-          await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
-        } catch (e) {
-          if (!(r && r.status === "complete")) {
-            let credit = Math.round(amount * config.fee) - p.ourfee;
-            await db.incrBy(`balance:${p.uid}`, amount + maxfee + p.ourfee);
-            await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-            await db.lRem(`${p.uid}:payments`, 0, p.id);
-            await db.del(`payment:${p.id}`);
+            await s(`payment:${p.id}`, p);
+
+            l("refunding fee", maxfee, p.fee, maxfee - p.fee);
+            await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+          } catch (e) {
+            warn("something went wrong", e.message);
+            if (!(r && r.status === "complete")) {
+              let credit = Math.round(amount * config.fee) - p.ourfee;
+              await db.incrBy(`balance:${p.uid}`, amount + maxfee + p.ourfee);
+              await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+              await db.lRem(`${p.uid}:payments`, 0, p.id);
+              await db.del(`payment:${p.id}`);
+            }
+            throw e;
           }
-          throw e;
         }
       }
-    }
 
-    if (!p) {
-      if (hash) {
-        p = await debit(hash, amount, 0, memo, user);
-        await credit(hash, amount, memo, user.id);
-      } else {
-        let pot = name || v4();
-        p = await debit(hash, amount, 0, memo, user, types.pot);
-        await db.incrBy(`pot:${pot}`, amount);
-        await db.lPush(`pot:${pot}:payments`, p.id);
-        l("funded pot", pot);
+      if (!p) {
+        if (hash) {
+          p = await debit(hash, amount, 0, memo, user);
+          await credit(hash, amount, memo, user.id);
+        } else {
+          let pot = name || v4();
+          p = await debit(hash, amount, 0, memo, user, types.pot);
+          await db.incrBy(`pot:${pot}`, amount);
+          await db.lPush(`pot:${pot}:payments`, p.id);
+          l("funded pot", pot);
+        }
       }
-    }
 
-    res.send(p);
+      res.send(p);
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 
   async list({ user: { id }, query: { start, end, limit, offset } }, res) {
@@ -235,7 +235,7 @@ export default {
 
       res.send({ feeRate, min, max, fee, tx });
     } catch (e) {
-      console.log(e);
+      warn("problem estimating fee", e.message);
       bail(res, "problem estimating fee");
     }
   },
@@ -367,8 +367,7 @@ export default {
 
       let result = await bc[method](...params);
 
-      if (result.feerate)
-        result.feerate = result.feerate.toFixed(8);
+      if (result.feerate) result.feerate = result.feerate.toFixed(8);
 
       res.send(result);
     } catch (e) {
