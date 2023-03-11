@@ -36,21 +36,23 @@ export default {
           })
           .json();
       } else if (payreq) {
+        let total = amount;
         let { msatoshi, payment_hash } = await ln.decode(payreq);
-        if (msatoshi) amount = Math.round(msatoshi / 1000);
+        if (msatoshi) total = Math.round(msatoshi / 1000);
         let invoice = await g(`invoice:${payment_hash}`);
 
         if (invoice) {
           if (invoice.uid === user.id) fail("Cannot send to self");
           hash = payment_hash;
         } else {
-          p = await debit(hash, amount, maxfee, memo, user, types.lightning);
+          p = await debit(hash, total, maxfee, memo, user, types.lightning);
 
           let r;
           try {
             r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
 
             p.amount = -amount;
+            p.tip = total - amount;
             p.hash = r.payment_hash;
             p.fee = Math.round((r.msatoshi_sent - r.msatoshi) / 1000);
             p.ref = r.payment_preimage;
@@ -279,8 +281,6 @@ export default {
 
       total = total - change + fee;
       let amount = total - fee;
-
-      console.log("AMOUNT", amount);
 
       if (change && !amount) fail("Cannot send to unregistered coinos address");
 

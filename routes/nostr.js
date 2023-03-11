@@ -15,7 +15,7 @@ export default {
       pubkey,
       anon: true,
       follows: [],
-      followers: []
+      followers: [],
     };
 
     res.send(event);
@@ -31,12 +31,12 @@ export default {
         pubkey,
         anon: true,
         follows: [],
-        followers: []
+        followers: [],
       };
 
     let params = {
         kinds: [1],
-        authors: [pubkey]
+        authors: [pubkey],
       },
       opts = { since: 0 };
 
@@ -45,16 +45,16 @@ export default {
     let ids = await db.sMembers(pubkey);
 
     let events = ids.length
-      ? (await db.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
+      ? (await db.mGet(ids.map((k) => "ev:" + k))).map(JSON.parse)
       : [];
 
-    res.send(events.map(e => ({ ...e, user })));
+    res.send(events.map((e) => ({ ...e, user })));
   },
 
   async messages({ params: { pubkey, since = 0 } }, res) {
     let params = {
       kinds: [4],
-      authors: [pubkey]
+      authors: [pubkey],
     };
 
     let opts = { since };
@@ -63,14 +63,14 @@ export default {
 
     params = {
       kinds: [4],
-      "#p": [pubkey]
+      "#p": [pubkey],
     };
 
     await q(`${pubkey}:messages`, params, opts).catch(nada);
 
     let messages = await db.sMembers(`${pubkey}:messages`);
     messages = await Promise.all(
-      messages.map(async id => {
+      messages.map(async (id) => {
         let m = await g(`ev:${id}`);
 
         let aid = await g(`user:${m.pubkey}`);
@@ -97,7 +97,7 @@ export default {
       params = {
         limit: 1,
         kinds: [3],
-        authors: [pubkey]
+        authors: [pubkey],
       },
       opts = { timeout: 60000, eager: 60000 };
 
@@ -113,7 +113,7 @@ export default {
       q(`${pubkey}:profile:f1`, {
         limit: 1,
         kinds: [0],
-        authors: [pubkey]
+        authors: [pubkey],
       }).catch(nada);
 
       let uid = await g(`user:${pubkey}`);
@@ -123,13 +123,13 @@ export default {
         user = {
           username: pubkey.substr(0, 6),
           pubkey,
-          anon: true
+          anon: true,
         };
 
       follows.push(user);
     }
 
-    follows = uniq(follows, e => e.pubkey);
+    follows = uniq(follows, (e) => e.pubkey);
     follows.sort((a, b) => a.username.localeCompare(b.username));
 
     res.send(follows);
@@ -138,7 +138,7 @@ export default {
   async followers({ params: { pubkey } }, res) {
     try {
       let pubkeys = [
-        ...new Set([...(await db.sMembers(`${pubkey}:followers`))])
+        ...new Set([...(await db.sMembers(`${pubkey}:followers`))]),
       ];
 
       let followers = [];
@@ -156,7 +156,7 @@ export default {
           await q(`${pubkey}:profile:f2`, {
             limit: 1,
             kinds: [0],
-            authors: [pubkey]
+            authors: [pubkey],
           }).catch(nada);
 
           uid = await g(`user:${pubkey}`);
@@ -167,13 +167,13 @@ export default {
           user = {
             username: pubkey.substr(0, 6),
             pubkey,
-            anon: true
+            anon: true,
           };
 
         followers.push(user);
       }
 
-      followers = uniq(followers, e => e.pubkey);
+      followers = uniq(followers, (e) => e.pubkey);
       followers.sort((a, b) => a.username.localeCompare(b.username));
 
       res.send(followers);
@@ -186,11 +186,10 @@ export default {
   async identities(req, res) {
     res.send({
       names: {
-        adam:
-          "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8",
+        adam: "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8",
         asoltys:
-          "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8"
-      }
+          "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8",
+      },
     });
-  }
+  },
 };

@@ -18,9 +18,9 @@ export default {
     const info = {
       lnchannel,
       lnwallet,
-      total
+      total,
     };
 
     res.send(info);
-  }
+  },
 };
