@@ -35,8 +35,9 @@ catchUp();
 
 export default {
   async create({ body, user }, res) {
-    try {
       let { amount, hash, maxfee, name, memo, payreq, username } = body;
+
+    try {
 
       amount = parseInt(amount);
       maxfee = maxfee ? parseInt(maxfee) : 0;
@@ -111,6 +112,7 @@ export default {
 
       res.send(p);
     } catch (e) {
+      warn("failed to create payment", username, amount, hash, payreq);
       bail(res, e.message);
     }
   },
