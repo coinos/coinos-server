@@ -399,5 +399,29 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
+  },
+
+  async fix({ body: { uid }, user }, res) {
+    try {
+      if (!user.admin) fail("unauthorized");
+
+      let { username } = await g(`user:${uid}`);
+      let balance = await g(`balance:${uid}`);
+
+      let payments = await db.lRange(`${uid}:payments`, 0, -1);
+
+      let total = 0;
+      for (let pid of payments) {
+        let p = await g(`payment:${pid}`);
+        total += p.amount;
+        if (p.amount < 0) total -= ((p.fee || 0) + (p.ourfee || 0));
+      } 
+
+      l('corrected balance', username, uid, balance, total);
+      await s(`balance:${uid}`, total);
+      res.send("ok");
+    } catch (e) {
+      bail(res, e.message);
+    }
   }
 };

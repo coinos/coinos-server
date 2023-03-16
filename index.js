@@ -60,6 +60,7 @@ app.get("/decode", lnurl.decode);
 app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
 
+app.post("/fix", auth, payments.fix);
 app.post("/bitcoin", payments.bitcoin);
 app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
