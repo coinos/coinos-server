@@ -35,10 +35,9 @@ catchUp();
 
 export default {
   async create({ body, user }, res) {
-      let { amount, hash, maxfee, name, memo, payreq, username } = body;
+    let { amount, hash, maxfee, name, memo, payreq, username } = body;
 
     try {
-
       amount = parseInt(amount);
       maxfee = maxfee ? parseInt(maxfee) : 0;
 
@@ -414,10 +413,10 @@ export default {
       for (let pid of payments) {
         let p = await g(`payment:${pid}`);
         total += p.amount;
-        if (p.amount < 0) total -= ((p.fee || 0) + (p.ourfee || 0));
-      } 
+        if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0);
+      }
 
-      l('corrected balance', username, uid, balance, total);
+      l("corrected balance", username, uid, balance, total);
       await s(`balance:${uid}`, total);
       res.send("ok");
     } catch (e) {
