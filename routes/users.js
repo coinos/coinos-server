@@ -9,7 +9,7 @@ import whitelist from "$lib/whitelist";
 import { l, err, warn } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import register from "$lib/register";
-import { requirePin } from "$lib/utils";
+import { requirePin } from "$lib/auth";
 import { v4 } from "uuid";
 import { parseISO } from "date-fns";
 import { types } from "$lib/payments";
