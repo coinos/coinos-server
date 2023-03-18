@@ -418,9 +418,12 @@ export default {
   },
 
   async lower(req, res) {
-    for await (let k of db.scanIterator({ MATCH: "payment:*" })) {
-      let p = await g(k);
-      if (p.ref && p.ref.startsWith("2dad97")) console.log(k, p);
+    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
+      let u = await g(k);
+      if (u.pin && !u.haspin) {
+        u.haspin = true;
+        s(k, u);
+      }
     }
 
     res.send("ok");
