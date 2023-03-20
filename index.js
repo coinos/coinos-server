@@ -54,6 +54,7 @@ app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
 app.post("/take", auth, payments.take);
 app.post("/buy", auth, payments.buy);
+app.post("/print", auth, payments.print);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
