@@ -1,7 +1,8 @@
 import { bail } from "$lib/utils";
 import got from "got";
 import config from "$config";
-import sendgrid from "@sendgrid/mail";
+import { SESClient, CloneReceiptRuleSetCommand } from "@aws-sdk/client-ses";
+import { SendEmailCommand } from "@aws-sdk/client-ses";
 
 export default {
   async send({ body }, res) {
@@ -11,26 +12,44 @@ export default {
       .post("https://www.google.com/recaptcha/api/siteverify", {
         form: {
           secret,
-          response,
-        },
+          response
+        }
       })
       .json();
 
     if (success) {
       delete body.token;
-      sendgrid.setApiKey(config.sendgrid);
-      const msg = {
-        to: "support@coinos.io",
-        from: "support@coinos.io",
-        subject: body.subject || "Email Signup",
-        text: JSON.stringify(body),
-        html: JSON.stringify(body),
-      };
 
-      await sendgrid.send(msg);
+      let client = new SESClient({ region: "us-east-2" });
+      await client.send(
+        new SendEmailCommand({
+          Destination: {
+            CcAddresses: [],
+            ToAddresses: ["support@coinos.io"]
+          },
+          Message: {
+            Body: {
+              Html: {
+                Charset: "UTF-8",
+                Data: JSON.stringify(body)
+              },
+              Text: {
+                Charset: "UTF-8",
+                Data: JSON.stringify(body)
+              }
+            },
+            Subject: {
+              Charset: "UTF-8",
+              Data: body.subject || "Email Signup"
+            }
+          },
+          Source: "support@coinos.io"
+        })
+      );
+
       res.send({ ok: true });
     } else {
       bail(res, "failed captcha");
     }
-  },
+  }
 };

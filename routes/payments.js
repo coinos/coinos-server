@@ -404,22 +404,11 @@ export default {
   async fix({ body: { uid, username }, user }, res) {
     try {
       if (!user.admin) fail("unauthorized");
-
-      if (username) uid = await g(`user:${username.toLowerCase()}`);
-      ({ username } = await g(`user:${uid}`));
-      let balance = await g(`balance:${uid}`);
-
-      let payments = await db.lRange(`${uid}:payments`, 0, -1);
-
-      let total = 0;
-      for (let pid of payments) {
-        let p = await g(`payment:${pid}`);
-        total += p.amount;
-        if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0);
+      for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
+        let bal = await g(k);
+        if (bal < 0) s(k, 0);
       }
 
-      l("corrected balance", username, uid, balance, total);
-      await s(`balance:${uid}`, total);
       res.send("ok");
     } catch (e) {
       console.log(e);

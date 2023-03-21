@@ -7,12 +7,12 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.295.0",
     "@fastify/multipart": "^7.1.2",
     "@fastify/passport": "^2.2.0",
     "@fastify/secure-session": "^5.2.0",
     "@fastify/static": "^6.5.0",
     "@fastify/websocket": "^7.0.1",
-    "@sendgrid/mail": "^7.7.0",
     "bcrypt": "^5.0.0",
     "bech32": "^2.0.0",
     "clightning-client": "^0.1.2",
