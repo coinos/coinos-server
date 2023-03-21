@@ -1,7 +1,7 @@
 import { g, s, db } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";
-import { fields, nada, pick, uniq, wait } from "$lib/utils";
+import { fields, nada, pick, uniq, wait, fail } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
@@ -46,6 +46,17 @@ export default {
       let uid = k.split(":")[1];
       let user = await g(`user:${uid}`);
       user.balance = await g(k);
+
+      let payments = await db.lRange(`${uid}:payments`, 0, -1);
+
+      let total = 0;
+      for (let pid of payments) {
+        let p = await g(`payment:${pid}`);
+        total += p.amount;
+        if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0);
+      }
+
+      user.expected = total;
       users.push(user);
     }
 

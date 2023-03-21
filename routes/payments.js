@@ -40,6 +40,7 @@ export default {
     try {
       amount = parseInt(amount);
       maxfee = maxfee ? parseInt(maxfee) : 0;
+      if (maxfee < 0) fail("Max fee cannot be negative");
 
       await requirePin({ body, user });
 
@@ -400,11 +401,12 @@ export default {
     }
   },
 
-  async fix({ body: { uid }, user }, res) {
+  async fix({ body: { uid, username }, user }, res) {
     try {
       if (!user.admin) fail("unauthorized");
 
-      let { username } = await g(`user:${uid}`);
+      if (username) uid = await g(`user:${username.toLowerCase()}`);
+      ({ username } = await g(`user:${uid}`));
       let balance = await g(`balance:${uid}`);
 
       let payments = await db.lRange(`${uid}:payments`, 0, -1);
@@ -420,6 +422,7 @@ export default {
       await s(`balance:${uid}`, total);
       res.send("ok");
     } catch (e) {
+      console.log(e);
       bail(res, e.message);
     }
   },
