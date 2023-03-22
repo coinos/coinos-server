@@ -1,7 +1,7 @@
 import { g, s, db } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";
-import { fields, nada, pick, uniq, wait, fail } from "$lib/utils";
+  import { fields, nada, pick, uniq, wait, bail, fail } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
@@ -165,6 +165,7 @@ export default {
   },
 
   async update({ user, body }, res) {
+    try {
     l("updating user", user.username);
 
     let { confirm, password, pin, newpin, username } = body;
@@ -218,6 +219,10 @@ export default {
 
     emit(user.id, "user", user);
     res.send({ user, token });
+    } catch(e) {
+      warn("failed to update", user.username, e.message);
+      bail(res, e.message);
+    } 
   },
 
   async login(req, res) {

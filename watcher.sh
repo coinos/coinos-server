@@ -12,11 +12,12 @@ do
   accts=$(curl -s https://coinos.io/api/balances | jr '.total')
   gap=$(node -pe "$accts - $total")
   echo $(date -Is) lnc $lnc lnw $lnw bc $bc tot $total gap $gap
-  # low=$(node -pe "!!($gap > $threshold)")
-  # if "$low"; then 
-  #   echo "Threshold hit, setting new threshold"
-  #   pnpm pm2 stop 0 > /dev/null
-  #   node /root/mailgun/index.js
-  # fi
-  sleep 60 
+  low=$(node -pe "!!($gap > $threshold)")
+  
+  if "$low"; then 
+    echo "Threshold hit, setting new threshold"
+    docker stop app;
+    curl localhost:3119/email -H "content-type: application/json" -d '{"token": "MPJzfq97ab!!!!", "message": "threshold hit"}'
+  fi
+  sleep 120 
 done
