@@ -1,7 +1,7 @@
 import { g, s, db } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";
-  import { fields, nada, pick, uniq, wait, bail, fail } from "$lib/utils";
+import { fields, nada, pick, uniq, wait, bail, fail } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
@@ -83,7 +83,7 @@ export default {
           username: key,
           display: key.substr(0, 6),
           pubkey: key,
-          anon: true,
+          anon: true
         };
       }
 
@@ -100,7 +100,7 @@ export default {
         "pubkey",
         "display",
         "prompt",
-        "id",
+        "id"
       ];
 
       if (user.pubkey)
@@ -124,7 +124,7 @@ export default {
         pubkey,
         password,
         username,
-        salt,
+        salt
       };
 
       user = await register(user, ip, false);
@@ -166,63 +166,63 @@ export default {
 
   async update({ user, body }, res) {
     try {
-    l("updating user", user.username);
+      l("updating user", user.username);
 
-    let { confirm, password, pin, newpin, username } = body;
+      let { confirm, password, pin, newpin, username } = body;
 
-    if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
-    if (typeof newpin !== "undefined") user.pin = newpin;
-    if (!user.pin || user.pin === "undefined") delete user.pin;
+      if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
+      if (typeof newpin !== "undefined") user.pin = newpin;
+      if (!user.pin || user.pin === "undefined") delete user.pin;
 
-    let exists;
-    if (username) exists = await g(`user:${username.toLowerCase()}`);
+      let exists;
+      if (username) exists = await g(`user:${username.toLowerCase()}`);
 
-    let token;
-    if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
-      err("username taken", username, user.username, exists.username);
-      throw new Error("Username taken");
-    } else if (username) {
-      if (user.username.toLowerCase() !== username.toLowerCase())
-        l("changing username", user.username, username);
-      user.username = username;
-    }
+      let token;
+      if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
+        err("username taken", username, user.username, exists.username);
+        throw new Error("Username taken");
+      } else if (username) {
+        if (user.username.toLowerCase() !== username.toLowerCase())
+          l("changing username", user.username, username);
+        user.username = username;
+      }
 
-    let attributes = [
-      "address",
-      "cipher",
-      "currencies",
-      "currency",
-      "display",
-      "email",
-      "fiat",
-      "locktime",
-      "prompt",
-      "pubkey",
-      "salt",
-      "seed",
-      "tokens",
-      "twofa",
-    ];
+      let attributes = [
+        "address",
+        "cipher",
+        "currencies",
+        "currency",
+        "display",
+        "email",
+        "fiat",
+        "locktime",
+        "prompt",
+        "pubkey",
+        "salt",
+        "seed",
+        "tokens",
+        "twofa"
+      ];
 
-    for (let a of attributes) {
-      if (typeof body[a] !== "undefined") user[a] = body[a];
-    }
+      for (let a of attributes) {
+        if (typeof body[a] !== "undefined") user[a] = body[a];
+      }
 
-    if (password && password === confirm) {
-      user.password = await bcrypt.hash(password, 1);
-    }
+      if (password && password === confirm) {
+        user.password = await bcrypt.hash(password, 1);
+      }
 
-    user.haspin = !!user.pin;
-    await s(`user:${user.pubkey}`, user.id);
-    await s(`user:${user.username}`, user.id);
-    await s(`user:${user.id}`, user);
+      user.haspin = !!user.pin;
+      await s(`user:${user.pubkey}`, user.id);
+      await s(`user:${user.username}`, user.id);
+      await s(`user:${user.id}`, user);
 
-    emit(user.id, "user", user);
-    res.send({ user, token });
-    } catch(e) {
+      emit(user.id, "user", user);
+      res.send({ user, token });
+    } catch (e) {
       warn("failed to update", user.username, e.message);
       bail(res, e.message);
-    } 
+    }
   },
 
   async login(req, res) {
@@ -245,7 +245,7 @@ export default {
           if (!token) fail();
 
           user = await got(`${classic}/admin/migrate/${username}?zero=true`, {
-            headers: { authorization: `Bearer ${config.admin}` },
+            headers: { authorization: `Bearer ${config.admin}` }
           }).json();
 
           let { balance } = user;
@@ -257,7 +257,7 @@ export default {
             ...pick(user, fields),
             id: uid,
             about: user.address,
-            migrated: true,
+            migrated: true
           };
 
           await s(`user:${username}`, uid);
@@ -265,7 +265,7 @@ export default {
           await s(`balance:${uid}`, balance);
 
           let payments = await got(`${classic}/payments`, {
-            headers: { authorization: `Bearer ${token}` },
+            headers: { authorization: `Bearer ${token}` }
           }).json();
 
           for (let p of payments) {
@@ -275,7 +275,7 @@ export default {
               "confirmed",
               "rate",
               "currency",
-              "preimage",
+              "preimage"
             ]);
             n.id = v4();
             n.created = parseISO(p.createdAt).getTime();
@@ -293,7 +293,7 @@ export default {
                 u = await got(
                   `${classic}/admin/migrate/${p.with.username.toLowerCase()}`,
                   {
-                    headers: { authorization: `Bearer ${config.admin}` },
+                    headers: { authorization: `Bearer ${config.admin}` }
                   }
                 ).json();
 
@@ -365,7 +365,7 @@ export default {
     if (!subscriptions) subscriptions = [];
     if (
       !subscriptions.find(
-        (s) => JSON.stringify(s) === JSON.stringify(subscription)
+        s => JSON.stringify(s) === JSON.stringify(subscription)
       )
     )
       subscriptions.push(subscription);
@@ -402,8 +402,8 @@ export default {
     let contacts = (await g(`${id}:contacts`)) || [];
 
     for (let { ref } of (
-      await Promise.all(payments.map(async (id) => await g(`payment:${id}`)))
-    ).filter((p) => p.type === types.internal && p.ref)) {
+      await Promise.all(payments.map(async id => await g(`payment:${id}`)))
+    ).filter(p => p.type === types.internal && p.ref)) {
       !~contacts.findIndex(({ id }) => id === ref) &&
         contacts.push(await g(`user:${ref}`));
     }
@@ -444,4 +444,22 @@ export default {
 
     res.send("ok");
   },
+
+  async reset({ body: { username, password }, user: { admin } }, res) {
+    if (!admin) fail("unauthorized");
+    try {
+      let id = await g(`user:${username}`);
+      let user = await g(`user:${id}`);
+
+      user.pubkey = null;
+      user.cipher = null;
+      user.salt = null;
+      user.password = await bcrypt.hash(password, 1);
+      await s(`user:${id}`, user);
+
+      res.send({});
+    } catch (e) {
+      bail(res, e.message);
+    }
+  }
 };
