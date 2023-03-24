@@ -72,6 +72,7 @@ export default {
           let r;
           try {
             r = await ln.pay(payreq, msatoshi ? undefined : `${amount}sats`);
+            if (r.status !== "complete") fail("payment did not complete");
 
             p.amount = -amount;
             p.tip = total - amount;
