@@ -1,6 +1,6 @@
 import { g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
-import { bail, fail } from "$lib/utils";
+import { bail, getUser, fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
 import { generate } from "$lib/invoices";
@@ -42,7 +42,7 @@ export default {
   },
 
   async lnurlp({ params: { username } }, res) {
-    let uid = await g(`user:${username.toLowerCase()}`);
+    let uid = await getUser(username);
     if (!uid) {
       let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
         headers: { authorization: `Bearer ${admin}` },
@@ -56,7 +56,7 @@ export default {
       u = { id: uid, about: u.address, ...pick(u, fields) };
       delete u.address;
 
-      await s(`user:${username.toLowerCase()}`, uid);
+      await s(`user:${username.replace(/\s/g, '').toLowerCase()}`, uid);
       await s(`user:${uid}`, u);
       await s(`balance:${uid}`, balance);
 
