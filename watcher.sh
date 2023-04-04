@@ -16,7 +16,7 @@ do
   
   if "$low"; then 
     echo "Threshold hit, setting new threshold"
-    docker stop app;
+#    docker stop app;
     curl localhost:3119/email -H "content-type: application/json" -d '{"token": "MPJzfq97ab!!!!", "message": "threshold hit"}'
   fi
   sleep 120 
