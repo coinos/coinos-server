@@ -19,10 +19,11 @@ import payments from "$routes/payments";
 import requests from "$routes/requests";
 
 fillPool();
-listenForLightning();
 
 getLocations();
 getRates();
+
+setTimeout(listenForLightning, 2000);
 
 setInterval(sendRates, 1000);
 setInterval(sendHeartbeat, 2000);
