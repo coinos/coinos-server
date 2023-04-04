@@ -42,42 +42,47 @@ export default {
   },
 
   async lnurlp({ params: { username } }, res) {
-    let { id: uid } = await getUser(username);
-    if (!uid) {
-      let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
-        headers: { authorization: `Bearer ${admin}` },
-      }).json();
+    try {
+      let { id: uid } = await getUser(username);
+      if (!uid) {
+        let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
+          headers: { authorization: `Bearer ${admin}` },
+        }).json();
 
-      if (!u) fail("user not found");
-      let { balance, pubkey } = u;
+        if (!u) fail("user not found");
+        let { balance, pubkey } = u;
 
-      uid = u.uuid;
+        uid = u.uuid;
 
-      u = { id: uid, about: u.address, ...pick(u, fields) };
-      delete u.address;
+        u = { id: uid, about: u.address, ...pick(u, fields) };
+        delete u.address;
 
-      await s(`user:${username.replace(/\s/g, "").toLowerCase()}`, uid);
-      await s(`user:${uid}`, u);
-      await s(`balance:${uid}`, balance);
+        await s(`user:${username.replace(/\s/g, "").toLowerCase()}`, uid);
+        await s(`user:${uid}`, u);
+        await s(`balance:${uid}`, balance);
 
-      l("added missing user", username);
+        l("added missing user", username);
+      }
+
+      let metadata = JSON.stringify([
+        ["text/plain", `Paying ${username}@${host}`],
+        ["text/identifier", `${username}@${host}`],
+      ]);
+
+      let id = v4();
+      await s(`lnurl:${id}`, uid);
+
+      res.send({
+        minSendable: 1000,
+        maxSendable: 100000000000,
+        metadata,
+        callback: `${URL}/api/lnurl/${id}`,
+        tag: "payRequest",
+      });
+    } catch (e) {
+      warn("problem generating lnurlp request", e.message);
+      bail(res, e.message);
     }
-
-    let metadata = JSON.stringify([
-      ["text/plain", `Paying ${username}@${host}`],
-      ["text/identifier", `${username}@${host}`],
-    ]);
-
-    let id = v4();
-    await s(`lnurl:${id}`, uid);
-
-    res.send({
-      minSendable: 1000,
-      maxSendable: 100000000000,
-      metadata,
-      callback: `${URL}/api/lnurl/${id}`,
-      tag: "payRequest",
-    });
   },
 
   async lnurl({ params: { id }, query: { amount } }, res) {
