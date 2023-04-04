@@ -151,23 +151,23 @@ export default {
 
   async parse({ body: { payreq } }, res) {
     try {
-    let hour = 1000 * 60 * 60;
-    let { last } = store.nodes;
-    let { nodes } = store;
+      let hour = 1000 * 60 * 60;
+      let { last } = store.nodes;
+      let { nodes } = store;
 
-    if (!last || last > Date.now() - hour) ({ nodes } = await ln.listnodes());
-    store.nodes = nodes;
+      if (!last || last > Date.now() - hour) ({ nodes } = await ln.listnodes());
+      store.nodes = nodes;
 
-    let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
-    let decoded = await ln.decodepay(payreq);
-    let { msatoshi, payee } = decoded;
-    let node = nodes.find((n) => n.nodeid === payee);
-    let alias = node ? node.alias : payee.substr(0, 12);
+      let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
+      let decoded = await ln.decodepay(payreq);
+      let { msatoshi, payee } = decoded;
+      let node = nodes.find((n) => n.nodeid === payee);
+      let alias = node ? node.alias : payee.substr(0, 12);
 
-    res.send({ alias, amount: Math.round(msatoshi / 1000) });
-    } catch(e) {
+      res.send({ alias, amount: Math.round(msatoshi / 1000) });
+    } catch (e) {
       bail(res, e.message);
-    } 
+    }
   },
 
   async pot({ params: { name } }, res) {

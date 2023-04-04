@@ -1,7 +1,7 @@
 import { g, s, db } from "$lib/db";
 import config from "$config";
 import store from "$lib/store";
-  import {
+import {
   fields,
   nada,
   pick,
@@ -9,7 +9,7 @@ import store from "$lib/store";
   wait,
   bail,
   fail,
-  getUser
+  getUser,
 } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -92,7 +92,7 @@ export default {
           username: key,
           display: key.substr(0, 6),
           pubkey: key,
-          anon: true
+          anon: true,
         };
       }
 
@@ -109,7 +109,7 @@ export default {
         "pubkey",
         "display",
         "prompt",
-        "id"
+        "id",
       ];
 
       if (user.pubkey)
@@ -133,7 +133,7 @@ export default {
         pubkey,
         password,
         username,
-        salt
+        salt,
       };
 
       user = await register(user, ip, false);
@@ -210,7 +210,7 @@ export default {
         "salt",
         "seed",
         "tokens",
-        "twofa"
+        "twofa",
       ];
 
       for (let a of attributes) {
@@ -254,7 +254,7 @@ export default {
           if (!token) fail();
 
           user = await got(`${classic}/admin/migrate/${username}?zero=true`, {
-            headers: { authorization: `Bearer ${config.admin}` }
+            headers: { authorization: `Bearer ${config.admin}` },
           }).json();
 
           let { balance } = user;
@@ -266,7 +266,7 @@ export default {
             ...pick(user, fields),
             id: uid,
             about: user.address,
-            migrated: true
+            migrated: true,
           };
 
           await s(`user:${username}`, uid);
@@ -274,7 +274,7 @@ export default {
           await s(`balance:${uid}`, balance);
 
           let payments = await got(`${classic}/payments`, {
-            headers: { authorization: `Bearer ${token}` }
+            headers: { authorization: `Bearer ${token}` },
           }).json();
 
           for (let p of payments) {
@@ -284,7 +284,7 @@ export default {
               "confirmed",
               "rate",
               "currency",
-              "preimage"
+              "preimage",
             ]);
             n.id = v4();
             n.created = parseISO(p.createdAt).getTime();
@@ -302,7 +302,7 @@ export default {
                 u = await got(
                   `${classic}/admin/migrate/${p.with.username.toLowerCase()}`,
                   {
-                    headers: { authorization: `Bearer ${config.admin}` }
+                    headers: { authorization: `Bearer ${config.admin}` },
                   }
                 ).json();
 
@@ -374,7 +374,7 @@ export default {
     if (!subscriptions) subscriptions = [];
     if (
       !subscriptions.find(
-        s => JSON.stringify(s) === JSON.stringify(subscription)
+        (s) => JSON.stringify(s) === JSON.stringify(subscription)
       )
     )
       subscriptions.push(subscription);
@@ -411,8 +411,8 @@ export default {
     let contacts = (await g(`${id}:contacts`)) || [];
 
     for (let { ref } of (
-      await Promise.all(payments.map(async id => await g(`payment:${id}`)))
-    ).filter(p => p.type === types.internal && p.ref)) {
+      await Promise.all(payments.map(async (id) => await g(`payment:${id}`)))
+    ).filter((p) => p.type === types.internal && p.ref)) {
       !~contacts.findIndex(({ id }) => id === ref) &&
         contacts.push(await g(`user:${ref}`));
     }
@@ -470,5 +470,5 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
-  }
+  },
 };
