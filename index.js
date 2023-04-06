@@ -68,7 +68,7 @@ app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
 
 app.get("/users", auth, users.list);
-app.get("/lower", users.lower);
+app.get("/fix", auth, users.fix);
 app.get("/me", auth, users.me);
 app.get("/users/:key", users.get);
 app.post("/register", users.create);

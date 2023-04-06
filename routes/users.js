@@ -442,12 +442,18 @@ export default {
     res.send({});
   },
 
-  async lower(req, res) {
-    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
-      let u = await g(k);
-      if (u.pin && !u.haspin) {
-        u.haspin = true;
-        s(k, u);
+  async fix(req, res) {
+    if (!req.user.admin) fail("unauthorized");
+    let uid = await g("user:laughingbean");
+    let payments = await db.lRange(`${uid}:payments`, 0, -1);
+
+    for (let hash of payments) {
+      let payment = await g(`payment:${hash}`);
+      let invoice = await g(`invoice:${hash}`);
+      if (!invoice) continue;
+      if (invoice.amount !== payment.amount) {
+        payment.amount -= payment.tip;
+        s(`payment:${hash}`, payment);
       }
     }
 
