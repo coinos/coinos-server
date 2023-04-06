@@ -4,8 +4,10 @@ sats=100000000
 threshold=$1
 while true
 do
-  lnc=$(docker exec -it cl lightning-cli listfunds | jr '[.channels[] | .channel_sat] | add')
-  lnw=$(docker exec -it cl lightning-cli listfunds | jr '[.outputs[] | .value] | add')
+  f=/home/adam/coinos-server/data/funds/$(date +"%m-%d-%y-%T").json
+  docker exec -it cl lightning-cli listfunds > $f
+  lnc=$(cat $f | jr '[.channels[] | .channel_sat] | add')
+  lnw=$(cat $f | jr '[.outputs[] | .value] | add')
   ln=$(node -pe "$lnc + $lnw")
   bc=$(docker exec -it bc bitcoin-cli getbalance | jr)
   total=$(node -pe "$ln + $bc * $sats")

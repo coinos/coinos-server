@@ -463,7 +463,7 @@ export default {
   async reset({ body: { username, password }, user: { admin } }, res) {
     if (!admin) fail("unauthorized");
     try {
-      let id = await g(`user:${username}`);
+      let id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);
       let user = await g(`user:${id}`);
 
       user.pubkey = null;
