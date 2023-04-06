@@ -41,11 +41,11 @@ export default {
       .post(`${config.classic}/invoice`, {
         json: {
           invoice: { amount: 0, network: "lightning" },
-          user: { username },
-        },
+          user: { username }
+        }
       })
       .json();
 
     res.send(invoice);
-  },
+  }
 };

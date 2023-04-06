@@ -10,7 +10,7 @@ export default {
     username: "admin1",
     password: "123",
     network: "regtest",
-    port: 18443,
+    port: 18443
   },
-  lightning: "/app/config/lightning/regtest/lightning-rpc",
+  lightning: "/app/config/lightning/regtest/lightning-rpc"
 };

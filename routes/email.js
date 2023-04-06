@@ -13,8 +13,8 @@ export default {
       .post("https://www.google.com/recaptcha/api/siteverify", {
         form: {
           secret,
-          response,
-        },
+          response
+        }
       })
       .json();
 
@@ -26,25 +26,25 @@ export default {
         new SendEmailCommand({
           Destination: {
             CcAddresses: [],
-            ToAddresses: ["support@coinos.io"],
+            ToAddresses: ["support@coinos.io"]
           },
           Message: {
             Body: {
               Html: {
                 Charset: "UTF-8",
-                Data: JSON.stringify(body),
+                Data: JSON.stringify(body)
               },
               Text: {
                 Charset: "UTF-8",
-                Data: JSON.stringify(body),
-              },
+                Data: JSON.stringify(body)
+              }
             },
             Subject: {
               Charset: "UTF-8",
-              Data: body.subject || "Support Request",
-            },
+              Data: body.subject || "Support Request"
+            }
           },
-          Source: "support@coinos.io",
+          Source: "support@coinos.io"
         })
       );
 
@@ -52,5 +52,5 @@ export default {
     } else {
       bail(res, "failed captcha");
     }
-  },
+  }
 };

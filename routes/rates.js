@@ -7,5 +7,5 @@ export default {
 
   async index(req, res) {
     res.send(store.rates);
-  },
+  }
 };
