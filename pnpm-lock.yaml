@@ -9,7 +9,7 @@ specifiers:
   '@fastify/websocket': ^7.0.1
   bcrypt: ^5.0.0
   bech32: ^2.0.0
-  clightning-client: ^0.1.2
+  clightning-client: github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc
   date-fns: ^2.21.3
   fastify: ^4.5.3
   file-type: ^18.0.0
@@ -42,7 +42,7 @@ dependencies:
   '@fastify/websocket': 7.1.0
   bcrypt: 5.1.0
   bech32: 2.0.0
-  clightning-client: 0.1.4
+  clightning-client: github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05
   date-fns: 2.29.3
   fastify: 4.8.1
   file-type: 18.0.0
@@ -1405,15 +1405,6 @@ packages:
     dependencies:
       inherits: 2.0.4
       safe-buffer: 5.2.1
-    dev: false
-
-  /clightning-client/0.1.4:
-    resolution: {integrity: sha512-M5UclkZcKvh15CmZOpbM0p6Dyua3ixRlgp7EP5IhL9jYWW8AL7qpROWLQFqSW2ANy48W1vGlw9igSyWV2A/iqw==}
-    dependencies:
-      debug: 4.3.4
-      error: 7.2.1
-    transitivePeerDependencies:
-      - supports-color
     dev: false
 
   /cluster-key-slot/1.1.0:
@@ -3444,4 +3435,15 @@ packages:
   /yocto-queue/0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+    dev: false
+
+  github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05:
+    resolution: {tarball: https://codeload.github.com/SimonVrouwe/lightning-client-js/tar.gz/946642bafca572fb5d9ce2dc1316d415fa950a05}
+    name: clightning-client
+    version: 0.1.4
+    dependencies:
+      debug: 4.3.4
+      error: 7.2.1
+    transitivePeerDependencies:
+      - supports-color
     dev: false

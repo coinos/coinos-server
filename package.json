@@ -15,7 +15,7 @@
     "@fastify/websocket": "^7.0.1",
     "bcrypt": "^5.0.0",
     "bech32": "^2.0.0",
-    "clightning-client": "^0.1.2",
+    "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
     "date-fns": "^2.21.3",
     "fastify": "^4.5.3",
     "file-type": "^18.0.0",
