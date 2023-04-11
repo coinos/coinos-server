@@ -271,7 +271,6 @@ app.get("/payment/:hash", auth, async function(req, res) {
     let { hash } = req.params;
     let payment = await db.Payment.findOne({
       where: {
-        user_id: req.user.id,
         [Op.or]: [{ hash }, { redeemcode: hash }]
       },
 
