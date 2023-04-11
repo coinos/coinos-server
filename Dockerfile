@@ -3,7 +3,7 @@ FROM node:18-alpine
 ARG NODE_ENV=production
 ENV NODE_ENV $NODE_ENV
 
-RUN apk add --update inotify-tools npm vips-dev
+RUN apk add --update inotify-tools npm vips-dev git
 RUN npm i -g pnpm
 
 COPY . /app
