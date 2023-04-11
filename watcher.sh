@@ -6,7 +6,7 @@ while true
 do
   f=/home/adam/coinos-server/data/funds/$(date +"%m-%d-%y-%T").json
   docker exec -it cl lightning-cli listfunds > $f
-  lnc=$(cat $f | jr '[.channels[] | .channel_sat] | add')
+  lnc=$(cat $f | jr '[.channels[] | select(.state == "CHANNELD_NORMAL") | .channel_sat] | add')
   lnw=$(cat $f | jr '[.outputs[] | .value] | add')
   ln=$(node -pe "$lnc + $lnw")
   bc=$(docker exec -it bc bitcoin-cli getbalance | jr)

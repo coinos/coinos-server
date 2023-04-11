@@ -12,7 +12,7 @@
     "@fastify/passport": "^2.2.0",
     "@fastify/secure-session": "^5.2.0",
     "@fastify/static": "^6.5.0",
-    "@fastify/websocket": "^7.0.1",
+    "@fastify/websocket": "^7.2.0",
     "bcrypt": "^5.0.0",
     "bech32": "^2.0.0",
     "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
