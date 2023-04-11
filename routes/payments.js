@@ -266,10 +266,19 @@ app.post("/checkRedeemCode", auth, async function(req, res) {
   res.send(payment);
 });
 
-app.get("/payments/:hash", auth, async function(req, res) {
+app.get("/payment/:hash", auth, async function(req, res) {
   try {
+    let { hash } = req.params;
     let payment = await db.Payment.findOne({
-      where: { user_id: req.user.id, hash: req.params.hash }
+      where: {
+        user_id: req.user.id,
+        [Op.or]: [{ hash }, { redeemcode: hash }]
+      },
+
+      include: {
+        model: db.Account,
+        as: "account"
+      }
     });
 
     return payment.get({ plain: true });
