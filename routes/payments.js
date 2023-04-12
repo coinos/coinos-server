@@ -71,10 +71,13 @@ export default {
 
           let r;
           try {
+            l("paying lightning invoice", payreq);
+
             r = await ln.pay({
               bolt11: payreq.replace(/\s/g, "").toLowerCase(),
               amount_msat: msatoshi ? undefined : `${amount}sats`,
-              maxfee
+              maxfee,
+              retry_for: 5
             });
             if (r.status !== "complete") fail("payment did not complete");
 
@@ -86,7 +89,7 @@ export default {
 
             await s(`payment:${p.id}`, p);
 
-            l("refunding fee", maxfee, p.fee, maxfee - p.fee);
+            l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
             await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
           } catch (e) {
             warn("something went wrong", e.message);
