@@ -1,6 +1,6 @@
 import { g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
-import { fail, pick } from "$lib/utils";
+import { bail, fail, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import got from "got";
 import config from "$config";
@@ -33,7 +33,11 @@ export default {
   },
 
   async create({ body: { invoice, user }, user: sender }, res) {
-    res.send(await generate({ invoice, user, sender }));
+    try {
+      res.send(await generate({ invoice, user, sender }));
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 
   async classic({ params: { username } }, res) {
