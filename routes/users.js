@@ -125,7 +125,7 @@ export default {
 
   async create(req, res) {
     try {
-      const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      const ip = req.headers["cf-connecting-ip"] || req.socket.remoteAddress;
       let { cipher, pubkey, password, username, salt } = req.body.user;
 
       let user = {
@@ -443,21 +443,7 @@ export default {
   },
 
   async fix(req, res) {
-    if (!req.user.admin) fail("unauthorized");
-    let uid = await g("user:laughingbean");
-    let payments = await db.lRange(`${uid}:payments`, 0, -1);
-
-    for (let hash of payments) {
-      let payment = await g(`payment:${hash}`);
-      let invoice = await g(`invoice:${hash}`);
-      if (!invoice) continue;
-      if (invoice.amount !== payment.amount) {
-        payment.amount -= payment.tip;
-        s(`payment:${hash}`, payment);
-      }
-    }
-
-    res.send("ok");
+    res.send(req.headers);
   },
 
   async reset({ body: { username, password }, user: { admin } }, res) {

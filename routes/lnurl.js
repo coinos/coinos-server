@@ -92,6 +92,7 @@ export default {
       let uid = await g(`lnurl:${id}`);
       let user = await g(`user:${uid}`);
       let { username } = user;
+      username = username.replace(/\s/g, '').toLowerCase();
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
