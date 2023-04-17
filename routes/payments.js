@@ -76,7 +76,7 @@ export default {
             r = await ln.pay({
               bolt11: payreq.replace(/\s/g, "").toLowerCase(),
               amount_msat: msatoshi ? undefined : `${amount}sats`,
-              maxfee,
+              maxfee: `${maxfee}sats`,,
               retry_for: 5
             });
             if (r.status !== "complete") fail("payment did not complete");
