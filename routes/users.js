@@ -54,6 +54,12 @@ export default {
     for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
       let uid = k.split(":")[1];
       let user = await g(`user:${uid}`);
+
+      if (!user) {
+        await db.del(`balance:${uid}`);
+        continue;
+      }
+
       user.balance = await g(k);
 
       let payments = await db.lRange(`${uid}:payments`, 0, -1);
