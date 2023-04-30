@@ -193,6 +193,8 @@ export default {
       } else if (username) {
         if (user.username.toLowerCase() !== username.toLowerCase())
           l("changing username", user.username, username);
+
+        await db.del(`user:${username}`);
         user.username = username;
       }
 
@@ -203,6 +205,7 @@ export default {
         "currency",
         "display",
         "email",
+        "language",
         "fiat",
         "locktime",
         "prompt",
