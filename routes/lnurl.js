@@ -34,11 +34,15 @@ export default {
   },
 
   async decode({ query: { text } }, res) {
-    let url = Buffer.from(
-      bech32.fromWords(bech32.decode(text, 20000).words)
-    ).toString();
+    try {
+      let url = Buffer.from(
+        bech32.fromWords(bech32.decode(text, 20000).words)
+      ).toString();
 
-    res.send(await got(url).json());
+      res.send(await got(url).json());
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 
   async lnurlp({ params: { username } }, res) {
@@ -92,7 +96,7 @@ export default {
       let uid = await g(`lnurl:${id}`);
       let user = await g(`user:${uid}`);
       let { username } = user;
-      username = username.replace(/\s/g, '').toLowerCase();
+      username = username.replace(/\s/g, "").toLowerCase();
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
