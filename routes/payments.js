@@ -111,6 +111,7 @@ export default {
           await credit(hash, amount, memo, user.id);
         } else {
           let pot = name || v4();
+          memo = pot;
           p = await debit(hash, amount, 0, memo, user, types.pot);
           await db.incrBy(`pot:${pot}`, amount);
           await db.lPush(`pot:${pot}:payments`, p.id);
@@ -202,7 +203,10 @@ export default {
     });
 
     let hash = v4();
+    let { currency } = user;
     await s(`invoice:${hash}`, {
+      currency,
+      rate: store.rates[currency],
       uid: user.id,
       received: 0
     });
