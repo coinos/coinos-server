@@ -53,6 +53,7 @@ app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", auth, payments.get);
 app.post("/parse", payments.parse);
 app.get("/pot/:name", payments.pot);
+app.get("/pot/:name/withdraw", payments.withdraw);
 app.post("/take", auth, payments.take);
 app.post("/buy", auth, payments.buy);
 app.post("/print", auth, payments.print);

@@ -192,8 +192,21 @@ export default {
     res.send({ amount, payments });
   },
 
-  async take({ body: { name, amount }, user }, res) {
+  async withdraw({ params: { name } }, res) {
+    let maxWithdrawable = await g(`pot:${name}`);
+    res.send({
+      tag: "withdrawRequest",
+      callback: `${URL}/lnurlw/${name}`,
+      k1: name,
+      defaultDescription: `Withdraw from coinos pot ${name}`,
+      minWithdrawable: 0,
+      maxWithdrawable
+    });
+  },
+
+  async take({ body: { name, amount, hash }, user }, res) {
     amount = parseInt(amount);
+
     await t(`pot:${name}`, async (balance, db) => {
       if (balance < amount) fail("Insufficient funds");
       await db
@@ -202,16 +215,18 @@ export default {
         .exec();
     });
 
-    let hash = v4();
-    let { currency } = user;
-    await s(`invoice:${hash}`, {
-      currency,
-      rate: store.rates[currency],
-      uid: user.id,
-      received: 0
-    });
+    if (!hash) {
+      hash = v4();
+      let { currency } = user;
+      await s(`invoice:${hash}`, {
+        currency,
+        rate: store.rates[currency],
+        uid: user.id,
+        received: 0
+      });
+    }
 
-    let payment = await credit(hash, amount, "", name, types.pot);
+    let payment = await credit(hash, amount, name, name, types.pot);
     await db.lPush(`pot:${name}:payments`, hash);
 
     res.send({ payment });

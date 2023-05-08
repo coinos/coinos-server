@@ -89,6 +89,9 @@ export default {
     }
   },
 
+  async lnurlw({ params: { k1, pr } }, res) {
+  },
+
   async lnurl({ params: { id }, query: { amount } }, res) {
     let pr = await g(`lnurlp:${id}`);
 
