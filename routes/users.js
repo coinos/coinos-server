@@ -232,7 +232,7 @@ export default {
 
       user.haspin = !!user.pin;
       await s(`user:${user.pubkey}`, user.id);
-      await s(`user:${user.username}`, user.id);
+      await s(`user:${user.username.toLowerCase().replace(/\s/g, '')}`, user.id);
       await s(`user:${user.id}`, user);
 
       emit(user.id, "user", user);
