@@ -131,7 +131,7 @@ export default {
 
   async create(req, res) {
     try {
-      const ip = req.headers["cf-connecting-ip"] || req.socket.remoteAddress;
+      const ip = req.headers["cf-connecting-ip"];
       let { cipher, pubkey, password, username, salt } = req.body.user;
 
       let user = {
@@ -232,7 +232,10 @@ export default {
 
       user.haspin = !!user.pin;
       await s(`user:${user.pubkey}`, user.id);
-      await s(`user:${user.username.toLowerCase().replace(/\s/g, '')}`, user.id);
+      await s(
+        `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
+        user.id
+      );
       await s(`user:${user.id}`, user);
 
       emit(user.id, "user", user);
@@ -246,7 +249,7 @@ export default {
   async login(req, res) {
     try {
       let { username, password, token: twofa } = req.body;
-      l("logging in", username);
+      l("logging in", username, req.headers["cf-connecting-ip"]);
 
       username = username.toLowerCase().replace(/\s/g, "");
       let uid = await g(`user:${username}`);
@@ -359,11 +362,7 @@ export default {
         return res.code(401).send("2fa required");
       }
 
-      l(
-        "login",
-        username,
-        req.headers["x-forwarded-for"] || req.socket.remoteAddress
-      );
+      l("logged in", username);
 
       let payload = { id: uid };
       let token = jwt.sign(payload, config.jwt);
