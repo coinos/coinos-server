@@ -95,8 +95,13 @@ export default {
             warn("something went wrong", e.message);
             if (!(r && r.status === "complete")) {
               let credit = Math.round(total * config.fee) - p.ourfee;
+              warn("crediting balance", total + maxfee + p.ourfee);
               await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
+
+              warn("crediting credits", credit);
               await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+
+              warn("reversing payment", p.id);
               await db.lRem(`${p.uid}:payments`, 1, p.id);
               await db.del(`payment:${p.id}`);
             }
