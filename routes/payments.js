@@ -94,10 +94,10 @@ export default {
           } catch (e) {
             warn("something went wrong", e.message);
             if (!(r && r.status === "complete")) {
-              let credit = Math.round(amount * config.fee) - p.ourfee;
-              await db.incrBy(`balance:${p.uid}`, amount + maxfee + p.ourfee);
+              let credit = Math.round(total * config.fee) - p.ourfee;
+              await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
               await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-              await db.lRem(`${p.uid}:payments`, 0, p.id);
+              await db.lRem(`${p.uid}:payments`, 1, p.id);
               await db.del(`payment:${p.id}`);
             }
             throw e;
