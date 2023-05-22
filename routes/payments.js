@@ -185,7 +185,7 @@ export default {
 
   async pot({ params: { name } }, res) {
     let amount = await g(`pot:${name}`);
-    if (typeof amount === 'undefined') return bail(res, "pot not found");
+    if (typeof amount === 'undefined' || amount === null) return bail(res, "pot not found");
     let payments = (await db.lRange(`pot:${name}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
 
