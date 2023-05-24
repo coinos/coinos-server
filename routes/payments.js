@@ -155,10 +155,17 @@ export default {
       (a, b) => ({
         ...a,
         [b.currency]: {
-          sats: (a[b.currency] ? a[b.currency].sats : 0) + b.amount,
+          sats:
+            (a[b.currency] ? a[b.currency].sats : 0) +
+            (b.amount || 0) +
+            (b.tip || 0) -
+            (b.fee || 0) -
+            (b.ourfee || 0),
           fiat: (
             parseFloat(a[b.currency] ? a[b.currency].fiat : 0) +
-            (b.amount * b.rate) / SATS
+            (((b.amount || 0) + (b.tip || 0) - (b.fee || 0) - (b.ourfee || 0)) *
+              b.rate) /
+              SATS
           ).toFixed(2)
         }
       }),
