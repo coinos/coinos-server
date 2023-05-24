@@ -4,7 +4,7 @@ import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
-import { bail, fail, btc, sats } from "$lib/utils";
+import { bail, fail, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types } from "$lib/payments";
 import got from "got";
@@ -149,11 +149,24 @@ export default {
       .filter(p => p)
       .sort((a, b) => b.created - a.created);
 
-    let total = payments.length;
+    let count = payments.length;
+
+    let totals = payments.reduce(
+      (a, b) => ({
+        [b.currency]: {
+          sats: (a[b.currency] ? a[b.currency].sats : 0) + b.amount,
+          fiat: (
+            parseFloat(a[b.currency] ? a[b.currency].fiat : 0) +
+            (b.amount * b.rate) / SATS
+          ).toFixed(2)
+        }
+      }),
+      {}
+    );
 
     if (limit) payments = payments.slice(offset, offset + limit);
 
-    res.send({ payments, total });
+    res.send({ payments, count, totals });
   },
 
   async get({ params: { hash } }, res) {
@@ -185,7 +198,8 @@ export default {
 
   async pot({ params: { name } }, res) {
     let amount = await g(`pot:${name}`);
-    if (typeof amount === 'undefined' || amount === null) return bail(res, "pot not found");
+    if (typeof amount === "undefined" || amount === null)
+      return bail(res, "pot not found");
     let payments = (await db.lRange(`pot:${name}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
 
