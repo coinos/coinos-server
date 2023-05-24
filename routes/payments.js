@@ -153,6 +153,7 @@ export default {
 
     let totals = payments.reduce(
       (a, b) => ({
+        ...a,
         [b.currency]: {
           sats: (a[b.currency] ? a[b.currency].sats : 0) + b.amount,
           fiat: (
