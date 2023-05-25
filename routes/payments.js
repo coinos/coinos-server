@@ -59,8 +59,8 @@ export default {
           .json();
       } else if (payreq) {
         let total = amount;
-        let { msatoshi, payment_hash } = await ln.decode(payreq);
-        if (msatoshi) total = Math.round(msatoshi / 1000);
+        let { amount_msat, payment_hash } = await ln.decode(payreq);
+        if (amount_msat) total = Math.round(amount_msat / 1000);
         let invoice = await g(`invoice:${payment_hash}`);
 
         if (invoice) {
@@ -75,16 +75,16 @@ export default {
 
             r = await ln.pay({
               bolt11: payreq.replace(/\s/g, "").toLowerCase(),
-              amount_msat: msatoshi ? undefined : `${amount}sats`,
-              maxfee: `${maxfee}sats`,
+              amount_msat: amount_msat ? undefined : amount * 1000,
+              maxfee: maxfee * 1000,
               retry_for: 5
             });
             if (r.status !== "complete") fail("payment did not complete");
-
+            
             p.amount = -amount;
             p.tip = total - amount;
             p.hash = r.payment_hash;
-            p.fee = Math.round((r.msatoshi_sent - r.msatoshi) / 1000);
+            p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
             p.ref = r.payment_preimage;
 
             await s(`payment:${p.id}`, p);
@@ -194,11 +194,11 @@ export default {
 
       let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
       let decoded = await ln.decodepay(payreq);
-      let { msatoshi, payee } = decoded;
+      let { amount_msat, payee } = decoded;
       let node = nodes.find(n => n.nodeid === payee);
       let alias = node ? node.alias : payee.substr(0, 12);
 
-      res.send({ alias, amount: Math.round(msatoshi / 1000) });
+      res.send({ alias, amount: Math.round(amount_msat / 1000) });
     } catch (e) {
       bail(res, e.message);
     }
