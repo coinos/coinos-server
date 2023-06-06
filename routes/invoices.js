@@ -14,9 +14,9 @@ export default {
     }
 
     let invoice = await g(`invoice:${hash}`);
-    delete invoice.secret;
 
     if (invoice) {
+      delete invoice.secret;
       invoice.user = pick(await g(`user:${invoice.uid}`), ['id', 'currency', 'username']);
       invoice.id = hash;
     } else if (config.classic) {
