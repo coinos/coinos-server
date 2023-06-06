@@ -17,7 +17,7 @@ export default {
 
     if (invoice) {
       delete invoice.secret;
-      invoice.user = pick(await g(`user:${invoice.uid}`), ['id', 'currency', 'username']);
+      invoice.user = pick(await g(`user:${invoice.uid}`), ['id', 'profile', 'banner', 'currency', 'username']);
       invoice.id = hash;
     } else if (config.classic) {
       invoice = await got(`${config.classic}/invoice/${pr}`).json();
