@@ -14,9 +14,10 @@ export default {
     }
 
     let invoice = await g(`invoice:${hash}`);
+    delete invoice.secret;
 
     if (invoice) {
-      invoice.user = pick(await g(`user:${invoice.uid}`), whitelist);
+      invoice.user = pick(await g(`user:${invoice.uid}`), ['id', 'currency', 'username']);
       invoice.id = hash;
     } else if (config.classic) {
       invoice = await got(`${config.classic}/invoice/${pr}`).json();
@@ -36,6 +37,7 @@ export default {
     try {
       res.send(await generate({ invoice, user, sender }));
     } catch (e) {
+      console.log(e);
       bail(res, e.message);
     }
   },
