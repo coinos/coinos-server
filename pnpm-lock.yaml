@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@aws-sdk/client-ses': ^3.295.0
+  '@fastify/cors': ^8.3.0
   '@fastify/multipart': ^7.1.2
   '@fastify/passport': ^2.2.0
   '@fastify/secure-session': ^5.2.0
@@ -35,6 +36,7 @@ specifiers:
 
 dependencies:
   '@aws-sdk/client-ses': 3.295.0
+  '@fastify/cors': 8.3.0
   '@fastify/multipart': 7.2.0
   '@fastify/passport': 2.2.0
   '@fastify/secure-session': 5.2.0
@@ -828,6 +830,13 @@ packages:
     dependencies:
       cookie: 0.5.0
       fastify-plugin: 4.3.0
+    dev: false
+
+  /@fastify/cors/8.3.0:
+    resolution: {integrity: sha512-oj9xkka2Tg0MrwuKhsSUumcAkfp2YCnKxmFEusi01pjk1YrdDsuSYTHXEelWNW+ilSy/ApZq0c2SvhKrLX0H1g==}
+    dependencies:
+      fastify-plugin: 4.3.0
+      mnemonist: 0.39.5
     dev: false
 
   /@fastify/deepmerge/1.1.0:
@@ -2417,6 +2426,12 @@ packages:
     hasBin: true
     dev: false
 
+  /mnemonist/0.39.5:
+    resolution: {integrity: sha512-FPUtkhtJ0efmEFGpU14x7jGbTB+s18LrzRL2KgoWz9YvcY3cPomz8tih01GbHwnGk/OmkOKfqd/RAQoc8Lm7DQ==}
+    dependencies:
+      obliterator: 2.0.4
+    dev: false
+
   /mri/1.1.4:
     resolution: {integrity: sha512-6y7IjGPm8AzlvoUrwAaw1tLnUBudaS3752vcd8JtrpGGQn+rXIe63LFVHm/YMwtqAuh+LJPCFdlLYPWM1nYn6w==}
     engines: {node: '>=4'}
@@ -2552,6 +2567,10 @@ packages:
 
   /object-inspect/1.12.2:
     resolution: {integrity: sha512-z+cPxW0QGUp0mcqcsgQyLVRDoXFQbXOwBaqyF7VIgI4TWNQsDHrBpUQslRmIfAoYWdYzs6UlKJtB2XJpTaNSpQ==}
+    dev: false
+
+  /obliterator/2.0.4:
+    resolution: {integrity: sha512-lgHwxlxV1qIg1Eap7LgIeoBWIMFibOjbrYPIPJZcI1mmGAI2m3lNYpK12Y+GBdPQ0U1hRwSord7GIaawz962qQ==}
     dev: false
 
   /on-exit-leak-free/0.2.0:
