@@ -12,6 +12,7 @@ specifiers:
   bech32: ^2.0.0
   clightning-client: github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc
   date-fns: ^2.21.3
+  dollars-to-words: github:asoltys/dollars-to-words
   fastify: ^4.5.3
   file-type: ^18.0.0
   got: ^12.5.3
@@ -46,6 +47,7 @@ dependencies:
   bech32: 2.0.0
   clightning-client: github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05
   date-fns: 2.29.3
+  dollars-to-words: github.com/asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37
   fastify: 4.8.1
   file-type: 18.0.0
   got: 12.5.3
@@ -3465,4 +3467,10 @@ packages:
       error: 7.2.1
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  github.com/asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37:
+    resolution: {tarball: https://codeload.github.com/asoltys/dollars-to-words/tar.gz/2139443f523facf106d2fbfa7571d1b63cd26f37}
+    name: dollars-to-words
+    version: 1.1.1
     dev: false

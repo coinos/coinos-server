@@ -18,6 +18,7 @@
     "bech32": "^2.0.0",
     "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
     "date-fns": "^2.21.3",
+    "dollars-to-words": "github:asoltys/dollars-to-words",
     "fastify": "^4.5.3",
     "file-type": "^18.0.0",
     "got": "^12.5.3",
