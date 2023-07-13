@@ -460,6 +460,7 @@ export default {
       let id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);
       let user = await g(`user:${id}`);
 
+      user.pin = null;
       user.pubkey = null;
       user.cipher = null;
       user.salt = null;
