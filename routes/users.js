@@ -278,7 +278,8 @@ export default {
             ...pick(user, fields),
             id: uid,
             about: user.address,
-            migrated: true
+            migrated: true,
+            haspin: !!user.pin
           };
 
           await s(`user:${username}`, uid);
