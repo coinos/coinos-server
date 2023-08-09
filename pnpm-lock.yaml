@@ -15,8 +15,8 @@ dependencies:
     specifier: ^7.1.2
     version: 7.2.0
   '@fastify/passport':
-    specifier: ^2.2.0
-    version: 2.2.0
+    specifier: ^2.3.0
+    version: 2.3.0
   '@fastify/secure-session':
     specifier: ^5.2.0
     version: 5.2.0
@@ -34,13 +34,13 @@ dependencies:
     version: 2.0.0
   clightning-client:
     specifier: github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc
-    version: github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05
+    version: git/github.com+SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05
   date-fns:
     specifier: ^2.21.3
     version: 2.29.3
   dollars-to-words:
     specifier: github:asoltys/dollars-to-words
-    version: github.com/asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37
+    version: git/github.com+asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37
   fastify:
     specifier: ^4.5.3
     version: 4.8.1
@@ -912,8 +912,8 @@ packages:
       stream-wormhole: 1.1.0
     dev: false
 
-  /@fastify/passport@2.2.0:
-    resolution: {integrity: sha512-JbrtmJUotEgPf9FPpCpbMcVDghLbjziAkj7EnufEaRpMOZE3wkeVg0CzgnD+nrIGoHo6D31RCJMIZMvvLxb+ew==}
+  /@fastify/passport@2.3.0:
+    resolution: {integrity: sha512-OVTUXyAm7Tx194RJiJrzSvM8m5O8TR0CIc9ewKDZWjQcFs+MNiVURdjpIm28l7oY2o19TV9XANutfSH/ngEd+A==}
     dependencies:
       '@fastify/flash': 5.1.0
       fastify-plugin: 4.3.0
@@ -3624,8 +3624,8 @@ packages:
     engines: {node: '>=10'}
     dev: false
 
-  github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05:
-    resolution: {tarball: https://codeload.github.com/SimonVrouwe/lightning-client-js/tar.gz/946642bafca572fb5d9ce2dc1316d415fa950a05}
+  git/github.com+SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05:
+    resolution: {commit: 946642bafca572fb5d9ce2dc1316d415fa950a05, repo: git@github.com:SimonVrouwe/lightning-client-js.git, type: git}
     name: clightning-client
     version: 0.1.4
     dependencies:
@@ -3635,8 +3635,8 @@ packages:
       - supports-color
     dev: false
 
-  github.com/asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37:
-    resolution: {tarball: https://codeload.github.com/asoltys/dollars-to-words/tar.gz/2139443f523facf106d2fbfa7571d1b63cd26f37}
+  git/github.com+asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37:
+    resolution: {commit: 2139443f523facf106d2fbfa7571d1b63cd26f37, repo: git@github.com:asoltys/dollars-to-words.git, type: git}
     name: dollars-to-words
     version: 1.1.1
     dev: false
