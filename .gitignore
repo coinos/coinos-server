@@ -4,3 +4,5 @@ data
 config.js
 compose.yml
 .env
+*.flitevox
+mimic
