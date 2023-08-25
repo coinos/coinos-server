@@ -4,7 +4,7 @@ ARG NODE_ENV=production
 ENV NODE_ENV $NODE_ENV
 
 RUN apt update
-RUN apt install gcc make pkg-config automake libpcre2-dev libtool libasound2-dev git -y
+RUN apt install gcc make pkg-config automake libpcre2-dev libtool libasound2-dev git ffmpeg -y
 RUN npm i -g pnpm
 
 COPY . /app
