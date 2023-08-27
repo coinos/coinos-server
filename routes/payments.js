@@ -233,6 +233,7 @@ export default {
 
   async take({ body: { name, amount, hash }, user }, res) {
     amount = parseInt(amount);
+    if (amount < 0) fail("Invalid amount");
 
     await t(`pot:${name}`, async (balance, db) => {
       if (balance < amount) fail("Insufficient funds");
