@@ -232,6 +232,7 @@ export default {
   },
 
   async take({ body: { name, amount, hash }, user }, res) {
+    try {
     amount = parseInt(amount);
     if (amount < 0) fail("Invalid amount");
 
@@ -258,6 +259,9 @@ export default {
     await db.lPush(`pot:${name}:payments`, hash);
 
     res.send({ payment });
+    } catch(e) {
+      bail(res, e.message);
+    } 
   },
 
   async bitcoin({ body: { txid, wallet } }, res) {
