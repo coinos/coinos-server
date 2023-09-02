@@ -20,7 +20,7 @@
     "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
     "date-fns": "^2.21.3",
     "dollars-to-words": "github:asoltys/dollars-to-words",
-    "fastify": "^4.5.3",
+    "fastify": "^4.10.2",
     "file-type": "^18.0.0",
     "fluent-ffmpeg": "^2.1.2",
     "got": "^12.5.3",

@@ -37,16 +37,16 @@ dependencies:
     version: 0.2.13
   clightning-client:
     specifier: github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc
-    version: github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05
+    version: git/github.com+SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05
   date-fns:
     specifier: ^2.21.3
     version: 2.29.3
   dollars-to-words:
     specifier: github:asoltys/dollars-to-words
-    version: github.com/asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37
+    version: git/github.com+asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37
   fastify:
-    specifier: ^4.5.3
-    version: 4.8.1
+    specifier: ^4.10.2
+    version: 4.10.2
   file-type:
     specifier: ^18.0.0
     version: 18.0.0
@@ -1855,14 +1855,15 @@ packages:
     resolution: {integrity: sha512-M3+i368lV0OYTJ5TfClIoPKEKSOF7112iiPdwgfSR0gN98BjA1Nk+c6oBHtfcVt9KiMxl+EQKHC1QNWo3ZOpYQ==}
     dev: false
 
-  /fastify@4.8.1:
-    resolution: {integrity: sha512-3an6yyXg7j5XPHTRxgFqUwIRaJPR7F8OPR8Uboo0SIgHx1orOqc9Y8Sl5Kz8+xK7JCy3c3mfRujskDjMu/nFfA==}
+  /fastify@4.10.2:
+    resolution: {integrity: sha512-0T+4zI6N3S8ex0LCZi3H4FasJR4AzWw834fUkPWvV8r6GBJkLmAOfFxH8f5V29Plef24IK0QSQD/tz1Nx+1UOA==}
     dependencies:
       '@fastify/ajv-compiler': 3.3.1
       '@fastify/error': 3.0.0
       '@fastify/fast-json-stringify-compiler': 4.1.0
       abstract-logging: 2.0.1
       avvio: 8.2.0
+      content-type: 1.0.4
       find-my-way: 7.3.1
       light-my-request: 5.6.1
       pino: 8.6.1
@@ -1871,7 +1872,7 @@ packages:
       rfdc: 1.3.0
       secure-json-parse: 2.5.0
       semver: 7.3.8
-      tiny-lru: 9.0.3
+      tiny-lru: 10.4.1
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -3430,9 +3431,9 @@ packages:
       real-require: 0.2.0
     dev: false
 
-  /tiny-lru@9.0.3:
-    resolution: {integrity: sha512-/i9GruRjXsnDgehxvy6iZ4AFNVxngEFbwzirhdulomMNPGPVV3ECMZOWSw0w4sRMZ9Al9m4jy08GPvRxRUGYlw==}
-    engines: {node: '>=6'}
+  /tiny-lru@10.4.1:
+    resolution: {integrity: sha512-buLIzw7ppqymuO3pt10jHk/6QMeZLbidihMQU+N6sogF6EnBzG0qtDWIHuhw1x3dyNgVL/KTGIZsTK81+yCzLg==}
+    engines: {node: '>=12'}
     dev: false
 
   /to-regex-range@5.0.1:
@@ -3653,8 +3654,8 @@ packages:
     engines: {node: '>=10'}
     dev: false
 
-  github.com/SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05:
-    resolution: {tarball: https://codeload.github.com/SimonVrouwe/lightning-client-js/tar.gz/946642bafca572fb5d9ce2dc1316d415fa950a05}
+  git/github.com+SimonVrouwe/lightning-client-js/946642bafca572fb5d9ce2dc1316d415fa950a05:
+    resolution: {commit: 946642bafca572fb5d9ce2dc1316d415fa950a05, repo: git@github.com:SimonVrouwe/lightning-client-js.git, type: git}
     name: clightning-client
     version: 0.1.4
     dependencies:
@@ -3664,8 +3665,8 @@ packages:
       - supports-color
     dev: false
 
-  github.com/asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37:
-    resolution: {tarball: https://codeload.github.com/asoltys/dollars-to-words/tar.gz/2139443f523facf106d2fbfa7571d1b63cd26f37}
+  git/github.com+asoltys/dollars-to-words/2139443f523facf106d2fbfa7571d1b63cd26f37:
+    resolution: {commit: 2139443f523facf106d2fbfa7571d1b63cd26f37, repo: git@github.com:asoltys/dollars-to-words.git, type: git}
     name: dollars-to-words
     version: 1.1.1
     dev: false
