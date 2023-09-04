@@ -9,10 +9,6 @@ import ln from "$lib/ln";
 export default {
   async get({ params: { hash } }, res) {
     let pr;
-    if (hash.startsWith("ln")) {
-      ({ payment_hash: hash } = await ln.decode(hash));
-    }
-
     let invoice = await g(`invoice:${hash}`);
 
     if (invoice) {

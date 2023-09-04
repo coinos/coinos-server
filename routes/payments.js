@@ -61,11 +61,11 @@ export default {
         let total = amount;
         let { amount_msat, payment_hash } = await ln.decode(payreq);
         if (amount_msat) total = Math.round(amount_msat / 1000);
-        let invoice = await g(`invoice:${payment_hash}`);
+        let invoice = await g(`invoice:${payreq}`);
 
         if (invoice) {
           if (invoice.uid === user.id) fail("Cannot send to self");
-          hash = payment_hash;
+          hash = payreq;
         } else {
           p = await debit(hash, total, maxfee, memo, user, types.lightning);
 
@@ -79,7 +79,8 @@ export default {
               maxfee: maxfee * 1000,
               retry_for: 5
             });
-            if (r.status !== "complete") fail("payment did not complete");
+
+            if (r.status !== "complete" || !r.payment_preimage) fail("payment did not complete");
             
             p.amount = -amount;
             p.tip = total - amount;
@@ -93,7 +94,7 @@ export default {
             await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
           } catch (e) {
             warn("something went wrong", e.message);
-            if (!(r && r.status === "complete")) {
+            if (!(r && r.status === "complete" && r.payment_preimage)) {
               let credit = Math.round(total * config.fee) - p.ourfee;
               warn("crediting balance", total + maxfee + p.ourfee);
               await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
