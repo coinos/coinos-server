@@ -67,21 +67,56 @@ export default {
           if (invoice.uid === user.id) fail("Cannot send to self");
           hash = payreq;
         } else {
-          p = await debit(hash, total, maxfee, memo, user, types.lightning);
-
           let r;
+
+          let { pays } = await ln.listpays(payreq);
+          if (pays.find(p => p.status === "complete"))
+            fail("Invoice has already been paid");
+
+          p = await debit(payreq, total, maxfee, memo, user, types.lightning);
+
+          let reverse = async () => {
+            if (
+              !(r && r.status === "complete" && r.payment_preimage) &&
+              (await g(`payment:${p.id}`))
+            ) {
+              await db.del(`payment:${p.id}`);
+
+              let credit = Math.round(total * config.fee) - p.ourfee;
+              warn("crediting balance", total + maxfee + p.ourfee);
+              await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
+
+              warn("crediting credits", credit);
+              await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+
+              warn("reversing payment", p.id);
+              await db.lRem(`${p.uid}:payments`, 1, p.id);
+            }
+          };
+
+          let timeout = setTimeout(reverse, 6000);
+
           try {
             l("paying lightning invoice", payreq);
 
-            r = await ln.pay({
-              bolt11: payreq.replace(/\s/g, "").toLowerCase(),
-              amount_msat: amount_msat ? undefined : amount * 1000,
-              maxfee: maxfee * 1000,
-              retry_for: 5
-            });
+            let timeout = ms =>
+              new Promise((_, f) =>
+                setTimeout(() => f(new Error("Timed out")), ms)
+              );
 
-            if (r.status !== "complete" || !r.payment_preimage) fail("payment did not complete");
-            
+            r = await Promise.race([
+              ln.pay({
+                bolt11: payreq.replace(/\s/g, "").toLowerCase(),
+                amount_msat: amount_msat ? undefined : amount * 1000,
+                maxfee: maxfee * 1000,
+                retry_for: 5
+              }),
+              timeout(5000)
+            ]);
+
+            if (r.status !== "complete" || !r.payment_preimage)
+              fail("Payment did not complete");
+
             p.amount = -amount;
             p.tip = total - amount;
             p.hash = r.payment_hash;
@@ -93,19 +128,9 @@ export default {
             l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
             await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
           } catch (e) {
+            clearTimeout(timeout);
             warn("something went wrong", e.message);
-            if (!(r && r.status === "complete" && r.payment_preimage)) {
-              let credit = Math.round(total * config.fee) - p.ourfee;
-              warn("crediting balance", total + maxfee + p.ourfee);
-              await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
-
-              warn("crediting credits", credit);
-              await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-
-              warn("reversing payment", p.id);
-              await db.lRem(`${p.uid}:payments`, 1, p.id);
-              await db.del(`payment:${p.id}`);
-            }
+            await reverse();
             throw e;
           }
         }
@@ -127,6 +152,7 @@ export default {
 
       res.send(p);
     } catch (e) {
+      warn(e.message);
       warn("failed to create payment", username, amount, hash, payreq);
       bail(res, e.message);
     }
@@ -234,35 +260,35 @@ export default {
 
   async take({ body: { name, amount, hash }, user }, res) {
     try {
-    amount = parseInt(amount);
-    if (amount < 0) fail("Invalid amount");
+      amount = parseInt(amount);
+      if (amount < 0) fail("Invalid amount");
 
-    await t(`pot:${name}`, async (balance, db) => {
-      if (balance < amount) fail("Insufficient funds");
-      await db
-        .multi()
-        .decrBy(`pot:${name}`, amount)
-        .exec();
-    });
-
-    if (!hash) {
-      hash = v4();
-      let { currency } = user;
-      await s(`invoice:${hash}`, {
-        currency,
-        rate: store.rates[currency],
-        uid: user.id,
-        received: 0
+      await t(`pot:${name}`, async (balance, db) => {
+        if (balance < amount) fail("Insufficient funds");
+        await db
+          .multi()
+          .decrBy(`pot:${name}`, amount)
+          .exec();
       });
-    }
 
-    let payment = await credit(hash, amount, name, name, types.pot);
-    await db.lPush(`pot:${name}:payments`, hash);
+      if (!hash) {
+        hash = v4();
+        let { currency } = user;
+        await s(`invoice:${hash}`, {
+          currency,
+          rate: store.rates[currency],
+          uid: user.id,
+          received: 0
+        });
+      }
 
-    res.send({ payment });
-    } catch(e) {
+      let payment = await credit(hash, amount, name, name, types.pot);
+      await db.lPush(`pot:${name}:payments`, hash);
+
+      res.send({ payment });
+    } catch (e) {
       bail(res, e.message);
-    } 
+    }
   },
 
   async bitcoin({ body: { txid, wallet } }, res) {
