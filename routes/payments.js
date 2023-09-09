@@ -75,46 +75,42 @@ export default {
 
           p = await debit(payreq, total, maxfee, memo, user, types.lightning);
 
-          let reverse = async () => {
-            if (
-              !(r && r.status === "complete" && r.payment_preimage) &&
-              (await g(`payment:${p.id}`))
-            ) {
-              await db.del(`payment:${p.id}`);
+          let check = async () => {
+            try {
+              let { pays } = await ln.listpays(payreq);
 
-              let credit = Math.round(total * config.fee) - p.ourfee;
-              warn("crediting balance", total + maxfee + p.ourfee);
-              await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
+              if ((!pays.length || pays[0].status === "failed") && (await g(`payment:${p.id}`))) {
+                await db.del(`payment:${p.id}`);
 
-              warn("crediting credits", credit);
-              await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+                let credit = Math.round(total * config.fee) - p.ourfee;
+                warn("crediting balance", total + maxfee + p.ourfee);
+                await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
 
-              warn("reversing payment", p.id);
-              await db.lRem(`${p.uid}:payments`, 1, p.id);
+                warn("crediting credits", credit);
+                await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+
+                warn("reversing payment", p.id);
+                await db.lRem(`${p.uid}:payments`, 1, p.id);
+              }
+            } catch (e) {
+              console.log(e);
+              err("Failed to reverse payment", r);
             }
           };
 
-          let timeout = setTimeout(reverse, 6000);
+          let interval = setInterval(check, 5000);
 
           try {
             l("paying lightning invoice", payreq);
 
-            let timeout = ms =>
-              new Promise((_, f) =>
-                setTimeout(() => f(new Error("Timed out")), ms)
-              );
+            r = await ln.pay({
+              bolt11: payreq.replace(/\s/g, "").toLowerCase(),
+              amount_msat: amount_msat ? undefined : amount * 1000,
+              maxfee: maxfee * 1000,
+              retry_for: 5
+            });
 
-            r = await Promise.race([
-              ln.pay({
-                bolt11: payreq.replace(/\s/g, "").toLowerCase(),
-                amount_msat: amount_msat ? undefined : amount * 1000,
-                maxfee: maxfee * 1000,
-                retry_for: 5
-              }),
-              timeout(5000)
-            ]);
-
-            if (r.status !== "complete" || !r.payment_preimage)
+            if (!(r.status === "complete" && r.payment_preimage))
               fail("Payment did not complete");
 
             p.amount = -amount;
@@ -128,11 +124,12 @@ export default {
             l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
             await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
           } catch (e) {
-            clearTimeout(timeout);
             warn("something went wrong", e.message);
-            await reverse();
+            await check();
             throw e;
           }
+
+          clearInterval(interval);
         }
       }
 
