@@ -130,6 +130,7 @@ export default {
             l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
             await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
           } catch (e) {
+            clearInterval(interval);
             warn("something went wrong", e.message);
             await check();
             throw e;
