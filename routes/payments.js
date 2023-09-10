@@ -73,11 +73,15 @@ export default {
           if (pays.find(p => p.status === "complete"))
             fail("Invoice has already been paid");
 
+          if (pays.find(p => p.status === "pending"))
+            fail("Payment is already underway");
+
           p = await debit(payreq, total, maxfee, memo, user, types.lightning);
 
           let check = async () => {
             try {
               let { pays } = await ln.listpays(payreq);
+              l("checking", payreq, pays);
 
               if ((!pays.length || pays[0].status === "failed") && (await g(`payment:${p.id}`))) {
                 await db.del(`payment:${p.id}`);
@@ -91,6 +95,8 @@ export default {
 
                 warn("reversing payment", p.id);
                 await db.lRem(`${p.uid}:payments`, 1, p.id);
+
+                clearInterval(interval);
               }
             } catch (e) {
               console.log(e);
