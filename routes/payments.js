@@ -82,17 +82,20 @@ export default {
 
           let check = async () => {
             checks++;
-            if (checks > 10) clearInterval(interval);
 
             try {
               let { pays } = await ln.listpays(payreq);
 
               let recordExists = !!(await g(`payment:${p.id}`));
-              let paymentFailed = (pays.length && pays[pays.length - 1].status === "failed")
+              let paymentFailed =
+                pays.length && pays[pays.length - 1].status === "failed";
 
               l("checking", payreq, recordExists, paymentFailed);
 
-              if (recordExists && paymentFailed) {
+              if (
+                recordExists &&
+                (paymentFailed || (checks > 5 && !pays.length))
+              ) {
                 await db.del(`payment:${p.id}`);
 
                 let credit = Math.round(total * config.fee) - p.ourfee;
@@ -135,7 +138,6 @@ export default {
             p.hash = r.payment_hash;
             p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
             p.ref = r.payment_preimage;
-
 
             await s(`payment:${p.id}`, p);
 
