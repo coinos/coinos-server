@@ -78,23 +78,19 @@ export default {
 
           p = await debit(payreq, total, maxfee, memo, user, types.lightning);
 
-          let checks = 0;
-
           let check = async () => {
-            checks++;
-
             try {
               let { pays } = await ln.listpays(payreq);
 
               let recordExists = !!(await g(`payment:${p.id}`));
               let paymentFailed =
-                pays.length && pays[pays.length - 1].status === "failed";
+                !pays.length || pays.every(p => p.status === "failed");
 
               l("checking", payreq, recordExists, paymentFailed);
 
               if (
                 recordExists &&
-                (paymentFailed || (checks > 5 && !pays.length))
+                paymentFailed
               ) {
                 await db.del(`payment:${p.id}`);
 
