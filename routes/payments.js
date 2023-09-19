@@ -78,12 +78,21 @@ export default {
 
           p = await debit(payreq, total, maxfee, memo, user, types.lightning);
 
+          let checks = 0;
+
           let check = async () => {
+            checks++;
+            if (checks > 10) clearInterval(interval);
+
             try {
               let { pays } = await ln.listpays(payreq);
-              l("checking", payreq, pays);
 
-              if ((!pays.length || pays[0].status === "failed") && (await g(`payment:${p.id}`))) {
+              let recordExists = !!(await g(`payment:${p.id}`));
+              let paymentFailed = (pays.length && pays[pays.length - 1].status === "failed")
+
+              l("checking", payreq, recordExists, paymentFailed);
+
+              if (recordExists && paymentFailed) {
                 await db.del(`payment:${p.id}`);
 
                 let credit = Math.round(total * config.fee) - p.ourfee;
@@ -119,18 +128,20 @@ export default {
             if (!(r.status === "complete" && r.payment_preimage))
               fail("Payment did not complete");
 
+            l("payment completed", p.id, r.payment_preimage);
+
             p.amount = -amount;
             p.tip = total - amount;
             p.hash = r.payment_hash;
             p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
             p.ref = r.payment_preimage;
 
+
             await s(`payment:${p.id}`, p);
 
             l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
             await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
           } catch (e) {
-            clearInterval(interval);
             warn("something went wrong", e.message);
             await check();
             throw e;
