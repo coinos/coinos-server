@@ -95,7 +95,7 @@ app.post("/requests", auth, requests.create);
 app.post("/requests/delete", auth, requests.destroy);
 
 app.post("/proxy", payments.proxy);
-app.post("/shopify/:id", auth, shopify);
+app.post("/shopify/:username/:id", shopify);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
