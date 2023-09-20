@@ -183,7 +183,7 @@ export default {
     try {
       l("updating user", user.username);
 
-      let { confirm, password, pin, newpin, username } = body;
+      let { confirm, password, pin, newpin, username, shopifyToken, shopifyStore } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
       if (typeof newpin !== "undefined") user.pin = newpin;
@@ -219,7 +219,9 @@ export default {
         "salt",
         "seed",
         "tokens",
-        "twofa"
+        "twofa",
+        "shopifyToken",
+        "shopifyStore"
       ];
 
       for (let a of attributes) {
