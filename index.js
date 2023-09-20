@@ -17,6 +17,7 @@ import invoices from "$routes/invoices";
 import users from "$routes/users";
 import payments from "$routes/payments";
 import requests from "$routes/requests";
+import shopify from "$routes/shopify";
 
 fillPool();
 
@@ -94,6 +95,7 @@ app.post("/requests", auth, requests.create);
 app.post("/requests/delete", auth, requests.destroy);
 
 app.post("/proxy", payments.proxy);
+app.post("/shopify/:id", auth, shopify);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
