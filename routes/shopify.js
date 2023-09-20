@@ -12,7 +12,8 @@ let query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) {
 }`;
 
 export default async ({ body, params: { id, username } }, res) => {
-  let user = await g(`user:${await g(`user:${username}`)}`);
+  let { uid } = body;
+  let user = await g(`user:${uid}`);
 
   let r = await got
     .post(
