@@ -1,5 +1,6 @@
 import got from "got";
 import { g } from "$lib/db";
+import { err } from "$lib/logging";
 
 let query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) { 
   orderMarkAsPaid(input: $input) { 
@@ -15,6 +16,7 @@ export default async ({ body: { hash }, params: { id } }, res) => {
   let p = await g(`payment:${hash}`);
   let user = await g(`user:${p.uid}`);
 
+  try {
   let r = await got
     .post(
       `https://${user.shopifyStore}.myshopify.com/admin/api/2023-07/graphql.json`,
@@ -30,6 +32,9 @@ export default async ({ body: { hash }, params: { id } }, res) => {
       }
     )
     .json();
+  } catch(e) {
+      err("problem marking shopify order as paid", e.message);
+  } 
 
   res.send(r);
 };
