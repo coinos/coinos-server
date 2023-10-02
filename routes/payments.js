@@ -131,7 +131,6 @@ export default {
 
             p.amount = -amount;
             p.tip = total - amount;
-            p.hash = r.payment_hash;
             p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
             p.ref = r.payment_preimage;
 
