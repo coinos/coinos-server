@@ -17,24 +17,24 @@ export default async ({ body: { hash }, params: { id } }, res) => {
   let user = await g(`user:${p.uid}`);
 
   try {
-  let r = await got
-    .post(
-      `https://${user.shopifyStore}.myshopify.com/admin/api/2023-07/graphql.json`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": user.shopifyToken
-        },
-        json: {
-          query,
-          variables: { input: { id: `gid://shopify/Order/${id}` } }
+    let r = await got
+      .post(
+        `https://${user.shopifyStore}.myshopify.com/admin/api/2023-07/graphql.json`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": user.shopifyToken,
+          },
+          json: {
+            query,
+            variables: { input: { id: `gid://shopify/Order/${id}` } },
+          },
         }
-      }
-    )
-    .json();
-  } catch(e) {
-      err("problem marking shopify order as paid", e.message);
-  } 
+      )
+      .json();
 
-  res.send(r);
+    res.send(r);
+  } catch (e) {
+    err("problem marking shopify order as paid", e.message);
+  }
 };
