@@ -186,7 +186,7 @@ export default {
       let { confirm, password, pin, newpin, username, shopifyToken, shopifyStore } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
-      if (typeof newpin !== "undefined") user.pin = newpin;
+      if (typeof newpin !== "undefined" && newpin.length === 6) user.pin = newpin;
       if (!user.pin || user.pin === "undefined") delete user.pin;
 
       let exists;
@@ -238,6 +238,7 @@ export default {
         `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
         user.id
       );
+      
       await s(`user:${user.id}`, user);
 
       emit(user.id, "user", user);
