@@ -187,7 +187,7 @@ export default {
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6) user.pin = newpin;
-      if (!user.pin || user.pin === "undefined") delete user.pin;
+      if (user.pin === "delete") delete user.pin;
 
       let exists;
       if (username) exists = await getUser(username);
