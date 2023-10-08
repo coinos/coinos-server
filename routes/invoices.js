@@ -7,14 +7,13 @@ import config from "$config";
 import ln from "$lib/ln";
 
 export default {
-  async get({ params: { hash } }, res) {
+  async get({ params: { id } }, res) {
     let pr;
-    let invoice = await g(`invoice:${hash}`);
+    let invoice = await g(`invoice:${id}`);
 
     if (invoice) {
       delete invoice.secret;
       invoice.user = pick(await g(`user:${invoice.uid}`), ['id', 'profile', 'banner', 'currency', 'username']);
-      invoice.id = hash;
     } else if (config.classic) {
       invoice = await got(`${config.classic}/invoice/${pr}`).json();
       if (invoice) {

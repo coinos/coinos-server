@@ -61,7 +61,8 @@ export default {
         let total = amount;
         let { amount_msat, payment_hash } = await ln.decode(payreq);
         if (amount_msat) total = Math.round(amount_msat / 1000);
-        let invoice = await g(`invoice:${payreq}`);
+        let iid = await g(`invoice:${payreq}`);
+        let invoice = await g(`invoice:${iid}`);
 
         if (invoice) {
           if (invoice.uid === user.id) fail("Cannot send to self");
@@ -270,7 +271,7 @@ export default {
     });
   },
 
-  async take({ body: { name, amount, hash }, user }, res) {
+  async take({ body: { name, amount, id }, user }, res) {
     try {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
@@ -283,11 +284,13 @@ export default {
           .exec();
       });
 
-      if (!hash) {
-        hash = v4();
+      if (!id) {
+        id = v4();
         let { currency } = user;
-        await s(`invoice:${hash}`, {
+        await s(`invoice:${id}`, {
           currency,
+          id,
+          hash: id,
           rate: store.rates[currency],
           uid: user.id,
           received: 0
@@ -310,7 +313,7 @@ export default {
         for (let { address, amount, category, vout } of details) {
           if (category !== "receive") continue;
           let p = await g(`payment:${txid}:${vout}`);
-          if (!p || confirmations < 1) {
+          if (!p) {
             await credit(
               address,
               sats(amount),
@@ -318,7 +321,7 @@ export default {
               `${txid}:${vout}`,
               types.bitcoin
             );
-          } else {
+          } else if(confirmations >= 1) {
             await confirm(address, txid, vout);
           }
         }
@@ -400,9 +403,10 @@ export default {
         value
       } of tx.vout) {
         total += sats(value);
+        let iid = await g(`invoice:${address}`);
         if (
           (await bc.getAddressInfo(address)).ismine &&
-          !(await g(`invoice:${address}`))
+          !iid
         )
           change += sats(value);
       }
@@ -459,9 +463,12 @@ export default {
 
     let { status } = r;
     if (status === "succeeded") {
+      let id = v4();
       let hash = r.id;
       let memo = "stripe";
-      await s(`invoice:${hash}`, {
+      await s(`invoice:${id}`, {
+        id,
+        hash: id,
         uid: user.id,
         received: 0
       });
