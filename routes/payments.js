@@ -61,7 +61,9 @@ export default {
         let total = amount;
         let { amount_msat, payment_hash } = await ln.decode(payreq);
         if (amount_msat) total = Math.round(amount_msat / 1000);
-        let iid = await g(`invoice:${payreq}`);
+
+        let iid = await g(`invoice:${hash}`);
+        if (iid && iid.hash) iid = iid.hash;
         let invoice = await g(`invoice:${iid}`);
 
         if (invoice) {
@@ -89,10 +91,7 @@ export default {
 
               l("checking", payreq, recordExists, paymentFailed);
 
-              if (
-                recordExists &&
-                paymentFailed
-              ) {
+              if (recordExists && paymentFailed) {
                 await db.del(`payment:${p.id}`);
 
                 let credit = Math.round(total * config.fee) - p.ourfee;
@@ -321,7 +320,7 @@ export default {
               `${txid}:${vout}`,
               types.bitcoin
             );
-          } else if(confirmations >= 1) {
+          } else if (confirmations >= 1) {
             await confirm(address, txid, vout);
           }
         }
@@ -404,10 +403,7 @@ export default {
       } of tx.vout) {
         total += sats(value);
         let iid = await g(`invoice:${address}`);
-        if (
-          (await bc.getAddressInfo(address)).ismine &&
-          !iid
-        )
+        if ((await bc.getAddressInfo(address)).ismine && !iid)
           change += sats(value);
       }
 
