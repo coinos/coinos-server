@@ -296,11 +296,12 @@ export default {
         });
       }
 
-      let payment = await credit(hash, amount, name, name, types.pot);
-      await db.lPush(`pot:${name}:payments`, hash);
+      let payment = await credit(id, amount, name, name, types.pot);
+      await db.lPush(`pot:${name}:payments`, payment.id);
 
       res.send({ payment });
     } catch (e) {
+      warn("problem withdrawing from pot", e.message);
       bail(res, e.message);
     }
   },
