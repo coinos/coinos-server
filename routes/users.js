@@ -200,7 +200,7 @@ export default {
         if (user.username.toLowerCase() !== username.toLowerCase())
           l("changing username", user.username, username);
 
-        await db.del(`user:${username}`);
+        await db.del(`user:${user.username}`);
         user.username = username;
       }
 
