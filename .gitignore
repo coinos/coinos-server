@@ -6,3 +6,4 @@ compose.yml
 .env
 *.flitevox
 mimic
+watcher.sh
