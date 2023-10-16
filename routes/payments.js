@@ -367,7 +367,7 @@ export default {
 
       res.send({ feeRate, min, max, fee, tx });
     } catch (e) {
-      warn("problem estimating fee", e.message);
+      warn("problem estimating fee", e.message, user.username);
       bail(res, "problem estimating fee");
     }
   },
