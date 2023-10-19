@@ -31,20 +31,17 @@ export default {
           new SendEmailCommand({
             Destination: {
               CcAddresses: [],
-              ToAddresses: [config.support],
+              ToAddresses: [config.support]
             },
             Message: {
               Body: {
-                Html: {
-                  Charset,
-                  Data: `${username}<br><br>${message.replace(/\n/g, "<br>")}`
-                },
-                Text: { Charset, Data: `${username}\n\n${message}` }
+                Html: { Charset, Data: message.replace(/\n/g, "<br>") },
+                Text: { Charset, Data: message }
               },
-              Subject: { Charset, Data: body.subject || "Support Request" }
+                Subject: { Charset, Data: body.subject || 'Support Request' + (username ? 'From ' +  username : '') }
             },
             ReplyToAddresses: [email],
-              Source: config.support
+            Source: config.support
           })
         );
 
