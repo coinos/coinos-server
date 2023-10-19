@@ -32,7 +32,6 @@ export default {
             Destination: {
               CcAddresses: [],
               ToAddresses: [config.support],
-              ReplyToAddresses: [email]
             },
             Message: {
               Body: {
@@ -44,7 +43,8 @@ export default {
               },
               Subject: { Charset, Data: body.subject || "Support Request" }
             },
-            Source: config.support
+            ReplyToAddresses: [email],
+              Source: config.support
           })
         );
 
