@@ -38,7 +38,12 @@ export default {
                 Html: { Charset, Data: message.replace(/\n/g, "<br>") },
                 Text: { Charset, Data: message }
               },
-                Subject: { Charset, Data: body.subject || 'Support Request' + (username ? 'From ' +  username : '') }
+              Subject: {
+                Charset,
+                Data:
+                  body.subject ||
+                  "Support Request" + (username ? " From " + username : "")
+              }
             },
             ReplyToAddresses: [email],
             Source: config.support
