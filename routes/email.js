@@ -1,7 +1,7 @@
 import { bail } from "$lib/utils";
 import got from "got";
 import config from "$config";
-import { l } from "$lib/logging";
+import { l, warn } from "$lib/logging";
 import { SESClient, CloneReceiptRuleSetCommand } from "@aws-sdk/client-ses";
 import { SendEmailCommand } from "@aws-sdk/client-ses";
 
@@ -11,11 +11,6 @@ export default {
       let { email, message, username, token: response } = body;
 
       let Charset = "UTF-8";
-      let Data = `
-        ${username}
-
-        ${message}
-      `;
 
       let { recaptcha: secret } = config;
       let { success } = await got
@@ -30,6 +25,7 @@ export default {
       if (success || response === config.adminpass) {
         delete body.token;
 
+        warn("support request from", email);
         let client = new SESClient({ region: "us-east-2" });
         await client.send(
           new SendEmailCommand({
@@ -40,10 +36,13 @@ export default {
             },
             Message: {
               Body: {
-                Html: { Charset, Data },
-                Text: { Charset, Data }
+                Html: {
+                  Charset,
+                  Data: `${username}<br><br>${message.replace(/\n/g, "<br>")}`
+                },
+                Text: { Charset, Data: `${username}\n\n${message}` }
               },
-                Subject: { Charset, Data: body.subject || "Support Request" }
+              Subject: { Charset, Data: body.subject || "Support Request" }
             },
             Source: config.support
           })
