@@ -8,18 +8,26 @@ import { SendEmailCommand } from "@aws-sdk/client-ses";
 export default {
   async send({ body }, res) {
     try {
-      let { token: response } = body;
+      let { email, message, username, token: response } = body;
+
+      let Charset = "UTF-8";
+      let Data = `
+        ${username}
+
+        ${message}
+      `;
+
       let { recaptcha: secret } = config;
       let { success } = await got
         .post("https://www.google.com/recaptcha/api/siteverify", {
           form: {
             secret,
-            response,
-          },
+            response
+          }
         })
         .json();
 
-      if (success || body.token === config.adminpass) {
+      if (success || response === config.adminpass) {
         delete body.token;
 
         let client = new SESClient({ region: "us-east-2" });
@@ -28,24 +36,16 @@ export default {
             Destination: {
               CcAddresses: [],
               ToAddresses: [config.support],
+              ReplyToAddresses: [email]
             },
             Message: {
               Body: {
-                Html: {
-                  Charset: "UTF-8",
-                  Data: JSON.stringify(body),
-                },
-                Text: {
-                  Charset: "UTF-8",
-                  Data: JSON.stringify(body),
-                },
+                Html: { Charset, Data },
+                Text: { Charset, Data }
               },
-              Subject: {
-                Charset: "UTF-8",
-                Data: body.subject || "Support Request",
-              },
+                Subject: { Charset, Data: body.subject || "Support Request" }
             },
-            Source: config.support,
+            Source: config.support
           })
         );
 
@@ -56,5 +56,5 @@ export default {
     } catch (e) {
       console.log(e);
     }
-  },
+  }
 };
