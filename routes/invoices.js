@@ -8,8 +8,6 @@ import ln from "$lib/ln";
 
 export default {
   async get({ params: { id } }, res) {
-    let pr;
-
     let invoice = await g(`invoice:${id}`);
     if (typeof invoice === "string") invoice = await g(`invoice:${invoice}`);
 
@@ -20,10 +18,11 @@ export default {
         "profile",
         "banner",
         "currency",
-        "username"
+        "username",
+        "pubkey"
       ]);
     } else if (config.classic) {
-      invoice = await got(`${config.classic}/invoice/${pr}`).json();
+      invoice = await got(`${config.classic}/invoice/${id}`).json();
       if (invoice) {
         invoice.id = invoice.uuid;
         invoice.classic = true;
