@@ -183,10 +183,19 @@ export default {
     try {
       l("updating user", user.username);
 
-      let { confirm, password, pin, newpin, username, shopifyToken, shopifyStore } = body;
+      let {
+        confirm,
+        password,
+        pin,
+        newpin,
+        username,
+        shopifyToken,
+        shopifyStore
+      } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
-      if (typeof newpin !== "undefined" && newpin.length === 6) user.pin = newpin;
+      if (typeof newpin !== "undefined" && newpin.length === 6)
+        user.pin = newpin;
       if (user.pin === "delete") delete user.pin;
 
       let exists;
@@ -238,7 +247,7 @@ export default {
         `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
         user.id
       );
-      
+
       await s(`user:${user.id}`, user);
 
       emit(user.id, "user", user);
@@ -416,17 +425,19 @@ export default {
   },
 
   async contacts({ user: { id } }, res) {
-    let i = (await g(`${id}:cindex`)) || 0;
-    let payments = (await db.lRange(`${id}:payments`, i, -1)) || [];
-    await db.incrBy(`${id}:cindex`, payments.length);
+    let lastlen = (await g(`${id}:lastlen`)) || 0;
+    let len = await db.lLen(`${id}:payments`);
+    let payments = (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
+    await db.set(`${id}:lastlen`, len);
 
     let contacts = (await g(`${id}:contacts`)) || [];
 
     for (let { ref } of (
-      await Promise.all(payments.map(async id => await g(`payment:${id}`)))
+      await Promise.all(payments.reverse().map(async id => await g(`payment:${id}`)))
     ).filter(p => p.type === types.internal && p.ref)) {
-      !~contacts.findIndex(({ id }) => id === ref) &&
-        contacts.push(await g(`user:${ref}`));
+      if (!~contacts.findIndex(({ id }) => id === ref)) {
+        contacts.unshift(await g(`user:${ref}`));
+      }
     }
 
     await s(`${id}:contacts`, contacts);
