@@ -158,12 +158,12 @@ export default {
           p = await debit(hash, amount, 0, memo, user);
           await credit(hash, amount, memo, user.id);
         } else {
-          let pot = name || v4();
-          memo = pot;
-          p = await debit(hash, amount, 0, memo, user, types.pot);
-          await db.incrBy(`pot:${pot}`, amount);
-          await db.lPush(`pot:${pot}:payments`, p.id);
-          l("funded pot", pot);
+          let fund = name || v4();
+          memo = fund;
+          p = await debit(hash, amount, 0, memo, user, types.fund);
+          await db.incrBy(`fund:${fund}`, amount);
+          await db.lPush(`fund:${fund}:payments`, p.id);
+          l("funded fund", fund);
         }
       }
 
@@ -248,11 +248,11 @@ export default {
     }
   },
 
-  async pot({ params: { name } }, res) {
-    let amount = await g(`pot:${name}`);
+  async fund({ params: { name } }, res) {
+    let amount = await g(`fund:${name}`);
     if (typeof amount === "undefined" || amount === null)
-      return bail(res, "pot not found");
-    let payments = (await db.lRange(`pot:${name}:payments`, 0, -1)) || [];
+      return bail(res, "fund not found");
+    let payments = (await db.lRange(`fund:${name}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
 
     await Promise.all(
@@ -264,12 +264,12 @@ export default {
   },
 
   async withdraw({ params: { name } }, res) {
-    let maxWithdrawable = await g(`pot:${name}`);
+    let maxWithdrawable = await g(`fund:${name}`);
     res.send({
       tag: "withdrawRequest",
       callback: `${URL}/lnurlw/${name}`,
       k1: name,
-      defaultDescription: `Withdraw from coinos pot ${name}`,
+      defaultDescription: `Withdraw from coinos fund ${name}`,
       minWithdrawable: 0,
       maxWithdrawable
     });
@@ -280,11 +280,11 @@ export default {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
-      await t(`pot:${name}`, async (balance, db) => {
+      await t(`fund:${name}`, async (balance, db) => {
         if (balance < amount) fail("Insufficient funds");
         await db
           .multi()
-          .decrBy(`pot:${name}`, amount)
+          .decrBy(`fund:${name}`, amount)
           .exec();
       });
 
@@ -301,12 +301,12 @@ export default {
         });
       }
 
-      let payment = await credit(id, amount, name, name, types.pot);
-      await db.lPush(`pot:${name}:payments`, payment.id);
+      let payment = await credit(id, amount, name, name, types.fund);
+      await db.lPush(`fund:${name}:payments`, payment.id);
 
       res.send({ payment });
     } catch (e) {
-      warn("problem withdrawing from pot", e.message);
+      warn("problem withdrawing from fund", e.message);
       bail(res, e.message);
     }
   },
