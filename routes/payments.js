@@ -36,7 +36,7 @@ catchUp();
 export default {
   async create({ body, user }, res) {
     warn(JSON.stringify(body));
-    let { amount, hash, maxfee, name, memo, payreq, username } = body;
+    let { amount, hash, maxfee, fund, memo, payreq, username } = body;
 
     try {
       if (await g('freeze')) fail("Problem sending payment");
@@ -157,10 +157,8 @@ export default {
         if (hash) {
           p = await debit(hash, amount, 0, memo, user);
           await credit(hash, amount, memo, user.id);
-        } else {
-          let fund = name || v4();
-          memo = fund;
-          p = await debit(hash, amount, 0, memo, user, types.fund);
+        } else if (fund) {
+          p = await debit(hash, amount, 0, fund, user, types.fund);
           await db.incrBy(`fund:${fund}`, amount);
           await db.lPush(`fund:${fund}:payments`, p.id);
           l("funded fund", fund);
@@ -275,34 +273,34 @@ export default {
     });
   },
 
-  async take({ body: { name, amount, id }, user }, res) {
+  async take({ body: { id, amount, invoice: iid }, user }, res) {
     try {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
-      await t(`fund:${name}`, async (balance, db) => {
+      await t(`fund:${id}`, async (balance, db) => {
         if (balance < amount) fail("Insufficient funds");
         await db
           .multi()
-          .decrBy(`fund:${name}`, amount)
+          .decrBy(`fund:${id}`, amount)
           .exec();
       });
 
-      if (!id) {
-        id = v4();
+      if (!iid) {
+        iid = v4();
         let { currency } = user;
-        await s(`invoice:${id}`, {
+        await s(`invoice:${iid}`, {
           currency,
-          id,
-          hash: id,
+          id: iid,
+          hash: iid,
           rate: store.rates[currency],
           uid: user.id,
           received: 0
         });
       }
 
-      let payment = await credit(id, amount, name, name, types.fund);
-      await db.lPush(`fund:${name}:payments`, payment.id);
+      let payment = await credit(iid, amount, id, id, types.fund);
+      await db.lPush(`fund:${id}:payments`, payment.id);
 
       res.send({ payment });
     } catch (e) {
