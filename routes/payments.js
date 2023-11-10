@@ -35,10 +35,15 @@ catchUp();
 
 export default {
   async create({ body, user }, res) {
+    warn(JSON.stringify(body));
     let { amount, hash, maxfee, name, memo, payreq, username } = body;
 
     try {
+      if (await g('freeze')) fail("Problem sending payment");
+
       amount = parseInt(amount);
+      if (amount < 0) fail("Invalid amount");
+
       maxfee = maxfee ? parseInt(maxfee) : 0;
       if (maxfee < 0) fail("Max fee cannot be negative");
 
@@ -368,7 +373,7 @@ export default {
 
       res.send({ feeRate, min, max, fee, tx });
     } catch (e) {
-      warn("problem estimating fee", e.message, user.username);
+      warn("problem estimating fee", e.message, user.username, amount, address);
       bail(res, "problem estimating fee");
     }
   },
@@ -515,6 +520,17 @@ export default {
         if (bal < 0) s(k, 0);
       }
 
+      res.send("ok");
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
+  },
+
+  async freeze({ body: { secret }}, res) {
+    try {
+      if (secret !== config.adminpass) fail("unauthorized");
+      await s('freeze', true);
       res.send("ok");
     } catch (e) {
       console.log(e);
