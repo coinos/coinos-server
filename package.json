@@ -36,7 +36,7 @@
     "pino-pretty": "^7.0.0",
     "pump": "^3.0.0",
     "readable-stream-clone": "^0.0.7",
-    "redis": "^4.3.1",
+    "redis": "^4.6.10",
     "sharp": "^0.31.1",
     "uuid": "8",
     "web-push": "^3.4.4",
