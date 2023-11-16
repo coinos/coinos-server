@@ -39,7 +39,7 @@ export default {
     let { amount, hash, maxfee, fund, memo, payreq, username } = body;
 
     try {
-      if (await g('freeze')) fail("Problem sending payment");
+      if (await g("freeze")) fail("Problem sending payment");
 
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
@@ -513,9 +513,38 @@ export default {
   async fix({ body: { uid, username }, user }, res) {
     try {
       if (!user.admin) fail("unauthorized");
+
       for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
         let bal = await g(k);
         if (bal < 0) s(k, 0);
+      }
+
+      for await (let k of db.scanIterator({ MATCH: "user:*" })) {
+        let u = await g(k);
+        let id = k.split(":")[1];
+
+        if (typeof u === "String") {
+          id = u;
+          u = await g(`user:${u}`);
+        }
+
+        if (!(u && u.username)) continue;
+
+        let touched;
+
+        console.log(u.username, u.profile, u.banner);
+
+        if (u.profile) {
+          u.profile = `${u.id}-profile`;
+          touched = true;
+        }
+
+        if (u.banner) {
+          u.banner = `${u.id}-banner`;
+          touched = true;
+        }
+
+        if (touched) await s(`user:${u.id}`, u);
       }
 
       res.send("ok");
@@ -525,10 +554,10 @@ export default {
     }
   },
 
-  async freeze({ body: { secret }}, res) {
+  async freeze({ body: { secret } }, res) {
     try {
       if (secret !== config.adminpass) fail("unauthorized");
-      await s('freeze', true);
+      await s("freeze", true);
       res.send("ok");
     } catch (e) {
       console.log(e);
