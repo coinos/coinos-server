@@ -109,6 +109,7 @@ export default {
         "username",
         "banner",
         "profile",
+        "banner",
         "address",
         "currency",
         "npub",
@@ -132,9 +133,10 @@ export default {
   async create(req, res) {
     try {
       const ip = req.headers["cf-connecting-ip"];
-      let { cipher, pubkey, password, username, salt } = req.body.user;
+      let { profile, cipher, pubkey, password, username, salt } = req.body.user;
 
       let user = {
+        profile,
         cipher,
         pubkey,
         password,
@@ -184,6 +186,8 @@ export default {
       l("updating user", user.username);
 
       let {
+        profile,
+        banner,
         confirm,
         password,
         pin,
@@ -215,6 +219,7 @@ export default {
 
       let attributes = [
         "address",
+        "banner",
         "cipher",
         "currencies",
         "currency",
@@ -224,6 +229,7 @@ export default {
         "fiat",
         "locktime",
         "prompt",
+        "profile",
         "pubkey",
         "salt",
         "seed",
