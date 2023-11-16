@@ -448,7 +448,7 @@ export default {
 
     await s(`${id}:contacts`, contacts);
 
-    res.send(contacts);
+      res.send(contacts.map(u => pick(u, fields)));
   },
 
   async del({ params: { username }, headers: { authorization } }, res) {
