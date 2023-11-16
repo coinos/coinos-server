@@ -519,6 +519,10 @@ export default {
         if (bal < 0) s(k, 0);
       }
 
+      for await (let k of db.scanIterator({ MATCH: "*:lastlen" })) {
+        await db.del(k);
+      }
+
       for await (let k of db.scanIterator({ MATCH: "user:*" })) {
         let u = await g(k);
         let id = k.split(":")[1];
