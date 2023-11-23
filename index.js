@@ -81,6 +81,8 @@ app.post("/user", auth, users.update);
 app.post("/reset", auth, users.reset);
 app.post("/upload/:type", users.upload);
 app.get("/users/delete/:username", users.del);
+app.post("/acl", users.acl);
+app.post("/superuser", users.superuser);
 
 app.post("/login", users.login);
 
