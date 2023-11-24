@@ -502,7 +502,7 @@ export default {
   },
 
   async superuser({ body: { username } }, res) {
-    if (username === config.mqtt.username) res.send({ ok: true });
+    if (username === config.mqtt2.username) res.send({ ok: true });
     else bail(res, "unauthorized");
   },
 };
