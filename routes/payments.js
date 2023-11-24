@@ -221,6 +221,7 @@ export default {
 
   async get({ params: { hash } }, res) {
     let p = await g(`payment:${hash}`);
+    if (typeof p === "string") p = await g(`payment:${p}`);
     if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
     res.send(p);
   },
@@ -316,6 +317,8 @@ export default {
         for (let { address, amount, category, vout } of details) {
           if (category !== "receive") continue;
           let p = await g(`payment:${txid}:${vout}`);
+          if (typeof p === "string") p = await g(`payment:${p}`);
+
           if (!p) {
             await credit(
               address,
@@ -331,6 +334,7 @@ export default {
       }
       res.send({});
     } catch (e) {
+      console.log(e);
       warn(`problem processing ${txid}`);
       bail(res, e.message);
     }
@@ -527,7 +531,7 @@ export default {
         let u = await g(k);
         let id = k.split(":")[1];
 
-        if (typeof u === "String") {
+        if (typeof u === "string") {
           id = u;
           u = await g(`user:${u}`);
         }
