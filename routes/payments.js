@@ -6,7 +6,7 @@ import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
 import { bail, fail, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
-import { debit, credit, confirm, types } from "$lib/payments";
+import { debit, credit, confirm, types, payLightning } from "$lib/payments";
 import got from "got";
 
 import bc from "$lib/bitcoin";
@@ -44,9 +44,6 @@ export default {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
-      maxfee = maxfee ? parseInt(maxfee) : 0;
-      if (maxfee < 0) fail("Max fee cannot be negative");
-
       await requirePin({ body, user });
 
       let p;
@@ -63,94 +60,7 @@ export default {
           })
           .json();
       } else if (payreq) {
-        let total = amount;
-        let { amount_msat, payment_hash } = await ln.decode(payreq);
-        if (amount_msat) total = Math.round(amount_msat / 1000);
-
-        let iid = await g(`invoice:${hash}`);
-        if (iid && iid.hash) iid = iid.hash;
-        let invoice = await g(`invoice:${iid}`);
-
-        if (invoice) {
-          if (invoice.uid === user.id) fail("Cannot send to self");
-          hash = payreq;
-        } else {
-          let r;
-
-          let { pays } = await ln.listpays(payreq);
-          if (pays.find(p => p.status === "complete"))
-            fail("Invoice has already been paid");
-
-          if (pays.find(p => p.status === "pending"))
-            fail("Payment is already underway");
-
-          p = await debit(payreq, total, maxfee, memo, user, types.lightning);
-
-          let check = async () => {
-            try {
-              let { pays } = await ln.listpays(payreq);
-
-              let recordExists = !!(await g(`payment:${p.id}`));
-              let paymentFailed =
-                !pays.length || pays.every(p => p.status === "failed");
-
-              l("checking", payreq, recordExists, paymentFailed);
-
-              if (recordExists && paymentFailed) {
-                await db.del(`payment:${p.id}`);
-
-                let credit = Math.round(total * config.fee) - p.ourfee;
-                warn("crediting balance", total + maxfee + p.ourfee);
-                await db.incrBy(`balance:${p.uid}`, total + maxfee + p.ourfee);
-
-                warn("crediting credits", credit);
-                await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-
-                warn("reversing payment", p.id);
-                await db.lRem(`${p.uid}:payments`, 1, p.id);
-
-                clearInterval(interval);
-              }
-            } catch (e) {
-              console.log(e);
-              err("Failed to reverse payment", r);
-            }
-          };
-
-          let interval = setInterval(check, 5000);
-
-          try {
-            l("paying lightning invoice", payreq);
-
-            r = await ln.pay({
-              bolt11: payreq.replace(/\s/g, "").toLowerCase(),
-              amount_msat: amount_msat ? undefined : amount * 1000,
-              maxfee: maxfee * 1000,
-              retry_for: 5
-            });
-
-            if (!(r.status === "complete" && r.payment_preimage))
-              fail("Payment did not complete");
-
-            l("payment completed", p.id, r.payment_preimage);
-
-            p.amount = -amount;
-            p.tip = total - amount;
-            p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
-            p.ref = r.payment_preimage;
-
-            await s(`payment:${p.id}`, p);
-
-            l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
-            await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
-          } catch (e) {
-            warn("something went wrong", e.message);
-            await check();
-            throw e;
-          }
-
-          clearInterval(interval);
-        }
+        p = await payLightning(user, payreq, amount, maxfee, memo);
       }
 
       if (!p) {
@@ -586,17 +496,26 @@ export default {
 
   async lnaddress({ params: { lnaddress, amount }, user }, res) {
     try {
+      await requirePin({ body, user });
+
+      let maxfee = 5000;
       let [username, domain] = lnaddress.split("@");
-      let { minSendable, maxSendable, callback } = await got(
+      let { minSendable, maxSendable, callback, metadata } = await got(
         `https://${domain}/.well-known/lnurlp/${username}`
       ).json();
 
-        if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
+      let memo = metadata["text/plain"] || "";
+      if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
         fail("amount out of range");
 
       let { pr } = await got(`${callback}?amount=${amount}`).json();
-      console.log(pr);
-      res.send(lnurl);
+      let p = await payLightning(user, pr, amount, maxfee, memo);
+      if (!p) {
+        p = await debit(hash, amount, 0, memo, user);
+        await credit(hash, amount, memo, user.id);
+      }
+
+      res.send(p);
     } catch (e) {
       bail(res, e.message);
     }
