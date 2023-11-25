@@ -582,5 +582,23 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
+  },
+
+  async lnaddress({ params: { lnaddress, amount }, user }, res) {
+    try {
+      let [username, domain] = lnaddress.split("@");
+      let { minSendable, maxSendable, callback } = await got(
+        `https://${domain}/.well-known/lnurlp/${username}`
+      ).json();
+
+        if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
+        fail("amount out of range");
+
+      let { pr } = await got(`${callback}?amount=${amount}`).json();
+      console.log(pr);
+      res.send(lnurl);
+    } catch (e) {
+      bail(res, e.message);
+    }
   }
 };

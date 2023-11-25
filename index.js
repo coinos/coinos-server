@@ -58,6 +58,7 @@ app.get("/fund/:name/withdraw", payments.withdraw);
 app.post("/take", auth, payments.take);
 app.post("/buy", auth, payments.buy);
 app.post("/print", auth, payments.print);
+app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
