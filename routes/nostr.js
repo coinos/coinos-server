@@ -185,15 +185,14 @@ export default {
   },
 
   async identities(req, res) {
-    res.send({
-      names: {
-        coinos:
-          "ba80990666ef0b6f4ba5059347beb13242921e54669e680064ca755256a1e3a6",
-        adam:
-          "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8",
-        asoltys:
-          "566c166f3adab0c8fba5da015b0b3bcc8eb3696b455f2a1d43bfbd97059646a8"
-      }
-    });
+    let names = {};
+    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
+      let u = await g(k);
+      console.log("U", u)
+      if (typeof u === "string") u = await g(`user:${u}`);
+      if (u && u.username && u.pubkey) names[u.username] = u.pubkey;
+    }
+
+    res.send({ names });
   }
 };
