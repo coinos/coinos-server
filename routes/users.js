@@ -356,9 +356,11 @@ export default {
         payments.reverse().map(async (id) => await g(`payment:${id}`))
       )
     ).filter((p) => p.type === types.internal && p.ref)) {
-      let i = contacts.findIndex(({ id }) => id === ref)
+      let i = contacts.findIndex((c) => c && c.id === ref);
       if (~i) contacts.splice(i, 1);
-      contacts.unshift(await g(`user:${ref}`));
+      let u = await g(`user:${ref}`);
+      if (typeof u === "string") u = await g(`user:${ref}`);
+      if (u) contacts.unshift(u);
     }
 
     await s(`${id}:contacts`, contacts);
