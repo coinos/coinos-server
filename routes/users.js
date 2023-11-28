@@ -356,9 +356,9 @@ export default {
         payments.reverse().map(async (id) => await g(`payment:${id}`))
       )
     ).filter((p) => p.type === types.internal && p.ref)) {
-      if (!~contacts.findIndex(({ id }) => id === ref)) {
-        contacts.unshift(await g(`user:${ref}`));
-      }
+      let i = contacts.findIndex(({ id }) => id === ref)
+      if (~i) contacts.splice(i, 1);
+      contacts.unshift(await g(`user:${ref}`));
     }
 
     await s(`${id}:contacts`, contacts);
@@ -407,6 +407,11 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
+  },
+
+  async printerlogin({ body: { username, topic } }, res) {
+    if (username === topic) res.send({ ok: true });
+    else bail(res, "unauthorized");
   },
 
   async acl({ body: { username, topic } }, res) {
