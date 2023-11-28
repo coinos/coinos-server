@@ -7,6 +7,7 @@ import { l, err, warn } from "$lib/logging";
 import { bail, fail, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import { debit, credit, confirm, types, payLightning } from "$lib/payments";
+import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
 
 import bc from "$lib/bitcoin";
@@ -15,12 +16,12 @@ import ln from "$lib/ln";
 let seen = [];
 let catchUp = async () => {
   let txns = await bc.listTransactions("*", 50);
-  txns = txns.filter(tx => tx.category === "receive" && tx.confirmations > 0);
+  txns = txns.filter((tx) => tx.category === "receive" && tx.confirmations > 0);
   for (let { txid } of txns) {
     try {
       if (seen.includes(txid)) continue;
       await got.post(`http://localhost:${process.env.PORT || 3119}/bitcoin`, {
-        json: { txid, wallet: config.bitcoin.wallet }
+        json: { txid, wallet: config.bitcoin.wallet },
       });
 
       seen.push(txid);
@@ -56,7 +57,7 @@ export default {
         await got
           .post(`${config.classic}/admin/credit`, {
             json: { username, amount, source },
-            headers: { authorization: `Bearer ${config.admin}` }
+            headers: { authorization: `Bearer ${config.admin}` },
           })
           .json();
       } else if (payreq) {
@@ -90,7 +91,7 @@ export default {
     let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
     payments = (
       await Promise.all(
-        payments.map(async id => {
+        payments.map(async (id) => {
           let p = await g(`payment:${id}`);
           if (p.created < start || p.created > end) return;
           if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
@@ -98,7 +99,7 @@ export default {
         })
       )
     )
-      .filter(p => p)
+      .filter((p) => p)
       .sort((a, b) => b.created - a.created);
 
     let count = payments.length;
@@ -118,8 +119,8 @@ export default {
             (((b.amount || 0) + (b.tip || 0) - (b.fee || 0) - (b.ourfee || 0)) *
               b.rate) /
               SATS
-          ).toFixed(2)
-        }
+          ).toFixed(2),
+        },
       }),
       {}
     );
@@ -148,7 +149,7 @@ export default {
       let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
       let decoded = await ln.decodepay(payreq);
       let { amount_msat, payee } = decoded;
-      let node = nodes.find(n => n.nodeid === payee);
+      let node = nodes.find((n) => n.nodeid === payee);
       let alias = node ? node.alias : payee.substr(0, 12);
 
       res.send({ alias, amount: Math.round(amount_msat / 1000) });
@@ -162,13 +163,13 @@ export default {
     if (typeof amount === "undefined" || amount === null)
       return bail(res, "fund not found");
     let payments = (await db.lRange(`fund:${name}:payments`, 0, -1)) || [];
-    payments = await Promise.all(payments.map(hash => g(`payment:${hash}`)));
+    payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
 
     await Promise.all(
-      payments.map(async p => (p.user = await g(`user:${p.uid}`)))
+      payments.map(async (p) => (p.user = await g(`user:${p.uid}`)))
     );
 
-    payments = payments.filter(p => p);
+    payments = payments.filter((p) => p);
     res.send({ amount, payments });
   },
 
@@ -180,7 +181,7 @@ export default {
       k1: name,
       defaultDescription: `Withdraw from coinos fund ${name}`,
       minWithdrawable: 0,
-      maxWithdrawable
+      maxWithdrawable,
     });
   },
 
@@ -191,10 +192,7 @@ export default {
 
       await t(`fund:${id}`, async (balance, db) => {
         if (balance < amount) fail("Insufficient funds");
-        await db
-          .multi()
-          .decrBy(`fund:${id}`, amount)
-          .exec();
+        await db.multi().decrBy(`fund:${id}`, amount).exec();
       });
 
       if (!iid) {
@@ -206,7 +204,7 @@ export default {
           hash: iid,
           rate: store.rates[currency],
           uid: user.id,
-          received: 0
+          received: 0,
         });
       }
 
@@ -274,7 +272,7 @@ export default {
       let tx = await bc.fundRawTransaction(raw, {
         feeRate,
         subtractFeeFromOutputs,
-        replaceable
+        replaceable,
       });
 
       let fee = sats(tx.fee);
@@ -317,7 +315,7 @@ export default {
 
       for (let {
         scriptPubKey: { address },
-        value
+        value,
       } of tx.vout) {
         total += sats(value);
         let iid = await g(`invoice:${address}`);
@@ -350,13 +348,13 @@ export default {
       "card[number]": number,
       "card[exp_month]": month,
       "card[exp_year]": year,
-      "card[cvc]": cvc
+      "card[cvc]": cvc,
     };
 
     let { id: source } = await got
       .post(`${stripe}/tokens`, {
         form,
-        username
+        username,
       })
       .json();
 
@@ -365,13 +363,13 @@ export default {
       amount,
       currency,
       source,
-      description: "starter coupon"
+      description: "starter coupon",
     };
 
     let r = await got
       .post(`${stripe}/charges`, {
         form,
-        username
+        username,
       })
       .json();
 
@@ -384,7 +382,7 @@ export default {
         id,
         hash: id,
         uid: user.id,
-        received: 0
+        received: 0,
       });
       amount = sats(amount / store.rates[currency]);
       let uid = await g("user:coinos");
@@ -404,7 +402,7 @@ export default {
         "estimatesmartfee",
         "echo",
         "getblockchaininfo",
-        "getnetworkinfo"
+        "getnetworkinfo",
       ];
 
       if (!whitelist.includes(method)) fail("unsupported method");
@@ -488,14 +486,28 @@ export default {
       let p = await g(`payment:${id}`);
       if (p.uid !== user.id) fail("unauthorized");
       emit(user.id, "payment", p);
+
+      let { username } = user;
+
+      mqtt1.publish(
+        username,
+        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`
+      );
+
+      mqtt2.publish(
+        username,
+        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`
+      );
+
       res.send({ ok: true });
     } catch (e) {
       bail(res, e.message);
     }
   },
 
-  async lnaddress({ params: { lnaddress, amount }, user }, res) {
+  async lnaddress({ params: { lnaddress, amount }, body, user }, res) {
     try {
+      lnaddress = decodeURIComponent(lnaddress);
       await requirePin({ body, user });
 
       let maxfee = 5000;
@@ -508,16 +520,20 @@ export default {
       if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
         fail("amount out of range");
 
-      let { pr } = await got(`${callback}?amount=${amount}`).json();
+      let r = await got(`${callback}?amount=${amount * 1000}`).json();
+      if (r.reason) fail(r.rason);
+      let { pr } = r;
       let p = await payLightning(user, pr, amount, maxfee, memo);
+
       if (!p) {
-        p = await debit(hash, amount, 0, memo, user);
-        await credit(hash, amount, memo, user.id);
+        p = await debit(pr, amount, 0, memo, user);
+        await credit(pr, amount, memo, user.id);
       }
 
       res.send(p);
     } catch (e) {
+      console.log(e);
       bail(res, e.message);
     }
-  }
+  },
 };
