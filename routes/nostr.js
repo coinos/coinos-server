@@ -188,9 +188,8 @@ export default {
     let names = {};
     for await (let k of db.scanIterator({ MATCH: "user:*" })) {
       let u = await g(k);
-      console.log("U", u)
       if (typeof u === "string") u = await g(`user:${u}`);
-      if (u && u.username && u.pubkey) names[u.username] = u.pubkey;
+      if (u && u.username && u.pubkey && u.nip5) names[u.username] = u.pubkey;
     }
 
     res.send({ names });
