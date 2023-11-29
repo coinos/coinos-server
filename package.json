@@ -24,6 +24,7 @@
     "file-type": "^18.0.0",
     "fluent-ffmpeg": "^2.1.2",
     "got": "^13.0.0",
+    "handlebars": "^4.7.8",
     "jsonwebtoken": "^9.0.2",
     "lnurl": "^0.24.2",
     "mqtt": "^5.0.2",

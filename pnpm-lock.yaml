@@ -56,6 +56,9 @@ dependencies:
   got:
     specifier: ^13.0.0
     version: 13.0.0
+  handlebars:
+    specifier: ^4.7.8
+    version: 4.7.8
   jsonwebtoken:
     specifier: ^9.0.2
     version: 9.0.2
@@ -1878,7 +1881,7 @@ packages:
     dependencies:
       glob: 7.2.3
       graceful-fs: 4.2.10
-      handlebars: 4.7.7
+      handlebars: 4.7.8
     dev: false
 
   /express@4.18.1:
@@ -2189,8 +2192,8 @@ packages:
     resolution: {integrity: sha512-9ByhssR2fPVsNZj478qUUbKfmL0+t5BDVyjShtyZZLiK7ZDAArFFfopyOTj0M05wE2tJPisA4iTnnXl2YoPvOA==}
     dev: false
 
-  /handlebars@4.7.7:
-    resolution: {integrity: sha512-aAcXm5OAfE/8IXkcZvCepKU3VzW1/39Fb5ZuqMtgI/hT8X2YgoMvBY5dLhq/cpOvw7Lk1nK/UF71aLG/ZnVYRA==}
+  /handlebars@4.7.8:
+    resolution: {integrity: sha512-vafaFqs8MZkRrSX7sFVUdo3ap/eNiLnb4IakshzvP56X5Nr1iGKAIqdX6tMlm6HcNRIkr6AxO5jFEoJzzpT8aQ==}
     engines: {node: '>=0.4.7'}
     hasBin: true
     dependencies:

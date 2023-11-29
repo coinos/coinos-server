@@ -9,7 +9,7 @@ import {
   wait,
   bail,
   fail,
-  getUser,
+  getUser
 } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -98,7 +98,7 @@ export default {
           username: key,
           display: key.substr(0, 6),
           pubkey: key,
-          anon: true,
+          anon: true
         };
       }
 
@@ -116,7 +116,7 @@ export default {
         "pubkey",
         "display",
         "prompt",
-        "id",
+        "id"
       ];
 
       if (user.pubkey)
@@ -141,7 +141,7 @@ export default {
         pubkey,
         password,
         username,
-        salt,
+        salt
       };
 
       user = await register(user, ip, false);
@@ -194,7 +194,7 @@ export default {
         newpin,
         username,
         shopifyToken,
-        shopifyStore,
+        shopifyStore
       } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
@@ -228,6 +228,7 @@ export default {
         "language",
         "fiat",
         "locktime",
+        "nip5",
         "prompt",
         "profile",
         "pubkey",
@@ -236,7 +237,7 @@ export default {
         "tokens",
         "twofa",
         "shopifyToken",
-        "shopifyStore",
+        "shopifyStore"
       ];
 
       for (let a of attributes) {
@@ -314,7 +315,7 @@ export default {
     if (!subscriptions) subscriptions = [];
     if (
       !subscriptions.find(
-        (s) => JSON.stringify(s) === JSON.stringify(subscription)
+        s => JSON.stringify(s) === JSON.stringify(subscription)
       )
     )
       subscriptions.push(subscription);
@@ -353,19 +354,19 @@ export default {
 
     for (let { ref } of (
       await Promise.all(
-        payments.reverse().map(async (id) => await g(`payment:${id}`))
+        payments.reverse().map(async id => await g(`payment:${id}`))
       )
-    ).filter((p) => p.type === types.internal && p.ref)) {
-      let i = contacts.findIndex((c) => c && c.id === ref);
+    ).filter(p => p.type === types.internal && p.ref)) {
+      let i = contacts.findIndex(c => c && c.id === ref);
       if (~i) contacts.splice(i, 1);
       let u = await g(`user:${ref}`);
       if (typeof u === "string") u = await g(`user:${ref}`);
-      if (u) contacts.unshift(u);
-    }
+      if (u) contacts.unshift(pick(u, ["id", "profile", "username"]));
+      }
 
     await s(`${id}:contacts`, contacts);
 
-    res.send(contacts.map((u) => pick(u, fields)));
+      res.send(contacts);
   },
 
   async del({ params: { username }, headers: { authorization } }, res) {
@@ -424,5 +425,5 @@ export default {
   async superuser({ body: { username } }, res) {
     if (username === config.mqtt2.username) res.send({ ok: true });
     else bail(res, "unauthorized");
-  },
+  }
 };

@@ -2,7 +2,7 @@ import { bail } from "$lib/utils";
 import got from "got";
 import config from "$config";
 import { l, warn } from "$lib/logging";
-import { SESClient, CloneReceiptRuleSetCommand } from "@aws-sdk/client-ses";
+import { SESClient } from "@aws-sdk/client-ses";
 import { SendEmailCommand } from "@aws-sdk/client-ses";
 
 export default {
