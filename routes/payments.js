@@ -36,7 +36,7 @@ catchUp();
 
 export default {
   async create({ body, user }, res) {
-    warn(JSON.stringify(body));
+    warn(user.username, JSON.stringify(body));
     let { amount, hash, maxfee, fund, memo, payreq, username } = body;
 
     try {
