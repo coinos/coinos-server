@@ -48,25 +48,6 @@ export default {
   async lnurlp({ params: { username } }, res) {
     try {
       let { id: uid } = await getUser(username);
-      if (!uid) {
-        let u = await got(`${classic}/admin/migrate/${username}?zero=true`, {
-          headers: { authorization: `Bearer ${admin}` }
-        }).json();
-
-        if (!u) fail("user not found");
-        let { balance, pubkey } = u;
-
-        uid = u.uuid;
-
-        u = { id: uid, about: u.address, ...pick(u, fields) };
-        delete u.address;
-
-        await s(`user:${username.replace(/\s/g, "").toLowerCase()}`, uid);
-        await s(`user:${uid}`, u);
-        await s(`balance:${uid}`, balance);
-
-        l("added missing user", username);
-      }
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
@@ -89,34 +70,29 @@ export default {
     }
   },
 
-  async lnurlw({ params: { k1, pr } }, res) {
-  },
+  async lnurlw({ params: { k1, pr } }, res) {},
 
   async lnurl({ params: { id }, query: { amount } }, res) {
-    let pr = await g(`lnurlp:${id}`);
+    let uid = await g(`lnurl:${id}`);
+    let user = await g(`user:${uid}`);
+    let { username } = user;
+    username = username.replace(/\s/g, "").toLowerCase();
 
-    if (!pr) {
-      let uid = await g(`lnurl:${id}`);
-      let user = await g(`user:${uid}`);
-      let { username } = user;
-      username = username.replace(/\s/g, "").toLowerCase();
+    let metadata = JSON.stringify([
+      ["text/plain", `Paying ${username}@${host}`],
+      ["text/identifier", `${username}@${host}`]
+    ]);
 
-      let metadata = JSON.stringify([
-        ["text/plain", `Paying ${username}@${host}`],
-        ["text/identifier", `${username}@${host}`]
-      ]);
+    let { text: pr } = await generate({
+      invoice: {
+        amount: Math.round(amount / 1000),
+        type: types.lightning
+      },
+      memo: metadata,
+      user
+    });
 
-      ({ text: pr } = await generate({
-        invoice: {
-          amount: Math.round(amount / 1000),
-          type: types.lightning
-        },
-        memo: metadata,
-        user
-      }));
-
-      await s(`lnurlp:${id}`, pr);
-    }
+    await s(`lnurlp:${id}`, pr);
 
     res.send({ pr, routes: [] });
   }
