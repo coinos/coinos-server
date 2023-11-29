@@ -92,8 +92,6 @@ export default {
       user
     });
 
-    await s(`lnurlp:${id}`, pr);
-
     res.send({ pr, routes: [] });
   }
 };
