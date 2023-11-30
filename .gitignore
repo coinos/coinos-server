@@ -7,3 +7,4 @@ compose.yml
 *.flitevox
 mimic
 watcher.sh
+.aws

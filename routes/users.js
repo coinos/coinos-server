@@ -327,7 +327,13 @@ export default {
 
   async password({ body: { password }, user }, res) {
     if (!user.password) return res.send(true);
-    res.send(await bcrypt.compare(password, user.password));
+
+    try {
+      if (!password) fail("password not provided");
+      res.send(await bcrypt.compare(password, user.password));
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 
   async pin({ body: { pin }, user }, res) {
@@ -362,11 +368,11 @@ export default {
       let u = await g(`user:${ref}`);
       if (typeof u === "string") u = await g(`user:${ref}`);
       if (u) contacts.unshift(pick(u, ["id", "profile", "username"]));
-      }
+    }
 
     await s(`${id}:contacts`, contacts);
 
-      res.send(contacts);
+    res.send(contacts);
   },
 
   async del({ params: { username }, headers: { authorization } }, res) {
@@ -425,5 +431,11 @@ export default {
   async superuser({ body: { username } }, res) {
     if (username === config.mqtt2.username) res.send({ ok: true });
     else bail(res, "unauthorized");
+  },
+
+  async verify({ body: { test } }, res) {
+    console.log("test", test);
+    res.send(test);
   }
+
 };

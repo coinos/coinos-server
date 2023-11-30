@@ -6,6 +6,7 @@ import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import { getRates, sendRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
+import { err } from "$lib/logging";
 
 import email from "$routes/email";
 import info from "$routes/info";
@@ -19,10 +20,13 @@ import payments from "$routes/payments";
 import requests from "$routes/requests";
 import shopify from "$routes/shopify";
 
-fillPool();
-
-getLocations();
-getRates();
+try {
+  fillPool();
+  getLocations();
+  getRates();
+} catch (e) {
+  console.log(e);
+}
 
 setTimeout(listenForLightning, 2000);
 
@@ -84,6 +88,7 @@ app.post("/upload/:type", users.upload);
 app.get("/users/delete/:username", users.del);
 app.post("/acl", users.acl);
 app.post("/superuser", users.superuser);
+app.post("/verify", users.verify);
 
 app.post("/login", users.login);
 
@@ -105,3 +110,5 @@ let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
 
 app.listen({ host, port });
+
+  process.on("unhandledRejection", () => err("Unhandled error"));

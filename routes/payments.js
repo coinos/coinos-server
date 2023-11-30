@@ -13,7 +13,7 @@ import got from "got";
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
-let seen = [];
+let seen = await db.sMembers("missing");
 let catchUp = async () => {
   let txns = await bc.listTransactions("*", 50);
   txns = txns.filter((tx) => tx.category === "receive" && tx.confirmations > 0);

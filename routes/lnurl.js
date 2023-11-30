@@ -47,7 +47,7 @@ export default {
 
   async lnurlp({ params: { username } }, res) {
     try {
-      let { id: uid } = await getUser(username);
+      let { id: uid, pubkey: nostrPubkey } = await getUser(username);
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
@@ -58,9 +58,11 @@ export default {
       await s(`lnurl:${id}`, uid);
 
       res.send({
+        allowsNostr: true,
         minSendable: 1000,
         maxSendable: 100000000000,
         metadata,
+        nostrPubkey,
         callback: `${URL}/api/lnurl/${id}`,
         tag: "payRequest"
       });
@@ -72,11 +74,21 @@ export default {
 
   async lnurlw({ params: { k1, pr } }, res) {},
 
-  async lnurl({ params: { id }, query: { amount } }, res) {
+  async lnurl({ params: { id }, query: { amount, nostr } }, res) {
     let uid = await g(`lnurl:${id}`);
     let user = await g(`user:${uid}`);
     let { username } = user;
     username = username.replace(/\s/g, "").toLowerCase();
+
+    if (nostr) {
+      try {
+        let event = JSON.parse(decodeURIComponent(nostr));
+        // TODO: validate the event
+        await s(`zap:${id}`, event);
+      } catch (e) {
+        err("problem handling zap", e.message);
+      }
+    }
 
     let metadata = JSON.stringify([
       ["text/plain", `Paying ${username}@${host}`],
