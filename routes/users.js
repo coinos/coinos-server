@@ -315,7 +315,7 @@ export default {
     if (!subscriptions) subscriptions = [];
     if (
       !subscriptions.find(
-        s => JSON.stringify(s) === JSON.stringify(subscription)
+        (s) => JSON.stringify(s) === JSON.stringify(subscription)
       )
     )
       subscriptions.push(subscription);
@@ -360,10 +360,10 @@ export default {
 
     for (let { ref } of (
       await Promise.all(
-        payments.reverse().map(async id => await g(`payment:${id}`))
+        payments.reverse().map(async (id) => await g(`payment:${id}`))
       )
-    ).filter(p => p.type === types.internal && p.ref)) {
-      let i = contacts.findIndex(c => c && c.id === ref);
+    ).filter((p) => p.type === types.internal && p.ref)) {
+      let i = contacts.findIndex((c) => c && c.id === ref);
       if (~i) contacts.splice(i, 1);
       let u = await g(`user:${ref}`);
       if (typeof u === "string") u = await g(`user:${ref}`);
@@ -437,5 +437,4 @@ export default {
     console.log("test", test);
     res.send(test);
   }
-
 };

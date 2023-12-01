@@ -45,10 +45,10 @@ export default {
     let ids = await db.sMembers(pubkey);
 
     let events = ids.length
-      ? (await db.mGet(ids.map(k => "ev:" + k))).map(JSON.parse)
+      ? (await db.mGet(ids.map((k) => "ev:" + k))).map(JSON.parse)
       : [];
 
-    res.send(events.map(e => ({ ...e, user })));
+    res.send(events.map((e) => ({ ...e, user })));
   },
 
   async messages({ params: { pubkey, since = 0 } }, res) {
@@ -71,7 +71,7 @@ export default {
     let messages = await db.sMembers(`${pubkey}:messages`);
 
     messages = await Promise.all(
-      messages.map(async id => {
+      messages.map(async (id) => {
         let m = await g(`ev:${id}`);
 
         let aid = await g(`user:${m.pubkey}`);
@@ -130,7 +130,7 @@ export default {
       follows.push(user);
     }
 
-    follows = uniq(follows, e => e.pubkey);
+    follows = uniq(follows, (e) => e.pubkey);
     follows.sort((a, b) => a.username.localeCompare(b.username));
 
     res.send(follows);
@@ -174,7 +174,7 @@ export default {
         followers.push(user);
       }
 
-      followers = uniq(followers, e => e.pubkey);
+      followers = uniq(followers, (e) => e.pubkey);
       followers.sort((a, b) => a.username.localeCompare(b.username));
 
       res.send(followers);

@@ -19,21 +19,21 @@ export default {
 
       let requests = await db.lRange(`${id}:requests`, 0, -1);
 
-      requests = await Promise.all(requests.map(id => g(`request:${id}`)));
+      requests = await Promise.all(requests.map((id) => g(`request:${id}`)));
 
       requests = await Promise.all(
-        requests.map(async r => {
+        requests.map(async (r) => {
           r.requester = await g(`user:${r.requester_id}`);
           r.recipient = await g(`user:${r.recipient_id}`);
           return r;
         })
       );
 
-      let sent = requests.filter(r => r.requester_id === id);
+      let sent = requests.filter((r) => r.requester_id === id);
 
       let received = requests
-        .filter(r => r.recipient_id === id)
-        .filter(r => !r.invoice_id);
+        .filter((r) => r.recipient_id === id)
+        .filter((r) => !r.invoice_id);
 
       let invoices = [];
       for (let r of sent) {

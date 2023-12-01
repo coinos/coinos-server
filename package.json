@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.449.0",
+    "@biomejs/biome": "^1.4.1",
     "@fastify/cors": "^8.3.0",
     "@fastify/multipart": "^8.0.0",
     "@fastify/passport": "^2.4.0",
@@ -43,9 +44,6 @@
     "uuid": "8",
     "web-push": "^3.4.4",
     "ws": "^7.4.6"
-  },
-  "devDependencies": {
-    "prettier": "^1.19.1"
   },
   "apidoc": {
     "title": "CoinOS Server API Documentation",
