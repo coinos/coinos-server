@@ -80,20 +80,21 @@ export default {
     let { username } = user;
     username = username.replace(/\s/g, "").toLowerCase();
 
+    let metadata = JSON.stringify([
+      ["text/plain", `Paying ${username}@${host}`],
+      ["text/identifier", `${username}@${host}`]
+    ]);
+
     if (nostr) {
       try {
         let event = JSON.parse(decodeURIComponent(nostr));
         // TODO: validate the event
         await s(`zap:${id}`, event);
+        metadata = nostr;
       } catch (e) {
         err("problem handling zap", e.message);
       }
     }
-
-    let metadata = JSON.stringify([
-      ["text/plain", `Paying ${username}@${host}`],
-      ["text/identifier", `${username}@${host}`]
-    ]);
 
     let { text: pr } = await generate({
       invoice: {
