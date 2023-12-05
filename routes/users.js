@@ -123,6 +123,7 @@ export default {
         user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
       user.prompt = !!user.prompt;
 
+      res.cookie("user", user.username, { expires: new Date(Date.now() + 432000000) });
       res.send(pick(user, whitelist));
     } catch (e) {
       console.log(e);
