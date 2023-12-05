@@ -47,6 +47,7 @@ export default {
 
   async lnurlp({ params: { username } }, res) {
     try {
+      l("lnurlp request", username);
       let { id: uid, pubkey: nostrPubkey } = await getUser(username);
 
       let metadata = JSON.stringify([

@@ -79,7 +79,7 @@ export default {
       res.send(p);
     } catch (e) {
       warn(e.message);
-      warn("failed to create payment", username, amount, hash, payreq);
+      warn("failed to create payment", user.username, amount, hash, payreq);
       bail(res, e.message);
     }
   },
