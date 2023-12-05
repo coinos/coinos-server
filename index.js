@@ -4,7 +4,7 @@ import { auth, optional } from "$lib/auth";
 import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
-import { getRates, sendRates } from "$lib/rates";
+import { getRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { err } from "$lib/logging";
 
@@ -29,8 +29,6 @@ try {
 }
 
 setTimeout(listenForLightning, 2000);
-
-setInterval(sendRates, 1000);
 setInterval(sendHeartbeat, 2000);
 
 app.get("/balances", info.balances);

@@ -1,0 +1,20 @@
+FROM node:21
+
+ARG NODE_ENV=production
+ENV NODE_ENV $NODE_ENV
+
+RUN apt update
+RUN apt install gcc make pkg-config automake libpcre2-dev libtool git ffmpeg curl zip -y
+RUN curl -fsSL https://bun.sh/install | bash
+
+COPY . /app 
+WORKDIR /app
+
+RUN NODE_ENV=development NODE_OPTIONS="" /root/.bun/bin/bun i
+WORKDIR /app/node_modules/bcrypt
+RUN npx node-pre-gyp install --fallback-to-build
+WORKDIR /app/node_modules/sharp
+RUN npm run install
+WORKDIR /app
+
+CMD ["node", "index.js"]
