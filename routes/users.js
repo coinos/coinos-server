@@ -9,7 +9,7 @@ import {
   wait,
   bail,
   fail,
-  getUser
+  getUser,
 } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -99,7 +99,7 @@ export default {
           username: key,
           display: key.substr(0, 6),
           pubkey: key,
-          anon: true
+          anon: true,
         };
       }
 
@@ -117,7 +117,7 @@ export default {
         "pubkey",
         "display",
         "prompt",
-        "id"
+        "id",
       ];
 
       if (user.pubkey)
@@ -142,7 +142,7 @@ export default {
         pubkey,
         password,
         username,
-        salt
+        salt,
       };
 
       user = await register(user, ip, false);
@@ -195,7 +195,7 @@ export default {
         newpin,
         username,
         shopifyToken,
-        shopifyStore
+        shopifyStore,
       } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
@@ -238,7 +238,7 @@ export default {
         "tokens",
         "twofa",
         "shopifyToken",
-        "shopifyStore"
+        "shopifyStore",
       ];
 
       for (let a of attributes) {
@@ -269,7 +269,9 @@ export default {
   async login(req, res) {
     try {
       let { username, password, token: twofa } = req.body;
-      l("logging in", username, req.headers["cf-connecting-ip"]);
+
+      if (username !== "coinos")
+        l("logging in", username, req.headers["cf-connecting-ip"]);
 
       username = username.toLowerCase().replace(/\s/g, "");
       let uid = await g(`user:${username}`);
@@ -296,7 +298,7 @@ export default {
         return res.code(401).send("2fa required");
       }
 
-      l("logged in", username);
+      if (username !== "coinos") l("logged in", username);
 
       let payload = { id: uid };
       let token = jwt.sign(payload, config.jwt);
