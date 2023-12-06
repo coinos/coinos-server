@@ -86,8 +86,8 @@ app.post("/upload/:type", users.upload);
 app.get("/users/delete/:username", users.del);
 app.post("/acl", users.acl);
 app.post("/superuser", users.superuser);
-app.post("/verify", users.verify);
-
+app.get("/verify/:code", users.verify);
+app.post("/request", auth, users.request);
 app.post("/login", users.login);
 
 app.post("/subscribe", auth, users.subscribe);

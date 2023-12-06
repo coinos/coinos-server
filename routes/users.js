@@ -23,6 +23,7 @@ import { v4 } from "uuid";
 import { parseISO } from "date-fns";
 import { types } from "$lib/payments";
 import { bech32 } from "bech32";
+import { mail, templates } from "$lib/mail";
 
 import got from "got";
 import upload from "$lib/upload";
@@ -433,8 +434,46 @@ export default {
     else bail(res, "unauthorized");
   },
 
-  async verify({ body: { test } }, res) {
-    console.log("test", test);
-    res.send(test);
+  async request({ body: { id, email }}, res) {
+    try {
+      let code = v4();
+      let user = await g(`user:${id}`);
+      if (!user) fail("user not found");
+      let { username } = user;
+
+      if (email !== user.email) {
+        user.verified = false;
+        await s(`user:${id}`, user);
+        user.email = email;
+      }
+
+
+      await s(`verify:${code}`, id);
+      let link = `${process.env.URL}/${username}/verify/${code}`;
+      let subject = "Email Verification";
+
+      await mail(user, subject, templates.verifyEmail, {
+        username,
+        link
+      });
+
+      res.send({ ok: true });
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
+  async verify({ params: { code } }, res) {
+    try {
+      let id = await g(`verify:${code}`);
+      if (!id) fail(res, "verification failed");
+      let user = await g(`user:${id}`);
+      user.verified = true;
+      await s(`user:${id}`, user);
+
+      res.send(pick(user, whitelist));
+    } catch (e) {
+      bail(res, e.message);
+    }
   }
 };
