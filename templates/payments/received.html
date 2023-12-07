@@ -8,20 +8,17 @@
 
 <html>
   <body>
-    <div style="display: flex; width: 100%;">
-      <a href="https://coinos.io" style="margin: auto">
-        <img src="https://coinos.io/images/logo.jpg" style="max-width: 800px">
-      </a>
-    </div>
-
     <div style="margin-bottom: 10px">Hello {{username}},</div>
 
     <div style="margin-bottom: 10px">
-      You received {{amount}} sats!
+      You received a payment of {{sats}}
     </div>
 
-    <div style="margin-bottom: 10px">Cheers,</div>
+    <div style="margin-bottom: 10px">
+      <a href="{{link}}">{{link}}</a>
+    </div>
 
+    <div>Regards,</div>
     <div>The Coinos Team</div>
   </body>
 </html>
