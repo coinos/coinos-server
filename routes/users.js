@@ -225,7 +225,6 @@ export default {
         "currencies",
         "currency",
         "display",
-        "email",
         "language",
         "fiat",
         "locktime",
