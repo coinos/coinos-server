@@ -230,6 +230,7 @@ export default {
         "fiat",
         "locktime",
         "nip5",
+        "notify",
         "prompt",
         "profile",
         "pubkey",
