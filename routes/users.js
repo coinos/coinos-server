@@ -9,7 +9,7 @@ import {
   wait,
   bail,
   fail,
-  getUser,
+  getUser
 } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -99,7 +99,7 @@ export default {
           username: key,
           display: key.substr(0, 6),
           pubkey: key,
-          anon: true,
+          anon: true
         };
       }
 
@@ -117,7 +117,7 @@ export default {
         "pubkey",
         "display",
         "prompt",
-        "id",
+        "id"
       ];
 
       if (user.pubkey)
@@ -142,7 +142,7 @@ export default {
         pubkey,
         password,
         username,
-        salt,
+        salt
       };
 
       user = await register(user, ip, false);
@@ -195,7 +195,7 @@ export default {
         newpin,
         username,
         shopifyToken,
-        shopifyStore,
+        shopifyStore
       } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
@@ -238,7 +238,7 @@ export default {
         "tokens",
         "twofa",
         "shopifyToken",
-        "shopifyStore",
+        "shopifyStore"
       ];
 
       for (let a of attributes) {
@@ -402,20 +402,31 @@ export default {
     res.send(req.headers);
   },
 
-  async reset({ body: { username, password }, user: { admin } }, res) {
-    if (!admin) fail("unauthorized");
-    try {
-      let id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);
-      let user = await g(`user:${id}`);
+  async reset({ body: { code, username, password }, user: u }, res) {
+    let admin = u && u.admin;
+    let id, user;
 
+    if (admin) {
+      id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);
+      user = await g(`user:${id}`);
+    } else {
+      id = await g(`reset:${code}`);
+      user = await g(`user:${id}`);
+    }
+
+    if (!user) fail("user not found");
+
+    try {
       user.pin = null;
       user.pubkey = null;
       user.cipher = null;
       user.salt = null;
       user.password = await bcrypt.hash(password, 1);
-      await s(`user:${id}`, user);
 
-      res.send({});
+      await s(`user:${id}`, user);
+      await db.del(`reset:${code}`);
+
+      res.send(pick(user, whitelist));
     } catch (e) {
       bail(res, e.message);
     }
@@ -436,11 +447,13 @@ export default {
     else bail(res, "unauthorized");
   },
 
-  async request({ body: { id, email }}, res) {
+  async request({ body: { id, email } }, res) {
     try {
-      let code = v4();
       let user = await g(`user:${id}`);
+
       if (!user) fail("user not found");
+      if (await g(`email:${email.toLowerCase()}`)) fail("email already in use");
+
       let { username } = user;
 
       if (email !== user.email) {
@@ -449,8 +462,8 @@ export default {
         user.email = email;
       }
 
-
-      await s(`verify:${code}`, id);
+      let code = v4();
+      await s(`verify:${code}`, { id, email });
       let link = `${process.env.URL}/${username}/verify/${code}`;
       let subject = "Email Verification";
 
@@ -467,13 +480,37 @@ export default {
 
   async verify({ params: { code } }, res) {
     try {
-      let id = await g(`verify:${code}`);
+      let { id, email } = await g(`verify:${code}`);
       if (!id) fail(res, "verification failed");
       let user = await g(`user:${id}`);
+      user.email = email;
       user.verified = true;
       await s(`user:${id}`, user);
+      await s(`email:${email.toLowerCase()}`, id);
 
       res.send(pick(user, whitelist));
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
+  async forgot({ body: { email } }, res) {
+    try {
+      let uid = await g(`email:${email.toLowerCase()}`);
+      let user = await g(`user:${uid}`);
+
+      if (user) {
+        let code = v4();
+        let link = `${process.env.URL}/reset/${code}`;
+        await s(`reset:${code}`, uid);
+
+        await mail(user, "Password reset", templates.passwordReset, {
+          ...user,
+          link
+        });
+      }
+
+      res.send({});
     } catch (e) {
       bail(res, e.message);
     }

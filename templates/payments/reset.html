@@ -1,0 +1,25 @@
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;700&display=swap");
+
+  body {
+    font-family: "Public Sans", sans-serif;
+  }
+</style>
+
+<html>
+  <body>
+    <div style="margin-bottom: 10px">Hello {{username}},</div>
+
+    <div style="margin-bottom: 10px">
+      Somebody requested to reset the password for your account. If it wasn't you, please ignore this email. Otherwise, please visit this link  to reset your password:
+    </div>
+
+    <div style="margin-bottom: 10px">
+      <a href="{{link}}">{{link}}</a>
+    </div>
+
+    <div style="margin-bottom: 10px">Thanks!</div>
+
+    <div>The Coinos Team</div>
+  </body>
+</html>

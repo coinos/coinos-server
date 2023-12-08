@@ -81,13 +81,14 @@ app.post("/register", users.create);
 app.post("/disable2fa", auth, users.disable2fa);
 app.post("/2fa", auth, users.enable2fa);
 app.post("/user", auth, users.update);
-app.post("/reset", auth, users.reset);
+app.post("/reset", optional, users.reset);
 app.post("/upload/:type", users.upload);
 app.get("/users/delete/:username", users.del);
 app.post("/acl", users.acl);
 app.post("/superuser", users.superuser);
 app.get("/verify/:code", users.verify);
 app.post("/request", auth, users.request);
+app.post("/forgot", users.forgot);
 app.post("/login", users.login);
 
 app.post("/subscribe", auth, users.subscribe);
