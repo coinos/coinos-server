@@ -21,7 +21,7 @@ let catchUp = async () => {
     try {
       if (seen.includes(txid)) continue;
       await got.post(`http://localhost:${process.env.PORT || 3119}/bitcoin`, {
-        json: { txid, wallet: config.bitcoin.wallet }
+        json: { txid, wallet: config.bitcoin.wallet },
       });
 
       seen.push(txid);
@@ -42,8 +42,10 @@ export default {
     try {
       if (await g("freeze")) fail("Problem sending payment");
 
-      amount = parseInt(amount);
-      if (amount < 0) fail("Invalid amount");
+      if (typeof amount !== "undefined") {
+        amount = parseInt(amount);
+        if (amount < 0 || amount > SATS || isNaN(amount)) fail("Invalid amount");
+      } 
 
       await requirePin({ body, user });
 
@@ -57,7 +59,7 @@ export default {
         await got
           .post(`${config.classic}/admin/credit`, {
             json: { username, amount, source },
-            headers: { authorization: `Bearer ${config.admin}` }
+            headers: { authorization: `Bearer ${config.admin}` },
           })
           .json();
       } else if (payreq) {
@@ -119,8 +121,8 @@ export default {
             (((b.amount || 0) + (b.tip || 0) - (b.fee || 0) - (b.ourfee || 0)) *
               b.rate) /
               SATS
-          ).toFixed(2)
-        }
+          ).toFixed(2),
+        },
       }),
       {}
     );
@@ -181,7 +183,7 @@ export default {
       k1: name,
       defaultDescription: `Withdraw from coinos fund ${name}`,
       minWithdrawable: 0,
-      maxWithdrawable
+      maxWithdrawable,
     });
   },
 
@@ -204,7 +206,7 @@ export default {
           hash: iid,
           rate: store.rates[currency],
           uid: user.id,
-          received: 0
+          received: 0,
         });
       }
 
@@ -272,7 +274,7 @@ export default {
       let tx = await bc.fundRawTransaction(raw, {
         feeRate,
         subtractFeeFromOutputs,
-        replaceable
+        replaceable,
       });
 
       let fee = sats(tx.fee);
@@ -315,7 +317,7 @@ export default {
 
       for (let {
         scriptPubKey: { address },
-        value
+        value,
       } of tx.vout) {
         total += sats(value);
         let iid = await g(`invoice:${address}`);
@@ -348,13 +350,13 @@ export default {
       "card[number]": number,
       "card[exp_month]": month,
       "card[exp_year]": year,
-      "card[cvc]": cvc
+      "card[cvc]": cvc,
     };
 
     let { id: source } = await got
       .post(`${stripe}/tokens`, {
         form,
-        username
+        username,
       })
       .json();
 
@@ -363,13 +365,13 @@ export default {
       amount,
       currency,
       source,
-      description: "starter coupon"
+      description: "starter coupon",
     };
 
     let r = await got
       .post(`${stripe}/charges`, {
         form,
-        username
+        username,
       })
       .json();
 
@@ -382,7 +384,7 @@ export default {
         id,
         hash: id,
         uid: user.id,
-        received: 0
+        received: 0,
       });
       amount = sats(amount / store.rates[currency]);
       let uid = await g("user:coinos");
@@ -402,7 +404,7 @@ export default {
         "estimatesmartfee",
         "echo",
         "getblockchaininfo",
-        "getnetworkinfo"
+        "getnetworkinfo",
       ];
 
       if (!whitelist.includes(method)) fail("unsupported method");
@@ -535,5 +537,5 @@ export default {
       console.log(e);
       bail(res, e.message);
     }
-  }
+  },
 };
