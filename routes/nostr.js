@@ -15,7 +15,7 @@ export default {
       pubkey,
       anon: true,
       follows: [],
-      followers: []
+      followers: [],
     };
 
     res.send(event);
@@ -31,12 +31,12 @@ export default {
         pubkey,
         anon: true,
         follows: [],
-        followers: []
+        followers: [],
       };
 
     let params = {
         kinds: [1],
-        authors: [pubkey]
+        authors: [pubkey],
       },
       opts = { since: 0 };
 
@@ -54,7 +54,7 @@ export default {
   async messages({ params: { pubkey, since = 0 } }, res) {
     let params = {
       kinds: [4],
-      authors: [pubkey]
+      authors: [pubkey],
     };
 
     let opts = { since };
@@ -63,7 +63,7 @@ export default {
 
     params = {
       kinds: [4],
-      "#p": [pubkey]
+      "#p": [pubkey],
     };
 
     await q(`${pubkey}:messages`, params, opts).catch(nada);
@@ -81,7 +81,7 @@ export default {
         m.recipient = await g(`user:${rid}`);
 
         return m;
-      })
+      }),
     );
 
     res.send(messages);
@@ -98,7 +98,7 @@ export default {
       params = {
         limit: 1,
         kinds: [3],
-        authors: [pubkey]
+        authors: [pubkey],
       },
       opts = { timeout: 60000, eager: 60000 };
 
@@ -114,7 +114,7 @@ export default {
       q(`${pubkey}:profile:f1`, {
         limit: 1,
         kinds: [0],
-        authors: [pubkey]
+        authors: [pubkey],
       }).catch(nada);
 
       let uid = await g(`user:${pubkey}`);
@@ -124,7 +124,7 @@ export default {
         user = {
           username: pubkey.substr(0, 6),
           pubkey,
-          anon: true
+          anon: true,
         };
 
       follows.push(user);
@@ -139,7 +139,7 @@ export default {
   async followers({ params: { pubkey } }, res) {
     try {
       let pubkeys = [
-        ...new Set([...(await db.sMembers(`${pubkey}:followers`))])
+        ...new Set([...(await db.sMembers(`${pubkey}:followers`))]),
       ];
 
       let followers = [];
@@ -147,7 +147,7 @@ export default {
       q(
         `${pubkey}:followers`,
         { kinds: [3], "#p": [pubkey] },
-        { timeout: 60000, eager: 60000 }
+        { timeout: 60000, eager: 60000 },
       ).catch(nada);
 
       for (let pubkey of pubkeys) {
@@ -157,7 +157,7 @@ export default {
           await q(`${pubkey}:profile:f2`, {
             limit: 1,
             kinds: [0],
-            authors: [pubkey]
+            authors: [pubkey],
           }).catch(nada);
 
           uid = await g(`user:${pubkey}`);
@@ -168,7 +168,7 @@ export default {
           user = {
             username: pubkey.substr(0, 6),
             pubkey,
-            anon: true
+            anon: true,
           };
 
         followers.push(user);
@@ -193,5 +193,5 @@ export default {
     }
 
     res.send({ names });
-  }
+  },
 };

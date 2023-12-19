@@ -17,8 +17,8 @@ export default {
         .post("https://www.google.com/recaptcha/api/siteverify", {
           form: {
             secret,
-            response
-          }
+            response,
+          },
         })
         .json();
 
@@ -31,23 +31,23 @@ export default {
           new SendEmailCommand({
             Destination: {
               CcAddresses: [],
-              ToAddresses: [config.support]
+              ToAddresses: [config.support],
             },
             Message: {
               Body: {
                 Html: { Charset, Data: message.replace(/\n/g, "<br>") },
-                Text: { Charset, Data: message }
+                Text: { Charset, Data: message },
               },
               Subject: {
                 Charset,
                 Data:
                   body.subject ||
-                  "Support Request" + (username ? " From " + username : "")
-              }
+                  "Support Request" + (username ? " From " + username : ""),
+              },
             },
             ReplyToAddresses: [email],
-            Source: config.support
-          })
+            Source: config.support,
+          }),
         );
 
         res.send({ ok: true });
@@ -57,5 +57,5 @@ export default {
     } catch (e) {
       console.log(e);
     }
-  }
+  },
 };

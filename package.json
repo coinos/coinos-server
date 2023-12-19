@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "format": "biome format *.js **/*.js --write"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.449.0",

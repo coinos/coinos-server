@@ -9,7 +9,7 @@ import {
   wait,
   bail,
   fail,
-  getUser
+  getUser,
 } from "$lib/utils";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -99,7 +99,7 @@ export default {
           username: key,
           display: key.substr(0, 6),
           pubkey: key,
-          anon: true
+          anon: true,
         };
       }
 
@@ -117,7 +117,7 @@ export default {
         "pubkey",
         "display",
         "prompt",
-        "id"
+        "id",
       ];
 
       if (user.pubkey)
@@ -142,7 +142,7 @@ export default {
         pubkey,
         password,
         username,
-        salt
+        salt,
       };
 
       user = await register(user, ip, false);
@@ -195,7 +195,7 @@ export default {
         newpin,
         username,
         shopifyToken,
-        shopifyStore
+        shopifyStore,
       } = body;
 
       if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
@@ -239,7 +239,7 @@ export default {
         "tokens",
         "twofa",
         "shopifyToken",
-        "shopifyStore"
+        "shopifyStore",
       ];
 
       for (let a of attributes) {
@@ -254,7 +254,7 @@ export default {
       await s(`user:${user.pubkey}`, user.id);
       await s(
         `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
-        user.id
+        user.id,
       );
 
       await s(`user:${user.id}`, user);
@@ -319,7 +319,7 @@ export default {
     if (!subscriptions) subscriptions = [];
     if (
       !subscriptions.find(
-        (s) => JSON.stringify(s) === JSON.stringify(subscription)
+        (s) => JSON.stringify(s) === JSON.stringify(subscription),
       )
     )
       subscriptions.push(subscription);
@@ -364,7 +364,7 @@ export default {
 
     for (let { ref } of (
       await Promise.all(
-        payments.reverse().map(async (id) => await g(`payment:${id}`))
+        payments.reverse().map(async (id) => await g(`payment:${id}`)),
       )
     ).filter((p) => p.type === types.internal && p.ref)) {
       let i = contacts.findIndex((c) => c && c.id === ref);
@@ -385,7 +385,7 @@ export default {
       return res.code(401).send("unauthorized");
 
     let { id, pubkey } = await g(
-      `user:${await g(`user:${username.replace(/\s/g, "").toLowerCase()}`)}`
+      `user:${await g(`user:${username.replace(/\s/g, "").toLowerCase()}`)}`,
     );
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
     let payments = await db.lRange(`${id}:payments`, 0, -1);
@@ -470,7 +470,7 @@ export default {
 
       await mail(user, subject, templates.verifyEmail, {
         username,
-        link
+        link,
       });
 
       res.send({ ok: true });
@@ -507,7 +507,7 @@ export default {
 
         await mail(user, "Password reset", templates.passwordReset, {
           ...user,
-          link
+          link,
         });
       }
 
@@ -515,5 +515,5 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
-  }
+  },
 };

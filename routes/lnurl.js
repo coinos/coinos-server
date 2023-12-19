@@ -36,7 +36,7 @@ export default {
   async decode({ query: { text } }, res) {
     try {
       let url = Buffer.from(
-        bech32.fromWords(bech32.decode(text, 20000).words)
+        bech32.fromWords(bech32.decode(text, 20000).words),
       ).toString();
 
       res.send(await got(url).json());
@@ -51,7 +51,7 @@ export default {
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
-        ["text/identifier", `${username}@${host}`]
+        ["text/identifier", `${username}@${host}`],
       ]);
 
       let id = v4();
@@ -64,7 +64,7 @@ export default {
         metadata,
         nostrPubkey,
         callback: `${URL}/api/lnurl/${id}`,
-        tag: "payRequest"
+        tag: "payRequest",
       });
     } catch (e) {
       warn("problem generating lnurlp request", e.message);
@@ -82,7 +82,7 @@ export default {
 
     let metadata = JSON.stringify([
       ["text/plain", `Paying ${username}@${host}`],
-      ["text/identifier", `${username}@${host}`]
+      ["text/identifier", `${username}@${host}`],
     ]);
 
     if (nostr) {
@@ -99,12 +99,12 @@ export default {
     let { text: pr } = await generate({
       invoice: {
         amount: Math.round(amount / 1000),
-        type: types.lightning
+        type: types.lightning,
       },
       memo: metadata,
-      user
+      user,
     });
 
     res.send({ pr, routes: [] });
-  }
+  },
 };

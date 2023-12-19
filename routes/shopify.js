@@ -24,13 +24,13 @@ export default async ({ body: { hash }, params: { id } }, res) => {
         {
           headers: {
             "Content-Type": "application/json",
-            "X-Shopify-Access-Token": user.shopifyToken
+            "X-Shopify-Access-Token": user.shopifyToken,
           },
           json: {
             query,
-            variables: { input: { id: `gid://shopify/Order/${id}` } }
-          }
-        }
+            variables: { input: { id: `gid://shopify/Order/${id}` } },
+          },
+        },
       )
       .json();
 

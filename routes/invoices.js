@@ -19,7 +19,7 @@ export default {
         "banner",
         "currency",
         "username",
-        "pubkey"
+        "pubkey",
       ]);
     } else if (config.classic) {
       invoice = await got(`${config.classic}/invoice/${id}`).json();
@@ -49,11 +49,11 @@ export default {
       .post(`${config.classic}/invoice`, {
         json: {
           invoice: { amount: 0, network: "lightning" },
-          user: { username }
-        }
+          user: { username },
+        },
       })
       .json();
 
     res.send(invoice);
-  }
+  },
 };

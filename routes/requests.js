@@ -26,7 +26,7 @@ export default {
           r.requester = await g(`user:${r.requester_id}`);
           r.recipient = await g(`user:${r.recipient_id}`);
           return r;
-        })
+        }),
       );
 
       let sent = requests.filter((r) => r.requester_id === id);
@@ -56,9 +56,9 @@ export default {
   async create(
     {
       body: { recipient, ...params },
-      user: { id: requester_id, username, profile }
+      user: { id: requester_id, username, profile },
     },
-    res
+    res,
   ) {
     let recipient_id = await g(`user:${recipient}`);
 
@@ -67,7 +67,7 @@ export default {
       id,
       recipient_id,
       requester_id,
-      ...params
+      ...params,
     };
 
     await s(`request:${id}`, request);
@@ -81,5 +81,5 @@ export default {
   async destroy({ body: { request_id }, user: { id } }, res) {
     await db.lrem(`user:${id}:requests`, request_id);
     res.send();
-  }
+  },
 };

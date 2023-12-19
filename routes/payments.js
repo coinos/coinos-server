@@ -44,8 +44,9 @@ export default {
 
       if (typeof amount !== "undefined") {
         amount = parseInt(amount);
-        if (amount < 0 || amount > SATS || isNaN(amount)) fail("Invalid amount");
-      } 
+        if (amount < 0 || amount > SATS || isNaN(amount))
+          fail("Invalid amount");
+      }
 
       await requirePin({ body, user });
 
@@ -98,7 +99,7 @@ export default {
           if (p.created < start || p.created > end) return;
           if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
           return p;
-        })
+        }),
       )
     )
       .filter((p) => p)
@@ -124,7 +125,7 @@ export default {
           ).toFixed(2),
         },
       }),
-      {}
+      {},
     );
 
     if (limit) payments = payments.slice(offset, offset + limit);
@@ -168,7 +169,7 @@ export default {
     payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
 
     await Promise.all(
-      payments.map(async (p) => (p.user = await g(`user:${p.uid}`)))
+      payments.map(async (p) => (p.user = await g(`user:${p.uid}`))),
     );
 
     payments = payments.filter((p) => p);
@@ -235,7 +236,7 @@ export default {
               sats(amount),
               "",
               `${txid}:${vout}`,
-              types.bitcoin
+              types.bitcoin,
             );
           } else if (confirmations >= 1) {
             await confirm(address, txid, vout);
@@ -250,7 +251,7 @@ export default {
     }
   },
 
-      async fee({ body: { amount, address, feeRate, subtract }, user }, res) {
+  async fee({ body: { amount, address, feeRate, subtract }, user }, res) {
     try {
       let ourfee = Math.round(amount * config.fee);
       let credit = await g(`credit:bitcoin:${user.id}`);
@@ -268,10 +269,10 @@ export default {
 
       let fee = sats(tx.fee);
 
-      if (amount + fee + ourfee > await g(`balance:${user.id}`))  {
+      if (amount + fee + ourfee > (await g(`balance:${user.id}`))) {
         tx = await bc.fundRawTransaction(raw, {
           replaceable: true,
-            subtractFeeFromOutputs: [0]
+          subtractFeeFromOutputs: [0],
         });
       }
 
@@ -485,12 +486,12 @@ export default {
 
       mqtt1.publish(
         username,
-        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`
+        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`,
       );
 
       mqtt2.publish(
         username,
-        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`
+        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`,
       );
 
       res.send({ ok: true });
@@ -507,7 +508,7 @@ export default {
       let maxfee = 5000;
       let [username, domain] = lnaddress.split("@");
       let { minSendable, maxSendable, callback, metadata } = await got(
-        `https://${domain}/.well-known/lnurlp/${username}`
+        `https://${domain}/.well-known/lnurlp/${username}`,
       ).json();
 
       let memo = metadata["text/plain"] || "";

@@ -1,12 +1,10 @@
 {
   "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2
+    "indentStyle": "space"
   },
-  "javascript": {
-    "formatter": {
-      "trailingComma": "none"
-    } 
-  } 
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  }
 }
