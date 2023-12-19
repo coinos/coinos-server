@@ -1,15 +1,15 @@
-FROM node:18
+FROM node:21
 
 ARG NODE_ENV=production
 ENV NODE_ENV $NODE_ENV
 
 RUN apt update
 RUN apt install gcc make pkg-config automake libpcre2-dev libtool git ffmpeg -y
-RUN npm i -g pnpm
+RUN npm i -g bun
 
 COPY . /app
 WORKDIR /app
 
-RUN NODE_ENV=development NODE_OPTIONS="" pnpm i
+RUN NODE_ENV=development NODE_OPTIONS="" bun i
 
-CMD ["pnpm", "start"]
+CMD ["bun", "run", "start"]

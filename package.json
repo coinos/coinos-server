@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.449.0",
-    "@biomejs/biome": "^1.4.1",
     "@fastify/cors": "^8.3.0",
     "@fastify/multipart": "^8.0.0",
     "@fastify/passport": "^2.4.0",
@@ -20,7 +19,6 @@
     "buffer-crc32": "^0.2.13",
     "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
     "date-fns": "^2.21.3",
-    "dollars-to-words": "github:asoltys/dollars-to-words",
     "fastify": "^4.24.3",
     "file-type": "^18.0.0",
     "fluent-ffmpeg": "^2.1.2",
@@ -29,7 +27,6 @@
     "jsonwebtoken": "^9.0.2",
     "lnurl": "^0.24.2",
     "mqtt": "^5.0.2",
-    "nodemon": "^2.0.7",
     "nostr": "^0.2.7",
     "nostr-tools": "^1.17.0",
     "otplib": "^12.0.1",
@@ -44,6 +41,10 @@
     "uuid": "8",
     "web-push": "^3.4.4",
     "ws": "^7.4.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.4.1",
+    "nodemon": "^2.0.7"
   },
   "apidoc": {
     "title": "CoinOS Server API Documentation",

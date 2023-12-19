@@ -7,7 +7,7 @@ services:
       - db
       - bc
       - cl
-    command: "pnpm dev"
+    command: "bun run dev"
     environment:
       NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
       NODE_ENV: development
