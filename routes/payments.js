@@ -250,11 +250,8 @@ export default {
     }
   },
 
-  async fee({ body: { amount, address, feeRate, subtract }, user }, res) {
+      async fee({ body: { amount, address, feeRate, subtract }, user }, res) {
     try {
-      let subtractFeeFromOutputs = subtract ? [0] : [];
-      let replaceable = true;
-
       let ourfee = Math.round(amount * config.fee);
       let credit = await g(`credit:bitcoin:${user.id}`);
       let covered = Math.min(credit, ourfee) || 0;
@@ -262,28 +259,23 @@ export default {
 
       if (subtract) amount -= ourfee;
 
-      let { feerate: min } = await bc.estimateSmartFee(40);
-      let { feerate: max } = await bc.estimateSmartFee(1);
-
-      if (feeRate) feeRate = btc(feeRate);
-      else feeRate = max;
-
       let outs = [{ [address]: btc(amount) }];
       let raw = await bc.createRawTransaction([], outs, 0, replaceable);
 
       let tx = await bc.fundRawTransaction(raw, {
-        feeRate,
-        subtractFeeFromOutputs,
-        replaceable,
+        replaceable: true,
       });
 
       let fee = sats(tx.fee);
 
-      min = sats(min);
-      max = Math.round(sats(max) * 1.2);
-      feeRate = sats(feeRate);
+      if (amount + fee + ourfee > await g(`balance:${user.id}`))  {
+        tx = await bc.fundRawTransaction(raw, {
+          replaceable: true,
+            subtractFeeFromOutputs: [0]
+        });
+      }
 
-      res.send({ feeRate, min, max, fee, tx });
+      res.send({ feeRate, ourfee, fee, tx });
     } catch (e) {
       warn("problem estimating fee", e.message, user.username, amount, address);
       bail(res, "problem estimating fee");
