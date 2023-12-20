@@ -55,7 +55,13 @@ export default {
       if (username && username.endsWith("@classic")) {
         let { username: source } = user;
         username = username.replace("@classic", "");
-        p = await debit(hash, amount, 0, username, user, types.classic);
+        p = await debit({
+          hash,
+          amount,
+          memo: username,
+          user,
+          type: types.classic,
+        });
 
         await got
           .post(`${config.classic}/admin/credit`, {
@@ -69,10 +75,10 @@ export default {
 
       if (!p) {
         if (hash) {
-          p = await debit(hash, amount, 0, memo, user);
+          p = await debit({ hash, amount, memo, user });
           await credit(hash, amount, memo, user.id);
         } else if (fund) {
-          p = await debit(hash, amount, 0, fund, user, types.fund);
+          p = await debit({ hash, amount, memo: fund, user, type: types.fund });
           await db.incrBy(`fund:${fund}`, amount);
           await db.lPush(`fund:${fund}:payments`, p.id);
           l("funded fund", fund);
@@ -251,45 +257,56 @@ export default {
     }
   },
 
-  async fee({ body: { amount, address, feeRate, subtract }, user }, res) {
+  async fee({ body: { amount, address, feeRate: fee_rate }, user }, res) {
     try {
+      amount = parseInt(amount);
+
+      let replaceable = true;
       let ourfee = Math.round(amount * config.fee);
       let credit = await g(`credit:bitcoin:${user.id}`);
       let covered = Math.min(credit, ourfee) || 0;
       ourfee -= covered;
 
-      if (subtract) amount -= ourfee;
-
       let outs = [{ [address]: btc(amount) }];
       let raw = await bc.createRawTransaction([], outs, 0, replaceable);
 
       let tx = await bc.fundRawTransaction(raw, {
-        replaceable: true,
+        fee_rate,
+        replaceable,
+        subtractFeeFromOutputs: [],
       });
 
       let fee = sats(tx.fee);
+      let dust = 547;
 
-      if (amount + fee + ourfee > (await g(`balance:${user.id}`))) {
+      let balance = await g(`balance:${user.id}`);
+
+      if (amount + fee + ourfee > balance) {
+        if (amount <= fee + ourfee + dust)
+          return bail(res, "insufficient funds");
+
+        outs = [{ [address]: btc(amount - ourfee) }];
+        raw = await bc.createRawTransaction([], outs, 0, replaceable);
+
         tx = await bc.fundRawTransaction(raw, {
-          replaceable: true,
+          fee_rate,
+          replaceable,
           subtractFeeFromOutputs: [0],
         });
+
+        fee = sats(tx.fee);
       }
 
-      res.send({ feeRate, ourfee, fee, tx });
+      res.send({ feeRate: fee_rate, ourfee, fee, hex: tx.hex });
     } catch (e) {
       warn("problem estimating fee", e.message, user.username, amount, address);
       bail(res, "problem estimating fee");
     }
   },
 
-  async send(req, res) {
+  async send({ body: { address, memo, hex, rate, pin }, user }, res) {
     try {
-      await requirePin(req);
-
-      let { user } = req;
-      let { address, memo, tx, subtract } = req.body;
-      let { hex, fee } = tx;
+      await requirePin({ body: { pin }, user });
 
       if (config.bitcoin.walletpass)
         await bc.walletPassphrase(config.bitcoin.walletpass, 300);
@@ -299,169 +316,48 @@ export default {
       let r = await bc.testMempoolAccept([hex]);
       if (!r[0].allowed) fail("transaction rejected");
 
-      fee = sats(fee);
-      if (fee < 0) fail("fee cannot be negative");
-
-      tx = await bc.decodeRawTransaction(hex);
+      let tx = await bc.decodeRawTransaction(hex);
       let { txid } = tx;
 
       let total = 0;
       let change = 0;
+
+      let totalIn = 0;
+      for await (let { txid, vout } of tx.vin) {
+        let hex = await bc.getRawTransaction(txid);
+        let tx = await bc.decodeRawTransaction(hex);
+        totalIn += sats(tx.vout[vout].value);
+      }
 
       for (let {
         scriptPubKey: { address },
         value,
       } of tx.vout) {
         total += sats(value);
-        let iid = await g(`invoice:${address}`);
-        if ((await bc.getAddressInfo(address)).ismine && !iid)
-          change += sats(value);
+        if (await g(`invoice:${address}`))
+          fail("Cannot send to internal address");
+
+        if ((await bc.getAddressInfo(address)).ismine) change += sats(value);
       }
 
-      total = total - change + fee;
-      let amount = total - fee;
+      let fee = totalIn - total;
+      let amount = total - change;
 
-      if (change && !amount) fail("Cannot send to unregistered coinos address");
-
-      await debit(txid, amount, fee, null, user, types.bitcoin, txid);
+      await debit({
+        hash: txid,
+        amount,
+        fee,
+        rate,
+        user,
+        type: types.bitcoin,
+        id: txid,
+      });
       await bc.sendRawTransaction(hex);
 
       res.send({ txid });
     } catch (e) {
       warn("payment failed", e.message);
       res.code(500).send(e.message);
-    }
-  },
-
-  async buy({ body: { amount, number, year, month, cvc }, user }, res) {
-    if (!user.eligible) fail("not eligible");
-
-    let stripe = "https://api.stripe.com/v1";
-    let { stripe: username } = config;
-
-    let form = {
-      "card[number]": number,
-      "card[exp_month]": month,
-      "card[exp_year]": year,
-      "card[cvc]": cvc,
-    };
-
-    let { id: source } = await got
-      .post(`${stripe}/tokens`, {
-        form,
-        username,
-      })
-      .json();
-
-    let currency = "CAD";
-    form = {
-      amount,
-      currency,
-      source,
-      description: "starter coupon",
-    };
-
-    let r = await got
-      .post(`${stripe}/charges`, {
-        form,
-        username,
-      })
-      .json();
-
-    let { status } = r;
-    if (status === "succeeded") {
-      let id = v4();
-      let hash = r.id;
-      let memo = "stripe";
-      await s(`invoice:${id}`, {
-        id,
-        hash: id,
-        uid: user.id,
-        received: 0,
-      });
-      amount = sats(amount / store.rates[currency]);
-      let uid = await g("user:coinos");
-      let coinos = await g(`user:${uid}`);
-      let p = await debit(hash, amount, 0, memo, coinos);
-      await credit(hash, amount, memo, coinos.id);
-    } else fail("Card payment failed");
-
-    res.send({ status });
-  },
-
-  async proxy({ body: { method, params } }, res) {
-    try {
-      let whitelist = [
-        "getblock",
-        "getblockhash",
-        "estimatesmartfee",
-        "echo",
-        "getblockchaininfo",
-        "getnetworkinfo",
-      ];
-
-      if (!whitelist.includes(method)) fail("unsupported method");
-
-      if (method === "estimatesmartfee" || method === "getblockhash")
-        params[0] = parseInt(params[0]);
-
-      if (method === "getblock") params[1] = parseInt(params[1]);
-
-      let result = await bc[method](...params);
-
-      if (result.feerate) result.feerate = result.feerate.toFixed(8);
-
-      res.send(result);
-    } catch (e) {
-      bail(res, e.message);
-    }
-  },
-
-  async fix({ body: { uid, username }, user }, res) {
-    try {
-      if (!user.admin) fail("unauthorized");
-
-      for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
-        let bal = await g(k);
-        if (bal < 0) s(k, 0);
-      }
-
-      for await (let k of db.scanIterator({ MATCH: "*:lastlen" })) {
-        await db.del(k);
-      }
-
-      for await (let k of db.scanIterator({ MATCH: "user:*" })) {
-        let u = await g(k);
-        let id = k.split(":")[1];
-
-        if (typeof u === "string") {
-          id = u;
-          u = await g(`user:${u}`);
-        }
-
-        if (!(u && u.username)) continue;
-
-        let touched;
-
-        console.log(u.username, u.profile, u.banner);
-
-        if (u.profile) {
-          u.profile = `${u.id}-profile`;
-          touched = true;
-        }
-
-        if (u.banner) {
-          u.banner = `${u.id}-banner`;
-          touched = true;
-        }
-
-        if (touched) await s(`user:${u.id}`, u);
-      }
-
-      res.send("ok");
-    } catch (e) {
-      console.log(e);
-      bail(res, e.message);
     }
   },
 
@@ -521,7 +417,7 @@ export default {
       let p = await payLightning(user, pr, amount, maxfee, memo);
 
       if (!p) {
-        p = await debit(pr, amount, 0, memo, user);
+        p = await debit({ hash: pr, amount, memo, user });
         await credit(pr, amount, memo, user.id);
       }
 

@@ -399,10 +399,6 @@ export default {
     res.send({});
   },
 
-  async fix(req, res) {
-    res.send(req.headers);
-  },
-
   async reset({ body: { code, username, password }, user: u }, res) {
     let admin = u && u.admin;
     let id, user;

@@ -58,7 +58,6 @@ app.post("/parse", payments.parse);
 app.get("/fund/:name", payments.fund);
 app.get("/fund/:name/withdraw", payments.withdraw);
 app.post("/take", auth, payments.take);
-app.post("/buy", auth, payments.buy);
 app.post("/print", auth, payments.print);
 app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
 
@@ -68,13 +67,11 @@ app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
 
 app.post("/freeze", payments.freeze);
-app.post("/fix", auth, payments.fix);
 app.post("/bitcoin", payments.bitcoin);
 app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
 
 app.get("/users", auth, users.list);
-app.get("/fix", auth, users.fix);
 app.get("/me", auth, users.me);
 app.get("/users/:key", users.get);
 app.post("/register", users.create);
@@ -102,7 +99,6 @@ app.get("/requests", auth, requests.list);
 app.post("/requests", auth, requests.create);
 app.post("/requests/delete", auth, requests.destroy);
 
-app.post("/proxy", payments.proxy);
 app.post("/shopify/:id", shopify);
 
 let host = process.env.HOST || "0.0.0.0";
