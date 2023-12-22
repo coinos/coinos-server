@@ -54,7 +54,7 @@ app.get("/invoice/classic/:username", invoices.classic);
 app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", auth, payments.get);
-app.post("/parse", payments.parse);
+app.post("/parse", auth, payments.parse);
 app.get("/fund/:name", payments.fund);
 app.get("/fund/:name/withdraw", payments.withdraw);
 app.post("/take", auth, payments.take);

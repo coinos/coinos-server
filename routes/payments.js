@@ -37,7 +37,7 @@ catchUp();
 export default {
   async create({ body, user }, res) {
     warn(user.username, JSON.stringify(body));
-    let { amount, hash, maxfee, fund, memo, payreq, username } = body;
+    let { amount, hash, maxfee, fund, memo, payreq, rate, username } = body;
 
     try {
       if (await g("freeze")) fail("Problem sending payment");
@@ -59,6 +59,7 @@ export default {
           hash,
           amount,
           memo: username,
+          rate,
           user,
           type: types.classic,
         });
@@ -146,7 +147,7 @@ export default {
     res.send(p);
   },
 
-  async parse({ body: { payreq } }, res) {
+  async parse({ body: { payreq }, user }, res) {
     try {
       let hour = 1000 * 60 * 60;
       let { last } = store.nodes;
@@ -161,7 +162,13 @@ export default {
       let node = nodes.find((n) => n.nodeid === payee);
       let alias = node ? node.alias : payee.substr(0, 12);
 
-      res.send({ alias, amount: Math.round(amount_msat / 1000) });
+      let amount = Math.round(amount_msat / 1000);
+      let ourfee = Math.round(amount * config.fee);
+      let credit = await g(`credit:lightning:${user.id}`);
+      let covered = Math.min(credit, ourfee) || 0;
+      ourfee -= covered;
+
+      res.send({ alias, amount, ourfee });
     } catch (e) {
       bail(res, e.message);
     }
