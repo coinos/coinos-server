@@ -67,7 +67,8 @@ app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
 
 app.post("/freeze", payments.freeze);
-app.post("/bitcoin", payments.bitcoin);
+
+app.post("/confirm", payments.confirm);
 app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
 
@@ -106,5 +107,5 @@ let port = process.env.PORT || 3119;
 
 app.listen({ host, port });
 
-process.on("unhandledRejection", () => err("Unhandled error"));
-process.on("uncaughtException", (e) => err(e.message));
+// process.on("unhandledRejection", (e) => err("Unhandled error", e.message));
+// process.on("uncaughtException", (e) => err(e.message));

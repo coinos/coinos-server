@@ -1,4 +1,5 @@
 import { g, s, db } from "$lib/db";
+import migrate from "$lib/migrate";
 import config from "$config";
 import store from "$lib/store";
 import {
@@ -277,6 +278,11 @@ export default {
       username = username.toLowerCase().replace(/\s/g, "");
       let uid = await g(`user:${username}`);
       let user = await getUser(username);
+
+      if (!user) {
+        user = await migrate(username);
+        if (user) uid = user.id;
+      }
 
       if (
         !user ||

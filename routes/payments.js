@@ -6,10 +6,11 @@ import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
 import { bail, fail, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
-import { debit, credit, confirm, types, payLightning } from "$lib/payments";
+import { debit, credit, types, payLightning } from "$lib/payments";
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
 
+import lq from "$lib/liquid";
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
@@ -20,8 +21,8 @@ let catchUp = async () => {
   for (let { txid } of txns) {
     try {
       if (seen.includes(txid)) continue;
-      await got.post(`http://localhost:${process.env.PORT || 3119}/bitcoin`, {
-        json: { txid, wallet: config.bitcoin.wallet },
+      await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
+        json: { txid, wallet: config.bitcoin.wallet, type: types.bitcoin },
       });
 
       seen.push(txid);
@@ -233,25 +234,36 @@ export default {
     }
   },
 
-  async bitcoin({ body: { txid, wallet } }, res) {
+  async confirm({ body: { txid, wallet, type } }, res) {
+    let node = type === types.bitcoin ? bc : lq;
     try {
       if (wallet === config.bitcoin.wallet) {
-        let { confirmations, details } = await bc.getTransaction(txid);
+        let { confirmations, details } = await node.getTransaction(txid);
         for (let { address, amount, category, vout } of details) {
           if (category !== "receive") continue;
           let p = await g(`payment:${txid}:${vout}`);
           if (typeof p === "string") p = await g(`payment:${p}`);
 
           if (!p) {
-            await credit(
-              address,
-              sats(amount),
-              "",
-              `${txid}:${vout}`,
-              types.bitcoin,
-            );
+            await credit(address, sats(amount), "", `${txid}:${vout}`, type);
           } else if (confirmations >= 1) {
-            await confirm(address, txid, vout);
+            let id = `payment:${txid}:${vout}`;
+            let p = await g(id);
+            if (typeof p === "string") p = await g(`payment:${p}`);
+            if (!p) return db.sAdd("missed", id);
+            if (p.confirmed) return;
+
+            p.confirmed = true;
+            emit(p.uid, "payment", p);
+
+            l("confirming", txid);
+
+            let r = await db
+              .multi()
+              .set(`payment:${p.id}`, JSON.stringify(p))
+              .decrBy(`pending:${p.uid}`, p.amount)
+              .incrBy(`balance:${p.uid}`, p.amount)
+              .exec();
           }
         }
       }
@@ -263,20 +275,27 @@ export default {
     }
   },
 
-  async fee({ body: { amount, address, feeRate: fee_rate }, user }, res) {
+  async fee(
+    {
+      body: { amount, address, feeRate: fee_rate, type = types.bitcoin },
+      user,
+    },
+    res,
+  ) {
     try {
+      let node = type === types.bitcoin ? bc : lq;
       amount = parseInt(amount);
 
       let replaceable = true;
       let ourfee = Math.round(amount * config.fee);
-      let credit = await g(`credit:bitcoin:${user.id}`);
+      let credit = await g(`credit:${type}:${user.id}`);
       let covered = Math.min(credit, ourfee) || 0;
       ourfee -= covered;
 
       let outs = [{ [address]: btc(amount) }];
-      let raw = await bc.createRawTransaction([], outs, 0, replaceable);
+      let raw = await node.createRawTransaction([], outs, 0, replaceable);
 
-      let tx = await bc.fundRawTransaction(raw, {
+      let tx = await node.fundRawTransaction(raw, {
         fee_rate,
         replaceable,
         subtractFeeFromOutputs: [],
@@ -292,9 +311,9 @@ export default {
           return bail(res, "insufficient funds");
 
         outs = [{ [address]: btc(amount - ourfee) }];
-        raw = await bc.createRawTransaction([], outs, 0, replaceable);
+        raw = await node.createRawTransaction([], outs, 0, replaceable);
 
-        tx = await bc.fundRawTransaction(raw, {
+        tx = await node.fundRawTransaction(raw, {
           fee_rate,
           replaceable,
           subtractFeeFromOutputs: [0],
