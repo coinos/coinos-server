@@ -16,13 +16,21 @@ import ln from "$lib/ln";
 
 let seen = await db.sMembers("missing");
 let catchUp = async () => {
-  let txns = await bc.listTransactions("*", 50);
-  txns = txns.filter((tx) => tx.category === "receive" && tx.confirmations > 0);
-  for (let { txid } of txns) {
+  let txns = [];
+  for (let [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
+    txns.push(
+      ...(await n.listTransactions("*", 50)).filter((tx) => {
+        tx.type = type;
+        return tx.category === "receive" && tx.confirmations > 0;
+      }),
+    );
+  }
+
+  for (let { txid, type } of txns) {
     try {
       if (seen.includes(txid)) continue;
       await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
-        json: { txid, wallet: config.bitcoin.wallet, type: types.bitcoin },
+        json: { txid, wallet: config.bitcoin.wallet, type },
       });
 
       seen.push(txid);
@@ -240,6 +248,7 @@ export default {
       if (wallet === config.bitcoin.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
         for (let { address, amount, category, vout } of details) {
+          if (!address) continue;
           if (category !== "receive") continue;
           let p = await g(`payment:${txid}:${vout}`);
           if (typeof p === "string") p = await g(`payment:${p}`);
@@ -253,17 +262,25 @@ export default {
             if (!p) return db.sAdd("missed", id);
             if (p.confirmed) return;
 
+            let iid = await g(`invoice:${address}`);
+            if (iid && iid.hash) iid = iid.hash;
+            let invoice = await g(`invoice:${iid}`);
+
             p.confirmed = true;
-            emit(p.uid, "payment", p);
+            invoice.received += parseInt(invoice.pending);
+            invoice.pending = 0;
 
             l("confirming", txid);
 
             let r = await db
               .multi()
+              .set(`invoice:${iid}`, JSON.stringify(invoice))
               .set(`payment:${p.id}`, JSON.stringify(p))
               .decrBy(`pending:${p.uid}`, p.amount)
               .incrBy(`balance:${p.uid}`, p.amount)
               .exec();
+
+            emit(p.uid, "payment", p);
           }
         }
       }
