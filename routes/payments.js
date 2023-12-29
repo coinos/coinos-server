@@ -247,8 +247,9 @@ export default {
     try {
       if (wallet === config.bitcoin.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
-        for (let { address, amount, category, vout } of details) {
+        for (let { address, amount, asset, category, vout } of details) {
           if (!address) continue;
+            if (type === types.liquid && asset !== config.liquid.btc) continue;
           if (category !== "receive") continue;
           let p = await g(`payment:${txid}:${vout}`);
           if (typeof p === "string") p = await g(`payment:${p}`);
