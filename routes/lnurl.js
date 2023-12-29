@@ -79,6 +79,7 @@ export default {
     let uid = await g(`lnurl:${id}`);
     let user = await g(`user:${uid}`);
     if (!user) user = await migrate(uid);
+    if (!(user && user.username)) return bail(res, "user not found");
     let { username } = user;
     username = username.replace(/\s/g, "").toLowerCase();
 
