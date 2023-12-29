@@ -94,6 +94,7 @@ export default {
   },
 
   async follows({ params: { pubkey }, query: { tagsonly } }, res) {
+    try {
     let sub = `${pubkey}:follows`,
       params = {
         limit: 1,
@@ -131,9 +132,12 @@ export default {
     }
 
     follows = uniq(follows, (e) => e.pubkey);
-    follows.sort((a, b) => a.username.localeCompare(b.username));
+    follows.sort((a, b) => a.username && a.username.localeCompare(b.username));
 
     res.send(follows);
+    } catch(e) {
+      bail(res, e.message);
+    } 
   },
 
   async followers({ params: { pubkey } }, res) {

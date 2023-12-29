@@ -78,6 +78,7 @@ export default {
   async lnurl({ params: { id }, query: { amount, nostr } }, res) {
     let uid = await g(`lnurl:${id}`);
     let user = await g(`user:${uid}`);
+    if (!user) user = await migrate(uid);
     let { username } = user;
     username = username.replace(/\s/g, "").toLowerCase();
 
