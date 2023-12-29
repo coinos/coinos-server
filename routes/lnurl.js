@@ -1,3 +1,4 @@
+import migrate from "$lib/migrate";
 import { g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { bail, getUser, fail } from "$lib/utils";
