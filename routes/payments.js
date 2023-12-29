@@ -243,8 +243,12 @@ export default {
   },
 
   async confirm({ body: { txid, wallet, type } }, res) {
-    let node = type === types.bitcoin ? bc : lq;
     try {
+      let node;
+      if (type === types.bitcoin) node = bc;
+      else if (type === types.liquid) node = lq;
+      else fail("unrecognized transaction type");
+
       if (wallet === config.bitcoin.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
         for (let { address, amount, asset, category, vout } of details) {
