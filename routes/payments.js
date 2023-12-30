@@ -14,6 +14,57 @@ import lq from "$lib/liquid";
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
+let getNode = (type) => {
+  if (type === types.bitcoin) return bc;
+  else if (type === types.liquid) return lq;
+  else fail("unrecognized transaction type");
+};
+
+let build = async (
+  { amount, address, feeRate: fee_rate, type = types.bitcoin },
+  user,
+) => {
+  let node = getNode(type);
+  amount = parseInt(amount);
+
+  let replaceable = true;
+  let ourfee = Math.round(amount * config.fee);
+  let credit = await g(`credit:${type}:${user.id}`);
+  let covered = Math.min(credit, ourfee) || 0;
+  ourfee -= covered;
+
+  let outs = [{ [address]: btc(amount) }];
+  let raw = await node.createRawTransaction([], outs, 0, replaceable);
+
+  let tx = await node.fundRawTransaction(raw, {
+    fee_rate,
+    replaceable,
+    subtractFeeFromOutputs: [],
+  });
+
+  let fee = sats(tx.fee);
+  let dust = 547;
+
+  let balance = await g(`balance:${user.id}`);
+
+  if (amount + fee + ourfee > balance) {
+    if (amount <= fee + ourfee + dust) fail("insufficient funds");
+
+    outs = [{ [address]: btc(amount - ourfee) }];
+    raw = await node.createRawTransaction([], outs, 0, replaceable);
+
+    tx = await node.fundRawTransaction(raw, {
+      fee_rate,
+      replaceable,
+      subtractFeeFromOutputs: [0],
+    });
+
+    fee = sats(tx.fee);
+  }
+
+  return { feeRate: fee_rate, ourfee, fee, hex: tx.hex };
+};
+
 let seen = await db.sMembers("missing");
 let catchUp = async () => {
   let txns = [];
@@ -244,22 +295,19 @@ export default {
 
   async confirm({ body: { txid, wallet, type } }, res) {
     try {
-      let node;
-      if (type === types.bitcoin) node = bc;
-      else if (type === types.liquid) node = lq;
-      else fail("unrecognized transaction type");
+      let node = getNode(type);
 
       if (wallet === config.bitcoin.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
         for (let { address, amount, asset, category, vout } of details) {
           if (!address) continue;
-            if (type === types.liquid && asset !== config.liquid.btc) continue;
+          if (type === types.liquid && asset !== config.liquid.btc) continue;
           if (category !== "receive") continue;
           let p = await g(`payment:${txid}:${vout}`);
           if (typeof p === "string") p = await g(`payment:${p}`);
 
           if (!p) {
-            await credit(address, sats(amount), "", `${txid}:${vout}`, type);
+            await credit(txid, sats(amount), "", `${txid}:${vout}`, type);
           } else if (confirmations >= 1) {
             let id = `payment:${txid}:${vout}`;
             let p = await g(id);
@@ -297,73 +345,33 @@ export default {
     }
   },
 
-  async fee(
-    {
-      body: { amount, address, feeRate: fee_rate, type = types.bitcoin },
-      user,
-    },
-    res,
-  ) {
+  async fee({ body, user }, res) {
     try {
-      let node = type === types.bitcoin ? bc : lq;
-      amount = parseInt(amount);
-
-      let replaceable = true;
-      let ourfee = Math.round(amount * config.fee);
-      let credit = await g(`credit:${type}:${user.id}`);
-      let covered = Math.min(credit, ourfee) || 0;
-      ourfee -= covered;
-
-      let outs = [{ [address]: btc(amount) }];
-      let raw = await node.createRawTransaction([], outs, 0, replaceable);
-
-      let tx = await node.fundRawTransaction(raw, {
-        fee_rate,
-        replaceable,
-        subtractFeeFromOutputs: [],
-      });
-
-      let fee = sats(tx.fee);
-      let dust = 547;
-
-      let balance = await g(`balance:${user.id}`);
-
-      if (amount + fee + ourfee > balance) {
-        if (amount <= fee + ourfee + dust)
-          return bail(res, "insufficient funds");
-
-        outs = [{ [address]: btc(amount - ourfee) }];
-        raw = await node.createRawTransaction([], outs, 0, replaceable);
-
-        tx = await node.fundRawTransaction(raw, {
-          fee_rate,
-          replaceable,
-          subtractFeeFromOutputs: [0],
-        });
-
-        fee = sats(tx.fee);
-      }
-
-      res.send({ feeRate: fee_rate, ourfee, fee, hex: tx.hex });
+      res.send(await build(body, user));
     } catch (e) {
       warn("problem estimating fee", e.message, user.username, amount, address);
       bail(res, "problem estimating fee");
     }
   },
 
-  async send({ body: { address, memo, hex, rate, pin }, user }, res) {
+  async send({ body, user }, res) {
     try {
-      await requirePin({ body: { pin }, user });
+      await requirePin({ body, user });
+
+      let { memo, hex, rate, type = types.bitcoin } = body;
+      let node = getNode(type);
+
+      if (!hex) ({ hex } = await build(body, user));
 
       if (config.bitcoin.walletpass)
-        await bc.walletPassphrase(config.bitcoin.walletpass, 300);
+        await node.walletPassphrase(config.bitcoin.walletpass, 300);
 
-      ({ hex } = await bc.signRawTransactionWithWallet(hex));
+      ({ hex } = await node.signRawTransactionWithWallet(hex));
 
-      let r = await bc.testMempoolAccept([hex]);
+      let r = await node.testMempoolAccept([hex]);
       if (!r[0].allowed) fail("transaction rejected");
 
-      let tx = await bc.decodeRawTransaction(hex);
+      let tx = await node.decodeRawTransaction(hex);
       let { txid } = tx;
 
       let total = 0;
@@ -371,8 +379,8 @@ export default {
 
       let totalIn = 0;
       for await (let { txid, vout } of tx.vin) {
-        let hex = await bc.getRawTransaction(txid);
-        let tx = await bc.decodeRawTransaction(hex);
+        let hex = await node.getRawTransaction(txid);
+        let tx = await node.decodeRawTransaction(hex);
         totalIn += sats(tx.vout[vout].value);
       }
 
@@ -384,7 +392,7 @@ export default {
         if (await g(`invoice:${address}`))
           fail("Cannot send to internal address");
 
-        if ((await bc.getAddressInfo(address)).ismine) change += sats(value);
+        if ((await node.getAddressInfo(address)).ismine) change += sats(value);
       }
 
       let fee = totalIn - total;
@@ -396,10 +404,10 @@ export default {
         fee,
         rate,
         user,
-        type: types.bitcoin,
-        id: txid,
+        type,
       });
-      await bc.sendRawTransaction(hex);
+
+      await node.sendRawTransaction(hex);
 
       res.send({ txid });
     } catch (e) {
