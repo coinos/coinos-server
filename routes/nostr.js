@@ -179,7 +179,7 @@ export default {
       }
 
       followers = uniq(followers, (e) => e.pubkey);
-      followers.sort((a, b) => a.username.localeCompare(b.username));
+      followers.sort((a, b) => a.username && a.username.localeCompare(b.username));
 
       res.send(followers);
     } catch (e) {
