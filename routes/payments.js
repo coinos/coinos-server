@@ -349,7 +349,7 @@ export default {
     try {
       res.send(await build(body, user));
     } catch (e) {
-      warn("problem estimating fee", e.message, user.username, amount, address);
+      warn("problem estimating fee", e.message, user.username, body.amount, body.address);
       bail(res, "problem estimating fee");
     }
   },
