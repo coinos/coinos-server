@@ -317,6 +317,9 @@ export default {
         type === types.liquid ? await node.blindRawTransaction(hex) : hex,
       );
 
+      if (type === types.liquid)
+        ({ wtxid: txid } = await lq.decodeRawTransaction(signed));
+
       let r = await node.testMempoolAccept([signed]);
       if (!r[0].allowed) fail("transaction rejected");
 
