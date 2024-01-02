@@ -6,93 +6,20 @@ import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
 import { bail, fail, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
-import { debit, credit, types, payLightning } from "$lib/payments";
+import {
+  debit,
+  credit,
+  types,
+  getNode,
+  build,
+  payLightning,
+} from "$lib/payments";
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
 
 import lq from "$lib/liquid";
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
-
-let getNode = (type) => {
-  if (type === types.bitcoin) return bc;
-  else if (type === types.liquid) return lq;
-  else fail("unrecognized transaction type");
-};
-
-let build = async (
-  { amount, address, feeRate: fee_rate, type = types.bitcoin },
-  user,
-) => {
-  let node = getNode(type);
-  amount = parseInt(amount);
-
-  let replaceable = true;
-  let ourfee = Math.round(amount * config.fee);
-  let credit = await g(`credit:${type}:${user.id}`);
-  let covered = Math.min(credit, ourfee) || 0;
-  ourfee -= covered;
-
-  let outs = [{ [address]: btc(amount) }];
-  let raw = await node.createRawTransaction([], outs, 0, replaceable);
-
-  let tx = await node.fundRawTransaction(raw, {
-    fee_rate,
-    replaceable,
-    subtractFeeFromOutputs: [],
-  });
-
-  let fee = sats(tx.fee);
-  let dust = 547;
-
-  let balance = await g(`balance:${user.id}`);
-
-  if (amount + fee + ourfee > balance) {
-    if (amount <= fee + ourfee + dust) fail("insufficient funds");
-
-    outs = [{ [address]: btc(amount - ourfee) }];
-    raw = await node.createRawTransaction([], outs, 0, replaceable);
-
-    tx = await node.fundRawTransaction(raw, {
-      fee_rate,
-      replaceable,
-      subtractFeeFromOutputs: [0],
-    });
-
-    fee = sats(tx.fee);
-  }
-
-  return { feeRate: fee_rate, ourfee, fee, hex: tx.hex };
-};
-
-let seen = await db.sMembers("missing");
-let catchUp = async () => {
-  let txns = [];
-  for (let [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
-    txns.push(
-      ...(await n.listTransactions("*", 50)).filter((tx) => {
-        tx.type = type;
-        return tx.category === "receive" && tx.confirmations > 0;
-      }),
-    );
-  }
-
-  for (let { txid, type } of txns) {
-    try {
-      if (seen.includes(txid)) continue;
-      await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
-        json: { txid, wallet: config.bitcoin.wallet, type },
-      });
-
-      seen.push(txid);
-    } catch (e) {
-      console.log(e.message);
-    }
-  }
-  setTimeout(catchUp, 2000);
-};
-
-catchUp();
 
 export default {
   async create({ body, user }, res) {
@@ -349,7 +276,13 @@ export default {
     try {
       res.send(await build(body, user));
     } catch (e) {
-      warn("problem estimating fee", e.message, user.username, body.amount, body.address);
+      warn(
+        "problem estimating fee",
+        e.message,
+        user.username,
+        body.amount,
+        body.address,
+      );
       bail(res, "problem estimating fee");
     }
   },
@@ -358,44 +291,80 @@ export default {
     try {
       await requirePin({ body, user });
 
-      let { memo, hex, rate, type = types.bitcoin } = body;
-      let node = getNode(type);
-
+      let { memo, hex, rate } = body;
       if (!hex) ({ hex } = await build(body, user));
 
-      if (config.bitcoin.walletpass)
-        await node.walletPassphrase(config.bitcoin.walletpass, 300);
+      let type, tx;
+      try {
+        tx = await bc.decodeRawTransaction(hex);
+        type = types.bitcoin;
+      } catch (e) {
+        try {
+          tx = await lq.decodeRawTransaction(hex);
+          type = types.liquid;
+        } catch (e) {
+          fail("unrecognized tx");
+        }
+      }
 
-      ({ hex } = await node.signRawTransactionWithWallet(hex));
-
-      let r = await node.testMempoolAccept([hex]);
-      if (!r[0].allowed) fail("transaction rejected");
-
-      let tx = await node.decodeRawTransaction(hex);
+      let node = getNode(type);
       let { txid } = tx;
 
+      if (config[type].walletpass)
+        await node.walletPassphrase(config[type].walletpass, 300);
+
+      let { hex: signed } = await node.signRawTransactionWithWallet(
+        type === types.liquid ? await node.blindRawTransaction(hex) : hex,
+      );
+
+      let r = await node.testMempoolAccept([signed]);
+      if (!r[0].allowed) fail("transaction rejected");
+
       let total = 0;
+      let fee = 0;
       let change = 0;
 
-      let totalIn = 0;
-      for await (let { txid, vout } of tx.vin) {
-        let hex = await node.getRawTransaction(txid);
-        let tx = await node.decodeRawTransaction(hex);
-        totalIn += sats(tx.vout[vout].value);
+      if (type === types.liquid) {
+        for (let {
+          asset,
+          scriptPubKey: { address, type },
+          value,
+        } of tx.vout) {
+          if (asset !== config.liquid.btc) fail("only L-BTC supported");
+          if (type === "fee") fee = sats(value);
+          else {
+            total += sats(value);
+
+            if (address) {
+              if ((await node.getAddressInfo(address)).ismine) {
+                change += sats(value);
+              }
+            }
+          }
+        }
+      } else {
+        let totalIn = 0;
+        for await (let { txid, vout } of tx.vin) {
+          let hex = await node.getRawTransaction(txid);
+          let tx = await node.decodeRawTransaction(hex);
+          totalIn += sats(tx.vout[vout].value);
+        }
+
+        for (let {
+          scriptPubKey: { address },
+          value,
+        } of tx.vout) {
+          total += sats(value);
+          if (await g(`invoice:${address}`))
+            fail("Cannot send to internal address");
+
+          if ((await node.getAddressInfo(address)).ismine)
+            change += sats(value);
+        }
+
+        fee = totalIn - total;
       }
 
-      for (let {
-        scriptPubKey: { address },
-        value,
-      } of tx.vout) {
-        total += sats(value);
-        if (await g(`invoice:${address}`))
-          fail("Cannot send to internal address");
-
-        if ((await node.getAddressInfo(address)).ismine) change += sats(value);
-      }
-
-      let fee = totalIn - total;
       let amount = total - change;
 
       await debit({
@@ -407,7 +376,7 @@ export default {
         type,
       });
 
-      await node.sendRawTransaction(hex);
+      await node.sendRawTransaction(signed);
 
       res.send({ txid });
     } catch (e) {
