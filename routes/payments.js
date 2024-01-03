@@ -283,7 +283,9 @@ export default {
         body.amount,
         body.address,
       );
-      bail(res, "problem estimating fee");
+      let msg = e.message;
+      if (msg.includes("500")) msg = "";
+      bail(res, "problem estimating fee " + msg);
     }
   },
 
