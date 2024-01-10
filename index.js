@@ -4,6 +4,7 @@ import { auth, optional } from "$lib/auth";
 import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
+  import { catchUp } from "$lib/payments";
 import { getRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { err } from "$lib/logging";
@@ -24,6 +25,7 @@ try {
   fillPool();
   getLocations();
   getRates();
+  catchUp();
 } catch (e) {
   console.log(e);
 }

@@ -89,10 +89,7 @@ export default {
         } catch (e) {}
       }
 
-      let user = await g(`user:${key}`);
-      if (typeof user === "string") {
-        user = await g(`user:${user}`);
-      }
+      let user = await getUser(key);
 
       if (!user && key.length === 64) {
         user = {
@@ -132,22 +129,22 @@ export default {
     }
   },
 
-  async create(req, res) {
+  async create({ body, headers }, res) {
     try {
-      const ip = req.headers["cf-connecting-ip"];
-      let { profile, cipher, pubkey, password, username, salt } = req.body.user;
+      const ip = headers["cf-connecting-ip"];
+      if (!body.user) fail("no user object provided");
+      let { user } = body;
+      let fields = [
+        "profile",
+        "cipher",
+        "pubkey",
+        "password",
+        "username",
+        "salt",
+      ];
 
-      let user = {
-        profile,
-        cipher,
-        pubkey,
-        password,
-        username,
-        salt,
-      };
-
-      user = await register(user, ip, false);
-      l("registered new user", username);
+      user = await register(pick(user, fields), ip, false);
+      l("registered new user", user.username);
       res.send(pick(user, whitelist));
     } catch (e) {
       res.code(500).send(e.message);
@@ -199,7 +196,7 @@ export default {
         shopifyStore,
       } = body;
 
-      if (user.pin && !(pin === user.pin)) throw new Error("Pin required");
+      if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
         user.pin = newpin;
       if (user.pin === "delete") delete user.pin;
@@ -210,7 +207,7 @@ export default {
       let token;
       if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
         err("username taken", username, user.username, exists.username);
-        throw new Error("Username taken");
+        fail("Username taken");
       } else if (username) {
         if (user.username.toLowerCase() !== username.toLowerCase())
           l("changing username", user.username, username);

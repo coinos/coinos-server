@@ -76,38 +76,41 @@ export default {
   async lnurlw({ params: { k1, pr } }, res) {},
 
   async lnurl({ params: { id }, query: { amount, nostr } }, res) {
-    let uid = await g(`lnurl:${id}`);
-    let user = await g(`user:${uid}`);
-    if (!user) user = await migrate(uid);
-    if (!(user && user.username)) return bail(res, "user not found");
-    let { username } = user;
-    username = username.replace(/\s/g, "").toLowerCase();
+    try {
+      let uid = await g(`lnurl:${id}`);
+      let user = await getUser(uid);
+      if (!user) fail("user not found");
+      let { username } = user;
+      username = username.replace(/\s/g, "").toLowerCase();
 
-    let metadata = JSON.stringify([
-      ["text/plain", `Paying ${username}@${host}`],
-      ["text/identifier", `${username}@${host}`],
-    ]);
+      let metadata = JSON.stringify([
+        ["text/plain", `Paying ${username}@${host}`],
+        ["text/identifier", `${username}@${host}`],
+      ]);
 
-    if (nostr) {
-      try {
-        let event = JSON.parse(decodeURIComponent(nostr));
-        // TODO: validate the event
-        await s(`zap:${id}`, event);
-        metadata = nostr;
-      } catch (e) {
-        err("problem handling zap", e.message);
+      if (nostr) {
+        try {
+          let event = JSON.parse(decodeURIComponent(nostr));
+          // TODO: validate the event
+          await s(`zap:${id}`, event);
+          metadata = nostr;
+        } catch (e) {
+          err("problem handling zap", e.message);
+        }
       }
+
+      let { text: pr } = await generate({
+        invoice: {
+          amount: Math.round(amount / 1000),
+          type: types.lightning,
+        },
+        memo: metadata,
+        user,
+      });
+
+      res.send({ pr, routes: [] });
+    } catch (e) {
+      bail(res, e.message);
     }
-
-    let { text: pr } = await generate({
-      invoice: {
-        amount: Math.round(amount / 1000),
-        type: types.lightning,
-      },
-      memo: metadata,
-      user,
-    });
-
-    res.send({ pr, routes: [] });
   },
 };
