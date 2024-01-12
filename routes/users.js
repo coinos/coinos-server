@@ -55,7 +55,7 @@ export default {
 
     for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
       let uid = k.split(":")[1];
-      let user = await g(`user:${uid}`);
+      let user = await getUser(uid);
 
       if (!user) {
         await db.del(`balance:${uid}`);
@@ -69,6 +69,7 @@ export default {
       let total = 0;
       for (let pid of payments) {
         let p = await g(`payment:${pid}`);
+        if (!p) continue;
         total += p.amount;
         if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0);
       }

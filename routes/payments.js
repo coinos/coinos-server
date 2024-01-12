@@ -89,6 +89,10 @@ export default {
       await Promise.all(
         payments.map(async (id) => {
           let p = await g(`payment:${id}`);
+          if (!p) {
+            warn("missing payment", id);
+            return p;
+          }
           if (p.created < start || p.created > end) return;
           if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
           return p;
