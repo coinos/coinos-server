@@ -228,7 +228,7 @@ export default {
     try {
       let node = getNode(type);
 
-      if (wallet === config.bitcoin.wallet) {
+      if (wallet === config.bitcoin.wallet || wallet === config.liquid.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
         for (let { address, amount, asset, category, vout } of details) {
           if (!address) continue;
