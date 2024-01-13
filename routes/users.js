@@ -71,7 +71,8 @@ export default {
         let p = await g(`payment:${pid}`);
         if (!p) continue;
         total += p.amount;
-        if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0);
+        if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0) + (p.tip || 0);
+        else total += (p.tip || 0)
       }
 
       user.expected = total;
