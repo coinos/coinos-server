@@ -126,7 +126,7 @@ export default {
 
       res.send(pick(user, whitelist));
     } catch (e) {
-      console.log(e);
+      err("problem getting user", e.message);
       res.code(500).send(e.message);
     }
   },
@@ -275,13 +275,7 @@ export default {
         l("logging in", username, req.headers["cf-connecting-ip"]);
 
       username = username.toLowerCase().replace(/\s/g, "");
-      let uid = await g(`user:${username}`);
       let user = await getUser(username);
-
-      if (!user) {
-        user = await migrate(username);
-        if (user) uid = user.id;
-      }
 
       if (
         !user ||
@@ -306,13 +300,12 @@ export default {
 
       if (username !== "coinos") l("logged in", username);
 
-      let payload = { id: uid };
+      let payload = { id: user.id };
       let token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
-      console.log(e);
       err("login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }
