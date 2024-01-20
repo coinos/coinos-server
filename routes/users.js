@@ -220,10 +220,12 @@ export default {
 
       let attributes = [
         "address",
+        "autowithdraw",
         "banner",
         "cipher",
         "currencies",
         "currency",
+        "destination",
         "display",
         "email",
         "language",
@@ -236,6 +238,7 @@ export default {
         "pubkey",
         "salt",
         "seed",
+        "threshold",
         "tokens",
         "twofa",
         "shopifyToken",
