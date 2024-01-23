@@ -95,49 +95,51 @@ export default {
 
   async follows({ params: { pubkey }, query: { tagsonly } }, res) {
     try {
-    let sub = `${pubkey}:follows`,
-      params = {
-        limit: 1,
-        kinds: [3],
-        authors: [pubkey],
-      },
-      opts = { timeout: 60000, eager: 60000 };
+      let sub = `${pubkey}:follows`,
+        params = {
+          limit: 1,
+          kinds: [3],
+          authors: [pubkey],
+        },
+        opts = { timeout: 60000, eager: 60000 };
 
-    q(sub, params, opts).catch(nada);
+      q(sub, params, opts).catch(nada);
 
-    let tags = (await g(`${pubkey}:follows`)) || [];
-    if (tagsonly) return res.send(tags);
+      let tags = (await g(`${pubkey}:follows`)) || [];
+      if (tagsonly) return res.send(tags);
 
-    let follows = [];
-    for (let f of tags) {
-      let [_, pubkey] = f;
+      let follows = [];
+      for (let f of tags) {
+        let [_, pubkey] = f;
 
-      q(`${pubkey}:profile:f1`, {
-        limit: 1,
-        kinds: [0],
-        authors: [pubkey],
-      }).catch(nada);
+        q(`${pubkey}:profile:f1`, {
+          limit: 1,
+          kinds: [0],
+          authors: [pubkey],
+        }).catch(nada);
 
-      let uid = await g(`user:${pubkey}`);
-      let user = await g(`user:${uid}`);
+        let uid = await g(`user:${pubkey}`);
+        let user = await g(`user:${uid}`);
 
-      if (!user)
-        user = {
-          username: pubkey.substr(0, 6),
-          pubkey,
-          anon: true,
-        };
+        if (!user)
+          user = {
+            username: pubkey.substr(0, 6),
+            pubkey,
+            anon: true,
+          };
 
-      follows.push(user);
-    }
+        follows.push(user);
+      }
 
-    follows = uniq(follows, (e) => e.pubkey);
-    follows.sort((a, b) => a.username && a.username.localeCompare(b.username));
+      follows = uniq(follows, (e) => e.pubkey);
+      follows.sort(
+        (a, b) => a.username && a.username.localeCompare(b.username),
+      );
 
-    res.send(follows);
-    } catch(e) {
+      res.send(follows);
+    } catch (e) {
       bail(res, e.message);
-    } 
+    }
   },
 
   async followers({ params: { pubkey } }, res) {
@@ -179,7 +181,9 @@ export default {
       }
 
       followers = uniq(followers, (e) => e.pubkey);
-      followers.sort((a, b) => a.username && a.username.localeCompare(b.username));
+      followers.sort(
+        (a, b) => a.username && a.username.localeCompare(b.username),
+      );
 
       res.send(followers);
     } catch (e) {
