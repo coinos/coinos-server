@@ -327,7 +327,7 @@ export default {
         type === types.liquid ? await node.blindRawTransaction(hex) : hex,
       );
 
-        ({ txid } = await node.decodeRawTransaction(signed));
+      ({ txid } = await node.decodeRawTransaction(signed));
 
       let r = await node.testMempoolAccept([signed]);
       if (!r[0].allowed) fail("transaction rejected");
@@ -462,5 +462,10 @@ export default {
       console.log(e);
       bail(res, e.message);
     }
+  },
+
+  async gateway({ body: { short_channel_id, webhook } }, res) {
+    await s(short_channel_id, webhook);
+    res.send({ ok: true });
   },
 };
