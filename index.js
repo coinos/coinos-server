@@ -4,7 +4,7 @@ import { auth, optional } from "$lib/auth";
 import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
-  import { catchUp } from "$lib/payments";
+import { catchUp } from "$lib/payments";
 import { getRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { err } from "$lib/logging";
@@ -53,6 +53,7 @@ app.get("/invoice/:id", invoices.get);
 app.post("/invoice", optional, invoices.create);
 app.get("/invoice/classic/:username", invoices.classic);
 
+app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", auth, payments.get);

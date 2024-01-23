@@ -22,6 +22,10 @@ import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
 export default {
+  async info({ body, user }, res) {
+    res.send(await ln.getinfo());
+  },
+
   async create({ body, user }, res) {
     let { amount, hash, maxfee, fund, memo, payreq, rate, username } = body;
 
