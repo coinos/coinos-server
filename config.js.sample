@@ -18,5 +18,14 @@ export default {
     network: "regtest",
     port: 18443,
   },
+  liquid: {
+    host: "lq",
+    wallet: "coinos",
+    username: "admin1",
+    password: "123",
+    network: "regtest",
+    port: 7040,
+    btc: "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
+  },
   lightning: "/app/data/lightning/regtest/lightning-rpc"
 };
