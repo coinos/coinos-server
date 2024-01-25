@@ -1,7 +1,7 @@
 version: '3.6'
 services:
   app:
-    image: asoltys/coinos
+    image: asoltys/coinos-server
     container_name: app
     depends_on:
       - db
@@ -9,23 +9,34 @@ services:
       - cl
     command: "bun run dev"
     environment:
-      NODE_OPTIONS: "--es-module-specifier-resolution=node --experimental-modules --loader ./loader.js"
+      NODE_OPTIONS: "--import ./hooks.js"
       NODE_ENV: development
-      URL: http://localhost:3119
+      URL: http://localhost:5173
     ports:
       - '3119:3119'
     volumes:
+      - .aws/:/root/.aws
       - ./:/app
       - ./logs:/logs
     restart: always
   bc:
     image: asoltys/bitcoin
     container_name: bc
+    ports:
+      - '18443:18443'
     volumes:
       - ./data/bitcoin:/home/bitcoin/.bitcoin
     restart: always
+  lq:
+    image: asoltys/liquid:23.x
+    container_name: lq
+    volumes:
+      - ./data/liquid:/home/elements/.elements
+    restart: always
+    ports:
+      - 7043:7040
   cl:
-    image: elementsproject/lightningd:v22.11.1
+    image: asoltys/cln
     container_name: cl
     environment:
       LIGHTNINGD_NETWORK: regtest
@@ -33,18 +44,37 @@ services:
       - ./data/lightning:/root/.lightning
     restart: always
   clb:
-    image: elementsproject/lightningd:v22.11.1
+    image: elementsproject/lightningd:v23.11.1-amd64
     container_name: clb
     environment:
       LIGHTNINGD_NETWORK: regtest
     volumes:
       - ./data/lightningb:/root/.lightning
     restart: always
+  clc:
+    image: elementsproject/lightningd:v23.11.1-amd64
+    container_name: clc
+    environment:
+      LIGHTNINGD_NETWORK: regtest
+    volumes:
+      - ./data/lightningc:/root/.lightning
+    restart: always
   db:
-    image: eqalpha/keydb
+    image: eqalpha/keydb:alpine_x86_64_v6.3.4
     container_name: db
+    ports:
+      - '6379:6379'
     volumes:
       - ./data/db:/data
+      - ./data/db/keydb.conf:/etc/keydb/keydb.conf
+    restart: always
+  archive:
+    image: eqalpha/keydb:alpine_x86_64_v6.3.4
+    container_name: archive
+    ports:
+      - '6380:6379'
+    volumes:
+      - ./data/archive:/data
     restart: always
   nostr:
     container_name: nostr
