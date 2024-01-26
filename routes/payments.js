@@ -39,6 +39,7 @@ export default {
       }
 
       await requirePin({ body, user });
+      let balance = await g(`balance:${user.id}`);
 
       let p;
 
@@ -78,7 +79,7 @@ export default {
 
       res.send(p);
     } catch (e) {
-      warn(user.username, "payment failed", amount, hash, payreq);
+        warn(user.username, "payment failed", amount, balance, hash, payreq);
       err(e.message);
       bail(res, e.message);
     }
