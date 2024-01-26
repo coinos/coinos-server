@@ -4,7 +4,7 @@ import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
-import { bail, fail, btc, sats, SATS } from "$lib/utils";
+import { bail, fail, getInvoice, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
   debit,
@@ -78,8 +78,8 @@ export default {
 
       res.send(p);
     } catch (e) {
-      warn(e.message);
-      warn("failed to create payment", user.username, amount, hash, payreq);
+      warn(user.username, "payment failed", amount, hash, payreq);
+      err(e.message);
       bail(res, e.message);
     }
   },
