@@ -111,5 +111,5 @@ let port = process.env.PORT || 3119;
 
 app.listen({ host, port });
 
-process.on("unhandledRejection", (e) => err("Unhandled error", e.message));
-process.on("uncaughtException", (e) => err(e.message));
+  process.on("unhandledRejection", (e) => err("Unhandled error", e.message));
+process.on("uncaughtException", (e) => err("Uncaught exception", e.message));

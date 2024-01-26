@@ -250,9 +250,8 @@ export default {
             if (!p) return db.sAdd("missed", id);
             if (p.confirmed) return;
 
-            let iid = await g(`invoice:${address}`);
-            if (iid && iid.hash) iid = iid.hash;
-            let invoice = await g(`invoice:${iid}`);
+            let invoice = await getInvoice(address);
+            let { id: iid } = invoice;
 
             p.confirmed = true;
             invoice.received += parseInt(invoice.pending);
