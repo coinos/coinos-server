@@ -30,6 +30,7 @@ export default {
 
   async create({ body, user }, res) {
     let { amount, hash, maxfee, fund, memo, payreq, rate, username } = body;
+      let balance = await g(`balance:${user.id}`);
 
     try {
       if (await g("freeze")) fail("Problem sending payment");
@@ -41,7 +42,6 @@ export default {
       }
 
       await requirePin({ body, user });
-      let balance = await g(`balance:${user.id}`);
 
       let p;
 
