@@ -22,13 +22,15 @@ export default {
         "pubkey",
       ]);
     } else if (config.classic) {
-      invoice = await got(`${config.classic}/invoice/${id}`).json();
-      if (invoice) {
-        invoice.id = invoice.uuid;
-        invoice.classic = true;
-        invoice.user.id = invoice.user.uuid;
-        invoice.user.username += "@classic";
-      }
+      try {
+        invoice = await got(`${config.classic}/invoice/${id}`).json();
+        if (invoice) {
+          invoice.id = invoice.uuid;
+          invoice.classic = true;
+          invoice.user.id = invoice.user.uuid;
+          invoice.user.username += "@classic";
+        }
+      } catch (e) {}
     }
 
     if (invoice) res.send(invoice);

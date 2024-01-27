@@ -244,6 +244,7 @@ export default {
         "twofa",
         "shopifyToken",
         "shopifyStore",
+        "withdrawal",
       ];
 
       for (let a of attributes) {

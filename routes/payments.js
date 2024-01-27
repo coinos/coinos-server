@@ -12,7 +12,8 @@ import {
   types,
   getNode,
   build,
-  payLightning,
+  sendLightning,
+  sendOnchain,
 } from "$lib/payments";
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
@@ -62,7 +63,7 @@ export default {
           })
           .json();
       } else if (payreq) {
-        p = await payLightning(user, payreq, amount, maxfee, memo);
+        p = await sendLightning(user, payreq, amount, maxfee, memo);
       }
 
       if (!p) {
@@ -79,7 +80,7 @@ export default {
 
       res.send(p);
     } catch (e) {
-        warn(user.username, "payment failed", amount, balance, hash, payreq);
+      warn(user.username, "payment failed", amount, balance, hash, payreq);
       err(e.message);
       bail(res, e.message);
     }
@@ -282,8 +283,9 @@ export default {
 
   async fee({ body, user }, res) {
     try {
-      res.send(await build(body, user));
+      res.send(await build({ ...body, user }));
     } catch (e) {
+      console.log(e)
       warn(
         "problem estimating fee",
         e.message,
@@ -300,98 +302,11 @@ export default {
   async send({ body, user }, res) {
     try {
       await requirePin({ body, user });
-
-      let { memo, hex, rate } = body;
-      if (!hex) ({ hex } = await build(body, user));
-
-      let type, tx;
-      try {
-        tx = await bc.decodeRawTransaction(hex);
-        type = types.bitcoin;
-      } catch (e) {
-        try {
-          tx = await lq.decodeRawTransaction(hex);
-          type = types.liquid;
-        } catch (e) {
-          fail("unrecognized tx");
-        }
-      }
-
-      let node = getNode(type);
-      let { txid } = tx;
-
-      if (config[type].walletpass)
-        await node.walletPassphrase(config[type].walletpass, 300);
-
-      let { hex: signed } = await node.signRawTransactionWithWallet(
-        type === types.liquid ? await node.blindRawTransaction(hex) : hex,
-      );
-
-      ({ txid } = await node.decodeRawTransaction(signed));
-
-      let r = await node.testMempoolAccept([signed]);
-      if (!r[0].allowed) fail("transaction rejected");
-
-      let total = 0;
-      let fee = 0;
-      let change = 0;
-
-      if (type === types.liquid) {
-        for (let {
-          asset,
-          scriptPubKey: { address, type },
-          value,
-        } of tx.vout) {
-          if (asset !== config.liquid.btc) fail("only L-BTC supported");
-          if (type === "fee") fee = sats(value);
-          else {
-            total += sats(value);
-
-            if (address) {
-              if ((await node.getAddressInfo(address)).ismine) {
-                change += sats(value);
-              }
-            }
-          }
-        }
-      } else {
-        let totalIn = 0;
-        for await (let { txid, vout } of tx.vin) {
-          let hex = await node.getRawTransaction(txid);
-          let tx = await node.decodeRawTransaction(hex);
-          totalIn += sats(tx.vout[vout].value);
-        }
-
-        for (let {
-          scriptPubKey: { address },
-          value,
-        } of tx.vout) {
-          total += sats(value);
-          if (await g(`invoice:${address}`))
-            fail("Cannot send to internal address");
-
-          if ((await node.getAddressInfo(address)).ismine)
-            change += sats(value);
-        }
-
-        fee = totalIn - total;
-      }
-
-      let amount = total - change;
-
-      await debit({
-        hash: txid,
-        amount,
-        fee,
-        rate,
-        user,
-        type,
-      });
-
-      await node.sendRawTransaction(signed);
+        let txid = await sendOnchain({ ...body, user });
 
       res.send({ txid });
     } catch (e) {
+      console.log(e)
       warn("payment failed", e.message);
       res.code(500).send(e.message);
     }
@@ -450,7 +365,7 @@ export default {
       let r = await got(`${callback}?amount=${amount * 1000}`).json();
       if (r.reason) fail(r.rason);
       let { pr } = r;
-      let p = await payLightning(user, pr, amount, maxfee, memo);
+      let p = await sendLightning(user, pr, amount, maxfee, memo);
 
       if (!p) {
         p = await debit({ hash: pr, amount, memo, user });
