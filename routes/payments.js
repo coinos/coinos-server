@@ -7,6 +7,7 @@ import { l, err, warn } from "$lib/logging";
 import { bail, fail, getInvoice, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
+  autowithdraw,
   debit,
   credit,
   types,
@@ -63,7 +64,7 @@ export default {
           })
           .json();
       } else if (payreq) {
-        p = await sendLightning(user, payreq, amount, maxfee, memo);
+        p = await sendLightning({ user, pr: payreq, amount, maxfee, memo });
       }
 
       if (!p) {
@@ -270,6 +271,8 @@ export default {
               .exec();
 
             emit(p.uid, "payment", p);
+            let user = await g(`user:${p.uid}`);
+            autowithdraw(user);
           }
         }
       }
@@ -285,7 +288,7 @@ export default {
     try {
       res.send(await build({ ...body, user }));
     } catch (e) {
-      console.log(e)
+      console.log(e);
       warn(
         "problem estimating fee",
         e.message,
@@ -302,11 +305,11 @@ export default {
   async send({ body, user }, res) {
     try {
       await requirePin({ body, user });
-        let txid = await sendOnchain({ ...body, user });
+      let txid = await sendOnchain({ ...body, user });
 
       res.send({ txid });
     } catch (e) {
-      console.log(e)
+      console.log(e);
       warn("payment failed", e.message);
       res.code(500).send(e.message);
     }
@@ -365,7 +368,7 @@ export default {
       let r = await got(`${callback}?amount=${amount * 1000}`).json();
       if (r.reason) fail(r.rason);
       let { pr } = r;
-      let p = await sendLightning(user, pr, amount, maxfee, memo);
+      let p = await sendLightning({ user, pr, amount, maxfee, memo });
 
       if (!p) {
         p = await debit({ hash: pr, amount, memo, user });

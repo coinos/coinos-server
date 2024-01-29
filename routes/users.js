@@ -41,6 +41,7 @@ export default {
       user.prompt = !!user.prompt;
       if (user.pubkey)
         user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
+
       res.send(pick(user, whitelist));
     } catch (e) {
       console.log("problem fetching user", e);
@@ -237,6 +238,7 @@ export default {
         "prompt",
         "profile",
         "pubkey",
+        "reserve",
         "salt",
         "seed",
         "threshold",
@@ -244,7 +246,6 @@ export default {
         "twofa",
         "shopifyToken",
         "shopifyStore",
-        "withdrawal",
       ];
 
       for (let a of attributes) {
