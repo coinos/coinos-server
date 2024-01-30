@@ -288,7 +288,6 @@ export default {
     try {
       res.send(await build({ ...body, user }));
     } catch (e) {
-      console.log(e);
       warn(
         "problem estimating fee",
         e.message,
