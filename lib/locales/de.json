@@ -1,0 +1,7 @@
+{
+	"hello": "Hallo",
+	"youReceived": "Sie haben eine Zahlung von erhalten",
+	"withdrawalTriggered": "Dies löste einen Rückzug von aus",
+	"problemWithdrawing": "Beim Senden an Ihre automatische Auszahlungsadresse ist ein Problem aufgetreten",
+	"paymentReceived": "Zahlung erhalten"
+}

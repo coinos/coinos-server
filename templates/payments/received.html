@@ -8,17 +8,34 @@
 
 <html>
   <body>
-    <div style="margin-bottom: 10px">Hello {{username}},</div>
+    <div style="margin-bottom: 10px">{{hello}} {{username}},</div>
 
     <div style="margin-bottom: 10px">
-      You received a payment of {{sats}}
+      {{youReceived}} {{payment.amount}}
     </div>
 
     <div style="margin-bottom: 10px">
-      <a href="{{link}}">{{link}}</a>
+      <a href="{{payment.link}}">{{payment.link}}</a>
     </div>
 
-    <div>Regards,</div>
-    <div>The Coinos Team</div>
+    {{#if withdrawal.amount}}
+      <div style="margin-bottom: 10px">
+        {{withdrawalTriggered}} {{withdrawal.amount}}
+      </div>
+
+      <div style="margin-bottom: 10px">
+        <a href="{{withdrawal.link}}">{{withdrawal.link}}</a>
+      </div>
+    {{else if withdrawal.failed}}
+      <div style="margin-bottom: 10px">
+        {{problemWithdrawing}}
+      </div>
+    {{/if}}
+
+    <a href="{{payment.link}}">
+      <img src="{{URL}}/images/logo.webp" style="width: 200px; margin: 50px;"/>
+    </a>
+    
+    <a href="{{URL}}/unsubscribe">Unsubscribe</a>
   </body>
 </html>

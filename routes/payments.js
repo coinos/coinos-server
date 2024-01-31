@@ -7,7 +7,7 @@ import { l, err, warn } from "$lib/logging";
 import { bail, fail, getInvoice, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
-  autowithdraw,
+  completePayment,
   debit,
   credit,
   types,
@@ -30,7 +30,7 @@ export default {
 
   async create({ body, user }, res) {
     let { amount, hash, maxfee, fund, memo, payreq, rate, username } = body;
-      let balance = await g(`balance:${user.id}`);
+    let balance = await g(`balance:${user.id}`);
 
     try {
       if (await g("freeze")) fail("Problem sending payment");
@@ -272,7 +272,7 @@ export default {
 
             emit(p.uid, "payment", p);
             let user = await g(`user:${p.uid}`);
-            autowithdraw(user);
+              await completePayment(p, user);
           }
         }
       }
@@ -305,7 +305,7 @@ export default {
   async send({ body, user }, res) {
     try {
       await requirePin({ body, user });
-      let txid = await sendOnchain({ ...body, user });
+      let { hash: txid } = await sendOnchain({ ...body, user });
 
       res.send({ txid });
     } catch (e) {
