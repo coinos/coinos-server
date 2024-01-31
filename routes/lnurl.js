@@ -68,7 +68,7 @@ export default {
         tag: "payRequest",
       });
     } catch (e) {
-      warn("problem generating lnurlp request", e.message);
+      warn("problem generating lnurlp request", username, e.message);
       bail(res, e.message);
     }
   },
