@@ -111,5 +111,6 @@ let port = process.env.PORT || 3119;
 
 app.listen({ host, port });
 
-process.on("unhandledRejection", console.log)
-process.on("uncaughtException", console.log)
+let logerr = (e) => e.message.startsWith("MASK") || console.log(e);
+process.on("unhandledRejection", logerr);
+process.on("uncaughtException", logerr);
