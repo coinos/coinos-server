@@ -195,6 +195,7 @@ export default {
         password,
         pin,
         newpin,
+        pubkey,
         username,
         shopifyToken,
         shopifyStore,
@@ -220,6 +221,13 @@ export default {
         user.username = username;
       }
 
+      if (pubkey) exists = await getUser(pubkey);
+      if (username !== exists.username) {
+        warn("key in use", pubkey, exists.username);
+        if (exists.anon) await db.del(`user:${pubkey}`);
+        else fail("Key in use by another account");
+      }
+
       let attributes = [
         "address",
         "autowithdraw",
@@ -235,6 +243,7 @@ export default {
         "locktime",
         "nip5",
         "notify",
+        "nsec",
         "prompt",
         "profile",
         "pubkey",
