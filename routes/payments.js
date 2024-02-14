@@ -8,6 +8,7 @@ import { bail, fail, getInvoice, btc, sats, SATS } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
   completePayment,
+  decode,
   debit,
   credit,
   types,
@@ -18,6 +19,7 @@ import {
 } from "$lib/payments";
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
+import api from "$lib/api";
 
 import lq from "$lib/liquid";
 import bc from "$lib/bitcoin";
@@ -240,7 +242,15 @@ export default {
         for (let { address, amount, asset, category, vout } of details) {
           if (!address) continue;
           if (type === types.liquid && asset !== config.liquid.btc) continue;
-          if (category !== "receive") continue;
+          if (category === "send") {
+            let p = await g(`payment:${txid}`);
+            if (typeof p === "string") p = await g(`payment:${p}`);
+
+            if (confirmations >= 1) p.confirmed = true;
+            await s(`payment:${p.id}`, p);
+            continue;
+          }
+
           let p = await g(`payment:${txid}:${vout}`);
           if (typeof p === "string") p = await g(`payment:${p}`);
 
@@ -272,7 +282,7 @@ export default {
 
             emit(p.uid, "payment", p);
             let user = await g(`user:${p.uid}`);
-              await completePayment(p, user);
+            await completePayment(p, user);
           }
         }
       }
@@ -305,6 +315,8 @@ export default {
     try {
       await requirePin({ body, user });
       let { hash: txid } = await sendOnchain({ ...body, user });
+      let pid = await g(`payment:${txid}`);
+      let p = await g(`payment:${pid}`);
 
       res.send({ txid });
     } catch (e) {
@@ -384,5 +396,66 @@ export default {
   async gateway({ body: { short_channel_id, webhook } }, res) {
     await s(short_channel_id, webhook);
     res.send({ ok: true });
+  },
+
+  async replace({ body: { id }, user }, res) {
+    try {
+      let { id: uid } = user;
+      let p = await g(`payment:${id}`);
+      if (!p) fail("Payment not found");
+      if (p.uid !== user.id) fail("unauthorized");
+
+      let { tx, type } = await decode(p.hex);
+      let node = getNode(type);
+
+      let fees = await fetch(`${api[type]}/fees/recommended`).then((r) =>
+        r.json(),
+      );
+
+      let outputs = [];
+      for (let {
+        scriptPubKey: { address },
+        value,
+      } of tx.vout) {
+        if (address && !(await node.getAddressInfo(address)).ismine)
+          outputs.push({ [address]: value });
+      }
+
+      let raw = await node.createRawTransaction(tx.vin, outputs);
+
+      let newTx = await node.fundRawTransaction(raw, {
+        fee_rate: fees.fastestFee,
+        replaceable: true,
+        subtractFeeFromOutputs: [],
+      });
+
+      let diff = sats(newTx.fee) - p.fee;
+      if (diff < 0) fail("fee must increase");
+
+      let ourfee = Math.round(diff * config.fee) || 0;
+
+      ourfee = await db.debit(
+        `balance:${uid}`,
+        `credit:${type}:${uid}`,
+        p.amount || 0,
+        0,
+        diff,
+        ourfee,
+      );
+
+      p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
+      let r = await node.testMempoolAccept([p.hex]);
+      if (!r[0].allowed) fail("transaction rejected");
+      p.hash = await node.sendRawTransaction(p.hex);
+      p.fee = sats(newTx.fee);
+      await s(`payment:${id}`, p);
+      await s(`payment:${p.hash}`, id);
+      emit(uid, "payment", p);
+
+      res.send({ ok: true });
+    } catch (e) {
+        err("failed to bump payment", id, e.message);
+      bail(res, e.message);
+    }
   },
 };
