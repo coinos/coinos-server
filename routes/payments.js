@@ -248,6 +248,7 @@ export default {
 
             if (confirmations >= 1) p.confirmed = true;
             await s(`payment:${p.id}`, p);
+            emit(p.uid, "payment", p);
             continue;
           }
 
@@ -454,7 +455,7 @@ export default {
 
       res.send({ ok: true });
     } catch (e) {
-        err("failed to bump payment", id, e.message);
+      err("failed to bump payment", id, e.message);
       bail(res, e.message);
     }
   },
