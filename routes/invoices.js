@@ -21,18 +21,7 @@ export default {
         "username",
         "pubkey",
       ]);
-    } else if (config.classic) {
-      try {
-        invoice = await got(`${config.classic}/invoice/${id}`).json();
-        if (invoice) {
-          invoice.id = invoice.uuid;
-          invoice.classic = true;
-          invoice.user.id = invoice.user.uuid;
-          invoice.user.username += "@classic";
-        }
-      } catch (e) {}
     }
-
     if (invoice) res.send(invoice);
     else res.code(500).send("invoice not found");
   },
@@ -44,18 +33,5 @@ export default {
       console.log(e);
       bail(res, e.message);
     }
-  },
-
-  async classic({ params: { username } }, res) {
-    let invoice = await got
-      .post(`${config.classic}/invoice`, {
-        json: {
-          invoice: { amount: 0, network: "lightning" },
-          user: { username },
-        },
-      })
-      .json();
-
-    res.send(invoice);
   },
 };

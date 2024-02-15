@@ -51,7 +51,6 @@ app.get("/locations", locations.list);
 
 app.get("/invoice/:id", invoices.get);
 app.post("/invoice", optional, invoices.create);
-app.get("/invoice/classic/:username", invoices.classic);
 
 app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);

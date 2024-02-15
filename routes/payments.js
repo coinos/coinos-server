@@ -47,25 +47,7 @@ export default {
 
       let p;
 
-      if (username && username.endsWith("@classic")) {
-        let { username: source } = user;
-        username = username.replace("@classic", "");
-        p = await debit({
-          hash,
-          amount,
-          memo: username,
-          rate,
-          user,
-          type: types.classic,
-        });
-
-        await got
-          .post(`${config.classic}/admin/credit`, {
-            json: { username, amount, source },
-            headers: { authorization: `Bearer ${config.admin}` },
-          })
-          .json();
-      } else if (payreq) {
+      if (payreq) {
         p = await sendLightning({ user, pr: payreq, amount, maxfee, memo });
       }
 

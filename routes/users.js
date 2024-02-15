@@ -29,7 +29,6 @@ import { mail, templates } from "$lib/mail";
 import got from "got";
 import upload from "$lib/upload";
 
-let { classic } = config;
 const { encode, decode, fromWords, toWords } = bech32;
 
 export default {

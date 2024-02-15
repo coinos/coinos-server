@@ -11,7 +11,7 @@ import { types } from "$lib/payments";
 import crypto from "crypto";
 
 import config from "$config";
-let { admin, classic } = config;
+let { admin } = config;
 
 let { URL } = process.env;
 let host = URL.split("/").at(-1);
