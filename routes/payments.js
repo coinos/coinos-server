@@ -426,9 +426,11 @@ export default {
         ourfee,
       );
 
+      if (config[type].walletpass)
+        await node.walletPassphrase(config[type].walletpass, 300);
       p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
       let r = await node.testMempoolAccept([p.hex]);
-      if (!r[0].allowed) fail("transaction rejected");
+      if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
       p.hash = await node.sendRawTransaction(p.hex);
       p.fee = sats(newTx.fee);
       await s(`payment:${id}`, p);
