@@ -221,7 +221,7 @@ export default {
       }
 
       if (pubkey) exists = await getUser(pubkey);
-      if (username !== exists.username) {
+      if (exists && username !== exists.username) {
         warn("key in use", pubkey, exists.username);
         if (exists.anon) await db.del(`user:${pubkey}`);
         else fail("Key in use by another account");
