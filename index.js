@@ -64,7 +64,7 @@ app.post("/take", auth, payments.take);
 app.post("/print", auth, payments.print);
 app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
 app.post("/gateway", payments.gateway);
-app.post("/replace", auth, payments.replace);
+// app.post("/replace", auth, payments.replace);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
