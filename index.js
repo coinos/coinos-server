@@ -104,6 +104,7 @@ app.get("/:id/items", items.list);
 app.get("/items/:id", items.get);
 app.post("/items", auth, items.create);
 app.post("/items/delete", auth, items.del);
+app.post("/items/sort", auth, items.sort);
 
 app.get("/request/:id", auth, requests.get);
 app.get("/requests", auth, requests.list);
