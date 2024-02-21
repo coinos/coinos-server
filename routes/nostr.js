@@ -52,7 +52,6 @@ export default {
   },
 
   async messages({ params: { pubkey, since = 0 } }, res) {
-    console.log("H")
     let params = {
       kinds: [4],
       authors: [pubkey],
@@ -84,8 +83,6 @@ export default {
         return m;
       }),
     );
-
-    console.log(messages.length)
 
     res.send(messages);
   },
