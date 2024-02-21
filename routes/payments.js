@@ -253,7 +253,7 @@ export default {
             invoice.received += parseInt(invoice.pending);
             invoice.pending = 0;
 
-            l("confirming", txid);
+            l("confirming", id, p.id, p.amount);
 
             let r = await db
               .multi()
