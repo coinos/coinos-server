@@ -16,6 +16,7 @@ import lnurl from "$routes/lnurl";
 import nostr from "$routes/nostr";
 import rates from "$routes/rates";
 import invoices from "$routes/invoices";
+import items from "$routes/items";
 import users from "$routes/users";
 import payments from "$routes/payments";
 import requests from "$routes/requests";
@@ -98,6 +99,11 @@ app.post("/password", auth, users.password);
 app.post("/pin", auth, users.pin);
 app.post("/otpsecret", auth, users.otpsecret);
 app.get("/contacts", auth, users.contacts);
+
+app.get("/:id/items", items.list);
+app.get("/items/:id", items.get);
+app.post("/items", auth, items.create);
+app.post("/items/delete", auth, items.del);
 
 app.get("/request/:id", auth, requests.get);
 app.get("/requests", auth, requests.list);

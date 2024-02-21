@@ -524,4 +524,9 @@ export default {
       bail(res, e.message);
     }
   },
+
+  async items({ params: { id } }, res) {
+    let item = await g(`item:${id}`);
+    return item;
+  },
 };
