@@ -227,6 +227,7 @@ export default {
           if (category === "send") {
             let p = await g(`payment:${txid}`);
             if (typeof p === "string") p = await g(`payment:${p}`);
+            if (!p) continue;
 
             if (confirmations >= 1) p.confirmed = true;
             await s(`payment:${p.id}`, p);
