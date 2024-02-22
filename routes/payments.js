@@ -238,6 +238,7 @@ export default {
           if (typeof p === "string") p = await g(`payment:${p}`);
 
           if (!p) {
+            console.log("crediting", txid, vout, type);
             await credit(address, sats(amount), "", `${txid}:${vout}`, type);
           } else if (confirmations >= 1) {
             let id = `payment:${txid}:${vout}`;
@@ -303,8 +304,7 @@ export default {
 
       res.send({ txid });
     } catch (e) {
-      console.log(e);
-      warn("payment failed", e.message);
+      warn(user.username, "payment failed", e.message);
       res.code(500).send(e.message);
     }
   },
