@@ -107,18 +107,19 @@ export default {
       if (!user) return res.code(500).send("User not found");
 
       let whitelist = [
+          "address",
         "anon",
-        "username",
         "banner",
-        "profile",
         "banner",
-        "address",
         "currency",
-        "npub",
-        "pubkey",
         "display",
-        "prompt",
         "id",
+        "memoPrompt",
+        "npub",
+        "profile",
+        "prompt",
+        "pubkey",
+        "username",
       ];
 
       if (user.pubkey)
@@ -240,6 +241,7 @@ export default {
         "language",
         "fiat",
         "locktime",
+        "memoPrompt",
         "nip5",
         "notify",
         "nsec",

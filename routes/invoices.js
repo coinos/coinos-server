@@ -22,7 +22,7 @@ export default {
         "pubkey",
       ]);
 
-        invoice.items ||= []
+      invoice.items ||= [];
     }
     if (invoice) res.send(invoice);
     else res.code(500).send("invoice not found");

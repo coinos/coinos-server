@@ -32,6 +32,7 @@ export default {
 
   async create({ body, user }, res) {
     let { amount, hash, maxfee, fund, memo, payreq, rate, username } = body;
+    memo ||= user.username;
     let balance = await g(`balance:${user.id}`);
 
     try {
