@@ -99,6 +99,11 @@ export default {
       (a, b) => ({
         ...a,
         [b.currency]: {
+          tips: (a[b.currency] ? a[b.currency].tips : 0) + (b.tip || 0),
+          fiatTips: (
+            parseFloat(a[b.currency] ? a[b.currency].fiatTips : 0) +
+            ((b.tip || 0) * b.rate) / SATS
+          ).toFixed(2),
           sats:
             (a[b.currency] ? a[b.currency].sats : 0) +
             (b.amount || 0) +
