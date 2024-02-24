@@ -532,4 +532,18 @@ export default {
     let item = await g(`item:${id}`);
     return item;
   },
+
+  async hidepay({ body: { username } }, res) {
+    let u = await getUser(username);
+    u.hidepay = true;
+      await s(`user:${u.id}`, u);
+    res.send({});
+  },
+
+  async unlimit({ body: { username } }, res) {
+    let u = await getUser(username);
+    u.unlimited = true;
+    await s(`user:${u.id}`, u);
+    res.send({});
+  },
 };

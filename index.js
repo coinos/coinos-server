@@ -1,5 +1,5 @@
 import app from "$lib/app";
-import { auth, optional } from "$lib/auth";
+import { auth, admin, optional } from "$lib/auth";
 
 import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
@@ -112,6 +112,9 @@ app.post("/requests", auth, requests.create);
 app.post("/requests/delete", auth, requests.destroy);
 
 app.post("/shopify/:id", shopify);
+
+app.post("/hidepay", admin, users.hidepay);
+    app.post("/unlimit", admin, users.unlimit);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
