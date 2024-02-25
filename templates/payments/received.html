@@ -8,10 +8,20 @@
 
 <html>
   <body>
-    <div style="margin-bottom: 10px">{{hello}} {{username}},</div>
+    {{#if payment.items}}
+      <div style="margin-bottom: 10px">
+        {{#each payment.items}}
+          <div>{{this.quantity}} {{this.name}} {{this.totalFiat}}</div>
+        {{/each}}
+      </div>
+    {{/if}}
 
     <div style="margin-bottom: 10px">
-      {{youReceived}} {{payment.amount}}
+      {{payment.fiat}} {{#if payment.tip}} + {{payment.fiatTip}}{{/if}}
+    </div>
+
+    <div style="margin-bottom: 10px">
+      {{payment.amount}} + {{payment.tip}}
     </div>
 
     <div style="margin-bottom: 10px">
@@ -33,7 +43,7 @@
     {{/if}}
 
     <a href="{{payment.link}}">
-      <img src="https://coinos.io/images/logo.webp" style="width: 200px; margin: 50px;"/>
+      <img src="https://coinos.io/images/logo.webp" style="width: 200px; margin-top: 20px;"/>
     </a>
   </body>
 </html>
