@@ -24,6 +24,12 @@
       {{payment.amount}} + {{payment.tip}}
     </div>
 
+    {{#if payment.memo}}
+      <div style="margin-bottom: 10px">
+        Memo: {{payment.memo}}
+      </div>
+      {{/if}}
+
     <div style="margin-bottom: 10px">
       <a href="{{payment.link}}">{{payment.link}}</a>
     </div>
