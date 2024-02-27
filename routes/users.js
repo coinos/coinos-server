@@ -210,7 +210,7 @@ export default {
       let exists;
       if (username) exists = await getUser(username);
 
-      let token;
+      let token, oldname;
       if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
         err("username taken", username, user.username, exists.username);
         fail("Username taken");
@@ -219,11 +219,12 @@ export default {
           l("changing username", user.username, username);
 
         await db.del(`user:${user.username}`);
+        oldname = user.username;
         user.username = username;
       }
 
       if (pubkey) exists = await getUser(pubkey);
-      if (exists && username !== exists.username) {
+      if (exists && username !== exists.username && username !== oldname) {
         warn("key in use", pubkey, exists.username);
         if (exists.anon) await db.del(`user:${pubkey}`);
         else fail("Key in use by another account");
@@ -536,7 +537,7 @@ export default {
   async hidepay({ body: { username } }, res) {
     let u = await getUser(username);
     u.hidepay = true;
-      await s(`user:${u.id}`, u);
+    await s(`user:${u.id}`, u);
     res.send({});
   },
 
