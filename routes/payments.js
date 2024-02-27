@@ -244,7 +244,6 @@ export default {
           if (typeof p === "string") p = await g(`payment:${p}`);
 
           if (!p) {
-            console.log("crediting", txid, vout, type);
             await credit(address, sats(amount), "", `${txid}:${vout}`, type);
           } else if (confirmations >= 1) {
             let id = `payment:${txid}:${vout}`;
