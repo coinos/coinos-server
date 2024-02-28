@@ -25,6 +25,7 @@ export default {
   },
 
   async create({ body: item, user: { id } }, res) {
+    try {
     if (!item.id) {
       item.id = v4();
       await db.lPush(`${id}:items`, item.id);
@@ -36,6 +37,9 @@ export default {
     await s(`item:${item.id}`, item);
 
     res.send(item);
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 
   async del({ body: { item }, user: { id } }, res) {
