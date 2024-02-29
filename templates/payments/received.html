@@ -21,7 +21,7 @@
     </div>
 
     <div style="margin-bottom: 10px">
-      {{payment.amount}} + {{payment.tip}}
+      {{payment.amount}} {{#if payment.tip}} + {{payment.tip}}{{/if}}
     </div>
 
     {{#if payment.memo}}
