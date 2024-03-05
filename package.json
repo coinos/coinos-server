@@ -12,6 +12,7 @@
     "@fastify/cors": "^8.3.0",
     "@fastify/multipart": "^8.0.0",
     "@fastify/passport": "^2.4.0",
+    "@fastify/rate-limit": "^9.1.0",
     "@fastify/secure-session": "^5.2.0",
     "@fastify/static": "^6.5.0",
     "@fastify/websocket": "^7.2.0",
