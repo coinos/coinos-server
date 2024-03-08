@@ -1,3 +1,4 @@
+import { archive } from "$lib/db";
 import db from "$lib/db";
 import ln from "$lib/ln";
 
@@ -7,8 +8,13 @@ export default {
     let lnwallet;
 
     let total = 0;
+
     for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
       total += parseInt(await db.get(k));
+    }
+
+    for await (let k of archive.scanIterator({ MATCH: "balance:*" })) {
+      total += parseInt(await archive.get(k));
     }
 
     const funds = await ln.listfunds();

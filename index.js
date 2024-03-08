@@ -114,13 +114,17 @@ app.post("/requests/delete", auth, requests.destroy);
 app.post("/shopify/:id", shopify);
 
 app.post("/hidepay", admin, users.hidepay);
-    app.post("/unlimit", admin, users.unlimit);
+app.post("/unlimit", admin, users.unlimit);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
 
 app.listen({ host, port });
 
-let logerr = (e) => e.message.startsWith("MASK") || console.log(e);
+let logerr = (e) =>
+  e.message.includes("MASK") ||
+  e.message.startsWith("Rate") ||
+  console.log(e);
+
 process.on("unhandledRejection", logerr);
 process.on("uncaughtException", logerr);

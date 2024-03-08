@@ -32,7 +32,6 @@ export default {
     try {
       res.send(await generate({ invoice, user, sender }));
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
