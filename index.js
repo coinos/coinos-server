@@ -122,6 +122,7 @@ let port = process.env.PORT || 3119;
 app.listen({ host, port });
 
 let logerr = (e) =>
+  e.message.includes("Invalid") ||
   e.message.includes("MASK") ||
   e.message.startsWith("Rate") ||
   console.log(e);
