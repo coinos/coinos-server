@@ -411,8 +411,10 @@ export default {
 
       let raw = await node.createRawTransaction(tx.vin, outputs);
 
+      console.log("FEES", fees)
+
       let newTx = await node.fundRawTransaction(raw, {
-        fee_rate: fees.fastestFee,
+        fee_rate: fees.fastestFee + 50,
         replaceable: true,
         subtractFeeFromOutputs: [],
       });
@@ -420,27 +422,30 @@ export default {
       let diff = sats(newTx.fee) - p.fee;
       if (diff < 0) fail("fee must increase");
 
-      let ourfee = Math.round(diff * config.fee) || 0;
+      console.log("DIFF", diff)
 
-      ourfee = await db.debit(
-        `balance:${uid}`,
-        `credit:${type}:${uid}`,
-        p.amount || 0,
-        0,
-        diff,
-        ourfee,
-      );
+      // let ourfee = Math.round(diff * config.fee) || 0;
+      //
+      // ourfee = await db.debit(
+      //   `balance:${uid}`,
+      //   `credit:${type}:${uid}`,
+      //   p.amount || 0,
+      //   0,
+      //   diff,
+      //   ourfee,
+      // );
 
       if (config[type].walletpass)
         await node.walletPassphrase(config[type].walletpass, 300);
       p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
       let r = await node.testMempoolAccept([p.hex]);
       if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
-      p.hash = await node.sendRawTransaction(p.hex);
-      p.fee = sats(newTx.fee);
-      await s(`payment:${id}`, p);
-      await s(`payment:${p.hash}`, id);
-      emit(uid, "payment", p);
+      warn("bump", user.username, p.hex);
+      // p.hash = await node.sendRawTransaction(p.hex);
+      // p.fee = sats(newTx.fee);
+      // await s(`payment:${id}`, p);
+      // await s(`payment:${p.hash}`, id);
+      // emit(uid, "payment", p);
 
       res.send({ ok: true });
     } catch (e) {
