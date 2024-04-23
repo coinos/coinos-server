@@ -46,7 +46,13 @@ export default {
     }
   },
 
-  async lnurlp({ params: { username } }, res) {
+  async lnurlp(
+    {
+      params: { username },
+        query: { minSendable = 1000, maxSendable = 100000000000 },
+    },
+    res,
+  ) {
     try {
       let { id: uid, pubkey: nostrPubkey } = await getUser(username);
 
@@ -60,8 +66,8 @@ export default {
 
       res.send({
         allowsNostr: true,
-        minSendable: 1000,
-        maxSendable: 100000000000,
+        minSendable,
+        maxSendable,
         metadata,
         nostrPubkey,
         callback: `${URL}/api/lnurl/${id}`,
