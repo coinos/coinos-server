@@ -49,7 +49,7 @@ export default {
   async lnurlp(
     {
       params: { username },
-        query: { minSendable = 1000, maxSendable = 100000000000 },
+      query: { minSendable = 1000, maxSendable = 100000000000 },
     },
     res,
   ) {
@@ -90,8 +90,8 @@ export default {
       username = username.replace(/\s/g, "").toLowerCase();
 
       let metadata = JSON.stringify([
-        ["text/plain", `Paying ${username}@${host}`],
         ["text/identifier", `${username}@${host}`],
+        ["text/plain", `Paying ${username}@${host}`],
       ]);
 
       if (nostr) {
@@ -108,9 +108,9 @@ export default {
       let { text: pr } = await generate({
         invoice: {
           amount: Math.round(amount / 1000),
+          memo: metadata,
           type: types.lightning,
         },
-        memo: metadata,
         user,
       });
 
