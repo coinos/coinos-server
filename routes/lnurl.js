@@ -89,9 +89,10 @@ export default {
       let { username } = user;
       username = username.replace(/\s/g, "").toLowerCase();
 
+      let memo = `Paying ${username}@${host}`;
       let metadata = JSON.stringify([
-        ["text/identifier", `${username}@${host}`],
-        ["text/plain", `Paying ${username}@${host}`],
+        ["text/plain", memo],
+        ["text/identifier", `${username}@${host}`]
       ]);
 
       if (nostr) {
