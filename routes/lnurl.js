@@ -1,6 +1,6 @@
 import migrate from "$lib/migrate";
 import { g, s } from "$lib/db";
-import { l, warn } from "$lib/logging";
+import { l, err, warn } from "$lib/logging";
 import { bail, getUser, fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
@@ -92,7 +92,7 @@ export default {
       let memo = `Paying ${username}@${host}`;
       let metadata = JSON.stringify([
         ["text/plain", memo],
-        ["text/identifier", `${username}@${host}`]
+        ["text/identifier", `${username}@${host}`],
       ]);
 
       if (nostr) {
@@ -106,7 +106,7 @@ export default {
         }
       }
 
-      let { text: pr } = await generate({
+      let { id: iid, text: pr } = await generate({
         invoice: {
           amount: Math.round(amount / 1000),
           memo: metadata,
@@ -115,9 +115,20 @@ export default {
         user,
       });
 
-      res.send({ pr, routes: [] });
+      res.send({ pr, routes: [], verify: `${URL}/api/lnurl/verify/${iid}` });
     } catch (e) {
       bail(res, e.message);
     }
+  },
+
+  async verify({ params: { id } }, res) {
+    let inv = await g(`invoice:${id}`);
+
+    if (!inv) return res.send({ status: "ERROR", reason: "Not found" });
+
+    let { received, amount, preimage } = inv;
+    let settled = received >= amount;
+
+    res.send({ status: "OK", settled, preimage });
   },
 };
