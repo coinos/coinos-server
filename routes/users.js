@@ -465,7 +465,7 @@ export default {
       let user = await g(`user:${id}`);
 
       if (!user) fail("user not found");
-      if (await g(`email:${email.toLowerCase()}`)) fail("email already in use");
+      if (await g(`email:${email.toLowerCase()}`)) fail("Email already in use");
 
       let { username } = user;
 
