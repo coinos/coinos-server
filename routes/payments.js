@@ -349,12 +349,11 @@ export default {
     }
   },
 
-  async lnaddress({ params: { lnaddress, amount }, body, user }, res) {
+  async lnaddress({ params: { lnaddress, amount, maxfee = 5000 }, body, user }, res) {
     try {
       lnaddress = decodeURIComponent(lnaddress);
       await requirePin({ body, user });
 
-      let maxfee = 5000;
       let [username, domain] = lnaddress.split("@");
       let { minSendable, maxSendable, callback, metadata } = await got(
         `https://${domain}/.well-known/lnurlp/${username}`,
