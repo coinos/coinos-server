@@ -9,6 +9,7 @@ import { getRates } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { err } from "$lib/logging";
 
+import ecash from "$routes/ecash";
 import email from "$routes/email";
 import info from "$routes/info";
 import locations from "$routes/locations";
@@ -116,6 +117,8 @@ app.post("/shopify/:id", shopify);
 
 app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);
+
+app.post("/mint", auth, ecash.mint);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
