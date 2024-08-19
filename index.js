@@ -120,6 +120,7 @@ app.post("/unlimit", admin, users.unlimit);
 
 app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
+app.post("/melt", auth, ecash.melt);
 
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
