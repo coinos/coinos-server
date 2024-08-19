@@ -118,6 +118,7 @@ app.post("/shopify/:id", shopify);
 app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);
 
+app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 
 let host = process.env.HOST || "0.0.0.0";

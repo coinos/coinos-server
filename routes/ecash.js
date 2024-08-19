@@ -1,18 +1,49 @@
-import { CashuMint, CashuWallet, MintQuoteState } from '@cashu/cashu-ts';
+import { g, s } from "$lib/db";
+import { claim, mint } from "$lib/ecash";
+import { bail } from "$lib/utils";
+import { debit, credit, types } from "$lib/payments";
+import { v4 } from "uuid";
+import store from "$lib/store";
+
+let { ecash: type } = types;
 
 export default {
-  async mint({ body }, res) {
-    const mintUrl = 'http://mint:3338'; // the mint URL
-    const mint = new CashuMint(mintUrl);
-    const wallet = new CashuWallet(mint);
-    const mintQuote = await wallet.createMintQuote(64);
-    console.log(mintQuote)
-    // pay the invoice here before you continue...
-    const mintQuoteChecked = await wallet.checkMintQuote(mintQuote.quote);
-    console.log(mintQuoteChecked)
-    if (mintQuoteChecked.state == MintQuoteState.PAID) {
-      const { proofs } = await wallet.mintTokens(64, mintQuote.quote);
-      console.log(proofs)
+  async claim({ body: { token }, user }, res) {
+    try {
+      let amount = await claim(token);
+
+      let memo;
+      let hash = v4();
+      let { currency, id: uid } = user;
+      await s(`invoice:${hash}`, {
+        currency,
+        id: hash,
+        hash,
+        rate: store.rates[currency],
+        uid,
+        received: 0,
+      });
+
+      await credit(hash, amount, memo, user.id, type);
+
+      res.send({ ok: true });
+    } catch (e) {
+      bail(res, e.message);
     }
-  }
-}
+  },
+
+  async mint({ body: { amount }, user }, res) {
+    try {
+      let hash = v4();
+
+      let p = await debit({ hash, amount, user, type });
+      let token = await mint(amount);
+      p.memo = token;
+      await s(`payment:${p.id}`, p);
+
+      res.send({ token });
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+};
