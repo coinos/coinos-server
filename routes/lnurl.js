@@ -9,6 +9,7 @@ import { bech32 } from "bech32";
 import { fields, pick } from "$lib/utils";
 import { types } from "$lib/payments";
 import crypto from "crypto";
+import { COINOS_PUBKEY } from "$lib/nostr";
 
 import config from "$config";
 let { admin } = config;
@@ -54,7 +55,7 @@ export default {
     res,
   ) {
     try {
-      let { id: uid, pubkey: nostrPubkey } = await getUser(username);
+      let { id: uid } = await getUser(username);
 
       let metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
@@ -69,7 +70,7 @@ export default {
         minSendable,
         maxSendable,
         metadata,
-        nostrPubkey,
+        nostrPubkey: COINOS_PUBKEY,
         callback: `${URL}/api/lnurl/${id}`,
         tag: "payRequest",
       });
