@@ -10,6 +10,14 @@ import store from "$lib/store";
 let { ecash: type } = types;
 
 export default {
+  async get({ params: { id } }, res) {
+    try {
+      res.send(await g(`cash:${id}`));
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
   async claim({ body: { token }, user }, res) {
     try {
       let amount = await claim(token);
@@ -30,20 +38,23 @@ export default {
 
       res.send({ ok: true });
     } catch (e) {
+      console.log(e);
       bail(res, e.message);
     }
   },
 
   async mint({ body: { amount }, user }, res) {
     try {
+      let id = v4();
       let hash = v4();
 
       let p = await debit({ hash, amount, user, type });
       let token = await mint(amount);
       p.memo = token;
       await s(`payment:${p.id}`, p);
+      s(`cash:${id}`, token);
 
-      res.send({ token });
+      res.send({ id });
     } catch (e) {
       bail(res, e.message);
     }
