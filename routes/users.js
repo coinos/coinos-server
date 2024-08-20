@@ -276,6 +276,7 @@ export default {
       );
 
       await s(`user:${user.id}`, user);
+      if (user.nip5) await db.sAdd('nip5', `${user.username}:${user.pubkey}`);
 
       emit(user.id, "user", user);
       res.send({ user, token });

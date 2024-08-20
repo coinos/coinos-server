@@ -1,4 +1,4 @@
-import { bail, nada, uniq } from "$lib/utils";
+import { bail, nada, getUser, uniq } from "$lib/utils";
 import config from "$config";
 import { g, s, db } from "$lib/db";
 import { pool, q } from "$lib/nostr";
@@ -192,12 +192,16 @@ export default {
     }
   },
 
-  async identities(req, res) {
+  async identities({ query: { name } }, res) {
     let names = {};
-    for await (let k of db.scanIterator({ MATCH: "user:*" })) {
-      let u = await g(k);
-      if (typeof u === "string") u = await g(`user:${u}`);
-      if (u && u.username && u.pubkey && u.nip5) names[u.username] = u.pubkey;
+    if (name) {
+      names = { [name]: (await getUser(name)).pubkey };
+    } else {
+      let records = await db.sMembers("nip5");
+      for (let s of records) {
+        let [name, pubkey] = s.split(":");
+        names[name] = pubkey;
+      }
     }
 
     res.send({ names });
