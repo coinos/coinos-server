@@ -1,5 +1,5 @@
 import { g, s, db } from "$lib/db";
-import { claim, mint } from "$lib/ecash";
+import { claim, mint, check } from "$lib/ecash";
 import { bail } from "$lib/utils";
 import { debit, credit, types } from "$lib/payments";
 import { v4 } from "uuid";
@@ -12,7 +12,9 @@ let { ecash: type } = types;
 export default {
   async get({ params: { id } }, res) {
     try {
-      res.send(await g(`cash:${id}`));
+      let token = await g(`cash:${id}`);
+      let status = await check(token);
+      res.send({ token, status });
     } catch (e) {
       bail(res, e.message);
     }
