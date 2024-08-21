@@ -95,35 +95,38 @@ export default {
 
     let count = payments.length;
 
-    let totals = payments.reduce(
-      (a, b) => ({
-        ...a,
-        [b.currency]: {
-          tips: (a[b.currency] ? a[b.currency].tips : 0) + (b.tip || 0),
-          fiatTips: (
-            parseFloat(a[b.currency] ? a[b.currency].fiatTips : 0) +
-            ((b.tip || 0) * b.rate) / SATS
-          ).toFixed(2),
-          sats:
-            (a[b.currency] ? a[b.currency].sats : 0) +
-            (b.amount || 0) +
-            (b.tip || 0) -
+    let fn = (a, b) => ({
+      ...a,
+      [b.currency]: {
+        tips: (a[b.currency] ? a[b.currency].tips : 0) + (b.tip || 0),
+        fiatTips: (
+          parseFloat(a[b.currency] ? a[b.currency].fiatTips : 0) +
+          ((b.tip || 0) * b.rate) / SATS
+        ).toFixed(2),
+        sats:
+          (a[b.currency] ? a[b.currency].sats : 0) +
+          (b.amount || 0) +
+          (b.tip || 0) -
+          (b.fee || 0) -
+          (b.ourfee || 0),
+        fiat: (
+          parseFloat(a[b.currency] ? a[b.currency].fiat : 0) +
+          (((b.amount || 0) +
+            ((b.amount > 0 ? b.tip : -b.tip) || 0) -
             (b.fee || 0) -
-            (b.ourfee || 0),
-          fiat: (
-            parseFloat(a[b.currency] ? a[b.currency].fiat : 0) +
-            (((b.amount || 0) + (b.tip || 0) - (b.fee || 0) - (b.ourfee || 0)) *
-              b.rate) /
-              SATS
-          ).toFixed(2),
-        },
-      }),
-      {},
-    );
+            (b.ourfee || 0)) *
+            b.rate) /
+            SATS
+        ).toFixed(2),
+      },
+    });
+
+    let incoming = payments.filter((p) => p.amount > 0).reduce(fn, {});
+    let outgoing = payments.filter((p) => p.amount < 0).reduce(fn, {});
 
     if (limit) payments = payments.slice(offset, offset + limit);
 
-    res.send({ payments, count, totals });
+    res.send({ payments, count, incoming, outgoing });
   },
 
   async get({ params: { hash } }, res) {
@@ -349,7 +352,10 @@ export default {
     }
   },
 
-  async lnaddress({ params: { lnaddress, amount, maxfee = 5000 }, body, user }, res) {
+  async lnaddress(
+    { params: { lnaddress, amount, maxfee = 5000 }, body, user },
+    res,
+  ) {
     try {
       lnaddress = decodeURIComponent(lnaddress);
       await requirePin({ body, user });
@@ -410,8 +416,6 @@ export default {
 
       let raw = await node.createRawTransaction(tx.vin, outputs);
 
-      console.log("FEES", fees)
-
       let newTx = await node.fundRawTransaction(raw, {
         fee_rate: fees.fastestFee + 50,
         replaceable: true,
@@ -420,8 +424,6 @@ export default {
 
       let diff = sats(newTx.fee) - p.fee;
       if (diff < 0) fail("fee must increase");
-
-      console.log("DIFF", diff)
 
       // let ourfee = Math.round(diff * config.fee) || 0;
       //
