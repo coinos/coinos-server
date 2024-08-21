@@ -10,6 +10,17 @@ import store from "$lib/store";
 let { ecash: type } = types;
 
 export default {
+  async save({ body: { token } }, res) {
+    try {
+      let id = v4();
+      await s(`cash:${id}`, token);
+      res.send({ id });
+    } catch (e) {
+      console.log(e)
+      bail(res, e.message);
+    }
+  },
+
   async get({ params: { id } }, res) {
     try {
       let token = await g(`cash:${id}`);

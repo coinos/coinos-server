@@ -119,6 +119,7 @@ app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);
 
 app.get("/cash/:id", ecash.get);
+app.post("/cash", ecash.save);
 app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
