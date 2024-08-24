@@ -1,5 +1,4 @@
 import config from "$config";
-import store from "$lib/store";
 import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
@@ -139,11 +138,11 @@ export default {
   async parse({ body: { payreq }, user }, res) {
     try {
       let hour = 1000 * 60 * 60;
-      let { last } = store.nodes;
-      let { nodes } = store;
+      let nodes = await g("nodes");
+      let { last } = nodes;
 
       if (!last || last > Date.now() - hour) ({ nodes } = await ln.listnodes());
-      store.nodes = nodes;
+      await s("nodes", nodes);
 
       let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
       let decoded = await ln.decodepay(payreq);
@@ -202,12 +201,13 @@ export default {
 
       if (!iid) {
         iid = v4();
+        let rates = await g("rates");
         let { currency } = user;
         await s(`invoice:${iid}`, {
           currency,
           id: iid,
           hash: iid,
-          rate: store.rates[currency],
+          rate: rates[currency],
           uid: user.id,
           received: 0,
         });

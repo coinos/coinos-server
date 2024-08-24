@@ -16,7 +16,7 @@ export default {
       await s(`cash:${id}`, token);
       res.send({ id });
     } catch (e) {
-      console.log(e)
+      err(e.message);
       bail(res, e.message);
     }
   },
@@ -27,6 +27,7 @@ export default {
       let status = await check(token);
       res.send({ token, status });
     } catch (e) {
+      err(e.message);
       bail(res, e.message);
     }
   },
@@ -38,11 +39,12 @@ export default {
       let memo;
       let hash = v4();
       let { currency, id: uid } = user;
+      let rates = await g("rates");
       await s(`invoice:${hash}`, {
         currency,
         id: hash,
         hash,
-        rate: store.rates[currency],
+        rate: rates[currency],
         uid,
         received: 0,
       });
@@ -51,7 +53,7 @@ export default {
 
       res.send({ ok: true });
     } catch (e) {
-      console.log(e);
+      err(e.message);
       bail(res, e.message);
     }
   },
@@ -69,6 +71,7 @@ export default {
 
       res.send({ id });
     } catch (e) {
+      err(e.message);
       bail(res, e.message);
     }
   },
@@ -89,7 +92,8 @@ export default {
         0,
       );
 
-      let rate = store.rates[currency];
+      let rates = await g("rates");
+      let rate = rates[currency];
 
       if (ourfee.err) fail(ourfee.err);
 

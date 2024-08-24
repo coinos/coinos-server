@@ -5,7 +5,7 @@ import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import { catchUp } from "$lib/payments";
-import { getRates } from "$lib/rates";
+import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { err } from "$lib/logging";
 
@@ -26,7 +26,7 @@ import shopify from "$routes/shopify";
 try {
   fillPool();
   getLocations();
-  getRates();
+  getFx();
   catchUp();
 } catch (e) {
   console.log(e);

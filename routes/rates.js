@@ -1,11 +1,11 @@
-import store from "$lib/store";
+import { g } from "$lib/db";
 
 export default {
   async last(req, res) {
-    res.send(store.last);
+    res.send(await g('rate'));
   },
 
   async index(req, res) {
-    res.send(store.rates);
+    res.send(await g('rates'));
   },
 };
