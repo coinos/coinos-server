@@ -139,10 +139,13 @@ export default {
     try {
       let hour = 1000 * 60 * 60;
       let nodes = await g("nodes");
-      let { last } = nodes;
+      let { last } = nodes || {};
 
-      if (!last || last > Date.now() - hour) ({ nodes } = await ln.listnodes());
-      await s("nodes", nodes);
+      if (!last || last > Date.now() - hour) {
+        ({ nodes } = await ln.listnodes());
+        nodes.last = Date.now();
+        await s("nodes", nodes);
+      }
 
       let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
       let decoded = await ln.decodepay(payreq);
