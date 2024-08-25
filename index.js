@@ -133,7 +133,7 @@ app.listen({ host, port });
 let logerr = (e) =>
   e.message.includes("Invalid") ||
   e.message.includes("MASK") ||
-  e.message.startsWith("Rate") ||
+  e.message.includes("Rate") ||
   console.log(e);
 
 process.on("unhandledRejection", logerr);
