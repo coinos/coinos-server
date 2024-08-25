@@ -1,9 +1,10 @@
 import config from "$config";
 import { emit } from "$lib/sockets";
+import { generate } from "$lib/invoices";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
-import { bail, fail, getInvoice, btc, sats, SATS } from "$lib/utils";
+import { bail, fail, getInvoice, btc, sats, SATS, getUser } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
   completePayment,
@@ -456,5 +457,22 @@ export default {
       err("failed to bump payment", id, e.message);
       bail(res, e.message);
     }
+  },
+
+  async internal({ body: { username, amount }, user: sender }, res) {
+    let recipient = await getUser(username);
+    let inv = await generate({
+      invoice: { amount, type: "lightning" },
+      user: recipient,
+      sender,
+    });
+
+    let { hash } = inv;
+    let memo;
+
+    let p = await debit({ hash, amount, memo, user: sender });
+    await credit(hash, amount, memo, recipient.id);
+
+    res.send(p);
   },
 };
