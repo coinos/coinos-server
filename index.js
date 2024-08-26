@@ -41,6 +41,7 @@ app.post("/email", email.send);
 app.get("/rate", rates.last);
 app.get("/rates", rates.index);
 
+app.get("/nostr/info", nostr.info);
 app.get("/nostr.json", nostr.identities);
 app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);

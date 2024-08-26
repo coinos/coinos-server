@@ -1,5 +1,4 @@
 import { g, s, db } from "$lib/db";
-import migrate from "$lib/migrate";
 import config from "$config";
 import store from "$lib/store";
 import {

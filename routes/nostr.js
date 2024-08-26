@@ -206,4 +206,8 @@ export default {
 
     res.send({ names });
   },
+
+  async info(req, res) {
+    res.send({ pubkey: COINOS_PUBKEY });
+  }
 };

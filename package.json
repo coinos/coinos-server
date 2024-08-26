@@ -17,6 +17,7 @@
     "@fastify/secure-session": "^5.2.0",
     "@fastify/static": "^6.5.0",
     "@fastify/websocket": "^7.2.0",
+    "@noble/hashes": "^1.4.0",
     "bcrypt": "^5.0.0",
     "bech32": "^2.0.0",
     "buffer-crc32": "^0.2.13",
