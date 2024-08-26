@@ -23,7 +23,7 @@
     "buffer-crc32": "^0.2.13",
     "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
     "date-fns": "^2.21.3",
-    "fastify": "^4.24.3",
+    "fastify": "^4.28.1",
     "file-type": "^18.0.0",
     "fluent-ffmpeg": "^2.1.2",
     "got": "^13.0.0",
