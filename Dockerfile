@@ -1,15 +1,12 @@
-FROM node:21
+FROM oven/bun
 
 ARG NODE_ENV=production
-ENV NODE_ENV $NODE_ENV
 
 RUN apt update
-RUN apt install gcc make pkg-config automake libpcre2-dev libtool git ffmpeg -y
-RUN npm i -g bun
+RUN apt install ffmpeg -y
 
-COPY . /app
-WORKDIR /app
+COPY . /home/bun/app
 
-RUN NODE_ENV=development NODE_OPTIONS="" bun i
+RUN NODE_ENV=development bun i
 
 CMD ["bun", "run", "start"]

@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "$lib/*": ["./lib/*"],
+      "$routes/*": ["./routes/*"],
+      "$config": ["./config.js"]
+    }
+  }
+}

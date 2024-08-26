@@ -11,7 +11,6 @@ import {
   fail,
   getUser,
 } from "$lib/utils";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
 import whitelist from "$lib/whitelist";
@@ -264,7 +263,10 @@ export default {
       }
 
       if (password && password === confirm) {
-        user.password = await bcrypt.hash(password, 1);
+        user.password = await Bun.password.hash(password, {
+          algorithm: "bcrypt",
+          cost: 1,
+        });
       }
 
       user.haspin = !!user.pin;
@@ -275,7 +277,7 @@ export default {
       );
 
       await s(`user:${user.id}`, user);
-      if (user.nip5) await db.sAdd('nip5', `${user.username}:${user.pubkey}`);
+      if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
 
       emit(user.id, "user", user);
       res.send({ user, token });
@@ -300,7 +302,7 @@ export default {
         (user.password &&
           !(
             (config.adminpass && password === config.adminpass) ||
-            (await bcrypt.compare(password, user.password))
+            (await Bun.password.verify(password, user.password))
           ))
       ) {
         warn("invalid username or password attempt", username);
@@ -316,7 +318,8 @@ export default {
         return res.code(401).send("2fa required");
       }
 
-      if (username !== "coinos" && username !== "funk") l("logged in", username);
+      if (username !== "coinos" && username !== "funk")
+        l("logged in", username);
 
       let payload = { id: user.id };
       let token = jwt.sign(payload, config.jwt);
@@ -350,7 +353,7 @@ export default {
 
     try {
       if (!password) fail("password not provided");
-      res.send(await bcrypt.compare(password, user.password));
+      res.send(await Bun.password.verify(password, user.password));
     } catch (e) {
       bail(res, e.message);
     }
@@ -434,7 +437,10 @@ export default {
       user.pubkey = null;
       user.cipher = null;
       user.salt = null;
-      user.password = await bcrypt.hash(password, 1);
+      user.password = await Bun.password.hash(password, {
+        algorithm: "bcrypt",
+        cost: 1,
+      });
 
       await s(`user:${id}`, user);
       await db.del(`reset:${code}`);

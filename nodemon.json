@@ -1,0 +1,6 @@
+{
+  "watch": ["lib", "routes", "index.ts"],
+  "ext": ".ts,.js",
+  "ignore": [],
+  "exec": "bun ./index.ts"
+}

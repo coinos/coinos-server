@@ -24,7 +24,7 @@ import requests from "$routes/requests";
 import shopify from "$routes/shopify";
 
 try {
-  fillPool();
+  // setTimeout(fillPool, 1000);
   getLocations();
   getFx();
   catchUp();
@@ -41,14 +41,14 @@ app.post("/email", email.send);
 app.get("/rate", rates.last);
 app.get("/rates", rates.index);
 
-app.get("/nostr/info", nostr.info);
-app.get("/nostr.json", nostr.identities);
-app.get("/:pubkey/followers", nostr.followers);
-app.get("/:pubkey/follows", nostr.follows);
-app.get("/:pubkey/notes", nostr.notes);
-app.get("/:pubkey/:since/messages", nostr.messages);
-app.get("/event/:id", nostr.event);
-app.post("/event", nostr.broadcast);
+// app.get("/nostr/info", nostr.info);
+// app.get("/nostr.json", nostr.identities);
+// app.get("/:pubkey/followers", nostr.followers);
+// app.get("/:pubkey/follows", nostr.follows);
+// app.get("/:pubkey/notes", nostr.notes);
+// app.get("/:pubkey/:since/messages", nostr.messages);
+// app.get("/event/:id", nostr.event);
+// app.post("/event", nostr.broadcast);
 
 app.get("/locations", locations.list);
 
@@ -129,7 +129,7 @@ app.post("/melt", auth, ecash.melt);
 let host = process.env.HOST || "0.0.0.0";
 let port = process.env.PORT || 3119;
 
-app.listen({ host, port });
+app.listen({ host, port }, console.log);
 
 let logerr = (e) =>
   e.message.includes("Invalid") ||
