@@ -1,10 +1,13 @@
 node_modules/
 .pnpm*
 data
-config.js
+config.ts
 compose.yml
 .env
 *.flitevox
 mimic
 watcher.sh
 .aws
+*.js
+routes/**/*.js
+lib/**/*.js

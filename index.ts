@@ -1,20 +1,17 @@
 import app from "$lib/app";
 import { auth, admin, optional } from "$lib/auth";
 
-import { fillPool } from "$lib/nostr";
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import { catchUp } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
-import { err } from "$lib/logging";
 
 import ecash from "$routes/ecash";
 import email from "$routes/email";
 import info from "$routes/info";
 import locations from "$routes/locations";
 import lnurl from "$routes/lnurl";
-import nostr from "$routes/nostr";
 import rates from "$routes/rates";
 import invoices from "$routes/invoices";
 import items from "$routes/items";
@@ -40,15 +37,6 @@ app.post("/email", email.send);
 
 app.get("/rate", rates.last);
 app.get("/rates", rates.index);
-
-// app.get("/nostr/info", nostr.info);
-// app.get("/nostr.json", nostr.identities);
-// app.get("/:pubkey/followers", nostr.followers);
-// app.get("/:pubkey/follows", nostr.follows);
-// app.get("/:pubkey/notes", nostr.notes);
-// app.get("/:pubkey/:since/messages", nostr.messages);
-// app.get("/event/:id", nostr.event);
-// app.post("/event", nostr.broadcast);
 
 app.get("/locations", locations.list);
 
@@ -126,12 +114,12 @@ app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 
-let host = process.env.HOST || "0.0.0.0";
-let port = process.env.PORT || 3119;
+let host = process.env["HOST"] || "0.0.0.0";
+let port = process.env["PORT"] || 3119;
 
-app.listen({ host, port }, console.log);
+app.listen({ host, port });
 
-let logerr = (e) =>
+let logerr = (e: Error) =>
   e.message.includes("Invalid") ||
   e.message.includes("MASK") ||
   e.message.includes("Rate") ||

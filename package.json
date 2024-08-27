@@ -47,7 +47,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.4.1",
-    "nodemon": "^2.0.7"
+    "@types/bun": "^1.1.8",
+    "nodemon": "^2.0.7",
+    "typescript": "^5.5.4"
   },
   "apidoc": {
     "title": "CoinOS Server API Documentation",

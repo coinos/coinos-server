@@ -67,15 +67,12 @@ let track = async (ws, token) => {
   ws.user = user;
 };
 
-console.log("starting socket server");
 Bun.serve({
   hostname: "0.0.0.0",
   port: 3120,
   fetch(req, server) {
-    console.log("here we go");
     // upgrade the request to a WebSocket
     if (server.upgrade(req)) {
-      console.log("UPGRADING");
       return; // do not return a Response
     }
     return new Response("Upgrade failed", { status: 500 });
@@ -131,7 +128,6 @@ Bun.serve({
       }
     },
     open(ws) {
-      console.log("OPENING");
       const id = v4();
       ws.id = id;
       ws.beats = 0;
