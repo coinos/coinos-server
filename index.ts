@@ -17,11 +17,9 @@ import invoices from "$routes/invoices";
 import items from "$routes/items";
 import users from "$routes/users";
 import payments from "$routes/payments";
-import requests from "$routes/requests";
 import shopify from "$routes/shopify";
 
 try {
-  // setTimeout(fillPool, 1000);
   getLocations();
   getFx();
   catchUp();
@@ -98,11 +96,6 @@ app.post("/items", auth, items.create);
 app.post("/items/delete", auth, items.del);
 app.post("/items/sort", auth, items.sort);
 
-app.get("/request/:id", auth, requests.get);
-app.get("/requests", auth, requests.list);
-app.post("/requests", auth, requests.create);
-app.post("/requests/delete", auth, requests.destroy);
-
 app.post("/shopify/:id", shopify);
 
 app.post("/hidepay", admin, users.hidepay);
@@ -114,8 +107,8 @@ app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 
-let host = process.env["HOST"] || "0.0.0.0";
-let port = process.env["PORT"] || 3119;
+let host: string = process.env["HOST"] || "0.0.0.0";
+let port: number = parseInt(process.env["PORT"]) || 3119;
 
 app.listen({ host, port });
 

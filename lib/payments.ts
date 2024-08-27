@@ -3,7 +3,7 @@ import config from "$config";
 import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { notify } from "$lib/notifications";
-import { db, g, s, t } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
 import {
   f,
@@ -11,9 +11,7 @@ import {
   fail,
   fiat,
   getInvoice,
-  getUser,
   sleep,
-  wait,
   SATS,
   sats,
   formatReceipt,
@@ -54,7 +52,7 @@ export let debit = async ({
   // if (!user.unlimited && amount > 1000000)
   //   fail(`⚡️${amount} exceeds max withdrawal of ⚡️1,000,000`);
   let ref;
-  let { id: uid, currency, username } = user;
+  let { id: uid, currency } = user;
   
   let rates = await g('rates');
   if (!rate) rate = rates[currency];

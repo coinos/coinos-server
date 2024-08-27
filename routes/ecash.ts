@@ -1,16 +1,18 @@
 import { g, s, db } from "$lib/db";
 import { claim, mint, check } from "$lib/ecash";
-import { bail } from "$lib/utils";
+import { bail, fail } from "$lib/utils";
 import { debit, credit, types } from "$lib/payments";
 import { v4 } from "uuid";
-import { l, err, warn } from "$lib/logging";
+import { l, err } from "$lib/logging";
 import { emit } from "$lib/sockets";
-import store from "$lib/store";
 
 let { ecash: type } = types;
 
 export default {
-  async save({ body: { token } }, res) {
+  async save(req, res) {
+    let {
+      body: { token },
+    } = req;
     try {
       let id = v4();
       await s(`cash:${id}`, token);
@@ -21,7 +23,10 @@ export default {
     }
   },
 
-  async get({ params: { id } }, res) {
+  async get(req, res) {
+    let {
+      params: { id },
+    } = req;
     try {
       let token = await g(`cash:${id}`);
       let status = await check(token);
@@ -32,7 +37,11 @@ export default {
     }
   },
 
-  async claim({ body: { token }, user }, res) {
+  async claim(req, res) {
+    let {
+      body: { token },
+      user,
+    } = req;
     try {
       let amount = await claim(token);
 
@@ -58,7 +67,11 @@ export default {
     }
   },
 
-  async mint({ body: { amount }, user }, res) {
+  async mint(req, res) {
+    let {
+      body: { amount },
+      user,
+    } = req;
     try {
       let id = v4();
       let hash = v4();
@@ -76,13 +89,17 @@ export default {
     }
   },
 
-  async melt({ body: { amount, bolt11: hash, preimage }, user }, res) {
+  async melt(req, res) {
+    let {
+      body: { amount, bolt11: hash, preimage },
+      user,
+    } = req;
     try {
       amount = Math.round(amount / 1000);
       let ref = preimage;
       let { lightning: type } = types;
       if (user.username !== "mint") fail("unauthorized");
-      let { id: uid, currency, username } = user;
+      let { id: uid, currency } = user;
       let ourfee = await db.debit(
         `balance:${uid}`,
         `credit:${type}:${uid}`,

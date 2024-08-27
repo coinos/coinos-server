@@ -11,15 +11,21 @@
     "allowImportingTsExtensions": true,
 
     // Best practices
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
-
 
     // Some stricter flags
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": true,
+
+    "noImplicitAny": false, // Allow variables to have 'any' type
+    "noImplicitThis": false, // Allow 'this' to be of any type
+    "strictNullChecks": false, // Disable strict null checks
+    "strictFunctionTypes": false, // Disable strict function types
+    "strictBindCallApply": false, // Disable strict bind/call/apply checks
+    "noImplicitReturns": false, // Disable implicit return type checks
+    "noFallthroughCasesInSwitch": false, 
 
     "baseUrl": ".",
     "paths": {

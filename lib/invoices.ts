@@ -11,7 +11,7 @@ import lq from "$lib/liquid";
 import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
-export let generate = async ({ invoice, user, sender }) => {
+export let generate = async ({ invoice, user, sender = undefined }) => {
   let {
     bolt11,
     currency,

@@ -21,17 +21,16 @@ import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
 import api from "$lib/api";
 
-import lq from "$lib/liquid";
-import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
 
 export default {
-  async info({ body, user }, res) {
+  async info(_, res) {
     res.send(await ln.getinfo());
   },
 
-  async create({ body, user }, res) {
-    let { amount, hash, maxfee, fund, memo, payreq, rate, username } = body;
+  async create(req, res) {
+    let { body, user } = req;
+    let { amount, hash, maxfee, fund, memo, payreq } = body;
     let balance = await g(`balance:${user.id}`);
 
     try {
@@ -71,7 +70,12 @@ export default {
     }
   },
 
-  async list({ user: { id }, query: { start, end, limit, offset } }, res) {
+  async list(req, res) {
+    let {
+      user: { id },
+      query: { start, end, limit, offset },
+    } = req;
+
     if (limit) limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
@@ -129,14 +133,21 @@ export default {
     res.send({ payments, count, incoming, outgoing });
   },
 
-  async get({ params: { hash } }, res) {
+  async get(req, res) {
+    let {
+      params: { hash },
+    } = req;
     let p = await g(`payment:${hash}`);
     if (typeof p === "string") p = await g(`payment:${p}`);
     if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
     res.send(p);
   },
 
-  async parse({ body: { payreq }, user }, res) {
+  async parse(req, res) {
+    let {
+      body: { payreq },
+      user,
+    } = req;
     try {
       let hour = 1000 * 60 * 60;
       let nodes = await g("nodes");
@@ -148,7 +159,6 @@ export default {
         await s("nodes", nodes);
       }
 
-      let twoWeeksAgo = new Date(new Date().setDate(new Date().getDate() - 14));
       let decoded = await ln.decodepay(payreq);
       let { amount_msat, payee } = decoded;
       let node = nodes.find((n) => n.nodeid === payee);
@@ -166,7 +176,10 @@ export default {
     }
   },
 
-  async fund({ params: { name } }, res) {
+  async fund(req, res) {
+    let {
+      params: { name },
+    } = req;
     let amount = await g(`fund:${name}`);
     if (typeof amount === "undefined" || amount === null)
       return bail(res, "fund not found");
@@ -181,7 +194,10 @@ export default {
     res.send({ amount, payments });
   },
 
-  async withdraw({ params: { name } }, res) {
+  async withdraw(req, res) {
+    let {
+      params: { name },
+    } = req;
     let maxWithdrawable = await g(`fund:${name}`);
     res.send({
       tag: "withdrawRequest",
@@ -193,7 +209,11 @@ export default {
     });
   },
 
-  async take({ body: { id, amount, invoice: iid }, user }, res) {
+  async take(req, res) {
+    let {
+      body: { id, amount, invoice: iid },
+      user,
+    } = req;
     try {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
@@ -227,7 +247,11 @@ export default {
     }
   },
 
-  async confirm({ body: { txid, wallet, type } }, res) {
+  async confirm(req, res) {
+    let {
+      body: { txid, wallet, type },
+    } = req;
+
     try {
       let node = getNode(type);
 
@@ -268,7 +292,7 @@ export default {
 
             l("confirming", id, p.id, p.amount);
 
-            let r = await db
+            await db
               .multi()
               .set(`invoice:${iid}`, JSON.stringify(invoice))
               .set(`payment:${p.id}`, JSON.stringify(p))
@@ -290,7 +314,8 @@ export default {
     }
   },
 
-  async fee({ body, user }, res) {
+  async fee(req, res) {
+    let { body, user } = req;
     try {
       res.send(await build({ ...body, user }));
     } catch (e) {
@@ -307,7 +332,8 @@ export default {
     }
   },
 
-  async send({ body, user }, res) {
+  async send(req, res) {
+    let { body, user } = req;
     try {
       await requirePin({ body, user });
       let { hash: txid } = await sendOnchain({ ...body, user });
@@ -321,7 +347,10 @@ export default {
     }
   },
 
-  async freeze({ body: { secret } }, res) {
+  async freeze(req, res) {
+    let {
+      body: { secret },
+    } = req;
     try {
       if (secret !== config.adminpass) fail("unauthorized");
       await s("freeze", true);
@@ -332,7 +361,11 @@ export default {
     }
   },
 
-  async print({ body: { id }, user }, res) {
+  async print(req, res) {
+    let {
+      body: { id },
+      user,
+    } = req;
     try {
       let p = await g(`payment:${id}`);
       if (p.uid !== user.id) fail("unauthorized");
@@ -356,10 +389,12 @@ export default {
     }
   },
 
-  async lnaddress(
-    { params: { lnaddress, amount, maxfee = 5000 }, body, user },
-    res,
-  ) {
+  async lnaddress(req, res) {
+    let {
+      params: { lnaddress, amount, maxfee = 5000 },
+      body,
+      user,
+    } = req;
     try {
       lnaddress = decodeURIComponent(lnaddress);
       await requirePin({ body, user });
@@ -390,14 +425,21 @@ export default {
     }
   },
 
-  async gateway({ body: { short_channel_id, webhook } }, res) {
+  async gateway(req, res) {
+    let {
+      body: { short_channel_id, webhook },
+    } = req;
+
     await s(short_channel_id, webhook);
     res.send({ ok: true });
   },
 
-  async replace({ body: { id }, user }, res) {
+  async replace(req, res) {
+    let {
+      body: { id },
+      user,
+    } = req;
     try {
-      let { id: uid } = user;
       let p = await g(`payment:${id}`);
       if (!p) fail("Payment not found");
       if (p.uid !== user.id) fail("unauthorized");
@@ -459,7 +501,11 @@ export default {
     }
   },
 
-  async internal({ body: { username, amount }, user: sender }, res) {
+  async internal(req, res) {
+    let {
+      body: { username, amount },
+      user: sender,
+    } = req;
     let recipient = await getUser(username);
     let inv = await generate({
       invoice: { amount, type: "lightning" },

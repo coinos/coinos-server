@@ -1,16 +1,6 @@
 import { g, s, db } from "$lib/db";
 import config from "$config";
-import store from "$lib/store";
-import {
-  fields,
-  nada,
-  pick,
-  uniq,
-  wait,
-  bail,
-  fail,
-  getUser,
-} from "$lib/utils";
+import { pick, bail, fail, getUser } from "$lib/utils";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
 import whitelist from "$lib/whitelist";
@@ -19,12 +9,9 @@ import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/auth";
 import { v4 } from "uuid";
-import { parseISO } from "date-fns";
 import { types } from "$lib/payments";
 import { bech32 } from "bech32";
 import { mail, templates } from "$lib/mail";
-
-import got from "got";
 import upload from "$lib/upload";
 
 const { encode, decode, fromWords, toWords } = bech32;
@@ -32,7 +19,8 @@ const { encode, decode, fromWords, toWords } = bech32;
 export default {
   upload,
 
-  async me({ user }, res) {
+  async me(req, res) {
+    let { user } = req;
     try {
       user.balance = await g(`balance:${user.id}`);
       user.prompt = !!user.prompt;
@@ -46,7 +34,8 @@ export default {
     }
   },
 
-  async list({ user }, res) {
+  async list(req, res) {
+    let { user } = req;
     if (!user.admin) fail("unauthorized");
 
     let users = [];
@@ -81,7 +70,10 @@ export default {
     res.send(users);
   },
 
-  async get({ params: { key } }, res) {
+  async get(req, res) {
+    let {
+      params: { key },
+    } = req;
     key = key.toLowerCase().replace(/\s/g, "");
     try {
       if (key.startsWith("npub")) {
@@ -132,7 +124,8 @@ export default {
     }
   },
 
-  async create({ body, headers }, res) {
+  async create(req, res) {
+    let { body, headers } = req;
     try {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
@@ -154,7 +147,11 @@ export default {
     }
   },
 
-  async disable2fa({ user, body: { token } }, res) {
+  async disable2fa(req, res) {
+    let {
+      user,
+      body: { token },
+    } = req;
     let { id, twofa, username, otpsecret } = user;
     if (twofa && !authenticator.check(token, otpsecret)) {
       return res.code(401).send("2fa required");
@@ -168,7 +165,11 @@ export default {
     res.send({});
   },
 
-  async enable2fa({ user, body: { token } }, res) {
+  async enable2fa(req, res) {
+    let {
+      user,
+      body: { token },
+    } = req;
     let { id, otpsecret, username } = user;
     const isValid = authenticator.check(token, otpsecret);
     if (isValid) {
@@ -183,7 +184,8 @@ export default {
     res.send({});
   },
 
-  async update({ user, body }, res) {
+  async update(req, res) {
+    let { user, body } = req;
     try {
       l("updating user", user.username);
 
@@ -332,7 +334,8 @@ export default {
     }
   },
 
-  async subscribe({ body, user }, res) {
+  async subscribe(req, res) {
+    let { body, user } = req;
     let { subscriptions } = user;
     let { subscription } = body;
     if (!subscriptions) subscriptions = [];
@@ -348,7 +351,11 @@ export default {
     res.sendStatus(201);
   },
 
-  async password({ body: { password }, user }, res) {
+  async password(req, res) {
+    let {
+      body: { password },
+      user,
+    } = req;
     if (!user.password) return res.send(true);
 
     try {
@@ -359,7 +366,11 @@ export default {
     }
   },
 
-  async pin({ body: { pin }, user }, res) {
+  async pin(req, res) {
+    let {
+      body: { pin },
+      user,
+    } = req;
     res.send(!user.pin || user.pin === pin);
   },
 
@@ -373,7 +384,10 @@ export default {
     }
   },
 
-  async contacts({ user: { id } }, res) {
+  async contacts(req, res) {
+    let {
+      user: { id },
+    } = req;
     let lastlen = (await g(`${id}:lastlen`)) || 0;
     let len = await db.lLen(`${id}:payments`);
     let payments = (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
@@ -398,7 +412,11 @@ export default {
     res.send(contacts);
   },
 
-  async del({ params: { username }, headers: { authorization } }, res) {
+  async del(req, res) {
+    let {
+      params: { username },
+      headers: { authorization },
+    } = req;
     username = username.toLowerCase();
     if (!(authorization && authorization.includes(config.admin)))
       return res.code(401).send("unauthorized");
@@ -418,7 +436,11 @@ export default {
     res.send({});
   },
 
-  async reset({ body: { code, username, password }, user: u }, res) {
+  async reset(req, res) {
+    let {
+      body: { code, username, password },
+      user: u,
+    } = req;
     let admin = u && u.admin;
     let id, user;
 
@@ -451,22 +473,34 @@ export default {
     }
   },
 
-  async printerlogin({ body: { username, topic } }, res) {
+  async printerlogin(req, res) {
+    let {
+      body: { username, topic },
+    } = req;
     if (username === topic) res.send({ ok: true });
     else bail(res, "unauthorized");
   },
 
-  async acl({ body: { username, topic } }, res) {
+  async acl(req, res) {
+    let {
+      body: { username, topic },
+    } = req;
     if (username === topic) res.send({ ok: true });
     else bail(res, "unauthorized");
   },
 
-  async superuser({ body: { username } }, res) {
+  async superuser(req, res) {
+    let {
+      body: { username },
+    } = req;
     if (username === config.mqtt2.username) res.send({ ok: true });
     else bail(res, "unauthorized");
   },
 
-  async request({ body: { id, email } }, res) {
+  async request(req, res) {
+    let {
+      body: { id, email },
+    } = req;
     try {
       let user = await g(`user:${id}`);
 
@@ -497,10 +531,13 @@ export default {
     }
   },
 
-  async verify({ params: { code } }, res) {
+  async verify(req, res) {
+    let {
+      params: { code },
+    } = req;
     try {
       let { id, email } = await g(`verify:${code}`);
-      if (!id) fail(res, "verification failed");
+      if (!id) fail("verification failed");
       let user = await g(`user:${id}`);
       user.email = email;
       user.verified = true;
@@ -513,7 +550,10 @@ export default {
     }
   },
 
-  async forgot({ body: { email } }, res) {
+  async forgot(req, res) {
+    let {
+      body: { email },
+    } = req;
     try {
       let uid = await g(`email:${email.toLowerCase()}`);
       let user = await g(`user:${uid}`);
@@ -535,19 +575,28 @@ export default {
     }
   },
 
-  async items({ params: { id } }, res) {
+  async items(req, _) {
+    let {
+      params: { id },
+    } = req;
     let item = await g(`item:${id}`);
     return item;
   },
 
-  async hidepay({ body: { username } }, res) {
+  async hidepay(req, res) {
+    let {
+      body: { username },
+    } = req;
     let u = await getUser(username);
     u.hidepay = true;
     await s(`user:${u.id}`, u);
     res.send({});
   },
 
-  async unlimit({ body: { username } }, res) {
+  async unlimit(req, res) {
+    let {
+      body: { username },
+    } = req;
     let u = await getUser(username);
     u.unlimited = true;
     await s(`user:${u.id}`, u);

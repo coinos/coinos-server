@@ -12,7 +12,11 @@ let query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) {
   }
 }`;
 
-export default async ({ body: { hash }, params: { id } }, res) => {
+export default async (req, res) => {
+  let {
+    body: { hash },
+    params: { id },
+  } = req;
   let p = await g(`payment:${hash}`);
   if (typeof p === "string") p = await g(`payment:${p}`);
   let user = await g(`user:${p.uid}`);

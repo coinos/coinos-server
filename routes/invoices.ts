@@ -1,13 +1,12 @@
-import { g, s } from "$lib/db";
+import { g } from "$lib/db";
 import { generate } from "$lib/invoices";
-import { bail, fail, pick } from "$lib/utils";
-import whitelist from "$lib/whitelist";
-import got from "got";
-import config from "$config";
-import ln from "$lib/ln";
+import { bail, pick } from "$lib/utils";
 
 export default {
-  async get({ params: { id } }, res) {
+  async get(req, res) {
+    let {
+      params: { id },
+    } = req;
     let invoice = await g(`invoice:${id}`);
     if (typeof invoice === "string") invoice = await g(`invoice:${invoice}`);
 
@@ -28,7 +27,12 @@ export default {
     else res.code(500).send("invoice not found");
   },
 
-  async create({ body: { invoice, user }, user: sender }, res) {
+  async create(req, res) {
+    let {
+      body: { invoice, user },
+      user: sender,
+    } = req;
+
     try {
       res.send(await generate({ invoice, user, sender }));
     } catch (e) {

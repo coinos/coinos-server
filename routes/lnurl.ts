@@ -1,24 +1,21 @@
-import migrate from "$lib/migrate";
 import { g, s } from "$lib/db";
-import { l, err, warn } from "$lib/logging";
+import { err, warn } from "$lib/logging";
 import { bail, getUser, fail } from "$lib/utils";
 import { v4 } from "uuid";
 import got from "got";
 import { generate } from "$lib/invoices";
 import { bech32 } from "bech32";
-import { fields, pick } from "$lib/utils";
 import { types } from "$lib/payments";
-import crypto from "crypto";
 import { COINOS_PUBKEY } from "$lib/nostr";
-
-import config from "$config";
-let { admin } = config;
 
 let { URL } = process.env;
 let host = URL.split("/").at(-1);
 
 export default {
-  async encode({ query: { address } }, res) {
+  async encode(req, res) {
+    let {
+      query: { address },
+    } = req;
     let [name, domain] = address.split("@");
     let url = `https://${domain}/.well-known/lnurlp/${name}`;
 
@@ -35,7 +32,10 @@ export default {
     res.send(enc);
   },
 
-  async decode({ query: { text } }, res) {
+  async decode(req, res) {
+    let {
+      query: { text },
+    } = req;
     try {
       let url = Buffer.from(
         bech32.fromWords(bech32.decode(text, 20000).words),
@@ -47,13 +47,11 @@ export default {
     }
   },
 
-  async lnurlp(
-    {
+  async lnurlp(req, res) {
+    let {
       params: { username },
       query: { minSendable = 1000, maxSendable = 100000000000 },
-    },
-    res,
-  ) {
+    } = req;
     try {
       let { id: uid } = await getUser(username);
 
@@ -80,9 +78,11 @@ export default {
     }
   },
 
-  async lnurlw({ params: { k1, pr } }, res) {},
-
-  async lnurl({ params: { id }, query: { amount, nostr } }, res) {
+  async lnurl(req, res) {
+    let {
+      params: { id },
+      query: { amount, nostr },
+    } = req;
     try {
       let uid = await g(`lnurl:${id}`);
       let user = await getUser(uid);
@@ -122,7 +122,10 @@ export default {
     }
   },
 
-  async verify({ params: { id } }, res) {
+  async verify(req, res) {
+    let {
+      params: { id },
+    } = req;
     let inv = await g(`invoice:${id}`);
 
     if (!inv) return res.send({ status: "ERROR", reason: "Not found" });
