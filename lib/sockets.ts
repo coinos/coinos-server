@@ -1,16 +1,12 @@
-import config from "$config";
 import store from "$lib/store";
 import jwt from "jsonwebtoken";
 import { v4 } from "uuid";
-import whitelist from "$lib/whitelist";
-import { l, err, warn } from "$lib/logging";
-import { g } from "$lib/db";
-import { fail, getUser, pick } from "$lib/utils";
+import { err, warn } from "$lib/logging";
+import { fail, getUser } from "$lib/utils";
 
 const code = 1000;
 const all = {};
 const subscriptions = [];
-const lastSeen = {};
 const users = {};
 
 export const emit = (uid, type, data) => {

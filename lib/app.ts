@@ -4,9 +4,11 @@ import fastifyMultipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import fastifyPassport from "@fastify/passport";
 import fastifySecureSession from "@fastify/secure-session";
+import fastifyProxy from "@fastify/http-proxy";
+import fastifyRateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
 
-import path from "path";
+import * as path from "path";
 import pino from "pino";
 
 import { jwtStrategy } from "$lib/auth";
@@ -17,18 +19,25 @@ const app = fastify({
   maxParamLength: 500,
 });
 
-await app.register(import("@fastify/rate-limit"), {
-  allowList: (req, key) => req.raw.url.includes("public"),
+app.register(fastifyRateLimit, {
+  allowList: (req) => req.raw.url?.includes("public"),
   max: 100,
   timeWindow: 2000,
-  keyGenerator: (req) => req.headers["cf-connecting-ip"],
-  errorResponseBuilder: (req, context) => {
+  keyGenerator: (req) => req.headers["cf-connecting-ip"] as string,
+  errorResponseBuilder: () => {
     return {
       statusCode: 429,
       error: "Too Many Requests",
       message: "Rate limit exceeded, retry in 2 seconds",
     };
   },
+});
+
+app.register(fastifyProxy, {
+  upstream: "http://localhost:3120",
+  prefix: "/ws",
+  rewritePrefix: "/ws",
+  websocket: true
 });
 
 app.register(fastifySecureSession, {
@@ -47,11 +56,9 @@ app.register(fastifyStatic, {
   prefix: "/public/",
 });
 
-await app.register(cors, {
-  origin: true,
-});
+await app.register(cors, { origin: true });
 
-app.setErrorHandler((error, request, reply) => {
+app.setErrorHandler((error, _, reply) => {
   if (error instanceof fastify.errorCodes.FST_ERR_BAD_STATUS_CODE) {
     reply.status(500).send({ ok: false });
   } else {
@@ -59,8 +66,8 @@ app.setErrorHandler((error, request, reply) => {
   }
 });
 
-app.setNotFoundHandler((request, reply) => {
-  reply.code(404).type("text/html").send("Not Found");
-});
+app.setNotFoundHandler((_, reply) =>
+  reply.code(404).type("text/html").send("Not Found"),
+);
 
 export default app;
