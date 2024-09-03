@@ -6,20 +6,23 @@ import { getLocations } from "$lib/locations";
 import { catchUp } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
+import { fillPool } from "$lib/nostr";
 
 import ecash from "$routes/ecash";
 import email from "$routes/email";
 import info from "$routes/info";
-import locations from "$routes/locations";
-import lnurl from "$routes/lnurl";
-import rates from "$routes/rates";
 import invoices from "$routes/invoices";
 import items from "$routes/items";
-import users from "$routes/users";
+import lnurl from "$routes/lnurl";
+import locations from "$routes/locations";
+import nostr from "$routes/nostr";
 import payments from "$routes/payments";
+import rates from "$routes/rates";
 import shopify from "$routes/shopify";
+import users from "$routes/users";
 
 try {
+  fillPool();
   getLocations();
   getFx();
   catchUp();
@@ -40,6 +43,14 @@ app.get("/locations", locations.list);
 
 app.get("/invoice/:id", invoices.get);
 app.post("/invoice", optional, invoices.create);
+
+app.get("/nostr.json", nostr.identities);
+app.get("/:pubkey/followers", nostr.followers);
+app.get("/:pubkey/follows", nostr.follows);
+app.get("/:pubkey/notes", nostr.notes);
+app.get("/:pubkey/:since/messages", nostr.messages);
+app.get("/event/:id", nostr.event);
+app.post("/event", nostr.broadcast);
 
 app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);
@@ -101,7 +112,7 @@ app.post("/shopify/:id", shopify);
 app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);
 
-app.get("/cash/:id", ecash.get);
+app.get("/cash/:id/:version", ecash.get);
 app.post("/cash", ecash.save);
 app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);

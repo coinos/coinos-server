@@ -1,10 +1,12 @@
 import { bail, nada, getUser, uniq } from "$lib/utils";
-import config from "$config";
-import { g, s, db } from "$lib/db";
-import { pool, q } from "$lib/nostr";
+import { g, db } from "$lib/db";
+import { pool, q, COINOS_PUBKEY } from "$lib/nostr";
 
 export default {
-  async event({ params: { id } }, res) {
+  async event(req, res) {
+    let {
+      params: { id },
+    } = req;
     let event = await g(`ev:${id}`);
     if (!event) return bail(res, "event not found");
 
@@ -21,7 +23,10 @@ export default {
     res.send(event);
   },
 
-  async notes({ params: { pubkey } }, res) {
+  async notes(req, res) {
+    let {
+      params: { pubkey },
+    } = req;
     let uid = await g(`user:${pubkey}`);
     let user = await g(`user:${uid}`);
 
@@ -51,7 +56,10 @@ export default {
     res.send(events.map((e) => ({ ...e, user })));
   },
 
-  async messages({ params: { pubkey, since = 0 } }, res) {
+  async messages(req, res) {
+    let {
+      params: { pubkey, since = 0 },
+    } = req;
     let params = {
       kinds: [4],
       authors: [pubkey],
@@ -93,7 +101,11 @@ export default {
     res.send(event);
   },
 
-  async follows({ params: { pubkey }, query: { tagsonly } }, res) {
+  async follows(req, res) {
+    let {
+      params: { pubkey },
+      query: { tagsonly },
+    } = req;
     try {
       let sub = `${pubkey}:follows`,
         params = {
@@ -142,7 +154,10 @@ export default {
     }
   },
 
-  async followers({ params: { pubkey } }, res) {
+  async followers(req, res) {
+    let {
+      params: { pubkey },
+    } = req;
     try {
       let pubkeys = [
         ...new Set([...(await db.sMembers(`${pubkey}:followers`))]),
@@ -192,7 +207,10 @@ export default {
     }
   },
 
-  async identities({ query: { name } }, res) {
+  async identities(req, res) {
+    let {
+      query: { name },
+    } = req;
     let names = {};
     if (name) {
       names = { [name]: (await getUser(name)).pubkey };
@@ -207,7 +225,7 @@ export default {
     res.send({ names });
   },
 
-  async info(req, res) {
+  async info(_, res) {
     res.send({ pubkey: COINOS_PUBKEY });
-  }
+  },
 };

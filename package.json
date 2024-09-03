@@ -3,13 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node index.js",
-    "dev": "bun --stack-size=4096 --hot index.ts",
+    "start": "bun index.js",
+    "dev": "nodemon --exec bun index.ts",
     "format": "biome format *.js **/*.js --write"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.449.0",
-    "@cashu/cashu-ts": "^1.0.1",
+    "@cashu/cashu-ts": "github:cashubtc/cashu-ts#development",
     "@fastify/cors": "^8.3.0",
     "@fastify/http-proxy": "^9.5.0",
     "@fastify/multipart": "^8.0.0",

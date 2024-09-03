@@ -23,7 +23,8 @@
     "paths": {
       "$lib/*": ["./lib/*.ts"],
       "$routes/*": ["./routes/*.ts"],
-      "$config": ["./config.ts"]
+      "$config": ["./config.ts"],
+      "@cashu/cashu-ts": ["node_modules/@cashu/cashu-ts/dist/lib/es6/index.js"]
     }
   }
 }

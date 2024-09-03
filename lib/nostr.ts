@@ -1,11 +1,10 @@
 import config from "$config";
 import { l } from "$lib/logging";
 import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
-import { broadcast, emit } from "$lib/sockets";
-import store from "$lib/store";
 import { g, s, db } from "$lib/db";
-import { fail, nada, wait } from "$lib/utils";
+import { fail, wait } from "$lib/utils";
 import { nip19 } from "nostr-tools";
+import { emit } from "$lib/sockets";
 
 export const COINOS_PUBKEY = getPublicKey(nip19.decode(config.nostrKey).data);
 export let coinos;
@@ -13,91 +12,91 @@ export let pool;
 
 export let fillPool = () => {
   try {
-  pool = RelayPool(config.relays);
-  pool.on("open", (relay) => {
-    if (relay.url.includes(config.nostr)) coinos = relay;
-    relay.subscribe("live", { limit: 1 });
-  });
+    pool = RelayPool(config.relays);
+    pool.on("open", (relay) => {
+      if (relay.url.includes(config.nostr)) coinos = relay;
+      // relay.subscribe("live", { limit: 1 });
+    });
 
-  pool.on("event", async (relay, sub, ev) => {
-    if (!coinos) return;
-    if (timeouts[sub]) timeouts[sub].extend(ev);
-    try {
-      let content;
+    pool.on("event", async (_, sub, ev) => {
+      if (!coinos && coinos.ws.readyState !== WebSocket.OPEN) return;
+      if (timeouts[sub]) timeouts[sub].extend(ev);
       try {
-        content = JSON.parse(ev.content);
-      } catch (e) {
-        content = ev.content;
-      }
+        let content;
+        try {
+          content = JSON.parse(ev.content);
+        } catch (e) {
+          content = ev.content;
+        }
 
-      if (sub === "live") {
-        let { pubkey } = ev;
+        if (sub === "live") {
+          let { pubkey } = ev;
 
-        if (Math.abs(Math.floor(Date.now() / 1000) - ev.created_at) > 7200)
-          return;
+          if (Math.abs(Math.floor(Date.now() / 1000) - ev.created_at) > 7200)
+            return;
 
-        if (seen.includes(ev.id)) return;
-        seen.push(ev.id);
-        seen.length > 1000 && seen.shift();
+          if (seen.includes(ev.id)) return;
+          seen.push(ev.id);
+          seen.length > 1000 && seen.shift();
 
-        if (coinos && ev.kind < 5) {
-          // coinos.send(["EVENT", ev]);
-          ev.user = await getUser(pubkey);
-          // broadcast("event", ev);
+          if (coinos && ev.kind < 5) {
+            // coinos.send(["EVENT", ev]);
+            ev.user = await getUser(pubkey);
+            // broadcast("event", ev);
 
-          if (ev.kind === 4) {
-            let uid = await g(`user:${ev.tags[0][1]}`);
-            if (uid) ev.recipient = await g(`user:${uid}`);
-            ev.author = ev.user;
-            emit(uid, "event", ev);
+            if (ev.kind === 4) {
+              let uid = await g(`user:${ev.tags[0][1]}`);
+              if (uid) ev.recipient = await g(`user:${uid}`);
+              ev.author = ev.user;
+              emit(uid, "event", ev);
+            }
           }
+        } else if (sub.includes("profile")) {
+          let { pubkey } = ev;
+          let user = await getUser(pubkey);
+
+          if (user.updated > ev.created_at) return;
+
+          if (content.name && user.username === pubkey.substr(0, 6))
+            user.username = content.name;
+
+          delete content.name;
+
+          user = {
+            ...user,
+            ...content,
+            updated: ev.created_at,
+          };
+
+          await s(`user:${pubkey}`, JSON.stringify(user));
+        } else if (sub.includes("messages")) {
+          let pubkey = sub.split(":")[0];
+          await db.sAdd(`${pubkey}:messages`, ev.id);
+          await s(`ev:${ev.id}`, ev);
+        } else if (sub.includes("follows")) {
+          let pubkey = sub.split(":")[0];
+          await s(`${pubkey}:follows`, ev.tags);
+          for (let f of ev.tags) {
+            let [_, followPubkey] = f;
+            await db.sAdd(`${followPubkey}:followers`, pubkey);
+          }
+          coinos.send(ev);
+        } else if (sub.includes("followers")) {
+          let followed = sub.split(":")[0];
+          let { pubkey } = ev;
+          await db.sAdd(`${followed}:followers`, pubkey);
+          coinos.send(ev);
+        } else if (sub.includes("notes")) {
+          let pubkey = sub.split(":")[0];
+          await db.sAdd(pubkey, ev.id);
+          await s(`ev:${ev.id}`, ev);
         }
-      } else if (sub.includes("profile")) {
-        let { pubkey } = ev;
-        let user = await getUser(pubkey);
-
-        if (user.updated > ev.created_at) return;
-
-        if (content.name && user.username === pubkey.substr(0, 6))
-          user.username = content.name;
-
-        delete content.name;
-
-        user = {
-          ...user,
-          ...content,
-          updated: ev.created_at,
-        };
-
-        await s(`user:${pubkey}`, JSON.stringify(user));
-      } else if (sub.includes("messages")) {
-        let pubkey = sub.split(":")[0];
-        await db.sAdd(`${pubkey}:messages`, ev.id);
-        await s(`ev:${ev.id}`, ev);
-      } else if (sub.includes("follows")) {
-        let pubkey = sub.split(":")[0];
-        await s(`${pubkey}:follows`, ev.tags);
-        for (let f of ev.tags) {
-          let [_, followPubkey] = f;
-          await db.sAdd(`${followPubkey}:followers`, pubkey);
-        }
-        coinos.send(ev);
-      } else if (sub.includes("followers")) {
-        let followed = sub.split(":")[0];
-        let { pubkey } = ev;
-        await db.sAdd(`${followed}:followers`, pubkey);
-        coinos.send(ev);
-      } else if (sub.includes("notes")) {
-        let pubkey = sub.split(":")[0];
-        await db.sAdd(pubkey, ev.id);
-        await s(`ev:${ev.id}`, ev);
+      } catch (e) {
+        console.log(e);
       }
-    } catch (e) {
-      console.log(e);
-    }
-  });
-  } catch(e) {
-    console.log("POOL", e)
+    });
+  } catch (e) {
+    console.log("POOL", e);
   }
 };
 
