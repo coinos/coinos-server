@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "bun index.js",
+    "start": "bun index.ts",
     "dev": "nodemon --exec bun index.ts",
     "format": "biome format *.js **/*.js --write"
   },
