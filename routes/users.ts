@@ -16,6 +16,7 @@ import upload from "$lib/upload";
 
 const { encode, decode, fromWords, toWords } = bech32;
 
+console.log("HI");
 export default {
   upload,
 
@@ -189,18 +190,7 @@ export default {
     try {
       l("updating user", user.username);
 
-      let {
-        profile,
-        banner,
-        confirm,
-        password,
-        pin,
-        newpin,
-        pubkey,
-        username,
-        shopifyToken,
-        shopifyStore,
-      } = body;
+      let { confirm, password, pin, newpin, pubkey, username } = body;
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
@@ -267,7 +257,7 @@ export default {
       if (password && password === confirm) {
         user.password = await Bun.password.hash(password, {
           algorithm: "bcrypt",
-          cost: 1,
+          cost: 4,
         });
       }
 
@@ -461,7 +451,7 @@ export default {
       user.salt = null;
       user.password = await Bun.password.hash(password, {
         algorithm: "bcrypt",
-        cost: 1,
+        cost: 4,
       });
 
       await s(`user:${id}`, user);

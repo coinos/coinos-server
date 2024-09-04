@@ -4,13 +4,13 @@ import { v4 } from "uuid";
 
 import config from "$config";
 import countries from "$lib/countries";
-import { s, g, archive } from "$lib/db";
+import { s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
 
 let valid = /^[\p{L}\p{N}]{2,24}$/u;
-export default async (user, ip, requireChallenge) => {
-  let { profile, password, pubkey, username } = user;
+export default async (user, ip) => {
+  let { password, pubkey, username } = user;
   l("registering", username);
 
   if (!username) fail("Username required");
@@ -27,7 +27,7 @@ export default async (user, ip, requireChallenge) => {
   if (password) {
     user.password = await Bun.password.hash(password, {
       algorithm: "bcrypt",
-      cost: 1,
+      cost: 4,
     });
   }
 
@@ -36,7 +36,7 @@ export default async (user, ip, requireChallenge) => {
     try {
       let {
         location: { country: { code } },
-      } = await got(
+      }: any = await got(
         `https://api.ipregistry.co/${ip}?key=${config.ipregistry}&fields=location.country.code`,
       ).json();
 
@@ -58,5 +58,6 @@ export default async (user, ip, requireChallenge) => {
   await s(`balance:${id}`, 0);
 
   l("new user", username);
+
   return user;
 };
