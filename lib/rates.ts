@@ -16,9 +16,10 @@ let connect = async () => {
   ws.onmessage = async function (event) {
     try {
       let msg = JSON.parse(event.data);
-      let rates = await g("rates");
+      let rates = await g("rates") || {};
       let fx = await g("fx");
       if (fx) ({ fx } = fx);
+      if (!fx) return;
 
       Object.keys(fx).map((symbol) => {
         rates[symbol] = msg.c * fx[symbol];
