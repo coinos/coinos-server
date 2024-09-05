@@ -16,7 +16,6 @@ import upload from "$lib/upload";
 
 const { encode, decode, fromWords, toWords } = bech32;
 
-console.log("HI");
 export default {
   upload,
 

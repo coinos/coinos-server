@@ -36,6 +36,7 @@ setInterval(sendHeartbeat, 2000);
 app.get("/balances", info.balances);
 app.post("/email", email.send);
 
+app.get("/fx", rates.fx);
 app.get("/rate", rates.last);
 app.get("/rates", rates.index);
 

@@ -1,15 +1,15 @@
-import crypto from "crypto";
-import store from "$lib/store";
-import { l } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import { db, g, s } from "$lib/db";
 import { getUser, bip21, fail, SATS } from "$lib/utils";
 import { types } from "$lib/payments";
 import { v4 } from "uuid";
 
-import lq from "$lib/liquid";
-import bc from "$lib/bitcoin";
+import bc_ from "$lib/bitcoin";
+import lq_ from "$lib/liquid";
 import ln from "$lib/ln";
+
+let bc = bc_ as any;
+let lq = lq_ as any;
 
 export let generate = async ({ invoice, user, sender = undefined }) => {
   let {
@@ -37,7 +37,7 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
   else if (sender) user = await getUser(sender.username);
   if (!user) fail("user not provided");
 
-  let rates = await g('rates');
+  let rates = await g("rates");
   if (!currency) currency = user.currency;
   if (!rate) rate = rates[currency];
   if (fiat) amount = Math.round((SATS * fiat) / rate);

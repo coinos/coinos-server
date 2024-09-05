@@ -1,11 +1,11 @@
 import got from "got";
 
-export default ({ host, port, wallet, username, password }) =>
+export default ({ host, port, wallet, username, password })=>
   new Proxy(
     {},
     {
       get:
-        (target, prop) =>
+        (_, prop) =>
         (...params) =>
           ((method, ...params) => {
             let url = `http://${host}:${port}/wallet/${wallet}`;
@@ -23,6 +23,6 @@ export default ({ host, port, wallet, username, password }) =>
               })
               .json()
               .then(({ result }) => result);
-          })(prop.toLowerCase(), ...params),
+          })((prop as string).toLowerCase(), ...params),
     },
   );

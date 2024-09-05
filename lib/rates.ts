@@ -1,7 +1,6 @@
 import got from "got";
 import config from "$config";
-import store from "$lib/store";
-import { err, warn } from "$lib/logging";
+import { err } from "$lib/logging";
 import { g, s } from "$lib/db";
 import { sleep } from "$lib/utils";
 import WebSocket from "ws";
@@ -51,10 +50,14 @@ export let getFx = async () => {
   if (Date.now() - date > 24 * 60 * 60 * 1000) {
     date = Date.now();
     try {
-      let r = await got(
-        `http://data.fixer.io/api/latest?access_key=${config.fixer}`,
-      ).json();
-      let { rates: fx } = r;
+      if (config.fixer) {
+        ({ rates: fx } = (await got(
+          `http://data.fixer.io/api/latest?access_key=${config.fixer}`,
+        ).json()) as any);
+      } else {
+        ({ fx } = (await got("https://coinos.io/api/fx").json()) as any);
+      }
+
       let USD = fx["USD"];
 
       Object.keys(fx).map((k) => {
