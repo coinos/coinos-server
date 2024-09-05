@@ -33,4 +33,5 @@ export default {
   adminpass: "pwa",
   support: "support@coinos.io",
   nostrKey: "nsec13wekuqstlsyfrzm369yh6vjaphslq5pq9kze74acqqynjm8lvpms4qzsx9",
+  mintUrl: "http://mint:3338",
 };

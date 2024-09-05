@@ -86,3 +86,42 @@ services:
       - "./data/nostr/config.toml:/usr/src/app/config.toml" 
     ports:
       - '8082:8080'
+  mint:
+    image: asoltys/nutshell
+    container_name: mint
+    ports:
+      - "3338:3338"
+    environment:
+      - MINT_CLNREST_URL=http://cl:3010
+      - MINT_CLNREST_RUNE=lC9j5Z8-x7uN3oPqEGbpcNk2yknxQ4h5To5Z2Dp8ONE9Mg==
+      - MINT_BACKEND_BOLT11_SAT=CLNRestWallet
+      # - MINT_BACKEND_BOLT11_SAT=FakeWallet
+      - MINT_LISTEN_HOST=0.0.0.0
+      - MINT_LISTEN_PORT=3338
+      - MINT_PRIVATE_KEY=TEST_PRIVATE_KEY
+      - MINT_CLNREST_COINOS_URL=http://app:3119
+      - MINT_CLNREST_COINOS_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVjYTM0YWU4LTdiMTItNDU4OS04ODMyLTUyMTNjOWVhMjc5NyIsImlhdCI6MTcyNDA0NjI3OH0.bdX1YLnpgqpjmjrkCdIdDbdmZUdViNSVrAJ0OX3ByPo
+    command: ["poetry", "run", "mint"]
+    volumes:
+      - "/home/adam/nutshell:/app"
+      - "./data/mint:/app/data/mint"
+  mintb:
+    image: asoltys/nutshell
+    container_name: mintb
+    ports:
+      - "3339:3338"
+    environment:
+      - MINT_CLNREST_URL=http://clb:3010
+      - MINT_CLNREST_RUNE=kTyXJ6yJwESVezCl4yB4z0zGMjXi11qggnKRQ4nnc2Y9MA==
+      - MINT_BACKEND_BOLT11_SAT=CLNRestWallet
+      # - MINT_BACKEND_BOLT11_SAT=FakeWallet
+      - MINT_LISTEN_HOST=0.0.0.0
+      - MINT_LISTEN_PORT=3338
+      - MINT_PRIVATE_KEY=TEST_PRIVATE_KEYB
+      - MINT_CLNREST_COINOS_URL=http://app:3119
+      - MINT_CLNREST_COINOS_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVjYTM0YWU4LTdiMTItNDU4OS04ODMyLTUyMTNjOWVhMjc5NyIsImlhdCI6MTcyNDA0NjI3OH0.bdX1YLnpgqpjmjrkCdIdDbdmZUdViNSVrAJ0OX3ByPo
+    command: ["poetry", "run", "mint"]
+    volumes:
+      - "/home/adam/nutshell:/app"
+      - "./data/mint:/app/data/mint"
+
