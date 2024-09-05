@@ -16,7 +16,7 @@ services:
       - '3119:3119'
     volumes:
       - .aws/:/root/.aws
-      - ./:/app
+      - ./:/home/bun/app
       - ./logs:/logs
     restart: always
   bc:

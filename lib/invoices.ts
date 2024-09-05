@@ -1,8 +1,10 @@
+import config from "$config";
 import { emit } from "$lib/sockets";
 import { db, g, s } from "$lib/db";
 import { getUser, bip21, fail, SATS } from "$lib/utils";
 import { types } from "$lib/payments";
 import { v4 } from "uuid";
+import rpc from "$lib/rpc";
 
 import bc_ from "$lib/bitcoin";
 import lq_ from "$lib/liquid";
@@ -14,6 +16,7 @@ let lq = lq_ as any;
 export let generate = async ({ invoice, user, sender = undefined }) => {
   let {
     bolt11,
+    account,
     currency,
     expiry,
     fiat,
@@ -49,7 +52,12 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
   let id = v4();
 
   let hash, text;
-  if (type === types.lightning) {
+  
+  if (account) {
+    bc = rpc({...config.bitcoin, wallet: account });
+    hash = await bc.getNewAddress();
+    text = bip21(hash, invoice);
+  } else if (type === types.lightning) {
     let r;
     if (bolt11) {
       let { id: nodeid } = await ln.getinfo();
@@ -84,6 +92,7 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
 
   invoice = {
     amount,
+    account,
     created: Date.now(),
     currency,
     hash,

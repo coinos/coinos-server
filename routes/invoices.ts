@@ -5,7 +5,7 @@ import { bail, pick } from "$lib/utils";
 export default {
   async get(req, res) {
     let {
-      params: { id },
+            params: { id },
     } = req;
     let invoice = await g(`invoice:${id}`);
     if (typeof invoice === "string") invoice = await g(`invoice:${invoice}`);
