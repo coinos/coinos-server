@@ -6,3 +6,7 @@ bitcoin-rpcuser=admin1
 bitcoin-rpcpassword=123
 network=regtest
 addr=clb:9735
+clnrest-port=3010
+clnrest-protocol=http
+clnrest-host=0.0.0.0
+
