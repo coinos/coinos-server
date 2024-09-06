@@ -21,15 +21,10 @@ import got from "got";
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import { mail, templates } from "$lib/mail";
 import api from "$lib/api";
-import rpc from "$lib/rpc";
-import { bech32 } from "bech32";
 
-import bc_ from "$lib/bitcoin";
-import lq_ from "$lib/liquid";
+import lq from "$lib/liquid";
+import bc from "$lib/bitcoin";
 import ln from "$lib/ln";
-
-let bc = bc_ as any;
-let lq = lq_ as any;
 
 let { URL } = process.env;
 
@@ -46,10 +41,10 @@ export let debit = async ({
   hash,
   amount,
   fee = 0,
-  memo = undefined,
+  memo,
   user,
   type = types.internal,
-  rate = undefined,
+  rate,
 }) => {
   amount = parseInt(amount);
   if (type !== types.internal && (await g("freeze")))
@@ -58,8 +53,8 @@ export let debit = async ({
   //   fail(`⚡️${amount} exceeds max withdrawal of ⚡️1,000,000`);
   let ref;
   let { id: uid, currency } = user;
-
-  let rates = await g("rates");
+  
+  let rates = await g('rates');
   if (!rate) rate = rates[currency];
 
   let invoice = await getInvoice(hash);
@@ -86,9 +81,7 @@ export let debit = async ({
 
   if (!amount || amount < 0) fail("Amount must be greater than zero");
 
-  let ourfee: any = [types.bitcoin, types.liquid, types.lightning].includes(
-    type,
-  )
+  let ourfee = [types.bitcoin, types.liquid, types.lightning].includes(type)
     ? Math.round((amount + fee + tip) * config.fee)
     : 0;
 
@@ -109,7 +102,6 @@ export let debit = async ({
     amount: -amount,
     fee,
     hash,
-    hex: undefined,
     ourfee,
     memo,
     iid,
@@ -153,13 +145,14 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
   let user = await g(`user:${inv.uid}`);
   let { id: uid, currency, username } = user;
 
-  let rates = await g("rates");
+  let rates = await g('rates');
   let rate = rates[currency];
 
   if (!rate) await sleep(1000);
   rate = rates[currency];
 
-  let equivalentRate = inv.rate * (rates[currency] / rates[inv.currency]);
+  let equivalentRate =
+    inv.rate * (rates[currency] / rates[inv.currency]);
 
   if (Math.abs(inv.rate / rates[inv.currency] - 1) < 0.01) {
     rate = equivalentRate;
@@ -172,7 +165,7 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
     id,
     iid: inv.id,
     hash,
-    amount: amount - tip,
+    amount: parseInt(amount - tip),
     uid,
     rate,
     currency,
@@ -182,7 +175,6 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
     type,
     confirmed: true,
     created: Date.now(),
-    items: [],
   };
 
   if ([types.bitcoin, types.liquid].includes(type)) inv.pending += amount;
@@ -311,15 +303,15 @@ let pay = async ({ amount, to, user }) => {
     lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
   } else if (to.startsWith("lnurl")) {
     lnurl = Buffer.from(
-      bech32.fromWords(bech32.decode(to, 20000).words),
+      bech32.fromWords(bech32.decode(text, 20000).words),
     ).toString();
   }
 
   let maxfee = getMaxFee(amount);
   if (lnurl) {
     amount -= maxfee;
-    let { callback } = (await got(lnurl).json()) as any;
-    ({ pr } = (await got(`${callback}?amount=${amount * 1000}`).json()) as any);
+    let { callback } = await got(lnurl).json();
+    ({ pr } = await got(`${callback}?amount=${amount * 1000}`).json());
   } else if (to.startsWith("ln")) {
     amount -= maxfee;
     pr = to;
@@ -353,7 +345,7 @@ export let sendOnchain = async (params) => {
   if (!hex) ({ hex } = await build(params));
 
   let { tx, type } = await decode(hex);
-  let node = await getNode(type);
+  let node = getNode(type);
   let { txid } = tx;
 
   try {
@@ -457,13 +449,7 @@ let getMaxFee = (n) =>
 
 let checking = {};
 let inflight = {};
-export let sendLightning = async ({
-  user,
-  pr,
-  amount,
-  maxfee,
-  memo = undefined,
-}) => {
+export let sendLightning = async ({ user, pr, amount, maxfee, memo }) => {
   try {
     if (inflight[user.id]) fail("payment in flight");
     inflight[user.id] = true;
@@ -477,7 +463,7 @@ export let sendLightning = async ({
     }
 
     let total = amount;
-    let { amount_msat } = await ln.decode(pr);
+    let { amount_msat, payment_hash } = await ln.decode(pr);
     if (amount_msat) total = Math.round(amount_msat / 1000);
 
     maxfee = parseInt(maxfee) || getMaxFee(total);
@@ -580,11 +566,9 @@ export let sendLightning = async ({
   }
 };
 
-export let getNode = async (type, wallet = undefined) => {
+export let getNode = (type) => {
   if (type === types.bitcoin) return bc;
   else if (type === types.liquid) return lq;
-  else if ((await g(`${wallet}:balance`)) !== null)
-    return rpc({ ...config.bitcoin, wallet });
   else fail("unrecognized transaction type");
 };
 
@@ -605,13 +589,11 @@ let getAddressType = async (a) => {
 export let build = async ({ amount, address, feeRate, user, subtract }) => {
   let type = await getAddressType(address);
 
-  let node = await getNode(type);
+  let node = getNode(type);
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
-  let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
-    r.json(),
-  );
+  let fees = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
 
   if (!feeRate) {
     feeRate = fees.halfHourFee;

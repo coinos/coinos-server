@@ -4,7 +4,7 @@ import { generate } from "$lib/invoices";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
-import { bail, fail, getInvoice, sats, SATS, getUser } from "$lib/utils";
+import { bail, fail, getInvoice, btc, sats, SATS, getUser } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
   completePayment,
@@ -253,7 +253,7 @@ export default {
     } = req;
 
     try {
-      let node = await getNode(type, wallet);
+      let node = getNode(type);
 
       if (wallet === config.bitcoin.wallet || wallet === config.liquid.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
@@ -400,16 +400,16 @@ export default {
       await requirePin({ body, user });
 
       let [username, domain] = lnaddress.split("@");
-      let { minSendable, maxSendable, callback, metadata } = (await got(
+      let { minSendable, maxSendable, callback, metadata } = await got(
         `https://${domain}/.well-known/lnurlp/${username}`,
-      ).json()) as any;
+      ).json();
 
       let memo = metadata["text/plain"] || "";
       if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
         fail("amount out of range");
 
-      let r: any = await got(`${callback}?amount=${amount * 1000}`).json();
-      if (r.reason) fail(r.reason);
+      let r = await got(`${callback}?amount=${amount * 1000}`).json();
+      if (r.reason) fail(r.rason);
       let { pr } = r;
       let p = await sendLightning({ user, pr, amount, maxfee, memo });
 
@@ -445,9 +445,9 @@ export default {
       if (p.uid !== user.id) fail("unauthorized");
 
       let { tx, type } = await decode(p.hex);
-      let node = await getNode(type);
+      let node = getNode(type);
 
-      let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
+      let fees = await fetch(`${api[type]}/fees/recommended`).then((r) =>
         r.json(),
       );
 
