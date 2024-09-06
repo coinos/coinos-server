@@ -1,6 +1,6 @@
 import got from "got";
 
-export default ({ host, port, wallet, username, password })=>
+export default ({ host, port, wallet, username, password }) =>
   new Proxy(
     {},
     {
@@ -23,6 +23,6 @@ export default ({ host, port, wallet, username, password })=>
               })
               .json()
               .then(({ result }) => result);
-          })((prop as string).toLowerCase(), ...params),
+          })((prop as any).toLowerCase(), ...params),
     },
   );

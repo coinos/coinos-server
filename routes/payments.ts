@@ -253,7 +253,8 @@ export default {
     } = req;
 
     try {
-      let node = getNode(type);
+      let known = await g(`${wallet}:balance`) !== null
+      let node = getNode(type, known ? wallet : undefined);
 
       if (wallet === config.bitcoin.wallet || wallet === config.liquid.wallet) {
         let { confirmations, details } = await node.getTransaction(txid);
