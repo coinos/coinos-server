@@ -52,9 +52,9 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
   let id = v4();
 
   let hash, text;
-  
+
   if (account) {
-    bc = rpc({...config.bitcoin, wallet: account });
+    bc = rpc({ ...config.bitcoin, wallet: account });
     hash = await bc.getNewAddress();
     text = bip21(hash, invoice);
   } else if (type === types.lightning) {
@@ -66,11 +66,12 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
       amount = Math.round(r.amount_msat / 1000);
       r.bolt11 = bolt11;
     } else {
+      expiry ||= 60 * 60 * 24 * 30;
       r = await ln.invoice({
         amount_msat: amount ? `${amount + tip}sat` : "any",
         label: id,
         description: memo || "",
-        expiry: expiry || 60 * 60 * 24 * 30,
+        expiry,
         deschashonly: true,
         cltv: 19,
       });
@@ -96,6 +97,7 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
     created: Date.now(),
     currency,
     hash,
+    expiry,
     id,
     items,
     memo,
