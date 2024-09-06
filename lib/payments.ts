@@ -224,6 +224,7 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
   }
 
   if (config.mqtt1) {
+    if (!mqtt1.connected) await mqtt1.reconnect();
     mqtt1.publish(
       username,
       `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${items}`,
@@ -231,6 +232,7 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
   }
 
   if (config.mqtt2) {
+    if (!mqtt2.connected) await mqtt2.reconnect();
     mqtt2.publish(
       username,
       `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${items}`,
@@ -611,7 +613,9 @@ export let build = async ({ amount, address, feeRate, user, subtract }) => {
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
-  let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
+  let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
+    r.json(),
+  );
 
   if (!feeRate) {
     feeRate = fees.halfHourFee;
