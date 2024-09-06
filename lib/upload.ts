@@ -1,31 +1,10 @@
-import { fileTypeFromStream } from "file-type";
-import pump from "pump";
-import Clone from "readable-stream-clone";
-import fs from "fs";
-import path from "path";
-import { pipeline } from "stream";
-import { g, s, db } from "$lib/db";
+import { fileTypeFromBuffer } from "file-type";
+import { writeFileSync } from "fs";
 import { bail, fail } from "$lib/utils";
-import crypto from "crypto";
+import { createHash } from "crypto";
 import { err } from "$lib/logging";
 
-async function getSha256Hash(stream) {
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash("sha256");
-    stream.pipe(hash);
-
-    let hashValue;
-    hash.on("data", (data) => {
-      hashValue = data.toString("hex");
-    });
-
-    hash.on("end", () => {
-      resolve(hashValue);
-    });
-
-    hash.on("error", reject);
-  });
-}
+const sharp = require("sharp");
 
 export default async (req, res) => {
   try {
@@ -33,38 +12,26 @@ export default async (req, res) => {
       params: { type },
     } = req;
 
-    let width = type === "banner" ? 1920 : 240;
-
     let data = await req.file();
-    let s1 = new Clone(data.file);
-    let s2 = new Clone(data.file);
+    let buf = await data.toBuffer();
 
-    let [format, ext] = (await fileTypeFromStream(s1)).mime.split("/");
+    let [format, ext] = (await fileTypeFromBuffer(buf)).mime.split("/");
 
     if (format !== "image" && !["jpg", "jpeg", "png"].includes(ext))
       fail("unsupported file type");
 
-    let processedBuffer = await streamToBuffer(s2.pipe(t));
-    let hash = crypto
-      .createHash("sha256")
-      .update(processedBuffer)
-      .digest("hex");
+    let w = type === "banner" ? 1920 : 240;
+    buf = await sharp(buf, { failOnError: false }).rotate().resize(w).webp().toBuffer();
+
+    let hash = createHash("sha256").update(buf).digest("hex");
 
     let filePath = `/home/bun/app/data/uploads/${hash}.webp`;
-    fs.writeFileSync(filePath, processedBuffer);
+    writeFileSync(filePath, buf);
 
     res.send({ hash });
   } catch (e) {
+    console.log(e);
     err("problem uploading", e.message);
     bail(res, e.message);
   }
 };
-
-function streamToBuffer(stream) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    stream.on("data", (chunk) => chunks.push(chunk));
-    stream.on("end", () => resolve(Buffer.concat(chunks)));
-    stream.on("error", reject);
-  });
-}
