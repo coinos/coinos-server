@@ -100,7 +100,7 @@ export default {
   IS: "ISK",
   IN: "INR",
   ID: "IDR",
-  IR: "IRR",
+  IR: "IRT",
   IQ: "IQD",
   IE: "EUR",
   IM: "GBP",
