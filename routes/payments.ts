@@ -4,7 +4,7 @@ import { generate } from "$lib/invoices";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
-import { bail, fail, getInvoice, btc, sats, SATS, getUser } from "$lib/utils";
+import { bail, fail, getInvoice, sats, SATS, getUser } from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
   completePayment,
@@ -125,8 +125,8 @@ export default {
       },
     });
 
-    let incoming = payments.filter((p) => p.amount > 0).reduce(fn, {});
-    let outgoing = payments.filter((p) => p.amount < 0).reduce(fn, {});
+    let incoming = payments.filter((p: any) => p.amount > 0).reduce(fn, {});
+    let outgoing = payments.filter((p: any) => p.amount < 0).reduce(fn, {});
 
     if (limit) payments = payments.slice(offset, offset + limit);
 
@@ -187,7 +187,7 @@ export default {
     payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
 
     await Promise.all(
-      payments.map(async (p) => (p.user = await g(`user:${p.uid}`))),
+      payments.map(async (p: any) => (p.user = await g(`user:${p.uid}`))),
     );
 
     payments = payments.filter((p) => p);
@@ -341,7 +341,7 @@ export default {
       let pid = await g(`payment:${txid}`);
       let p = await g(`payment:${pid}`);
 
-      res.send({ txid });
+      res.send(p);
     } catch (e) {
       warn(user.username, "payment failed", e.message);
       res.code(500).send(e.message);
@@ -401,16 +401,16 @@ export default {
       await requirePin({ body, user });
 
       let [username, domain] = lnaddress.split("@");
-      let { minSendable, maxSendable, callback, metadata } = await got(
+      let { minSendable, maxSendable, callback, metadata } = (await got(
         `https://${domain}/.well-known/lnurlp/${username}`,
-      ).json();
+      ).json()) as any;
 
       let memo = metadata["text/plain"] || "";
       if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
         fail("amount out of range");
 
-      let r = await got(`${callback}?amount=${amount * 1000}`).json();
-      if (r.reason) fail(r.rason);
+      let r: any = await got(`${callback}?amount=${amount * 1000}`).json();
+      if (r.reason) fail(r.reason);
       let { pr } = r;
       let p = await sendLightning({ user, pr, amount, maxfee, memo });
 
@@ -448,7 +448,7 @@ export default {
       let { tx, type } = await decode(p.hex);
       let node = getNode(type);
 
-      let fees = await fetch(`${api[type]}/fees/recommended`).then((r) =>
+      let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
         r.json(),
       );
 
@@ -472,28 +472,12 @@ export default {
       let diff = sats(newTx.fee) - p.fee;
       if (diff < 0) fail("fee must increase");
 
-      // let ourfee = Math.round(diff * config.fee) || 0;
-      //
-      // ourfee = await db.debit(
-      //   `balance:${uid}`,
-      //   `credit:${type}:${uid}`,
-      //   p.amount || 0,
-      //   0,
-      //   diff,
-      //   ourfee,
-      // );
-
       if (config[type].walletpass)
         await node.walletPassphrase(config[type].walletpass, 300);
       p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
       let r = await node.testMempoolAccept([p.hex]);
       if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
       warn("bump", user.username, p.hex);
-      // p.hash = await node.sendRawTransaction(p.hex);
-      // p.fee = sats(newTx.fee);
-      // await s(`payment:${id}`, p);
-      // await s(`payment:${p.hash}`, id);
-      // emit(uid, "payment", p);
 
       res.send({ ok: true });
     } catch (e) {
