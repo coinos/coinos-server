@@ -14,7 +14,7 @@ export default {
   bitcoin: {
     host: "bc",
     wallet: "coinos",
-    username: "admin1",
+    user: "admin1",
     password: "123",
     network: "regtest",
     port: 18443,
@@ -22,7 +22,7 @@ export default {
   liquid: {
     host: "lq",
     wallet: "coinos",
-    username: "admin1",
+    user: "admin1",
     password: "123",
     network: "regtest",
     port: 7040,
