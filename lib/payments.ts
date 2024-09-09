@@ -24,12 +24,10 @@ import api from "$lib/api";
 import { bech32 } from "bech32";
 import rpc from "@coinos/rpc";
 
-import lq_ from "$lib/liquid";
-import bc_ from "$lib/bitcoin";
 import ln from "$lib/ln";
 
-let bc = bc_ as any;
-let lq = lq_ as any;
+let bc = rpc(config.bitcoin);
+let lq = rpc(config.liquid);
 
 let { URL } = process.env;
 
