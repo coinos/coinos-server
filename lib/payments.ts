@@ -133,7 +133,14 @@ export let debit = async ({
   return p;
 };
 
-export let credit = async (hash, amount, memo, ref, type = types.internal) => {
+export let credit = async ({
+  hash,
+  amount,
+  memo = undefined,
+  ref = undefined,
+  type = types.internal,
+  account = undefined,
+}) => {
   amount = parseInt(amount) || 0;
 
   let inv = await getInvoice(hash);
@@ -169,6 +176,7 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
 
   let id = v4();
   let p = {
+    account,
     id,
     iid: inv.id,
     hash,
@@ -208,8 +216,8 @@ export let credit = async (hash, amount, memo, ref, type = types.internal) => {
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
     .set(`payment:${p.id}`, JSON.stringify(p))
-    .lPush(`${uid}:payments`, p.id)
-    .incrBy(`${balanceKey}:${uid}`, amount)
+    .lPush(`${account || uid}:payments`, p.id)
+    .incrBy(`${balanceKey}:${account || uid}`, amount)
     .exec();
 
   emit(uid, "payment", p);
@@ -355,7 +363,7 @@ export let sendOnchain = async (params) => {
   if (!hex) ({ hex } = await build(params));
 
   let { tx, type } = await decode(hex);
-  let node = getNode(type);
+  let node = rpc(config[type]);
   let { txid } = tx;
 
   try {
@@ -582,16 +590,6 @@ export let sendLightning = async ({
   }
 };
 
-export let getNode = (type, wallet = undefined) => {
-  if (type === types.bitcoin) {
-    return bc;
-  } else if (type === types.liquid) {
-    return lq;
-  } else if (wallet) {
-    return rpc({ ...config.bitcoin, wallet });
-  } else fail("unrecognized transaction type");
-};
-
 let getAddressType = async (a) => {
   try {
     await bc.getAddressInfo(a);
@@ -608,8 +606,7 @@ let getAddressType = async (a) => {
 
 export let build = async ({ amount, address, feeRate, user, subtract }) => {
   let type = await getAddressType(address);
-
-  let node = getNode(type);
+  let node = rpc(config[type]);
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 

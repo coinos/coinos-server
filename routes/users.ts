@@ -564,12 +564,25 @@ export default {
     }
   },
 
-  async items(req, _) {
-    let {
-      params: { id },
-    } = req;
-    let item = await g(`item:${id}`);
-    return item;
+  async accounts(req, res) {
+    let { user } = req;
+
+    let balance = await g(`balance:${user.id}`);
+    let accounts: any = [
+      {
+        balance,
+        type: "Cash",
+        mint: "https://mint.coinos.io",
+      },
+    ];
+
+    for (let id of await db.lRange(`${user.id}:accounts`, 0, 1)) {
+      let account = await g(`account:${id}`);
+      account.balance = await g(`balance:${id}`);
+      accounts.push(account);
+    }
+
+    res.send(accounts);
   },
 
   async hidepay(req, res) {
@@ -590,5 +603,19 @@ export default {
     u.unlimited = true;
     await s(`user:${u.id}`, u);
     res.send({});
+  },
+
+  async createAccount(req, res) {
+    let { type, seed } = req.body;
+    let { user } = req;
+
+    let id = v4();
+    let account = { id, seed, type };
+
+    await s(`account:${id}`, account);
+    await s(`balance:${id}`, 0);
+    await db.lPush(`${user.id}:accounts`, id);
+
+    res.send(account);
   },
 };

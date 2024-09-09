@@ -1,11 +1,12 @@
 import { g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { bail, pick } from "$lib/utils";
+import { err } from "$lib/logging";
 
 export default {
   async get(req, res) {
     let {
-            params: { id },
+      params: { id },
     } = req;
     let invoice = await g(`invoice:${id}`);
     if (typeof invoice === "string") invoice = await g(`invoice:${invoice}`);
@@ -34,8 +35,10 @@ export default {
     } = req;
 
     try {
-      res.send(await generate({ invoice, user, sender }));
+        res.send(await generate({ invoice, user, sender }));
     } catch (e) {
+      console.log(e);
+      err("problem generating invoice", e.message);
       bail(res, e.message);
     }
   },

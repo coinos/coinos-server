@@ -12,7 +12,6 @@ import {
   debit,
   credit,
   types,
-  getNode,
   build,
   sendLightning,
   sendOnchain,
@@ -20,8 +19,12 @@ import {
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
 import api from "$lib/api";
+import rpc from "$lib/rpc";
 
 import ln from "$lib/ln";
+
+let { wallet: bcw } = config.bitcoin;
+let { wallet: lqw } = config.liquid;
 
 export default {
   async info(_, res) {
@@ -53,7 +56,7 @@ export default {
       if (!p) {
         if (hash) {
           p = await debit({ hash, amount, memo, user });
-          await credit(hash, amount, memo, user.id);
+          await credit({ hash, amount, memo, ref: user.id });
         } else if (fund) {
           p = await debit({ hash, amount, memo: fund, user, type: types.fund });
           await db.incrBy(`fund:${fund}`, amount);
@@ -73,13 +76,13 @@ export default {
   async list(req, res) {
     let {
       user: { id },
-      query: { start, end, limit, offset },
+      query: { account, start, end, limit, offset },
     } = req;
 
     if (limit) limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
-    let payments = (await db.lRange(`${id}:payments`, 0, -1)) || [];
+    let payments = (await db.lRange(`${account || id}:payments`, 0, -1)) || [];
     payments = (
       await Promise.all(
         payments.map(async (id) => {
@@ -237,7 +240,13 @@ export default {
         });
       }
 
-      let payment = await credit(iid, amount, id, id, types.fund);
+      let payment = await credit({
+        hash: iid,
+        amount,
+        memo: id,
+        ref: id,
+        type: types.fund,
+      });
       await db.lPush(`fund:${id}:payments`, payment.id);
 
       res.send({ payment });
@@ -253,58 +262,65 @@ export default {
     } = req;
 
     try {
-      let known = await g(`${wallet}:balance`) !== null
-      let node = getNode(type, known ? wallet : undefined);
+      let node = rpc({ ...config[type], wallet });
 
-      if (wallet === config.bitcoin.wallet || wallet === config.liquid.wallet) {
-        let { confirmations, details } = await node.getTransaction(txid);
-        for (let { address, amount, asset, category, vout } of details) {
-          if (!address) continue;
-          if (type === types.liquid && asset !== config.liquid.btc) continue;
-          if (category === "send") {
-            let p = await g(`payment:${txid}`);
-            if (typeof p === "string") p = await g(`payment:${p}`);
-            if (!p) continue;
+      let { confirmations, details } = await node.getTransaction(txid);
 
-            if (confirmations >= 1) p.confirmed = true;
-            await s(`payment:${p.id}`, p);
-            emit(p.uid, "payment", p);
-            continue;
-          }
+      for (let { address, amount, asset, category, vout } of details) {
+        if (!address) continue;
+        if (type === types.liquid && asset !== config.liquid.btc) continue;
 
-          let p = await g(`payment:${txid}:${vout}`);
+        if (category === "send") {
+          let p = await g(`payment:${txid}`);
           if (typeof p === "string") p = await g(`payment:${p}`);
+          if (!p) continue;
 
-          if (!p) {
-            await credit(address, sats(amount), "", `${txid}:${vout}`, type);
-          } else if (confirmations >= 1) {
-            let id = `payment:${txid}:${vout}`;
-            let p = await g(id);
-            if (typeof p === "string") p = await g(`payment:${p}`);
-            if (!p) return db.sAdd("missed", id);
-            if (p.confirmed) return;
+          if (confirmations >= 1) p.confirmed = true;
+          await s(`payment:${p.id}`, p);
+          emit(p.uid, "payment", p);
+          continue;
+        }
 
-            let invoice = await getInvoice(address);
-            let { id: iid } = invoice;
+        let p = await g(`payment:${txid}:${vout}`);
+        if (typeof p === "string") p = await g(`payment:${p}`);
 
-            p.confirmed = true;
-            invoice.received += parseInt(invoice.pending);
-            invoice.pending = 0;
+        if (!p) {
+          let account;
+          if ((await g(`${wallet}:balance`)) !== null) account = wallet;
+          await credit({
+            hash: address,
+            amount: sats(amount),
+            ref: `${txid}:${vout}`,
+            type,
+            account,
+          });
+        } else if (confirmations >= 1) {
+          let id = `payment:${txid}:${vout}`;
+          let p = await g(id);
+          if (typeof p === "string") p = await g(`payment:${p}`);
+          if (!p) return db.sAdd("missed", id);
+          if (p.confirmed) return;
 
-            l("confirming", id, p.id, p.amount);
+          let invoice = await getInvoice(address);
+          let { id: iid } = invoice;
 
-            await db
-              .multi()
-              .set(`invoice:${iid}`, JSON.stringify(invoice))
-              .set(`payment:${p.id}`, JSON.stringify(p))
-              .decrBy(`pending:${p.uid}`, p.amount)
-              .incrBy(`balance:${p.uid}`, p.amount)
-              .exec();
+          p.confirmed = true;
+          invoice.received += parseInt(invoice.pending);
+          invoice.pending = 0;
 
-            emit(p.uid, "payment", p);
-            let user = await g(`user:${p.uid}`);
-            await completePayment(p, user);
-          }
+          l("confirming", id, p.id, p.amount);
+
+          await db
+            .multi()
+            .set(`invoice:${iid}`, JSON.stringify(invoice))
+            .set(`payment:${p.id}`, JSON.stringify(p))
+            .decrBy(`pending:${p.uid}`, p.amount)
+            .incrBy(`balance:${p.uid}`, p.amount)
+            .exec();
+
+          emit(p.uid, "payment", p);
+          let user = await g(`user:${p.uid}`);
+          await completePayment(p, user);
         }
       }
       res.send({});
@@ -416,7 +432,7 @@ export default {
 
       if (!p) {
         p = await debit({ hash: pr, amount, memo, user });
-        await credit(pr, amount, memo, user.id);
+        await credit({ hash: pr, amount, memo, ref: user.id });
       }
 
       res.send(p);
@@ -446,7 +462,7 @@ export default {
       if (p.uid !== user.id) fail("unauthorized");
 
       let { tx, type } = await decode(p.hex);
-      let node = getNode(type);
+      let node = rpc(config[type]);
 
       let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
         r.json(),
@@ -502,7 +518,7 @@ export default {
     let memo;
 
     let p = await debit({ hash, amount, memo, user: sender });
-    await credit(hash, amount, memo, recipient.id);
+    await credit({ hash, amount, memo, ref: recipient.id });
 
     res.send(p);
   },

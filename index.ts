@@ -79,6 +79,9 @@ app.post("/confirm", payments.confirm);
 app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
 
+app.get("/accounts", auth, users.accounts);
+app.post("/accounts", auth, users.createAccount);
+
 app.get("/users", auth, users.list);
 app.get("/me", auth, users.me);
 app.get("/users/:key", users.get);

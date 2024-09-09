@@ -5,13 +5,10 @@ import { getUser, bip21, fail, SATS } from "$lib/utils";
 import { types } from "$lib/payments";
 import { v4 } from "uuid";
 import rpc from "$lib/rpc";
-
-import bc_ from "$lib/bitcoin";
-import lq_ from "$lib/liquid";
 import ln from "$lib/ln";
 
-let bc = bc_ as any;
-let lq = lq_ as any;
+let bc = rpc(config.bitcoin);
+let lq = rpc(config.liquid);
 
 export let generate = async ({ invoice, user, sender = undefined }) => {
   let {

@@ -44,7 +44,7 @@ export async function listenForLightning() {
 
     if (p) return warn("already processed", bolt11);
 
-    await credit(bolt11, received, invoice.memo, preimage, types.lightning);
+    await credit({ hash:bolt11, amount:received, memo:invoice.memo, ref:preimage, type:types.lightning});
   } catch (e) {
     console.log(e);
     err("problem receiving lightning payment", e.message);

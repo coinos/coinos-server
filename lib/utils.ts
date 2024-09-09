@@ -1,6 +1,5 @@
 import { randomBytes, bytesToHex } from "@noble/hashes/utils";
 import migrate from "$lib/migrate";
-import store from "$lib/store";
 import { g, s } from "$lib/db";
 import config from "$config";
 
