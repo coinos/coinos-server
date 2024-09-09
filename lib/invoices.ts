@@ -4,7 +4,7 @@ import { db, g, s } from "$lib/db";
 import { getUser, bip21, fail, SATS } from "$lib/utils";
 import { types } from "$lib/payments";
 import { v4 } from "uuid";
-import rpc from "$lib/rpc";
+import rpc from "@coinos/rpc";
 import ln from "$lib/ln";
 
 let bc = rpc(config.bitcoin);

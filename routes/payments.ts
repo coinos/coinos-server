@@ -19,12 +19,9 @@ import {
 import { mqtt1, mqtt2 } from "$lib/mqtt";
 import got from "got";
 import api from "$lib/api";
-import rpc from "$lib/rpc";
+import rpc from "@coinos/rpc";
 
 import ln from "$lib/ln";
-
-let { wallet: bcw } = config.bitcoin;
-let { wallet: lqw } = config.liquid;
 
 export default {
   async info(_, res) {

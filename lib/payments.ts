@@ -22,7 +22,7 @@ import { mqtt1, mqtt2 } from "$lib/mqtt";
 import { mail, templates } from "$lib/mail";
 import api from "$lib/api";
 import { bech32 } from "bech32";
-import rpc from "$lib/rpc";
+import rpc from "@coinos/rpc";
 
 import lq_ from "$lib/liquid";
 import bc_ from "$lib/bitcoin";
@@ -670,7 +670,7 @@ export let catchUp = async () => {
     let txns = [];
     for (let [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
       txns.push(
-        ...(await n.listTransactions("*", 200)).filter((tx) => {
+        ...(await n.listTransactions("*", 10)).filter((tx) => {
           tx.type = type;
           return tx.category === "receive" && tx.confirmations > 0;
         }),
@@ -695,5 +695,5 @@ export let catchUp = async () => {
     err("problem syncing", e.message);
   }
 
-  setTimeout(catchUp, 2000);
+  setTimeout(catchUp, 10000);
 };
