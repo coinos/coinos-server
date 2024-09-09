@@ -58,7 +58,7 @@ export default {
         received: 0,
       });
 
-      await credit({hash, amount, memo, ref:user.id, type});
+      await credit({ hash, amount, memo, ref: user.id, type });
 
       res.send({ ok: true });
     } catch (e) {
