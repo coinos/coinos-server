@@ -13,8 +13,10 @@ import { types } from "$lib/payments";
 import { bech32 } from "bech32";
 import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
+import rpc from "@coinos/rpc";
 
-const { encode, decode, fromWords, toWords } = bech32;
+let bc = rpc(config.bitcoin);
+let { encode, decode, fromWords, toWords } = bech32;
 
 export default {
   upload,
@@ -567,15 +569,7 @@ export default {
   async accounts(req, res) {
     let { user } = req;
 
-    let balance = await g(`balance:${user.id}`);
-    let accounts: any = [
-      {
-        balance,
-        type: "Cash",
-        mint: "https://mint.coinos.io",
-      },
-    ];
-
+    let accounts = [];
     for (let id of await db.lRange(`${user.id}:accounts`, 0, 1)) {
       let account = await g(`account:${id}`);
       account.balance = await g(`balance:${id}`);
@@ -612,8 +606,11 @@ export default {
     let id = v4();
     let account = { id, seed, type };
 
+    await bc.createWallet(id);
+
     await s(`account:${id}`, account);
     await s(`balance:${id}`, 0);
+    await s(`pending:${id}`, 0);
     await db.lPush(`${user.id}:accounts`, id);
 
     res.send(account);

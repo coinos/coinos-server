@@ -1,7 +1,6 @@
 import { err, warn, l, line } from "$lib/logging";
 import { types } from "$lib/payments";
-import { archive, arc2, db, g, ga, s } from "$lib/db";
-import { wait } from "$lib/utils";
+import { archive, db, g, ga, s } from "$lib/db";
 
 let queued = {};
 let migrating = {};

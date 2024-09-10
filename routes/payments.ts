@@ -283,7 +283,8 @@ export default {
 
         if (!p) {
           let account;
-          if ((await g(`${wallet}:balance`)) !== null) account = wallet;
+          let bal = await g(`balance:${wallet}`);
+          if (bal !== null) account = wallet;
           await credit({
             hash: address,
             amount: sats(amount),
@@ -311,8 +312,8 @@ export default {
             .multi()
             .set(`invoice:${iid}`, JSON.stringify(invoice))
             .set(`payment:${p.id}`, JSON.stringify(p))
-            .decrBy(`pending:${p.uid}`, p.amount)
-            .incrBy(`balance:${p.uid}`, p.amount)
+            .decrBy(`pending:${p.account || p.uid}`, p.amount)
+            .incrBy(`balance:${p.account || p.uid}`, p.amount)
             .exec();
 
           emit(p.uid, "payment", p);
