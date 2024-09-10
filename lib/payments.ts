@@ -679,7 +679,7 @@ export let catchUp = async () => {
       try {
         if (await db.zScore("seen", txid)) continue;
         await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
-          json: { txid, wallet: config.bitcoin.wallet, type },
+          json: { txid, wallet: config[type].wallet, type },
         });
 
         await db.zAdd("seen", { score: Date.now(), value: txid });
