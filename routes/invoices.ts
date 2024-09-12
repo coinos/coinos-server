@@ -35,9 +35,8 @@ export default {
     } = req;
 
     try {
-        res.send(await generate({ invoice, user, sender }));
+      res.send(await generate({ invoice, user, sender }));
     } catch (e) {
-      console.log(e);
       err("problem generating invoice", e.message);
       bail(res, e.message);
     }

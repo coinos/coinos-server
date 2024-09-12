@@ -37,6 +37,8 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
   else if (sender) user = await getUser(sender.username);
   if (!user) fail("user not provided");
 
+  if (account === user.id) account = undefined;
+
   let rates = await g("rates");
   if (!currency) currency = user.currency;
   if (!rate) rate = rates[currency];

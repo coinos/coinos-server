@@ -13,7 +13,15 @@ async function migrate(id) {
     let user = await g(`user:${id}`);
     if (typeof user === "string") user = await g(`user:${user}`);
 
-    if (user) return user;
+    if (user) {
+      let accounts = await db.lLen(`${user.id}:accounts`);
+      if (!accounts) {
+        await s(`account:${user.id}`, { id: user.id });
+        await db.lPush(`${user.id}:accounts`, user.id);
+      }
+
+      return user;
+    }
 
     user = await ga(`user:${id}`);
 

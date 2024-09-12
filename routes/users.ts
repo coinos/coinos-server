@@ -597,7 +597,7 @@ export default {
     let { user } = req;
 
     let accounts = [];
-    for (let id of await db.lRange(`${user.id}:accounts`, 0, 1)) {
+    for (let id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
       let account = await g(`account:${id}`);
       account.balance = await g(`balance:${id}`);
 
