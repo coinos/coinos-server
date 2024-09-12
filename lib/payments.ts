@@ -30,6 +30,7 @@ let bc = rpc(config.bitcoin);
 let lq = rpc(config.liquid);
 
 let { URL } = process.env;
+let dust = 547;
 
 export let types = {
   internal: "internal",
@@ -41,6 +42,7 @@ export let types = {
 };
 
 export let debit = async ({
+  account = undefined,
   hash,
   amount,
   fee = 0,
@@ -90,9 +92,11 @@ export let debit = async ({
     ? Math.round((amount + fee + tip) * config.fee)
     : 0;
 
+  if (account) ourfee = 0;
+
   ourfee = await db.debit(
-    `balance:${uid}`,
-    `credit:${type}:${uid}`,
+    `balance:${account || uid}`,
+    `credit:${type}:${account ? 0 : uid}`,
     amount || 0,
     tip || 0,
     fee || 0,
@@ -104,6 +108,7 @@ export let debit = async ({
   let id = v4();
   let p = {
     id,
+    account,
     amount: -amount,
     fee,
     hash,
@@ -123,7 +128,7 @@ export let debit = async ({
 
   await s(`payment:${hash}`, id);
   await s(`payment:${id}`, p);
-  await db.lPush(`${uid}:payments`, id);
+  await db.lPush(`${account || uid}:payments`, id);
 
   l(user.username, "sent", type, amount);
   //emit(user.id, "payment", p);
@@ -311,7 +316,7 @@ export let completePayment = async (p, user) => {
   }
 };
 
-let pay = async ({ amount, to, user }) => {
+let pay = async ({ account, amount, to, user }) => {
   amount = parseInt(amount) || 0;
   let lnurl, pr;
   if (to.includes("@") && to.includes(".")) {
@@ -335,7 +340,7 @@ let pay = async ({ amount, to, user }) => {
 
   return pr
     ? await sendLightning({ user, pr, amount, maxfee })
-    : await sendOnchain({ amount, address: to, user, subtract: true });
+    : await sendOnchain({ account, amount, address: to, user, subtract: true });
 };
 
 export let decode = async (hex) => {
@@ -357,27 +362,29 @@ export let decode = async (hex) => {
 };
 
 export let sendOnchain = async (params) => {
-  let { hex, rate, user } = params;
+  let { account, hex, rate, user, signed } = params;
   if (!hex) ({ hex } = await build(params));
 
   let { tx, type } = await decode(hex);
-  let node = rpc(config[type]);
+  let node = rpc({ ...config[type], wallet: account });
   let { txid } = tx;
 
   try {
     if (inflight[txid]) fail("payment in flight");
     inflight[txid] = true;
 
-    if (config[type].walletpass)
-      await node.walletPassphrase(config[type].walletpass, 300);
+    if (!signed) {
+      if (config[type].walletpass)
+        await node.walletPassphrase(config[type].walletpass, 300);
 
-    let { hex: signed } = await node.signRawTransactionWithWallet(
-      type === types.liquid ? await node.blindRawTransaction(hex) : hex,
-    );
+      ({ hex } = await node.signRawTransactionWithWallet(
+        type === types.liquid ? await node.blindRawTransaction(hex) : hex,
+      ));
+    }
 
-    ({ txid } = await node.decodeRawTransaction(signed));
+    ({ txid } = await node.decodeRawTransaction(hex));
 
-    let r = await node.testMempoolAccept([signed]);
+    let r = await node.testMempoolAccept([hex]);
     if (!r[0].allowed) fail("transaction rejected");
 
     let total = 0;
@@ -427,6 +434,7 @@ export let sendOnchain = async (params) => {
     let amount = total - change;
 
     let p = await debit({
+      account,
       hash: txid,
       amount,
       fee,
@@ -435,10 +443,10 @@ export let sendOnchain = async (params) => {
       type,
     });
 
-    p.hex = signed;
+    p.hex = hex;
     await s(`payment:${p.id}`, p);
 
-    await node.sendRawTransaction(signed);
+    await node.sendRawTransaction(hex);
 
     delete inflight[txid];
     return p;
@@ -602,9 +610,9 @@ let getAddressType = async (a) => {
   }
 };
 
-export let build = async ({ amount, address, feeRate, user, subtract }) => {
+export let build = async ({ account, amount, address, feeRate, subtract }) => {
   let type = await getAddressType(address);
-  let node = rpc(config[type]);
+  let node = rpc({ ...config[type], wallet: account });
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
@@ -627,21 +635,28 @@ export let build = async ({ amount, address, feeRate, user, subtract }) => {
 
   let raw = await node.createRawTransaction([], outs, 0, replaceable);
 
-  let tx = await node.fundRawTransaction(raw, {
-    fee_rate: feeRate,
-    replaceable,
-    subtractFeeFromOutputs: [],
-  });
+  let fee = 0;
+  let tx;
 
-  let fee = sats(tx.fee);
-  let dust = 547;
+  try {
+    tx = await node.fundRawTransaction(raw, {
+      fee_rate: feeRate,
+      replaceable,
+      subtractFeeFromOutputs: [],
+    });
 
-  let balance = await g(`balance:${user.id}`);
+    fee = sats(tx.fee);
+  } catch (e) {
+    if (e.message.startsWith("Insufficient")) subtract = true;
+  }
+
+  let balance = await g(`balance:${account}`);
   let ourfee = Math.round(amount * config.fee);
-  let credit = await g(`credit:${type}:${user.id}`);
+  let credit = await g(`credit:${type}:${account}`);
   let covered = Math.min(credit, ourfee);
   ourfee -= covered;
 
+  if (account) ourfee = 0;
   if (subtract || amount + fee + ourfee > balance) {
     if (amount <= fee + ourfee + dust)
       fail(
@@ -660,7 +675,18 @@ export let build = async ({ amount, address, feeRate, user, subtract }) => {
     fee = sats(tx.fee);
   }
 
-  return { feeRate, ourfee, fee, fees, hex: tx.hex };
+  let inputs = [];
+  let { vin } = await node.decodeRawTransaction(tx.hex);
+
+  for (let { txid, vout } of vin) {
+    let nonWitnessUtxo = await node.getRawTransaction(txid);
+    let tx = await node.decodeRawTransaction(nonWitnessUtxo);
+    let { address } = tx.vout[vout].scriptPubKey;
+    let { hdkeypath: path } = await node.getAddressInfo(address);
+    inputs.push({ nonWitnessUtxo, path });
+  }
+
+  return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs };
 };
 
 export let catchUp = async () => {

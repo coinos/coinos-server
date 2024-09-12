@@ -566,19 +566,6 @@ export default {
     }
   },
 
-  async accounts(req, res) {
-    let { user } = req;
-
-    let accounts = [];
-    for (let id of await db.lRange(`${user.id}:accounts`, 0, 1)) {
-      let account = await g(`account:${id}`);
-      account.balance = await g(`balance:${id}`);
-      accounts.push(account);
-    }
-
-    res.send(accounts);
-  },
-
   async hidepay(req, res) {
     let {
       body: { username },
@@ -599,20 +586,70 @@ export default {
     res.send({});
   },
 
-  async createAccount(req, res) {
-    let { type, seed } = req.body;
+  async account(req, res) {
+    let { id } = req.params;
+    let account = await g(`account:${id}`);
+    account.balance = await g(`balance:${id}`);
+    res.send(account);
+  },
+
+  async accounts(req, res) {
     let { user } = req;
 
-    let id = v4();
-    let account = { id, seed, type };
+    let accounts = [];
+    for (let id of await db.lRange(`${user.id}:accounts`, 0, 1)) {
+      let account = await g(`account:${id}`);
+      account.balance = await g(`balance:${id}`);
 
-    await bc.createWallet(id);
+      if (account.type === "savings") {
+      }
 
-    await s(`account:${id}`, account);
-    await s(`balance:${id}`, 0);
-    await s(`pending:${id}`, 0);
-    await db.lPush(`${user.id}:accounts`, id);
+      accounts.push(account);
+    }
 
-    res.send(account);
+    res.send(accounts);
+  },
+
+  async createAccount(req, res) {
+    try {
+      let { fingerprint, pubkey, type, seed } = req.body;
+      let { user } = req;
+
+      let id = v4();
+      let account = { id, seed, type };
+
+      await bc.createWallet({
+        wallet_name: id,
+        descriptors: true,
+        disable_private_keys: true,
+      });
+
+      let node = rpc({ ...config.bitcoin, wallet: id });
+
+      let descriptors = [];
+      for (let i of [0, 1]) {
+        let desc = `wpkh([${fingerprint}]${pubkey}/${i}/*)`;
+        let { checksum } = await node.getDescriptorInfo(desc);
+        descriptors.push({
+          desc: `${desc}#${checksum}`,
+          range: [0, 100],
+          next_index: 0,
+          timestamp: 0,
+          internal: i === 1,
+          active: true,
+        });
+      }
+
+      await node.importDescriptors(descriptors);
+
+      await s(`account:${id}`, account);
+      await s(`balance:${id}`, 0);
+      await s(`pending:${id}`, 0);
+      await db.lPush(`${user.id}:accounts`, id);
+
+      res.send(account);
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 };
