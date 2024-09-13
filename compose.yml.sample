@@ -18,6 +18,7 @@ services:
       - .aws/:/root/.aws
       - ./:/home/bun/app
       - ./logs:/logs
+      - ./data/bitcoin/bitcoin.conf:/bitcoin.conf
     restart: always
   bc:
     image: asoltys/bitcoin

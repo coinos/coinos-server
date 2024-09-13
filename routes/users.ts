@@ -1,3 +1,4 @@
+import { appendFile } from "node:fs/promises";
 import { g, s, db } from "$lib/db";
 import config from "$config";
 import { pick, bail, fail, getUser } from "$lib/utils";
@@ -607,7 +608,7 @@ export default {
       accounts.push(account);
     }
 
-    res.send(accounts);
+    res.send(accounts.reverse());
   },
 
   async createAccount(req, res) {
@@ -646,6 +647,8 @@ export default {
       await s(`balance:${id}`, 0);
       await s(`pending:${id}`, 0);
       await db.lPush(`${user.id}:accounts`, id);
+
+      await appendFile("/bitcoin.conf", `wallet=${id}`);
 
       res.send(account);
     } catch (e) {

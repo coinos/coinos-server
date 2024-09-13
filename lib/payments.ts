@@ -422,7 +422,8 @@ export let sendOnchain = async (params) => {
         value,
       } of tx.vout) {
         total += sats(value);
-        if (await g(`invoice:${address}`))
+        let invoice = await g(`invoice:${address}`);
+        if (invoice?.account === account)
           fail("Cannot send to internal address");
 
         if ((await node.getAddressInfo(address)).ismine) change += sats(value);
@@ -503,7 +504,7 @@ export let sendLightning = async ({
     let invoice = await getInvoice(hash);
 
     if (invoice) {
-      if (invoice.uid === user.id) fail("Cannot send to self");
+      if (invoice.account === user.id) fail("Cannot send to self");
       hash = pr;
     } else {
       let r;
