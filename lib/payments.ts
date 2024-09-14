@@ -84,6 +84,7 @@ export let debit = async ({
   let tip = parseInt(invoice?.tip) || null;
   if (tip < 0) fail("Invalid tip");
 
+  console.log("AMT", amount);
   if (!amount || amount < 0) fail("Amount must be greater than zero");
 
   let ourfee: any = [types.bitcoin, types.liquid, types.lightning].includes(
@@ -366,7 +367,10 @@ export let sendOnchain = async (params) => {
   if (!hex) ({ hex } = await build(params));
 
   let { tx, type } = await decode(hex);
-  let node = rpc({ ...config[type], wallet: account });
+  let node =
+    account === user.id
+      ? rpc(config[type])
+      : rpc({ ...config[type], wallet: account });
   let { txid } = tx;
 
   try {
@@ -426,7 +430,9 @@ export let sendOnchain = async (params) => {
         if (invoice?.account === account)
           fail("Cannot send to internal address");
 
-        if ((await node.getAddressInfo(address)).ismine) change += sats(value);
+        if ((await node.getAddressInfo(address)).ismine) {
+          change += sats(value);
+        }
       }
 
       fee = totalIn - total;
@@ -611,9 +617,20 @@ let getAddressType = async (a) => {
   }
 };
 
-export let build = async ({ account, amount, address, feeRate, subtract }) => {
+export let build = async ({
+  account,
+  amount,
+  address,
+  feeRate,
+  subtract,
+  user,
+}) => {
   let type = await getAddressType(address);
-  let node = rpc({ ...config[type], wallet: account });
+  let node =
+    account === user.id
+      ? rpc(config[type])
+      : rpc({ ...config[type], wallet: account });
+
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
@@ -649,6 +666,7 @@ export let build = async ({ account, amount, address, feeRate, subtract }) => {
     fee = sats(tx.fee);
   } catch (e) {
     if (e.message.startsWith("Insufficient")) subtract = true;
+    else throw e;
   }
 
   let balance = await g(`balance:${account}`);

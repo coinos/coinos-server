@@ -53,8 +53,8 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
   let hash, text;
 
   if (account) {
-    bc = rpc({ ...config.bitcoin, wallet: account });
-    hash = await bc.getNewAddress();
+    let node = rpc({ ...config.bitcoin, wallet: account });
+    hash = await node.getNewAddress();
     text = bip21(hash, invoice);
   } else if (type === types.lightning) {
     let r;

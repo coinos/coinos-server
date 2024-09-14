@@ -14,13 +14,20 @@ async function migrate(id) {
     if (typeof user === "string") user = await g(`user:${user}`);
 
     if (user) {
-      let accounts = await db.lLen(`${user.id}:accounts`);
-      if (!accounts) {
-        await s(`account:${user.id}`, { id: user.id });
-        await db.lPush(`${user.id}:accounts`, user.id);
-      }
+      let k = `lock:${user.id}:accounts`;
+        const lock = await db.set(k, "1", { NX: true, PX: 5000 });
+        if (!lock) return user;
+      try {
+          let accounts = await db.lLen(`${user.id}:accounts`);
 
-      return user;
+          if (!accounts) {
+            await db.set(`account:${user.id}`, JSON.stringify({ id: user.id }));
+            await db.lPush(`${user.id}:accounts`, user.id);
+          }
+          return user;
+      } finally {
+        await db.del(k);
+      }
     }
 
     user = await ga(`user:${id}`);
