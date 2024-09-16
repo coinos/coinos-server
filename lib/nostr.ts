@@ -2,7 +2,7 @@ import config from "$config";
 import { l } from "$lib/logging";
 import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
 import { g, s, db } from "$lib/db";
-import { fail, wait } from "$lib/utils";
+import { fail, sleep, wait } from "$lib/utils";
 import { nip04, nip19 } from "nostr-tools";
 import { emit } from "$lib/sockets";
 import { sendLightning } from "$lib/payments";
@@ -289,14 +289,29 @@ r.on("event", async (sub, ev) => {
   let user = await g(`user:${uid}`);
 
   if (method === "pay_invoice") {
-    let { ref: preimage } = await sendLightning({
+    await sendLightning({
       amount,
       user,
       pr,
       maxfee: 5000,
     });
 
-    let res = { result_type: method, result: { preimage } };
+    let res = { result_type: method, result: undefined, error: undefined };
+
+    for (let i = 0; i < 10; i++) {
+      let { pays } = await ln.listpays(pr);
+      let p = pays.find((p) => p.status === "complete");
+      if (p) {
+        let { preimage } = p;
+        res.result = { preimage };
+        break;
+      }
+      await sleep(2000);
+    }
+
+    if (!res.result)
+      res.error = { code: "INTERNAL", message: "Payment timed out" };
+
     let content = nip04.encrypt(sk, pubkey, JSON.stringify(res));
 
     let rev = {
