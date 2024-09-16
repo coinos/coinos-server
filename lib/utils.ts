@@ -2,6 +2,7 @@ import { randomBytes, bytesToHex } from "@noble/hashes/utils";
 import migrate from "$lib/migrate";
 import { g, s } from "$lib/db";
 import config from "$config";
+import { getPublicKey } from "nostr";
 
 export let fail = (msg) => {
   throw new Error(msg);
@@ -71,7 +72,8 @@ export let getUser = async (username) => {
   let user = await migrate(username);
   if (user && !user.nwc) {
     user.nwc = bytesToHex(randomBytes(32));
-    s(`user:${user.id}`, user);
+    await s(getPublicKey(user.nwc), user.id);
+    await s(`user:${user.id}`, user);
   }
 
   return user;

@@ -3,8 +3,10 @@ import { l } from "$lib/logging";
 import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
 import { g, s, db } from "$lib/db";
 import { fail, wait } from "$lib/utils";
-import { nip19 } from "nostr-tools";
+import { nip04, nip19 } from "nostr-tools";
 import { emit } from "$lib/sockets";
+import { sendLightning } from "$lib/payments";
+import ln from "$lib/ln";
 
 export const COINOS_PUBKEY = getPublicKey(nip19.decode(config.nostrKey).data);
 export let coinos;
@@ -269,11 +271,44 @@ export async function handleZap(invoice) {
   await Promise.allSettled(relays.map((r) => send(ev, r)));
 }
 
-// let damus = new Relay("ws://strfry:7777");
-// damus.on("open", (relay) => {
-//   damus.subscribe("nwc", { limit: 1, kinds: [23194] });
-// });
-//
-// damus.on("event", async (sub, ev) => {
-//   console.log("EV", ev);
-// });
+let r = new Relay("ws://strfry:7777");
+r.on("open", (_) => {
+  r.subscribe("nwc", { kinds: [23194], "#p": [COINOS_PUBKEY] });
+});
+
+r.on("event", async (sub, ev) => {
+  if (sub !== "nwc") return;
+  let { content, pubkey } = ev;
+  let sk = nip19.decode(config.nostrKey).data as Uint8Array;
+  let { params, method } = JSON.parse(await nip04.decrypt(sk, pubkey, content));
+
+  let { invoice: pr } = params;
+  let { amount_msat } = await ln.decode(pr);
+  let amount = Math.round(amount_msat / 1000);
+  let uid = await g(pubkey);
+  let user = await g(`user:${uid}`);
+
+  if (method === "pay_invoice") {
+    let { ref: preimage } = await sendLightning({
+      amount,
+      user,
+      pr,
+      maxfee: 5000,
+    });
+
+    let res = { result_type: method, result: { preimage } };
+    let content = nip04.encrypt(sk, pubkey, JSON.stringify(res));
+
+    let rev = {
+      kind: 24195,
+      pubkey,
+      tags: [
+        ["p", COINOS_PUBKEY],
+        ["e", ev.id],
+      ],
+      content,
+    };
+
+    r.send(["EVENT", rev]);
+  }
+});
