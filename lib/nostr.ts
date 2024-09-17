@@ -3,7 +3,8 @@ import { l } from "$lib/logging";
 import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
 import { g, s, db } from "$lib/db";
 import { fail, sleep, wait } from "$lib/utils";
-import { nip04, nip19 } from "nostr-tools";
+import { nip04, nip19, finalizeEvent } from "nostr-tools";
+import type { UnsignedEvent } from "nostr-tools";
 import { emit } from "$lib/sockets";
 import { sendLightning } from "$lib/payments";
 import ln from "$lib/ln";
@@ -279,56 +280,59 @@ r.on("open", (_) => {
 
 r.on("event", async (sub, ev) => {
   try {
-  if (sub !== "nwc") return;
-  let { content, pubkey } = ev;
-  let sk = nip19.decode(config.nostrKey).data as Uint8Array;
-  let { params, method } = JSON.parse(await nip04.decrypt(sk, pubkey, content));
+    if (sub !== "nwc") return;
+    let { content, pubkey } = ev;
+    let sk = nip19.decode(config.nostrKey).data as Uint8Array;
+    let { params, method } = JSON.parse(
+      await nip04.decrypt(sk, pubkey, content),
+    );
 
-  let { invoice: pr } = params;
-  let { amount_msat } = await ln.decode(pr);
-  let amount = Math.round(amount_msat / 1000);
-  let uid = await g(pubkey);
-  let user = await g(`user:${uid}`);
+    let { invoice: pr } = params;
+    let { amount_msat } = await ln.decode(pr);
+    let amount = Math.round(amount_msat / 1000);
+    let uid = await g(pubkey);
+    let user = await g(`user:${uid}`);
 
-  if (method === "pay_invoice") {
-    await sendLightning({
-      amount,
-      user,
-      pr,
-      maxfee: 5000,
-    });
+    if (method === "pay_invoice") {
+      await sendLightning({
+        amount,
+        user,
+        pr,
+        maxfee: 5000,
+      });
 
-    let res = { result_type: method, result: undefined, error: undefined };
+      let res = { result_type: method, result: undefined, error: undefined };
 
-    for (let i = 0; i < 10; i++) {
-      let { pays } = await ln.listpays(pr);
-      let p = pays.find((p) => p.status === "complete");
-      if (p) {
-        let { preimage } = p;
-        res.result = { preimage };
-        break;
+      for (let i = 0; i < 10; i++) {
+        let { pays } = await ln.listpays(pr);
+        let p = pays.find((p) => p.status === "complete");
+        if (p) {
+          let { preimage } = p;
+          res.result = { preimage };
+          break;
+        }
+        await sleep(2000);
       }
-      await sleep(2000);
+
+      if (!res.result)
+        res.error = { code: "INTERNAL", message: "Payment timed out" };
+
+      let content = await nip04.encrypt(sk, pubkey, JSON.stringify(res));
+
+      let rev: UnsignedEvent = {
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 24195,
+        pubkey,
+        tags: [
+          ["p", COINOS_PUBKEY],
+          ["e", ev.id],
+        ],
+        content,
+      };
+
+      r.send(["EVENT", await finalizeEvent(rev, sk)]);
     }
-
-    if (!res.result)
-      res.error = { code: "INTERNAL", message: "Payment timed out" };
-
-    let content = nip04.encrypt(sk, pubkey, JSON.stringify(res));
-
-    let rev = {
-      kind: 24195,
-      pubkey,
-      tags: [
-        ["p", COINOS_PUBKEY],
-        ["e", ev.id],
-      ],
-      content,
-    };
-
-    r.send(["EVENT", rev]);
-  }
-  } catch(e) {
-    console.log("problem with nwc", e)
+  } catch (e) {
+    console.log("problem with nwc", e);
   }
 });
