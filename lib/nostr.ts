@@ -298,7 +298,7 @@ r.on("event", async (sub, ev) => {
         amount,
         user,
         pr,
-        maxfee: 5000,
+        maxfee: 50,
       });
 
       let res = { result_type: method, result: undefined, error: undefined };
