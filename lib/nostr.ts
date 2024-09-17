@@ -10,7 +10,9 @@ import { sendLightning } from "$lib/payments";
 import ln from "$lib/ln";
 import { hex } from "@scure/base";
 
-export const COINOS_PUBKEY = getPublicKey(nip19.decode(config.nostrKey).data);
+export const COINOS_PUBKEY = hex.encode(
+  getPublicKey(nip19.decode(config.nostrKey).data),
+);
 export let coinos;
 export let pool;
 
@@ -275,7 +277,7 @@ export async function handleZap(invoice) {
 
 let r = new Relay("ws://strfry:7777");
 r.on("open", (_) => {
-  r.subscribe("nwc", { kinds: [23194], "#p": [hex.encode(COINOS_PUBKEY)] });
+  r.subscribe("nwc", { kinds: [23194], "#p": [COINOS_PUBKEY] });
 });
 
 r.on("event", async (sub, ev) => {
@@ -293,6 +295,8 @@ r.on("event", async (sub, ev) => {
     let uid = await g(pubkey);
     let user = await g(`user:${uid}`);
 
+    let ret = { result_type: method, result: undefined, error: undefined };
+
     if (method === "pay_invoice") {
       await sendLightning({
         amount,
@@ -301,38 +305,50 @@ r.on("event", async (sub, ev) => {
         maxfee: 50,
       });
 
-      let res = { result_type: method, result: undefined, error: undefined };
-
       for (let i = 0; i < 10; i++) {
         let { pays } = await ln.listpays(pr);
         let p = pays.find((p) => p.status === "complete");
         if (p) {
           let { preimage } = p;
-          res.result = { preimage };
+          ret.result = { preimage };
           break;
         }
         await sleep(2000);
       }
 
-      if (!res.result)
-        res.error = { code: "INTERNAL", message: "Payment timed out" };
-
-      let content = await nip04.encrypt(sk, pubkey, JSON.stringify(res));
-
-      let rev: UnsignedEvent = {
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 23195,
-        pubkey: hex.encode(COINOS_PUBKEY),
-        tags: [
-          ["p", pubkey],
-          ["e", ev.id],
-        ],
-        content,
+      if (!ret.result)
+        ret.error = { code: "INTERNAL", message: "Payment timed out" };
+    } else if (method === "get_info") {
+      let { alias, blockheight, color } = await ln.getInfo();
+      ret.result = {
+        alias,
+        color,
+        pubkey: COINOS_PUBKEY,
+        network: "mainnet",
+        block_height: blockheight,
+        methods: ["pay_invoice", "get_balance", "get_info"],
       };
-
-      rev = await finalizeEvent(rev, sk);
-      r.send(["EVENT", rev]);
+    } else if (method === "get_balance") {
+      ret.result = {
+        balance: await g(`balance:${uid}`),
+      };
     }
+
+    content = await nip04.encrypt(sk, pubkey, JSON.stringify(ret));
+
+    let response: UnsignedEvent = {
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 23195,
+      pubkey: COINOS_PUBKEY,
+      tags: [
+        ["p", pubkey],
+        ["e", ev.id],
+      ],
+      content,
+    };
+
+    response = await finalizeEvent(response, sk);
+    r.send(["EVENT", response]);
   } catch (e) {
     console.log("problem with nwc", e);
   }
