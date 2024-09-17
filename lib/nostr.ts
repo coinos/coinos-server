@@ -1,8 +1,8 @@
 import config from "$config";
-import { l } from "$lib/logging";
+import { l, err } from "$lib/logging";
 import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
 import { g, s, db } from "$lib/db";
-import { fail, sleep, wait } from "$lib/utils";
+import { fail, getInvoice, sleep, wait } from "$lib/utils";
 import { nip04, nip19, finalizeEvent } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
 import { emit } from "$lib/sockets";
@@ -297,14 +297,16 @@ r.on("event", async (sub, ev) => {
     if (method === "pay_invoice") {
       let { invoice: pr } = params;
       let { amount_msat, payee } = await ln.decode(pr);
-      let { id } = await ln.getInfo();
+      let { id } = await ln.getinfo();
       let amount = Math.round(amount_msat / 1000);
 
       if (payee === id) {
-        let inv = await g(pr);
-        let recipient = await g(`user:${inv.uid}`);
+        let invoice = await getInvoice(pr);
+        let recipient = await g(`user:${invoice.uid}`);
+
         await sendInternal({
           amount,
+          invoice,
           recipient,
           sender: user,
         });
@@ -333,7 +335,7 @@ r.on("event", async (sub, ev) => {
           ret.error = { code: "INTERNAL", message: "Payment timed out" };
       }
     } else if (method === "get_info") {
-      let { alias, blockheight, color } = await ln.getInfo();
+      let { alias, blockheight, color } = await ln.getinfo();
       ret.result = {
         alias,
         color,
@@ -364,6 +366,6 @@ r.on("event", async (sub, ev) => {
     response = await finalizeEvent(response, sk);
     r.send(["EVENT", response]);
   } catch (e) {
-    console.log("problem with nwc", e);
+    err("problem with nwc", e.message);
   }
 });

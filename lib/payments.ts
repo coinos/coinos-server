@@ -12,7 +12,6 @@ import {
   fail,
   fiat,
   getInvoice,
-  getUser,
   sleep,
   SATS,
   sats,
@@ -605,14 +604,14 @@ export let sendLightning = async ({
   }
 };
 
-export let sendInternal = async ({ amount, recipient, sender }) => {
-  let inv = await generate({
+export let sendInternal = async ({ amount, invoice = undefined, recipient, sender }) => {
+  if (!invoice) invoice = await generate({
     invoice: { amount, type: "lightning" },
     user: recipient,
     sender,
   });
 
-  let { hash } = inv;
+  let { hash } = invoice;
   let memo;
 
   let p = await debit({ hash, amount, memo, user: sender });
