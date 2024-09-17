@@ -1,5 +1,6 @@
 import locales from "$lib/locales/index";
 import config from "$config";
+import { generate } from "$lib/invoices";
 import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { notify } from "$lib/notifications";
@@ -11,6 +12,7 @@ import {
   fail,
   fiat,
   getInvoice,
+  getUser,
   sleep,
   SATS,
   sats,
@@ -603,6 +605,21 @@ export let sendLightning = async ({
   }
 };
 
+export let sendInternal = async ({ amount, recipient, sender }) => {
+  let inv = await generate({
+    invoice: { amount, type: "lightning" },
+    user: recipient,
+    sender,
+  });
+
+  let { hash } = inv;
+  let memo;
+
+  let p = await debit({ hash, amount, memo, user: sender });
+  await credit({ hash, amount, memo, ref: recipient.id });
+  return p;
+};
+
 let getAddressType = async (a) => {
   try {
     await bc.getAddressInfo(a);
@@ -627,7 +644,7 @@ export let build = async ({
 }) => {
   let type = await getAddressType(address);
   if (!account) account = user.id;
-  let node = 
+  let node =
     account === user.id
       ? rpc(config[type])
       : rpc({ ...config[type], wallet: account });

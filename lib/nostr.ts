@@ -6,7 +6,7 @@ import { fail, sleep, wait } from "$lib/utils";
 import { nip04, nip19, finalizeEvent } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
 import { emit } from "$lib/sockets";
-import { sendLightning } from "$lib/payments";
+import { sendInternal, sendLightning } from "$lib/payments";
 import ln from "$lib/ln";
 import { hex } from "@scure/base";
 
@@ -289,35 +289,49 @@ r.on("event", async (sub, ev) => {
       await nip04.decrypt(sk, pubkey, content),
     );
 
-    let { invoice: pr } = params;
-    let { amount_msat } = await ln.decode(pr);
-    let amount = Math.round(amount_msat / 1000);
     let uid = await g(pubkey);
     let user = await g(`user:${uid}`);
 
     let ret = { result_type: method, result: undefined, error: undefined };
 
     if (method === "pay_invoice") {
-      await sendLightning({
-        amount,
-        user,
-        pr,
-        maxfee: 50,
-      });
+      let { invoice: pr } = params;
+      let { amount_msat, payee } = await ln.decode(pr);
+      let { id } = await ln.getInfo();
+      let amount = Math.round(amount_msat / 1000);
 
-      for (let i = 0; i < 10; i++) {
-        let { pays } = await ln.listpays(pr);
-        let p = pays.find((p) => p.status === "complete");
-        if (p) {
-          let { preimage } = p;
-          ret.result = { preimage };
-          break;
+      if (payee === id) {
+        let inv = await g(pr);
+        let recipient = await g(`user:${inv.uid}`);
+        await sendInternal({
+          amount,
+          recipient,
+          sender: user,
+        });
+
+        ret.result = { preimage: recipient.id};
+      } else {
+        await sendLightning({
+          amount,
+          user,
+          pr,
+          maxfee: 50,
+        });
+
+        for (let i = 0; i < 10; i++) {
+          let { pays } = await ln.listpays(pr);
+          let p = pays.find((p) => p.status === "complete");
+          if (p) {
+            let { preimage } = p;
+            ret.result = { preimage };
+            break;
+          }
+          await sleep(2000);
         }
-        await sleep(2000);
-      }
 
-      if (!ret.result)
-        ret.error = { code: "INTERNAL", message: "Payment timed out" };
+        if (!ret.result)
+          ret.error = { code: "INTERNAL", message: "Payment timed out" };
+      }
     } else if (method === "get_info") {
       let { alias, blockheight, color } = await ln.getInfo();
       ret.result = {
