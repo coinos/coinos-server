@@ -363,6 +363,7 @@ export let decode = async (hex) => {
 
 export let sendOnchain = async (params) => {
   let { account, hex, rate, user, signed } = params;
+  if (!account) account = user.id;
   if (!hex) ({ hex } = await build(params));
 
   let { tx, type } = await decode(hex);
@@ -625,7 +626,8 @@ export let build = async ({
   user,
 }) => {
   let type = await getAddressType(address);
-  let node =
+  if (!account) account = user.id;
+  let node = 
     account === user.id
       ? rpc(config[type])
       : rpc({ ...config[type], wallet: account });
