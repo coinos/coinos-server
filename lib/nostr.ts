@@ -7,6 +7,7 @@ import { nip04, nip19 } from "nostr-tools";
 import { emit } from "$lib/sockets";
 import { sendLightning } from "$lib/payments";
 import ln from "$lib/ln";
+import { hex } from "@scure/base";
 
 export const COINOS_PUBKEY = getPublicKey(nip19.decode(config.nostrKey).data);
 export let coinos;
@@ -273,10 +274,11 @@ export async function handleZap(invoice) {
 
 let r = new Relay("ws://strfry:7777");
 r.on("open", (_) => {
-  r.subscribe("nwc", { kinds: [23194], "#p": [COINOS_PUBKEY] });
+  r.subscribe("nwc", { kinds: [23194], "#p": [hex.encode(COINOS_PUBKEY)] });
 });
 
 r.on("event", async (sub, ev) => {
+  try {
   if (sub !== "nwc") return;
   let { content, pubkey } = ev;
   let sk = nip19.decode(config.nostrKey).data as Uint8Array;
@@ -325,5 +327,8 @@ r.on("event", async (sub, ev) => {
     };
 
     r.send(["EVENT", rev]);
+  }
+  } catch(e) {
+    console.log("problem with nwc", e)
   }
 });

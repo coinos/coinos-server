@@ -84,7 +84,6 @@ export let debit = async ({
   let tip = parseInt(invoice?.tip) || null;
   if (tip < 0) fail("Invalid tip");
 
-  console.log("AMT", amount);
   if (!amount || amount < 0) fail("Amount must be greater than zero");
 
   let ourfee: any = [types.bitcoin, types.liquid, types.lightning].includes(
