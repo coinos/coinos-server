@@ -321,16 +321,17 @@ r.on("event", async (sub, ev) => {
 
       let rev: UnsignedEvent = {
         created_at: Math.floor(Date.now() / 1000),
-        kind: 24195,
-        pubkey,
+        kind: 23195,
+        pubkey: hex.encode(COINOS_PUBKEY),
         tags: [
-          ["p", COINOS_PUBKEY],
+          ["p", pubkey],
           ["e", ev.id],
         ],
         content,
       };
 
-      r.send(["EVENT", await finalizeEvent(rev, sk)]);
+      rev = await finalizeEvent(rev, sk);
+      r.send(["EVENT", rev]);
     }
   } catch (e) {
     console.log("problem with nwc", e);
