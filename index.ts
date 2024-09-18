@@ -7,6 +7,7 @@ import { catchUp } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { fillPool } from "$lib/nostr";
+import nwc from "$lib/nwc";
 
 import ecash from "$routes/ecash";
 import email from "$routes/email";
@@ -26,6 +27,7 @@ try {
   getLocations();
   getFx();
   catchUp();
+  nwc();
 } catch (e) {
   console.log(e);
 }

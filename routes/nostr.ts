@@ -1,6 +1,6 @@
 import { bail, nada, getUser, uniq } from "$lib/utils";
 import { g, db } from "$lib/db";
-import { pool, q, COINOS_PUBKEY } from "$lib/nostr";
+import { pool, q, serverPubkey } from "$lib/nostr";
 
 export default {
   async event(req, res) {
@@ -226,6 +226,6 @@ export default {
   },
 
   async info(_, res) {
-    res.send({ pubkey: COINOS_PUBKEY });
+    res.send({ pubkey: serverPubkey });
   },
 };

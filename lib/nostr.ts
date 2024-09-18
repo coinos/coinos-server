@@ -1,18 +1,16 @@
 import config from "$config";
-import { l, err } from "$lib/logging";
+import { l } from "$lib/logging";
 import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
 import { g, s, db } from "$lib/db";
-import { fail, getInvoice, sleep, wait } from "$lib/utils";
-import { nip04, nip19, finalizeEvent } from "nostr-tools";
-import type { UnsignedEvent } from "nostr-tools";
+import { fail, wait } from "$lib/utils";
+import { nip19 } from "nostr-tools";
 import { emit } from "$lib/sockets";
-import { sendInternal, sendLightning } from "$lib/payments";
-import ln from "$lib/ln";
 import { hex } from "@scure/base";
 
-export const COINOS_PUBKEY = hex.encode(
+export const serverPubkey = hex.encode(
   getPublicKey(nip19.decode(config.nostrKey).data),
 );
+
 export let coinos;
 export let pool;
 
@@ -274,98 +272,3 @@ export async function handleZap(invoice) {
 
   await Promise.allSettled(relays.map((r) => send(ev, r)));
 }
-
-let r = new Relay("ws://strfry:7777");
-r.on("open", (_) => {
-  r.subscribe("nwc", { kinds: [23194], "#p": [COINOS_PUBKEY] });
-});
-
-r.on("event", async (sub, ev) => {
-  try {
-    if (sub !== "nwc") return;
-    let { content, pubkey } = ev;
-    let sk = nip19.decode(config.nostrKey).data as Uint8Array;
-    let { params, method } = JSON.parse(
-      await nip04.decrypt(sk, pubkey, content),
-    );
-
-    let uid = await g(pubkey);
-    let user = await g(`user:${uid}`);
-
-    let ret = { result_type: method, result: undefined, error: undefined };
-
-    if (method === "pay_invoice") {
-      let { invoice: pr } = params;
-      let { amount_msat, payee } = await ln.decode(pr);
-      let { id } = await ln.getinfo();
-      let amount = Math.round(amount_msat / 1000);
-
-      if (payee === id) {
-        let invoice = await getInvoice(pr);
-        let recipient = await g(`user:${invoice.uid}`);
-
-        await sendInternal({
-          amount,
-          invoice,
-          recipient,
-          sender: user,
-        });
-
-        ret.result = { preimage: recipient.id};
-      } else {
-        await sendLightning({
-          amount,
-          user,
-          pr,
-          maxfee: 50,
-        });
-
-        for (let i = 0; i < 10; i++) {
-          let { pays } = await ln.listpays(pr);
-          let p = pays.find((p) => p.status === "complete");
-          if (p) {
-            let { preimage } = p;
-            ret.result = { preimage };
-            break;
-          }
-          await sleep(2000);
-        }
-
-        if (!ret.result)
-          ret.error = { code: "INTERNAL", message: "Payment timed out" };
-      }
-    } else if (method === "get_info") {
-      let { alias, blockheight, color } = await ln.getinfo();
-      ret.result = {
-        alias,
-        color,
-        pubkey: COINOS_PUBKEY,
-        network: "mainnet",
-        block_height: blockheight,
-        methods: ["pay_invoice", "get_balance", "get_info"],
-      };
-    } else if (method === "get_balance") {
-      ret.result = {
-        balance: await g(`balance:${uid}`),
-      };
-    }
-
-    content = await nip04.encrypt(sk, pubkey, JSON.stringify(ret));
-
-    let response: UnsignedEvent = {
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 23195,
-      pubkey: COINOS_PUBKEY,
-      tags: [
-        ["p", pubkey],
-        ["e", ev.id],
-      ],
-      content,
-    };
-
-    response = await finalizeEvent(response, sk);
-    r.send(["EVENT", response]);
-  } catch (e) {
-    err("problem with nwc", e.message);
-  }
-});

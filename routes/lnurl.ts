@@ -6,7 +6,7 @@ import got from "got";
 import { generate } from "$lib/invoices";
 import { bech32 } from "bech32";
 import { types } from "$lib/payments";
-import { COINOS_PUBKEY } from "$lib/nostr";
+import { serverPubkey } from "$lib/nostr";
 
 let { URL } = process.env;
 let host = URL.split("/").at(-1);
@@ -68,7 +68,7 @@ export default {
         minSendable,
         maxSendable,
         metadata,
-        nostrPubkey: COINOS_PUBKEY,
+        nostrPubkey: serverPubkey,
         callback: `${URL}/api/lnurl/${id}`,
         tag: "payRequest",
       });
