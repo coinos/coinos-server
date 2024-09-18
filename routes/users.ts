@@ -655,4 +655,25 @@ export default {
       bail(res, e.message);
     }
   },
+
+  async updateAccount(req, res) {
+    let { id } = req.params;
+    let { name } = req.body;
+
+    let account = await g(`account:${id}`);
+    account.name = name;
+    await s(`account:${id}`, account);
+
+    res.send(account);
+  },
+
+  async deleteAccount(req, res) {
+    let { id } = req.body;
+    let { id: uid } = req.user;
+
+    await db.lRem(`${uid}:accounts`, 1, id);
+    await db.del(`account:${id}`);
+
+    res.send({ ok: true });
+  },
 };

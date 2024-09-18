@@ -38,7 +38,7 @@ export let bip21 = (address, { amount, memo, tip, type }) => {
   let url = new URLSearchParams();
 
   if (amount) {
-    url.append("amount", btc(amount + tip));
+    url.append("amount", btc(amount + tip).toFixed(8));
     if (type === "liquid") url.append("assetid", config.liquid.btc);
   }
 

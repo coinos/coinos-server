@@ -80,8 +80,10 @@ app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
 
 app.get("/account/:id", auth, users.account);
+app.post("/account/:id", auth, users.updateAccount);
 app.get("/accounts", auth, users.accounts);
 app.post("/accounts", auth, users.createAccount);
+app.post("/account/delete", auth, users.deleteAccount);
 
 app.get("/users", auth, users.list);
 app.get("/me", auth, users.me);
