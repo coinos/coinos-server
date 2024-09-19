@@ -33,7 +33,7 @@ export default () => {
       let user = await g(`user:${uid}`);
 
       let result = await handle(method, params, user);
-      let payload = JSON.stringify({ result_type: method, result });
+      let payload = JSON.stringify({ result_type: method, ...result });
       content = await nip04.encrypt(sk, pubkey, payload);
 
       let response: UnsignedEvent = {
