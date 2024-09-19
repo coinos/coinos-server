@@ -7,6 +7,7 @@ import { sendInternal, sendLightning } from "$lib/payments";
 import { serverPubkey } from "$lib/nostr";
 import { nip04, nip19, finalizeEvent } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
+import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 
 let result = (result) => ({ result });
@@ -98,20 +99,42 @@ let handle = (method, params, user) =>
 
     async get_info() {
       let { alias, blockheight, color } = await ln.getinfo();
-      return {
-        result: {
-          alias,
-          color,
-          pubkey: serverPubkey,
-          network: "mainnet",
-          block_height: blockheight,
-          methods: ["pay_invoice", "get_balance", "get_info"],
-        },
-      };
+      return result({
+        alias,
+        color,
+        pubkey: serverPubkey,
+        network: "mainnet",
+        block_height: blockheight,
+        methods: ["pay_invoice", "get_balance", "get_info"],
+      });
     },
 
     async get_balance() {
       let balance = await g(`balance:${user.id}`);
       return result({ balance });
+    },
+
+    async make_invoice() {
+      let { amount, description, description_hash, expiry } = params;
+
+      let invoice = {
+        amount: Math.round(amount / 1000),
+        type: "lightning",
+        memo: description,
+        expiry,
+      };
+
+      let { hash, created: created_at } = await generate({ invoice, user });
+
+      return result({
+        type: "incoming",
+        invoice: hash,
+        description,
+        description_hash,
+        amount,
+        created_at,
+        expires_at: created_at + expiry,
+        metadata: {},
+      });
     },
   })[method](params);

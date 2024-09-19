@@ -10,7 +10,7 @@ import ln from "$lib/ln";
 let bc = rpc(config.bitcoin);
 let lq = rpc(config.liquid);
 
-export let generate = async ({ invoice, user, sender = undefined }) => {
+export let generate = async ({ invoice, user }) => {
   let {
     bolt11,
     account,
@@ -34,7 +34,6 @@ export let generate = async ({ invoice, user, sender = undefined }) => {
   tip = parseInt(tip) || null;
 
   if (user) user = await getUser(user.username);
-  else if (sender) user = await getUser(sender.username);
   if (!user) fail("user not provided");
 
   if (account === user.id) account = undefined;

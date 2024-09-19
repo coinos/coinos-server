@@ -29,13 +29,12 @@ export default {
   },
 
   async create(req, res) {
-    let {
-      body: { invoice, user },
-      user: sender,
-    } = req;
+    let { body, user } = req;
+    if (body.user) user = body.user;
+    let { invoice } = body;
 
     try {
-      res.send(await generate({ invoice, user, sender }));
+      res.send(await generate({ invoice, user }));
     } catch (e) {
       err("problem generating invoice", e.message);
       bail(res, e.message);
