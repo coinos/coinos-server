@@ -43,7 +43,7 @@ export let types = {
 };
 
 export let debit = async ({
-  account = undefined,
+  aid = undefined,
   hash,
   amount,
   fee = 0,
@@ -93,11 +93,11 @@ export let debit = async ({
     ? Math.round((amount + fee + tip) * config.fee)
     : 0;
 
-  if (account) ourfee = 0;
+  if (aid) ourfee = 0;
 
   ourfee = await db.debit(
-    `balance:${account || uid}`,
-    `credit:${type}:${account ? 0 : uid}`,
+    `balance:${aid || uid}`,
+    `credit:${type}:${aid ? 0 : uid}`,
     amount || 0,
     tip || 0,
     fee || 0,
@@ -109,7 +109,7 @@ export let debit = async ({
   let id = v4();
   let p = {
     id,
-    account,
+    aid,
     amount: -amount,
     fee,
     hash,
@@ -129,7 +129,7 @@ export let debit = async ({
 
   await s(`payment:${hash}`, id);
   await s(`payment:${id}`, p);
-  await db.lPush(`${account || uid}:payments`, id);
+  await db.lPush(`${aid || uid}:payments`, id);
 
   l(user.username, "sent", type, amount);
   //emit(user.id, "payment", p);
@@ -143,7 +143,7 @@ export let credit = async ({
   memo = undefined,
   ref = undefined,
   type = types.internal,
-  account = undefined,
+  aid = undefined,
 }) => {
   amount = parseInt(amount) || 0;
 
@@ -180,7 +180,7 @@ export let credit = async ({
 
   let id = v4();
   let p = {
-    account,
+    aid,
     id,
     iid: inv.id,
     hash,
@@ -220,8 +220,8 @@ export let credit = async ({
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
     .set(`payment:${p.id}`, JSON.stringify(p))
-    .lPush(`${account || uid}:payments`, p.id)
-    .incrBy(`${balanceKey}:${account || uid}`, amount)
+    .lPush(`${aid || uid}:payments`, p.id)
+    .incrBy(`${balanceKey}:${aid || uid}`, amount)
     .exec();
 
   emit(uid, "payment", p);
@@ -317,7 +317,7 @@ export let completePayment = async (p, user) => {
   }
 };
 
-let pay = async ({ account, amount, to, user }) => {
+let pay = async ({ aid, amount, to, user }) => {
   amount = parseInt(amount) || 0;
   let lnurl, pr;
   if (to.includes("@") && to.includes(".")) {
@@ -341,7 +341,7 @@ let pay = async ({ account, amount, to, user }) => {
 
   return pr
     ? await sendLightning({ user, pr, amount, maxfee })
-    : await sendOnchain({ account, amount, address: to, user, subtract: true });
+    : await sendOnchain({ aid, amount, address: to, user, subtract: true });
 };
 
 export let decode = async (hex) => {
@@ -363,15 +363,15 @@ export let decode = async (hex) => {
 };
 
 export let sendOnchain = async (params) => {
-  let { account, hex, rate, user, signed } = params;
-  if (!account) account = user.id;
+  let { aid, hex, rate, user, signed } = params;
+  if (!aid) aid = user.id;
   if (!hex) ({ hex } = await build(params));
 
   let { tx, type } = await decode(hex);
   let node =
-    account === user.id
+    aid === user.id
       ? rpc(config[type])
-      : rpc({ ...config[type], wallet: account });
+      : rpc({ ...config[type], wallet: aid });
   let { txid } = tx;
 
   try {
@@ -428,7 +428,7 @@ export let sendOnchain = async (params) => {
       } of tx.vout) {
         total += sats(value);
         let invoice = await g(`invoice:${address}`);
-        if (invoice?.account === account)
+        if (invoice?.aid === aid)
           fail("Cannot send to internal address");
 
         if ((await node.getAddressInfo(address)).ismine) {
@@ -442,7 +442,7 @@ export let sendOnchain = async (params) => {
     let amount = total - change;
 
     let p = await debit({
-      account,
+      aid,
       hash: txid,
       amount,
       fee,
@@ -511,7 +511,7 @@ export let sendLightning = async ({
     let invoice = await getInvoice(hash);
 
     if (invoice) {
-      if (invoice.account === user.id) fail("Cannot send to self");
+      if (invoice.aid === user.id) fail("Cannot send to self");
       hash = pr;
     } else {
       let r;
@@ -634,7 +634,7 @@ let getAddressType = async (a) => {
 };
 
 export let build = async ({
-  account,
+  aid,
   amount,
   address,
   feeRate,
@@ -642,11 +642,11 @@ export let build = async ({
   user,
 }) => {
   let type = await getAddressType(address);
-  if (!account) account = user.id;
+  if (!aid) aid = user.id;
   let node =
-    account === user.id
+    aid === user.id
       ? rpc(config[type])
-      : rpc({ ...config[type], wallet: account });
+      : rpc({ ...config[type], wallet: aid });
 
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
@@ -686,13 +686,13 @@ export let build = async ({
     else throw e;
   }
 
-  let balance = await g(`balance:${account}`);
+  let balance = await g(`balance:${aid}`);
   let ourfee = Math.round(amount * config.fee);
-  let credit = await g(`credit:${type}:${account}`);
+  let credit = await g(`credit:${type}:${aid}`);
   let covered = Math.min(credit, ourfee);
   ourfee -= covered;
 
-  if (account) ourfee = 0;
+  if (aid) ourfee = 0;
   if (subtract || amount + fee + ourfee > balance) {
     if (amount <= fee + ourfee + dust)
       fail(

@@ -13,7 +13,7 @@ let lq = rpc(config.liquid);
 export let generate = async ({ invoice, user }) => {
   let {
     bolt11,
-    account,
+    aid,
     currency,
     expiry,
     fiat,
@@ -25,18 +25,17 @@ export let generate = async ({ invoice, user }) => {
     memo,
     memoPrompt,
     prompt,
-    type,
+    type = types.lightning,
     webhook,
     secret,
   } = invoice;
 
+  let account = await g(`account:${aid}`);
   amount = parseInt(amount || 0);
   tip = parseInt(tip) || null;
 
   if (user) user = await getUser(user.username);
   if (!user) fail("user not provided");
-
-  if (account === user.id) account = undefined;
 
   let rates = await g("rates");
   if (!currency) currency = user.currency;
@@ -51,8 +50,9 @@ export let generate = async ({ invoice, user }) => {
 
   let hash, text;
 
-  if (account) {
-    let node = rpc({ ...config.bitcoin, wallet: account });
+  if (account.seed) {
+    type = "bitcoin";
+    let node = rpc({ ...config[type], wallet: aid });
     hash = await node.getNewAddress();
     text = bip21(hash, invoice);
   } else if (type === types.lightning) {
@@ -91,7 +91,7 @@ export let generate = async ({ invoice, user }) => {
 
   invoice = {
     amount,
-    account,
+    aid,
     created: Date.now(),
     currency,
     hash,

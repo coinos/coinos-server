@@ -73,13 +73,13 @@ export default {
   async list(req, res) {
     let {
       user: { id },
-      query: { account, start, end, limit, offset },
+      query: { aid, start, end, limit, offset },
     } = req;
 
     if (limit) limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
-    let payments = (await db.lRange(`${account || id}:payments`, 0, -1)) || [];
+    let payments = (await db.lRange(`${aid || id}:payments`, 0, -1)) || [];
     payments = (
       await Promise.all(
         payments.map(async (id) => {
@@ -282,15 +282,15 @@ export default {
         if (typeof p === "string") p = await g(`payment:${p}`);
 
         if (!p) {
-          let account;
+          let aid;
           let bal = await g(`balance:${wallet}`);
-          if (bal !== null) account = wallet;
+          if (bal !== null) aid = wallet;
           await credit({
             hash: address,
             amount: sats(amount),
             ref: `${txid}:${vout}`,
             type,
-            account,
+            aid,
           });
         } else if (confirmations >= 1) {
           let id = `payment:${txid}:${vout}`;
@@ -312,8 +312,8 @@ export default {
             .multi()
             .set(`invoice:${iid}`, JSON.stringify(invoice))
             .set(`payment:${p.id}`, JSON.stringify(p))
-            .decrBy(`pending:${p.account || p.uid}`, p.amount)
-            .incrBy(`balance:${p.account || p.uid}`, p.amount)
+            .decrBy(`pending:${p.aid || p.uid}`, p.amount)
+            .incrBy(`balance:${p.aid || p.uid}`, p.amount)
             .exec();
 
           emit(p.uid, "payment", p);

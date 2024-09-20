@@ -619,13 +619,15 @@ export default {
       let id = v4();
       let account = { id, seed, type };
 
-      await bc.createWallet({
+      let node = rpc(config[type]);
+
+      await node.createWallet({
         wallet_name: id,
         descriptors: true,
         disable_private_keys: true,
       });
 
-      let node = rpc({ ...config.bitcoin, wallet: id });
+      node = rpc({ ...config[type], wallet: id });
 
       let descriptors = [];
       for (let i of [0, 1]) {

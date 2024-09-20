@@ -21,7 +21,10 @@ async function migrate(id) {
         let accounts = await db.lLen(`${user.id}:accounts`);
 
         if (!accounts) {
-          await db.set(`account:${user.id}`, JSON.stringify({ id: user.id, name: "Cash" }));
+          await db.set(
+            `account:${user.id}`,
+            JSON.stringify({ id: user.id, name: "Cash", type: types.ecash }),
+          );
           await db.lPush(`${user.id}:accounts`, user.id);
         }
         return user;
