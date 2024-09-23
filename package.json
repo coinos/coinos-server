@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.449.0",
-    "@cashu/cashu-ts": "github:cashubtc/cashu-ts#development",
+    "@cashu/cashu-ts": "^1.1.0",
     "@coinos/rpc": "^0.0.6",
     "@fastify/cors": "^8.3.0",
     "@fastify/http-proxy": "^9.5.0",

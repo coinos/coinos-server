@@ -1,7 +1,7 @@
 import { appendFile } from "node:fs/promises";
 import { g, s, db } from "$lib/db";
 import config from "$config";
-import { pick, bail, fail, getUser } from "$lib/utils";
+import { SATS, pick, bail, fail, getUser } from "$lib/utils";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
 import whitelist from "$lib/whitelist";
@@ -10,7 +10,7 @@ import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/auth";
 import { v4 } from "uuid";
-import { types } from "$lib/payments";
+import { credit, types } from "$lib/payments";
 import { bech32 } from "bech32";
 import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
@@ -613,11 +613,11 @@ export default {
 
   async createAccount(req, res) {
     try {
-      let { fingerprint, pubkey, type, seed } = req.body;
+      let { fingerprint, pubkey, name, seed, type } = req.body;
       let { user } = req;
 
       let id = v4();
-      let account = { id, seed, type };
+      let account = { id, name, seed, type };
 
       let node = rpc(config[type]);
 
@@ -644,13 +644,30 @@ export default {
       }
 
       await node.importDescriptors(descriptors);
+      let { total_amount } = await node.scanTxOutSet("start", descriptors);
+      let amount = Math.round(total_amount * SATS);
+
+      if (amount) {
+        let hash = v4();
+        let inv = {
+          memo: "On-chain balance reconciliation",
+          type: types.reconcile,
+          hash,
+          amount,
+          uid: user.id,
+          aid: id,
+        };
+        await s(`invoice:${hash}`, inv);
+        let { id: pid } = await credit({ hash, amount, type: types.reconcile });
+        await db.lPush(`${id}:payments`, pid);
+      }
 
       await s(`account:${id}`, account);
-      await s(`balance:${id}`, 0);
+      await s(`balance:${id}`, amount);
       await s(`pending:${id}`, 0);
       await db.lPush(`${user.id}:accounts`, id);
 
-      await appendFile("/bitcoin.conf", `wallet=${id}`);
+      await appendFile("/bitcoin.conf", `wallet=${id}\n`);
 
       res.send(account);
     } catch (e) {

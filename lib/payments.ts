@@ -40,6 +40,7 @@ export let types = {
   fund: "fund",
   liquid: "liquid",
   ecash: "ecash",
+  reconcile: "reconcile",
 };
 
 export let debit = async ({
@@ -140,8 +141,8 @@ export let debit = async ({
 export let credit = async ({
   hash,
   amount,
-  memo = undefined,
-  ref = undefined,
+  memo = "",
+  ref = "",
   type = types.internal,
   aid = undefined,
 }) => {
@@ -369,9 +370,7 @@ export let sendOnchain = async (params) => {
 
   let { tx, type } = await decode(hex);
   let node =
-    aid === user.id
-      ? rpc(config[type])
-      : rpc({ ...config[type], wallet: aid });
+    aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
   let { txid } = tx;
 
   try {
@@ -428,8 +427,7 @@ export let sendOnchain = async (params) => {
       } of tx.vout) {
         total += sats(value);
         let invoice = await g(`invoice:${address}`);
-        if (invoice?.aid === aid)
-          fail("Cannot send to internal address");
+        if (invoice?.aid === aid) fail("Cannot send to internal address");
 
         if ((await node.getAddressInfo(address)).ismine) {
           change += sats(value);
@@ -604,12 +602,18 @@ export let sendLightning = async ({
   }
 };
 
-export let sendInternal = async ({ amount, invoice = undefined, recipient, sender }) => {
-  if (!invoice) invoice = await generate({
-    invoice: { amount, type: "lightning" },
-    user: recipient,
-    sender,
-  });
+export let sendInternal = async ({
+  amount,
+  invoice = undefined,
+  recipient,
+  sender,
+}) => {
+  if (!invoice)
+    invoice = await generate({
+      invoice: { amount, type: "lightning" },
+      user: recipient,
+      sender,
+    });
 
   let { hash } = invoice;
   let memo;
@@ -644,9 +648,7 @@ export let build = async ({
   let type = await getAddressType(address);
   if (!aid) aid = user.id;
   let node =
-    aid === user.id
-      ? rpc(config[type])
-      : rpc({ ...config[type], wallet: aid });
+    aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
 
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");

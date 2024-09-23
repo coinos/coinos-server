@@ -12,26 +12,7 @@ async function migrate(id) {
 
     let user = await g(`user:${id}`);
     if (typeof user === "string") user = await g(`user:${user}`);
-
-    if (user) {
-      let k = `lock:${user.id}:accounts`;
-      const lock = await db.set(k, "1", { NX: true, PX: 5000 });
-      if (!lock) return user;
-      try {
-        let accounts = await db.lLen(`${user.id}:accounts`);
-
-        if (!accounts) {
-          await db.set(
-            `account:${user.id}`,
-            JSON.stringify({ id: user.id, name: "Cash", type: types.ecash }),
-          );
-          await db.lPush(`${user.id}:accounts`, user.id);
-        }
-        return user;
-      } finally {
-        await db.del(k);
-      }
-    }
+    if (user) return user;
 
     user = await ga(`user:${id}`);
 

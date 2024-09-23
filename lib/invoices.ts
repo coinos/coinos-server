@@ -30,12 +30,15 @@ export let generate = async ({ invoice, user }) => {
     secret,
   } = invoice;
 
-  let account = await g(`account:${aid}`);
   amount = parseInt(amount || 0);
   tip = parseInt(tip) || null;
 
   if (user) user = await getUser(user.username);
   if (!user) fail("user not provided");
+
+  let account = await g(`account:${aid}`);
+  if (!account) account = await g(`account:${user.id}`);
+  if (!account) fail("account not found");
 
   let rates = await g("rates");
   if (!currency) currency = user.currency;
