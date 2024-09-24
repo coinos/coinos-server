@@ -11,6 +11,7 @@ import {
   fail,
   fiat,
   getInvoice,
+  getUser,
   sleep,
   SATS,
   sats,
@@ -154,7 +155,7 @@ export let credit = async ({
     return;
   }
 
-  let { tip } = inv;
+  let { path, tip } = inv;
   tip = parseInt(tip) || 0;
 
   if (!memo) ({ memo } = inv);
@@ -162,7 +163,7 @@ export let credit = async ({
   if (amount < 0 || tip < 0) fail("Invalid amount");
   if (type === types.internal) amount += tip;
 
-  let user = await g(`user:${inv.uid}`);
+  let user = await getUser(inv.uid);
   let { id: uid, currency, username } = user;
 
   let rates = await g("rates");
@@ -186,6 +187,7 @@ export let credit = async ({
     iid: inv.id,
     hash,
     amount: amount - tip,
+    path,
     uid,
     rate,
     currency,
@@ -319,7 +321,7 @@ export let completePayment = async (p, user) => {
 };
 
 let pay = async ({ aid = undefined, amount, to, user }) => {
-    if (!aid) aid = user.id;
+  if (!aid) aid = user.id;
   amount = parseInt(amount) || 0;
   let lnurl, pr;
   if (to.includes("@") && to.includes(".")) {
@@ -440,6 +442,7 @@ export let sendOnchain = async (params) => {
 
     let amount = total - change;
 
+    console.log("debiting", aid, amount);
     let p = await debit({
       aid,
       hash: txid,
@@ -613,7 +616,6 @@ export let sendInternal = async ({
     invoice = await generate({
       invoice: { amount, type: "lightning" },
       user: recipient,
-      sender,
     });
 
   let { hash } = invoice;
@@ -718,11 +720,16 @@ export let build = async ({
   let { vin } = await node.decodeRawTransaction(tx.hex);
 
   for (let { txid, vout } of vin) {
-    let nonWitnessUtxo = await node.getRawTransaction(txid);
-    let tx = await node.decodeRawTransaction(nonWitnessUtxo);
-    let { address } = tx.vout[vout].scriptPubKey;
+    let rawTx = await node.getRawTransaction(txid);
+    let tx = await node.decodeRawTransaction(rawTx);
+    let prevOutput = tx.vout[vout];
+    let { address } = prevOutput.scriptPubKey;
     let { hdkeypath: path } = await node.getAddressInfo(address);
-    inputs.push({ nonWitnessUtxo, path });
+    let witnessUtxo = {
+      amount: Math.round(prevOutput.value * SATS),
+      script: prevOutput.scriptPubKey.hex,
+    };
+    inputs.push({ witnessUtxo, path });
   }
 
   return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs };
@@ -759,4 +766,53 @@ export let catchUp = async () => {
   }
 
   setTimeout(catchUp, 10000);
+};
+
+export let reconcile = async (account) => {
+  let { descriptors, id, uid, type } = account;
+  let user = await getUser(uid);
+  let node = rpc({ ...config[type], wallet: id });
+  let { total_amount } = await node.scanTxOutSet("start", descriptors);
+  let total = Math.round(total_amount * SATS);
+  let { balanceAdjustment: memo } = t(user);
+
+  let balance = await g(`balance:${id}`);
+
+  let inflight = 0;
+  for (let pid of await db.sMembers(`inflight:${id}`)) {
+    let p = await g(`payment:${pid}`);
+    inflight += Math.abs(p.amount) + p.fee;
+  }
+
+  balance += inflight;
+
+  let amount = Math.abs(total - balance);
+  let hash = v4();
+
+  if (total > balance) {
+    let inv = {
+      memo,
+      type: types.reconcile,
+      hash,
+      amount,
+      uid,
+      aid: id,
+    };
+    await s(`invoice:${hash}`, inv);
+    await credit({
+      hash,
+      amount,
+      type: types.reconcile,
+      aid: id,
+    });
+  } else if (total < balance) {
+    await debit({
+      aid: id,
+      amount,
+      hash: v4(),
+      memo,
+      user,
+      type: types.reconcile,
+    });
+  }
 };

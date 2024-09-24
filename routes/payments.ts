@@ -260,8 +260,10 @@ export default {
 
     try {
       let node = rpc({ ...config[type], wallet });
-
       let { confirmations, details } = await node.getTransaction(txid);
+      let hot = wallet === config[type].wallet;
+      let aid;
+      if (!hot) aid = wallet;
 
       for (let { address, amount, asset, category, vout } of details) {
         if (!address) continue;
@@ -272,8 +274,14 @@ export default {
           if (typeof p === "string") p = await g(`payment:${p}`);
           if (!p) continue;
 
-          if (confirmations >= 1) p.confirmed = true;
-          await s(`payment:${p.id}`, p);
+          if (confirmations) {
+            p.confirmed = true;
+            await s(`payment:${p.id}`, p);
+            if (aid) await db.sRem(`inflight:${aid}`, p.id);
+          } else {
+              if (aid) await db.sAdd(`inflight:${aid}`, p.id);
+          }
+
           emit(p.uid, "payment", p);
           continue;
         }
@@ -282,9 +290,6 @@ export default {
         if (typeof p === "string") p = await g(`payment:${p}`);
 
         if (!p) {
-          let aid;
-          let bal = await g(`balance:${wallet}`);
-          if (bal !== null) aid = wallet;
           await credit({
             hash: address,
             amount: sats(amount),
@@ -357,6 +362,7 @@ export default {
 
       res.send(p);
     } catch (e) {
+      console.log(e);
       warn(user.username, "payment failed", e.message);
       res.code(500).send(e.message);
     }

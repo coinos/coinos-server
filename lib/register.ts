@@ -4,7 +4,7 @@ import { v4 } from "uuid";
 
 import config from "$config";
 import countries from "$lib/countries";
-import { s } from "$lib/db";
+import { db } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
 
@@ -52,10 +52,20 @@ export default async (user, ip) => {
   user.migrated = true;
   user.locktime = 300;
 
-  await s(`user:${id}`, user);
-  await s(`user:${username}`, id);
-  await s(`user:${pubkey}`, id);
-  await s(`balance:${id}`, 0);
+  let account = JSON.stringify({
+    id,
+    type: "ecash",
+    name: "Spending",
+  });
+
+  db.multi()
+    .set(`user:${id}`, JSON.stringify(user))
+    .set(`user:${username}`, id)
+    .set(`user:${pubkey}`, id)
+    .set(`balance:${id}`, 0)
+    .set(`account:${id}`, account)
+    .lPush(`${id}:accounts`, id)
+    .exec();
 
   l("new user", username);
 

@@ -1,7 +1,7 @@
 import { appendFile } from "node:fs/promises";
 import { g, s, db } from "$lib/db";
 import config from "$config";
-import { SATS, pick, bail, fail, getUser, t } from "$lib/utils";
+import { pick, bail, fail, getUser } from "$lib/utils";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
 import whitelist from "$lib/whitelist";
@@ -10,7 +10,7 @@ import { emit } from "$lib/sockets";
 import register from "$lib/register";
 import { requirePin } from "$lib/auth";
 import { v4 } from "uuid";
-import { credit, types } from "$lib/payments";
+import { reconcile, types } from "$lib/payments";
 import { bech32 } from "bech32";
 import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
@@ -594,29 +594,34 @@ export default {
   },
 
   async accounts(req, res) {
-    let { user } = req;
+    try {
+      let { user } = req;
 
-    let accounts = [];
-    for (let id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
-      let account = await g(`account:${id}`);
-      account.balance = await g(`balance:${id}`);
+      let accounts = [];
+      for (let id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
+        let account = await g(`account:${id}`);
+        account.balance = await g(`balance:${id}`);
 
-      if (account.type === "savings") {
+        if (account.seed) await reconcile(account);
+
+        accounts.push(account);
       }
 
-      accounts.push(account);
+      res.send(accounts.reverse());
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
     }
-
-    res.send(accounts.reverse());
   },
 
   async createAccount(req, res) {
     try {
       let { fingerprint, pubkey, name, seed, type } = req.body;
       let { user } = req;
+      let { id: uid } = user;
 
       let id = v4();
-      let account = { id, name, seed, type };
+      let account = { id, name, seed, type, uid, descriptors: [] };
 
       let node = rpc(config[type]);
 
@@ -628,11 +633,10 @@ export default {
 
       node = rpc({ ...config[type], wallet: id });
 
-      let descriptors = [];
       for (let i of [0, 1]) {
         let desc = `wpkh([${fingerprint}]${pubkey}/${i}/*)`;
         let { checksum } = await node.getDescriptorInfo(desc);
-        descriptors.push({
+        account.descriptors.push({
           desc: `${desc}#${checksum}`,
           range: [0, 100],
           next_index: 0,
@@ -642,34 +646,17 @@ export default {
         });
       }
 
-      await node.importDescriptors(descriptors);
-      let { total_amount } = await node.scanTxOutSet("start", descriptors);
-      let amount = Math.round(total_amount * SATS);
-      let { balanceAdjustment: memo } = t(user);
+      await node.importDescriptors(account.descriptors);
 
-      if (amount) {
-        let hash = v4();
-        let inv = {
-          memo,
-          type: types.reconcile,
-          hash,
-          amount,
-          uid: user.id,
-          aid: id,
-        };
-        await s(`invoice:${hash}`, inv);
-        await credit({
-          hash,
-          amount,
-          type: types.reconcile,
-          aid: id,
-        });
-      }
+      await db
+        .multi()
+        .set(`account:${id}`, JSON.stringify(account))
+        .set(`balance:${id}`, 0)
+        .set(`pending:${id}`, 0)
+        .lPush(`${user.id}:accounts`, id)
+        .exec();
 
-      await s(`account:${id}`, account);
-      await s(`balance:${id}`, amount);
-      await s(`pending:${id}`, 0);
-      await db.lPush(`${user.id}:accounts`, id);
+      await reconcile(account);
 
       await appendFile("/bitcoin.conf", `wallet=${id}\n`);
 
@@ -691,12 +678,25 @@ export default {
   },
 
   async deleteAccount(req, res) {
-    let { id } = req.body;
-    let { id: uid } = req.user;
+    try {
+      let { id } = req.body;
+      let { id: uid } = req.user;
+      let { type } = await g(`account:${id}`);
+      let node = rpc({ ...config[type], wallet: id });
+      await node.unloadWallet(id);
 
-    await db.lRem(`${uid}:accounts`, 1, id);
-    await db.del(`account:${id}`);
+      await db
+        .multi()
+        .lRem(`${uid}:accounts`, 1, id)
+        .del(`account:${id}`)
+        .del(`balance:${id}`)
+        .del(`${id}:payments`)
+        .exec();
 
-    res.send({ ok: true });
+      res.send({ ok: true });
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 };
