@@ -1,7 +1,7 @@
 import { appendFile } from "node:fs/promises";
 import { g, s, db } from "$lib/db";
 import config from "$config";
-import { SATS, pick, bail, fail, getUser } from "$lib/utils";
+import { SATS, pick, bail, fail, getUser, t } from "$lib/utils";
 import jwt from "jsonwebtoken";
 import { authenticator } from "otplib";
 import whitelist from "$lib/whitelist";
@@ -16,7 +16,6 @@ import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
 import rpc from "@coinos/rpc";
 
-let bc = rpc(config.bitcoin);
 let { encode, decode, fromWords, toWords } = bech32;
 
 export default {
@@ -646,11 +645,12 @@ export default {
       await node.importDescriptors(descriptors);
       let { total_amount } = await node.scanTxOutSet("start", descriptors);
       let amount = Math.round(total_amount * SATS);
+      let { balanceAdjustment: memo } = t(user);
 
       if (amount) {
         let hash = v4();
         let inv = {
-          memo: "On-chain balance reconciliation",
+          memo,
           type: types.reconcile,
           hash,
           amount,
@@ -658,8 +658,12 @@ export default {
           aid: id,
         };
         await s(`invoice:${hash}`, inv);
-        let { id: pid } = await credit({ hash, amount, type: types.reconcile });
-        await db.lPush(`${id}:payments`, pid);
+        await credit({
+          hash,
+          amount,
+          type: types.reconcile,
+          aid: id,
+        });
       }
 
       await s(`account:${id}`, account);

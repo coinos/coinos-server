@@ -1,4 +1,3 @@
-import locales from "$lib/locales/index";
 import config from "$config";
 import { generate } from "$lib/invoices";
 import { emit } from "$lib/sockets";
@@ -16,6 +15,7 @@ import {
   SATS,
   sats,
   formatReceipt,
+  t,
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
 import got from "got";
@@ -289,10 +289,10 @@ export let completePayment = async (p, user) => {
       }
     }
 
-    let t = locales[user.language || "en"];
+    let { paymentReceived } = t(user);
     if (user.verified && user.notify) {
-      mail(user, t.paymentReceived, templates.paymentReceived, {
-        ...t,
+      mail(user, paymentReceived, templates.paymentReceived, {
+        ...t(user),
         username,
         payment: {
           amount: fmt(p.amount),
@@ -318,7 +318,8 @@ export let completePayment = async (p, user) => {
   }
 };
 
-let pay = async ({ aid, amount, to, user }) => {
+let pay = async ({ aid = undefined, amount, to, user }) => {
+    if (!aid) aid = user.id;
   amount = parseInt(amount) || 0;
   let lnurl, pr;
   if (to.includes("@") && to.includes(".")) {

@@ -1,3 +1,4 @@
+import locales from "$lib/locales/index";
 import { randomBytes, bytesToHex } from "@noble/hashes/utils";
 import migrate from "$lib/migrate";
 import { g, s } from "$lib/db";
@@ -159,3 +160,5 @@ export function formatReceipt(items, currency) {
     })
     .join("\n");
 }
+
+  export let t = ({ language = "en" }) => locales[language];
