@@ -75,6 +75,7 @@ export default {
       user: { id },
       query: { aid, start, end, limit, offset },
     } = req;
+    if (!aid || aid === "undefined") aid = id;
 
     if (limit) limit = parseInt(limit);
     offset = parseInt(offset) || 0;
