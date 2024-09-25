@@ -821,8 +821,9 @@ export let reconcile = async (account) => {
       });
     }
   } catch (e) {
+    console.log(e);
+    warn("problem reconciling", e.message, account);
     if (e.message.includes("progress"))
       return setTimeout(() => reconcile(account), 1000);
-    warn("problem reconciling", e.message, account);
   }
 };

@@ -629,6 +629,7 @@ export default {
         wallet_name: id,
         descriptors: true,
         disable_private_keys: true,
+        load_on_startup: true
       });
 
       node = rpc({ ...config[type], wallet: id });
@@ -640,7 +641,7 @@ export default {
           desc: `${desc}#${checksum}`,
           range: [0, 100],
           next_index: 0,
-          timestamp: 0,
+          timestamp: "now",
           internal: i === 1,
           active: true,
         });
