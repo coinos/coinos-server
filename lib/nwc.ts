@@ -13,6 +13,8 @@ import ln from "$lib/ln";
 let result = (result) => ({ result });
 let error = (error) => ({ error });
 
+let methods= ["pay_invoice", "get_balance", "get_info", "make_invoice"];
+
 export default () => {
   let r = new Relay("ws://strfry:7777");
 
@@ -28,6 +30,8 @@ export default () => {
       let { params, method } = JSON.parse(
         await nip04.decrypt(sk, pubkey, content),
       );
+
+      if (!methods.includes(method)) return;
 
       let uid = await g(pubkey);
       let user = await g(`user:${uid}`);
@@ -105,7 +109,7 @@ let handle = (method, params, user) =>
         pubkey: serverPubkey,
         network: "mainnet",
         block_height: blockheight,
-        methods: ["pay_invoice", "get_balance", "get_info"],
+        methods
       });
     },
 
