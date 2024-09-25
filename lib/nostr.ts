@@ -217,8 +217,7 @@ function send(ev, url, opts) {
 
 export async function handleZap(invoice) {
   let { data: privkey } = nip19.decode(config.nostrKey);
-  let pubkey = getPublicKey(privkey);
-  let keypair = { privkey, pubkey };
+  let pubkey = serverPubkey;
   let zapreq = JSON.parse(invoice.description);
 
   if (!zapreq.tags || zapreq.tags.length === 0) {
