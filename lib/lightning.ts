@@ -1,10 +1,7 @@
 import { handleZap } from "$lib/nostr";
-import config from "$config";
-import { notify } from "$lib/notifications";
-import { callWebhook } from "$lib/webhooks";
 import ln from "$lib/ln";
-import { l, err, warn } from "$lib/logging";
-import { g, s, t, db } from "$lib/db";
+import { err, warn } from "$lib/logging";
+import { g, s } from "$lib/db";
 import { credit, types } from "$lib/payments";
 
 export async function listenForLightning() {
@@ -13,7 +10,6 @@ export async function listenForLightning() {
     bolt11,
     description,
     pay_index,
-    status,
     amount_received_msat,
     payment_preimage: preimage,
   } = inv;

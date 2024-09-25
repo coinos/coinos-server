@@ -17,7 +17,6 @@ import {
   sats,
   formatReceipt,
   t,
-  wait,
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
 import got from "got";
