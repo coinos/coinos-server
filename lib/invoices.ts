@@ -126,7 +126,7 @@ export let generate = async ({ invoice, user }) => {
 
   await s(`invoice:${hash}`, id);
   await s(`invoice:${id}`, invoice);
-  await db.lPush(`${user.id}:invoices`, id);
+  await db.lPush(`${aid}:invoices`, id);
 
   if (request_id) {
     let request = await g(`request:${request_id}`);
