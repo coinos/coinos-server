@@ -602,7 +602,7 @@ export default {
         let account = await g(`account:${id}`);
         account.balance = await g(`balance:${id}`);
 
-        if (account.seed) reconcile(account);
+        // if (account.seed) reconcile(account);
 
         accounts.push(account);
       }
