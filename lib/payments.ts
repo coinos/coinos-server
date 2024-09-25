@@ -17,6 +17,7 @@ import {
   sats,
   formatReceipt,
   t,
+  wait,
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
 import got from "got";
@@ -442,7 +443,6 @@ export let sendOnchain = async (params) => {
 
     let amount = total - change;
 
-    console.log("debiting", aid, amount);
     let p = await debit({
       aid,
       hash: txid,
@@ -769,50 +769,60 @@ export let catchUp = async () => {
 };
 
 export let reconcile = async (account) => {
-  let { descriptors, id, uid, type } = account;
-  let user = await getUser(uid);
-  let node = rpc({ ...config[type], wallet: id });
-  let { total_amount } = await node.scanTxOutSet("start", descriptors);
-  let total = Math.round(total_amount * SATS);
-  let { balanceAdjustment: memo } = t(user);
+  try {
+    let { descriptors, id, uid, type } = account;
+    let user = await getUser(uid);
+    let node = rpc({ ...config[type], wallet: id });
 
-  let balance = await g(`balance:${id}`);
+    let progress = await node.scanTxOutSet("status");
+    if (progress) return setTimeout(() => reconcile(account), 1000);
 
-  let inflight = 0;
-  for (let pid of await db.sMembers(`inflight:${id}`)) {
-    let p = await g(`payment:${pid}`);
-    inflight += Math.abs(p.amount) + p.fee;
-  }
+    let { total_amount } = await node.scanTxOutSet("start", descriptors);
+    let total = Math.round(total_amount * SATS);
+    let { balanceAdjustment: memo } = t(user);
 
-  balance += inflight;
+    let balance = await g(`balance:${id}`);
 
-  let amount = Math.abs(total - balance);
-  let hash = v4();
+    let inflight = 0;
+    for (let pid of await db.sMembers(`inflight:${id}`)) {
+      let p = await g(`payment:${pid}`);
+      inflight += Math.abs(p.amount) + p.fee;
+    }
 
-  if (total > balance) {
-    let inv = {
-      memo,
-      type: types.reconcile,
-      hash,
-      amount,
-      uid,
-      aid: id,
-    };
-    await s(`invoice:${hash}`, inv);
-    await credit({
-      hash,
-      amount,
-      type: types.reconcile,
-      aid: id,
-    });
-  } else if (total < balance) {
-    await debit({
-      aid: id,
-      amount,
-      hash: v4(),
-      memo,
-      user,
-      type: types.reconcile,
-    });
+    balance += inflight;
+
+    let amount = Math.abs(total - balance);
+    let hash = v4();
+
+    if (total > balance) {
+      let inv = {
+        memo,
+        type: types.reconcile,
+        hash,
+        amount,
+        uid,
+        aid: id,
+      };
+      await s(`invoice:${hash}`, inv);
+      await credit({
+        hash,
+        amount,
+        type: types.reconcile,
+        aid: id,
+      });
+    } else if (total < balance) {
+      await debit({
+        aid: id,
+        amount,
+        hash: v4(),
+        memo,
+        user,
+        type: types.reconcile,
+      });
+    }
+  } catch (e) {
+    if (e.message.includes("progress"))
+      return setTimeout(() => reconcile(account), 1000);
+    warn("problem reconciling", e.message, account);
   }
 };

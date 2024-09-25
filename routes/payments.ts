@@ -279,7 +279,7 @@ export default {
             await s(`payment:${p.id}`, p);
             if (aid) await db.sRem(`inflight:${aid}`, p.id);
           } else {
-              if (aid) await db.sAdd(`inflight:${aid}`, p.id);
+            if (aid) await db.sAdd(`inflight:${aid}`, p.id);
           }
 
           emit(p.uid, "payment", p);
