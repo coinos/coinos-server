@@ -782,7 +782,7 @@ export let reconcile = async (account, initial = false) => {
       let { total_amount } = await node.scanTxOutSet("start", descriptors);
       total = Math.round(total_amount * SATS);
     } else {
-      total = Math.round((await node.getBalance()) * SATS);
+      total = Math.round((await node.getBalance({ minconf: 1 })) * SATS);
     }
 
     let { balanceAdjustment: memo } = t(user);

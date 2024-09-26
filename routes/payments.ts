@@ -291,6 +291,8 @@ export default {
         if (typeof p === "string") p = await g(`payment:${p}`);
 
         if (!p) {
+          let invoice = await getInvoice(address);
+          if (!hot && aid !== invoice?.aid) continue;
           await credit({
             hash: address,
             amount: sats(amount),
