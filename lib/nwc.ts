@@ -114,7 +114,8 @@ let handle = (method, params, user) =>
     },
 
     async get_balance() {
-      let balance = await g(`balance:${user.id}`) * 1000;
+      let balance = await g(`balance:${user.id}`);
+      balance *= 1000;
       return result({ balance });
     },
 
