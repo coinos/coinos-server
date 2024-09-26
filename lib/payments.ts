@@ -767,28 +767,27 @@ export let catchUp = async () => {
   setTimeout(catchUp, 10000);
 };
 
-export let reconcile = async (account) => {
+export let reconcile = async (account, initial = false) => {
   try {
     let { descriptors, id, uid, type } = account;
     let user = await getUser(uid);
     let node = rpc({ ...config[type], wallet: id });
 
-    let progress = await node.scanTxOutSet("status");
-    if (progress) return setTimeout(() => reconcile(account), 1000);
+    let total;
 
-    let { total_amount } = await node.scanTxOutSet("start", descriptors);
-    let total = Math.round(total_amount * SATS);
+    if (initial) {
+      let progress = await node.scanTxOutSet("status");
+      if (progress) return setTimeout(() => reconcile(account, initial), 1000);
+
+      let { total_amount } = await node.scanTxOutSet("start", descriptors);
+      total = Math.round(total_amount * SATS);
+    } else {
+      total = Math.round((await node.getBalance()) * SATS);
+    }
+
     let { balanceAdjustment: memo } = t(user);
 
     let balance = await g(`balance:${id}`);
-
-    let inflight = 0;
-    for (let pid of await db.sMembers(`inflight:${id}`)) {
-      let p = await g(`payment:${pid}`);
-      inflight += Math.abs(p.amount) + p.fee;
-    }
-
-    balance += inflight;
 
     let amount = Math.abs(total - balance);
     let hash = v4();
@@ -823,6 +822,6 @@ export let reconcile = async (account) => {
     console.log(e);
     warn("problem reconciling", e.message, account);
     if (e.message.includes("progress"))
-      return setTimeout(() => reconcile(account), 1000);
+      return setTimeout(() => reconcile(account, initial), 1000);
   }
 };

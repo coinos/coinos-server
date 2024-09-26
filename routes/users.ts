@@ -657,7 +657,7 @@ export default {
         .lPush(`${user.id}:accounts`, id)
         .exec();
 
-      await reconcile(account);
+      reconcile(account, true);
 
       await appendFile("/bitcoin.conf", `wallet=${id}\n`);
 
