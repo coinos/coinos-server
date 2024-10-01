@@ -508,7 +508,7 @@ export default {
 
       let code = v4();
       await s(`verify:${code}`, { id, email });
-      let link = `${process.env.URL}/${username}/verify/${code}`;
+      let link = `${process.env.URL}/verify/${code}`;
       let subject = "Email Verification";
 
       await mail(user, subject, templates.verifyEmail, {
