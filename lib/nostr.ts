@@ -1,9 +1,9 @@
 import config from "$config";
 import { l } from "$lib/logging";
-import { Relay, RelayPool, calculateId, signId, getPublicKey } from "nostr";
+import { Relay, RelayPool, getPublicKey } from "nostr";
 import { g, s, db } from "$lib/db";
 import { fail, wait } from "$lib/utils";
-import { nip19 } from "nostr-tools";
+import { nip19, finalizeEvent } from "nostr-tools";
 import { emit } from "$lib/sockets";
 import { hex } from "@scure/base";
 
@@ -188,8 +188,8 @@ let getUser = async (pubkey) => {
   );
 };
 
-function send(ev, url, opts) {
-  let timeout = (opts && opts.timeout != null && opts.timeout) || 1000;
+function send(ev, url, opts = { timeout: 1000 }) {
+  let { timeout } = opts;
 
   return new Promise((resolve, reject) => {
     let relay = Relay(url);
@@ -216,8 +216,8 @@ function send(ev, url, opts) {
 }
 
 export async function handleZap(invoice) {
-  let { data: privkey } = nip19.decode(config.nostrKey);
   let pubkey = serverPubkey;
+  let sk = nip19.decode(config.nostrKey).data as Uint8Array;
   let zapreq = JSON.parse(invoice.description);
 
   if (!zapreq.tags || zapreq.tags.length === 0) {
@@ -264,8 +264,7 @@ export async function handleZap(invoice) {
   tags.push(["preimage", invoice.payment_preimage]);
 
   let ev = { pubkey, kind, created_at, content, tags };
-  ev.id = await calculateId(ev);
-  ev.sig = await signId(privkey, ev.id);
+  ev = await finalizeEvent(ev, sk);
 
   l("sending receipt");
 
