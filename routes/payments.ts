@@ -3,7 +3,15 @@ import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { db, g, s, t } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
-import { bail, fail, getInvoice, getUser, sats, SATS } from "$lib/utils";
+import {
+  bail,
+  fail,
+  getInvoice,
+  getPayment,
+  getUser,
+  sats,
+  SATS,
+} from "$lib/utils";
 import { requirePin } from "$lib/auth";
 import {
   completePayment,
@@ -138,8 +146,7 @@ export default {
     let {
       params: { hash },
     } = req;
-    let p = await g(`payment:${hash}`);
-    if (typeof p === "string") p = await g(`payment:${p}`);
+    let p = await getPayment(hash);
     if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
     res.send(p);
   },
@@ -271,8 +278,7 @@ export default {
         if (type === types.liquid && asset !== config.liquid.btc) continue;
 
         if (category === "send") {
-          let p = await g(`payment:${txid}`);
-          if (typeof p === "string") p = await g(`payment:${p}`);
+          let p = await getPayment(txid);
           if (!p) continue;
 
           if (confirmations) {
@@ -287,8 +293,7 @@ export default {
           continue;
         }
 
-        let p = await g(`payment:${txid}:${vout}`);
-        if (typeof p === "string") p = await g(`payment:${p}`);
+        let p = await getPayment(`${txid}:${vout}`);
 
         if (!p) {
           let invoice = await getInvoice(address);
@@ -302,8 +307,7 @@ export default {
           });
         } else if (confirmations >= 1) {
           let id = `payment:${txid}:${vout}`;
-          let p = await g(id);
-          if (typeof p === "string") p = await g(`payment:${p}`);
+          let p = await getPayment(`${txid}:${vout}`);
           if (!p) return db.sAdd("missed", id);
           if (p.confirmed) return;
 

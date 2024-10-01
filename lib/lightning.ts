@@ -3,6 +3,7 @@ import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { g, s } from "$lib/db";
 import { credit, types } from "$lib/payments";
+import { getPayment } from "$lib/utils";
 
 export async function listenForLightning() {
   let inv = await ln.waitanyinvoice((await g("pay_index")) || 0);
@@ -35,9 +36,7 @@ export async function listenForLightning() {
       }
     }
 
-    let p = await g(`payment:${bolt11}`);
-    if (typeof p === "string") p = await g(`payment:${p}`);
-
+    let p = await getPayment(bolt11);
     if (p) return warn("already processed", bolt11);
 
     await credit({ hash:bolt11, amount:received, memo:invoice.memo, ref:preimage, type:types.lightning});

@@ -1,6 +1,7 @@
 import got from "got";
 import { g } from "$lib/db";
 import { err } from "$lib/logging";
+import { getPayment } from "$lib/utils";
 
 let query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) { 
   orderMarkAsPaid(input: $input) { 
@@ -17,8 +18,7 @@ export default async (req, res) => {
     body: { hash },
     params: { id },
   } = req;
-  let p = await g(`payment:${hash}`);
-  if (typeof p === "string") p = await g(`payment:${p}`);
+  let p = await getPayment(hash);
   let user = await g(`user:${p.uid}`);
 
   try {

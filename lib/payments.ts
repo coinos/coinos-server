@@ -480,7 +480,6 @@ let getMaxFee = (n) =>
               : n * 0.01,
   );
 
-let checking = {};
 let inflight = {};
 export let sendLightning = async ({
   user,
@@ -490,8 +489,8 @@ export let sendLightning = async ({
   memo = undefined,
 }) => {
   try {
-    if (inflight[user.id]) fail("payment in flight");
-    inflight[user.id] = true;
+    if (inflight[pr]) fail("payment in flight");
+    inflight[pr] = true;
 
     let p;
     let hash = pr;
@@ -534,39 +533,6 @@ export let sendLightning = async ({
         type: types.lightning,
       });
 
-      let check = async () => {
-        if (checking[pr]) return;
-        checking[pr] = true;
-
-        try {
-          let { pays } = await ln.listpays(pr);
-
-          let recordExists = !!(await g(`payment:${pr}`));
-          let paymentFailed =
-            !pays.length || pays.every((p) => p.status === "failed");
-
-          if (recordExists && paymentFailed) {
-            await db.del(`payment:${pr}`);
-            await db.del(`payment:${p.id}`);
-
-            let ourfee = p.ourfee || 0;
-            let credit = Math.round(total * config.fee) - ourfee;
-            await db.incrBy(`balance:${p.uid}`, total + maxfee + ourfee);
-
-            await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-            await db.lRem(`${p.uid}:payments`, 1, p.id);
-
-            clearInterval(interval);
-          }
-        } catch (e) {
-          err("Failed to reverse payment", r);
-        }
-
-        checking[pr] = false;
-      };
-
-      let interval = setInterval(check, 5000);
-
       try {
         l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
 
@@ -591,7 +557,6 @@ export let sendLightning = async ({
         l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
         await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
       } catch (e) {
-        await check();
         throw e;
       }
 
@@ -824,5 +789,35 @@ export let reconcile = async (account, initial = false) => {
     warn("problem reconciling", e.message, account);
     if (e.message.includes("progress"))
       return setTimeout(() => reconcile(account, initial), 1000);
+  }
+};
+
+export let check = async () => {
+  let payments = await db.sMembers("inflight");
+
+  for (let pr of payments) {
+    try {
+      let { pays } = await ln.listpays(pr);
+
+      let recordExists = !!(await g(`payment:${pr}`));
+      let paymentFailed =
+        !pays.length || pays.every((p) => p.status === "failed");
+
+      if (recordExists && paymentFailed) {
+        await db.del(`payment:${pr}`);
+        await db.del(`payment:${p.id}`);
+
+        let ourfee = p.ourfee || 0;
+        let credit = Math.round(total * config.fee) - ourfee;
+        await db.incrBy(`balance:${p.uid}`, total + maxfee + ourfee);
+
+        await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+        await db.lRem(`${p.uid}:payments`, 1, p.id);
+      }
+    } catch (e) {
+      err("Failed to reverse payment", r);
+    }
+
+      setTimeout(check, 2000);
   }
 };

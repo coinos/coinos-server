@@ -87,6 +87,12 @@ export let getInvoice = async (hash) => {
   return await g(`invoice:${iid}`);
 };
 
+export let getPayment = async (id) => {
+  let p = await g(`payment:${id}`);
+  if (typeof p === "string") p = await g(`payment:${p}`);
+  return p;
+};
+
 export let f = (s, currency) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -161,4 +167,4 @@ export function formatReceipt(items, currency) {
     .join("\n");
 }
 
-  export let t = ({ language = "en" }) => locales[language];
+export let t = ({ language = "en" }) => locales[language];
