@@ -4,7 +4,7 @@ import { g } from "$lib/db";
 import { Relay } from "nostr";
 import { getInvoice, sleep } from "$lib/utils";
 import { sendInternal, sendLightning } from "$lib/payments";
-import { serverPubkey } from "$lib/nostr";
+import { handleZap, serverPubkey } from "$lib/nostr";
 import { nip04, nip19, finalizeEvent } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
 import { generate } from "$lib/invoices";
@@ -13,7 +13,7 @@ import ln from "$lib/ln";
 let result = (result) => ({ result });
 let error = (error) => ({ error });
 
-let methods= ["pay_invoice", "get_balance", "get_info", "make_invoice"];
+let methods = ["pay_invoice", "get_balance", "get_info", "make_invoice"];
 
 export default () => {
   let r = new Relay("ws://strfry:7777");
@@ -71,6 +71,12 @@ let handle = (method, params, user) =>
         let invoice = await getInvoice(pr);
         let recipient = await g(`user:${invoice.uid}`);
 
+        if (invoice.memo.includes("9734")) {
+          try {
+            await handleZap(invoice);
+          } catch (e) {}
+        }
+
         let { id: preimage } = await sendInternal({
           amount,
           invoice,
@@ -109,7 +115,7 @@ let handle = (method, params, user) =>
         pubkey: serverPubkey,
         network: "mainnet",
         block_height: blockheight,
-        methods
+        methods,
       });
     },
 
