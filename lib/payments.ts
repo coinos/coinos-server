@@ -502,7 +502,8 @@ export let sendLightning = async ({
     }
 
     let total = amount;
-    let { amount_msat } = await ln.decode(pr);
+    let decoded = await ln.decode(pr);
+    let { amount_msat } = decoded;
     if (amount_msat) total = Math.round(amount_msat / 1000);
 
     maxfee = parseInt(maxfee) || getMaxFee(total);

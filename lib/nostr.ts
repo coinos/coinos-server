@@ -6,6 +6,7 @@ import { fail, wait } from "$lib/utils";
 import { nip19, finalizeEvent } from "nostr-tools";
 import { emit } from "$lib/sockets";
 import { hex } from "@scure/base";
+import { Relay as ntr } from 'nostr-tools/relay'
 
 export const serverPubkey = hex.encode(
   getPublicKey(nip19.decode(config.nostrKey).data),
@@ -264,9 +265,13 @@ export async function handleZap(invoice) {
   tags.push(["preimage", invoice.payment_preimage]);
 
   let ev = { pubkey, kind, created_at, content, tags };
-  ev = await finalizeEvent(ev, sk);
+  let signed = await finalizeEvent(ev, sk);
 
   l("sending receipt");
 
-  await Promise.allSettled(relays.map((r) => send(ev, r)));
+  await Promise.allSettled(relays.map(async (url) => {
+    let r = await ntr.connect(url);
+    await r.publish(signed);
+    r.close()
+  }));
 }

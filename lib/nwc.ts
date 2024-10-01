@@ -71,18 +71,25 @@ let handle = (method, params, user) =>
         let invoice = await getInvoice(pr);
         let recipient = await g(`user:${invoice.uid}`);
 
-        if (invoice.memo.includes("9734")) {
-          try {
-            await handleZap(invoice);
-          } catch (e) {}
-        }
-
         let { id: preimage } = await sendInternal({
           amount,
           invoice,
           recipient,
           sender: user,
         });
+
+        if (invoice.memo.includes("9734")) {
+          let { invoices } = await ln.listinvoices({ invstring: pr });
+          let inv = invoices[0];
+          inv.payment_preimage = preimage;
+          inv.paid_at = Math.floor(Date.now() / 1000);
+          try {
+            await handleZap(inv);
+          } catch (e) {
+            console.log("zap receipt failed", e);
+          }
+        }
+
 
         return result({ preimage });
       } else {
