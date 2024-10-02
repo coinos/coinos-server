@@ -72,6 +72,7 @@ export default {
 
       res.send(p);
     } catch (e) {
+      console.log(e)
       warn(user.username, "payment failed", amount, balance, hash, payreq);
       err(e.message);
       bail(res, e.message);

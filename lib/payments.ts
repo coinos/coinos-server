@@ -366,6 +366,7 @@ export let decode = async (hex) => {
   return { tx, type };
 };
 
+let inflight = {};
 export let sendOnchain = async (params) => {
   let { aid, hex, rate, user, signed } = params;
   if (!aid) aid = user.id;
@@ -480,7 +481,6 @@ let getMaxFee = (n) =>
               : n * 0.01,
   );
 
-let inflight = {};
 export let sendLightning = async ({
   user,
   pr,
@@ -488,87 +488,51 @@ export let sendLightning = async ({
   maxfee,
   memo = undefined,
 }) => {
-  try {
-    if (inflight[pr]) fail("payment in flight");
-    inflight[pr] = true;
+  let p;
 
-    let p;
-    let hash = pr;
-
-    if (typeof amount !== "undefined") {
-      amount = parseInt(amount);
-      if (amount < 0 || amount > SATS || isNaN(amount)) fail("Invalid amount");
-    }
-
-    let total = amount;
-    let decoded = await ln.decode(pr);
-    let { amount_msat } = decoded;
-    if (amount_msat) total = Math.round(amount_msat / 1000);
-
-    maxfee = parseInt(maxfee) || getMaxFee(total);
-
-    if (maxfee < 0) fail("Max fee cannot be negative");
-
-    let invoice = await getInvoice(hash);
-
-    if (invoice) {
-      if (invoice.aid === user.id) fail("Cannot send to self");
-      hash = pr;
-    } else {
-      let r;
-
-      let { pays } = await ln.listpays(pr);
-      if (pays.find((p) => p.status === "complete"))
-        fail("Invoice has already been paid");
-
-      if (pays.find((p) => p.status === "pending"))
-        fail("Payment is already underway");
-
-      p = await debit({
-        hash: pr,
-        amount: total,
-        fee: maxfee,
-        memo,
-        user,
-        type: types.lightning,
-      });
-
-      try {
-        l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
-
-        r = await ln.pay({
-          bolt11: pr.replace(/\s/g, "").toLowerCase(),
-          amount_msat: amount_msat ? undefined : amount * 1000,
-          maxfee: maxfee * 1000,
-          retry_for: 5,
-        });
-
-        if (!(r.status === "complete" && r.payment_preimage))
-          fail("Payment did not complete");
-
-        l("payment completed", p.id, r.payment_preimage);
-
-        p.amount = -total;
-        p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
-        p.ref = r.payment_preimage;
-
-        await s(`payment:${p.id}`, p);
-
-        l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
-        await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
-      } catch (e) {
-        throw e;
-      }
-
-      clearInterval(interval);
-    }
-
-    delete inflight[user.id];
-    return p;
-  } catch (e) {
-    delete inflight[user.id];
-    throw e;
+  if (typeof amount !== "undefined") {
+    amount = parseInt(amount);
+    if (amount < 0 || amount > SATS || isNaN(amount)) fail("Invalid amount");
   }
+
+  let total = amount;
+  let decoded = await ln.decode(pr);
+  let { amount_msat } = decoded;
+  if (amount_msat) total = Math.round(amount_msat / 1000);
+
+  maxfee = parseInt(maxfee) || getMaxFee(total);
+
+  if (maxfee < 0) fail("Max fee cannot be negative");
+
+  let { pays } = await ln.listpays(pr);
+  if (pays.find((p) => p.status === "complete"))
+    fail("Invoice has already been paid");
+
+  if (pays.find((p) => p.status === "pending"))
+    fail("Payment is already underway");
+
+  p = await debit({
+    hash: pr,
+    amount: total,
+    fee: maxfee,
+    memo,
+    user,
+    type: types.lightning,
+  });
+
+  l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
+
+  let r = await ln.pay({
+    bolt11: pr.replace(/\s/g, "").toLowerCase(),
+    amount_msat: amount_msat ? undefined : amount * 1000,
+    maxfee: maxfee * 1000,
+    retry_for: 5,
+  });
+
+  if (r.status === "complete") await finalize(r, p);
+  else await db.sAdd("inflight", pr);
+
+  return p;
 };
 
 export let sendInternal = async ({
@@ -796,28 +760,44 @@ export let check = async () => {
   let payments = await db.sMembers("inflight");
 
   for (let pr of payments) {
-    try {
-      let { pays } = await ln.listpays(pr);
+    let p = await g(`payment:${pr}`);
+    let { pays } = await ln.listpays(pr);
 
-      let recordExists = !!(await g(`payment:${pr}`));
-      let paymentFailed =
-        !pays.length || pays.every((p) => p.status === "failed");
+    let recordExists = !!(await g(`payment:${pr}`));
+    let paymentFailed =
+      !pays.length || pays.every((p) => p.status === "failed");
 
-      if (recordExists && paymentFailed) {
-        await db.del(`payment:${pr}`);
-        await db.del(`payment:${p.id}`);
+    let r = pays.find((p) => p.status === "complete");
 
-        let ourfee = p.ourfee || 0;
+    if (r) {
+      await finalize(r, p);
+    } else if (recordExists && paymentFailed) {
+      await db.del(`payment:${pr}`);
+      await db.del(`payment:${p.id}`);
+
+      let total = Math.abs(p.amount);
+      let ourfee = p.ourfee || 0;
         let credit = Math.round(total * config.fee) - ourfee;
-        await db.incrBy(`balance:${p.uid}`, total + maxfee + ourfee);
+      await db.incrBy(`balance:${p.uid}`, total + p.fee + ourfee);
 
-        await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-        await db.lRem(`${p.uid}:payments`, 1, p.id);
-      }
-    } catch (e) {
-      err("Failed to reverse payment", r);
+      await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+      await db.lRem(`${p.uid}:payments`, 1, p.id);
     }
 
-      setTimeout(check, 2000);
+    setTimeout(check, 2000);
   }
+};
+
+let finalize = async (r, p) => {
+  await db.sRem("inflight", p.hash);
+  l("payment completed", p.id, r.payment_preimage);
+
+  let maxfee = p.fee;
+  p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
+  p.ref = r.payment_preimage;
+
+  await s(`payment:${p.id}`, p);
+
+  l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
+  await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
 };
