@@ -11,3 +11,4 @@ watcher.sh
 *.js
 routes/**/*.js
 lib/**/*.js
+watcher.log

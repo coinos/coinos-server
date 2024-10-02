@@ -768,21 +768,26 @@ export let reconcile = async (account, initial = false) => {
 };
 
 export let check = async () => {
-  let payments = await db.sMembers("pending");
+  try {
+    let payments = await db.sMembers("pending");
 
-  for (let pr of payments) {
-    let p = await getPayment(pr);
-    if (!p) continue;
-    let { pays } = await ln.listpays(pr);
+    for (let pr of payments) {
+      let p = await getPayment(pr);
+      if (!p) continue;
+      let { pays } = await ln.listpays(pr);
 
-    let failed = !pays.length || pays.every((p) => p.status === "failed");
-    let completed = pays.find((p) => p.status === "complete");
+      let failed = !pays.length || pays.every((p) => p.status === "failed");
+      let completed = pays.find((p) => p.status === "complete");
 
-    if (completed) await finalize(completed, p);
-    else if (failed) await reverse(p);
+      if (completed) await finalize(completed, p);
+      else if (failed) await reverse(p);
 
-    setTimeout(check, 2000);
+    }
+  } catch(e) {
+    console.log("payment check failed", e);
   }
+
+  setTimeout(check, 2000);
 };
 
 let finalize = async (r, p) => {
