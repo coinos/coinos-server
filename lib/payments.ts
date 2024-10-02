@@ -767,9 +767,7 @@ export let reconcile = async (account, initial = false) => {
   }
 };
 
-let checktime;
-let check = async () => {
-  clearTimeout(checktime);
+export let check = async () => {
   let payments = await db.sMembers("pending");
 
   for (let pr of payments) {
@@ -783,7 +781,7 @@ let check = async () => {
     if (completed) await finalize(completed, p);
     else if (failed) await reverse(p);
 
-    checktime = setTimeout(check, 2000);
+    setTimeout(check, 2000);
   }
 };
 

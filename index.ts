@@ -3,7 +3,7 @@ import { auth, admin, optional } from "$lib/auth";
 
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
-import { catchUp, check} from "$lib/payments";
+import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { fillPool } from "$lib/nostr";
