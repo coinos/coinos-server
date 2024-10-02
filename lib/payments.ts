@@ -11,6 +11,7 @@ import {
   fail,
   fiat,
   getInvoice,
+  getPayment,
   getUser,
   sleep,
   SATS,
@@ -522,15 +523,25 @@ export let sendLightning = async ({
 
   l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
 
-  let r = await ln.pay({
-    bolt11: pr.replace(/\s/g, "").toLowerCase(),
-    amount_msat: amount_msat ? undefined : amount * 1000,
-    maxfee: maxfee * 1000,
-    retry_for: 5,
-  });
+  let r;
+  try {
+    r = await ln.pay({
+      bolt11: pr.replace(/\s/g, "").toLowerCase(),
+      amount_msat: amount_msat ? undefined : amount * 1000,
+      maxfee: maxfee * 1000,
+      retry_for: 5,
+    });
 
-  if (r.status === "complete") await finalize(r, p);
-  else await db.sAdd("inflight", pr);
+    try {
+      if (r.status === "complete") p = await finalize(r, p);
+      else await db.sAdd("pending", pr);
+    } catch (e) {
+      console.log("failed to process payment", e, p);
+    }
+  } catch (e) {
+    await reverse(p);
+    throw e;
+  }
 
   return p;
 };
@@ -756,40 +767,28 @@ export let reconcile = async (account, initial = false) => {
   }
 };
 
-export let check = async () => {
-  let payments = await db.sMembers("inflight");
+let checktime;
+let check = async () => {
+  clearTimeout(checktime);
+  let payments = await db.sMembers("pending");
 
   for (let pr of payments) {
-    let p = await g(`payment:${pr}`);
+    let p = await getPayment(pr);
+    if (!p) continue;
     let { pays } = await ln.listpays(pr);
 
-    let recordExists = !!(await g(`payment:${pr}`));
-    let paymentFailed =
-      !pays.length || pays.every((p) => p.status === "failed");
+    let failed = !pays.length || pays.every((p) => p.status === "failed");
+    let completed = pays.find((p) => p.status === "complete");
 
-    let r = pays.find((p) => p.status === "complete");
+    if (completed) await finalize(completed, p);
+    else if (failed) await reverse(p);
 
-    if (r) {
-      await finalize(r, p);
-    } else if (recordExists && paymentFailed) {
-      await db.del(`payment:${pr}`);
-      await db.del(`payment:${p.id}`);
-
-      let total = Math.abs(p.amount);
-      let ourfee = p.ourfee || 0;
-        let credit = Math.round(total * config.fee) - ourfee;
-      await db.incrBy(`balance:${p.uid}`, total + p.fee + ourfee);
-
-      await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-      await db.lRem(`${p.uid}:payments`, 1, p.id);
-    }
-
-    setTimeout(check, 2000);
+    checktime = setTimeout(check, 2000);
   }
 };
 
 let finalize = async (r, p) => {
-  await db.sRem("inflight", p.hash);
+  await db.sRem("pending", p.hash);
   l("payment completed", p.id, r.payment_preimage);
 
   let maxfee = p.fee;
@@ -800,4 +799,19 @@ let finalize = async (r, p) => {
 
   l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
   await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+
+  return p;
+};
+
+let reverse = async (p) => {
+  await db.del(`payment:${p.hash}`);
+  await db.del(`payment:${p.id}`);
+
+  let total = Math.abs(p.amount);
+  let ourfee = p.ourfee || 0;
+  let credit = Math.round(total * config.fee) - ourfee;
+  await db.incrBy(`balance:${p.uid}`, total + p.fee + ourfee);
+
+  await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
+  await db.lRem(`${p.uid}:payments`, 1, p.id);
 };

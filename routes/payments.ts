@@ -72,7 +72,7 @@ export default {
 
       res.send(p);
     } catch (e) {
-      console.log(e)
+      console.log(e);
       warn(user.username, "payment failed", amount, balance, hash, payreq);
       err(e.message);
       bail(res, e.message);
@@ -144,12 +144,17 @@ export default {
   },
 
   async get(req, res) {
-    let {
-      params: { hash },
-    } = req;
-    let p = await getPayment(hash);
-    if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
-    res.send(p);
+    try {
+      let {
+        params: { hash },
+      } = req;
+      let p = await getPayment(hash);
+      if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+      res.send(p);
+    } catch (e) {
+      err("failed to get payment", e.message);
+      bail(res, e.message);
+    }
   },
 
   async parse(req, res) {
