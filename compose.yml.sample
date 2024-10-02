@@ -104,7 +104,7 @@ services:
       - MINT_CLNREST_COINOS_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVjYTM0YWU4LTdiMTItNDU4OS04ODMyLTUyMTNjOWVhMjc5NyIsImlhdCI6MTcyNDA0NjI3OH0.bdX1YLnpgqpjmjrkCdIdDbdmZUdViNSVrAJ0OX3ByPo
     command: ["poetry", "run", "mint"]
     volumes:
-      - "/home/adam/nutshell:/app"
+      - "./data/nutshell:/app"
       - "./data/mint:/app/data/mint"
   mintb:
     image: asoltys/nutshell
@@ -123,6 +123,17 @@ services:
       - MINT_CLNREST_COINOS_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVjYTM0YWU4LTdiMTItNDU4OS04ODMyLTUyMTNjOWVhMjc5NyIsImlhdCI6MTcyNDA0NjI3OH0.bdX1YLnpgqpjmjrkCdIdDbdmZUdViNSVrAJ0OX3ByPo
     command: ["poetry", "run", "mint"]
     volumes:
-      - "/home/adam/nutshell:/app"
+      - "./data/nutshell:/app"
       - "./data/mint:/app/data/mint"
 
+  wallet:
+    image: asoltys/nutshell
+    container_name: wallet
+    ports:
+      - "4448:4448"
+    depends_on:
+      - mint
+    environment:
+      - MINT_URL=http://mint:3338
+      - API_HOST=0.0.0.0
+    command: ["poetry", "run", "cashu", "-d"]
