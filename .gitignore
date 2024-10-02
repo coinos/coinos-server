@@ -12,3 +12,4 @@ watcher.sh
 routes/**/*.js
 lib/**/*.js
 watcher.log
+.history/
