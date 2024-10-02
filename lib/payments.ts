@@ -781,9 +781,8 @@ export let check = async () => {
 
       if (completed) await finalize(completed, p);
       else if (failed) await reverse(p);
-
     }
-  } catch(e) {
+  } catch (e) {
     console.log("payment check failed", e);
   }
 
