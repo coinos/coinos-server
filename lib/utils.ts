@@ -71,7 +71,7 @@ export let fields = [
 export let getUser = async (username) => {
   if (username === "undefined") fail("invalid user");
   let user = await migrate(username);
-  if (user && !user.nwc) {
+  if (user && !user.anon && !user.nwc) {
     user.nwc = bytesToHex(randomBytes(32));
     await s(getPublicKey(user.nwc), user.id);
     await s(`user:${user.id}`, user);

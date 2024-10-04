@@ -6,7 +6,7 @@ import { fail, wait } from "$lib/utils";
 import { nip19, finalizeEvent } from "nostr-tools";
 import { emit } from "$lib/sockets";
 import { hex } from "@scure/base";
-import { Relay as ntr } from 'nostr-tools/relay'
+import { Relay as ntr } from "nostr-tools/relay";
 
 export const serverPubkey = hex.encode(
   getPublicKey(nip19.decode(config.nostrKey).data),
@@ -24,7 +24,7 @@ export let fillPool = () => {
     });
 
     pool.on("event", async (_, sub, ev) => {
-      if (!coinos && coinos.ws.readyState !== WebSocket.OPEN) return;
+      if (!coinos || coinos.ws.readyState !== WebSocket.OPEN) return;
       if (timeouts[sub]) timeouts[sub].extend(ev);
       try {
         let content;
@@ -73,7 +73,9 @@ export let fillPool = () => {
             updated: ev.created_at,
           };
 
-          await s(`user:${pubkey}`, JSON.stringify(user));
+          console.log("SAVING", pubkey);
+
+          await s(`user:${pubkey}`, user);
         } else if (sub.includes("messages")) {
           let pubkey = sub.split(":")[0];
           await db.sAdd(`${pubkey}:messages`, ev.id);
@@ -108,11 +110,7 @@ export let fillPool = () => {
 let now = () => Math.round(Date.now() / 1000);
 
 let timeouts = {};
-export let q = async (
-  sub,
-  query,
-  { timeout = 20000, since = 3600, eager = 200 },
-) =>
+export let q = async (sub, query, { timeout = 20000, eager = 20000 } = {}) =>
   new Promise(async (r, j) => {
     let start = Date.now();
     let seen = [];
@@ -269,9 +267,11 @@ export async function handleZap(invoice) {
 
   l("sending receipt");
 
-  await Promise.allSettled(relays.map(async (url) => {
-    let r = await ntr.connect(url);
-    await r.publish(signed);
-    r.close()
-  }));
+  await Promise.allSettled(
+    relays.map(async (url) => {
+      let r = await ntr.connect(url);
+      await r.publish(signed);
+      r.close();
+    }),
+  );
 }

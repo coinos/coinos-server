@@ -22,6 +22,11 @@ import rates from "$routes/rates";
 import shopify from "$routes/shopify";
 import users from "$routes/users";
 
+import sf from "$lib/strfry";
+console.log(await sf(
+  `scan '{"authors":["c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"]}'`,
+));
+
 try {
   fillPool();
   getLocations();

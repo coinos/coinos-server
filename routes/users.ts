@@ -11,12 +11,11 @@ import register from "$lib/register";
 import { requirePin } from "$lib/auth";
 import { v4 } from "uuid";
 import { reconcile, types } from "$lib/payments";
-import { bech32 } from "bech32";
 import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
 import rpc from "@coinos/rpc";
-
-let { encode, decode, fromWords, toWords } = bech32;
+import { nip19 } from "nostr-tools";
+import { hex } from "@scure/base";
 
 export default {
   upload,
@@ -26,8 +25,7 @@ export default {
     try {
       user.balance = await g(`balance:${user.id}`);
       user.prompt = !!user.prompt;
-      if (user.pubkey)
-        user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
+      if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
 
       res.send(pick(user, whitelist));
     } catch (e) {
@@ -80,7 +78,7 @@ export default {
     try {
       if (key.startsWith("npub")) {
         try {
-          key = Buffer.from(fromWords(decode(key).words)).toString("hex");
+          key = hex.encode(nip19.decode(key).data as Uint8Array);
         } catch (e) {}
       }
 
@@ -115,8 +113,7 @@ export default {
         "username",
       ];
 
-      if (user.pubkey)
-        user.npub = encode("npub", toWords(Buffer.from(user.pubkey, "hex")));
+      if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
       user.prompt = !!user.prompt;
 
       res.send(pick(user, whitelist));
@@ -192,6 +189,9 @@ export default {
       l("updating user", user.username);
 
       let { confirm, password, pin, newpin, pubkey, username } = body;
+
+      console.log("PK", pubkey);
+      console.log("SK", body.nsec);
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
@@ -629,7 +629,7 @@ export default {
         wallet_name: id,
         descriptors: true,
         disable_private_keys: true,
-        load_on_startup: true
+        load_on_startup: true,
       });
 
       node = rpc({ ...config[type], wallet: id });

@@ -27,8 +27,7 @@ export default {
     let {
       params: { pubkey },
     } = req;
-    let uid = await g(`user:${pubkey}`);
-    let user = await g(`user:${uid}`);
+    let user = await getUser(pubkey);
 
     if (!user)
       user = {
@@ -121,24 +120,29 @@ export default {
       if (tagsonly) return res.send(tags);
 
       let follows = [];
+
+      console.log("L", tags.length);
+
       for (let f of tags) {
         let [_, pubkey] = f;
+        let user = await getUser(pubkey);
 
-        q(`${pubkey}:profile:f1`, {
-          limit: 1,
-          kinds: [0],
-          authors: [pubkey],
-        }).catch(nada);
+        if (!(user && user.updated)) {
+          console.log("Q", pubkey)
+          q(`${pubkey}:profile:f1`, {
+            limit: 1,
+            kinds: [0],
+            authors: [pubkey],
+          }).catch(nada);
+        }
 
-        let uid = await g(`user:${pubkey}`);
-        let user = await g(`user:${uid}`);
-
-        if (!user)
+        if (!user) {
           user = {
             username: pubkey.substr(0, 6),
             pubkey,
             anon: true,
           };
+        }
 
         follows.push(user);
       }
@@ -172,17 +176,14 @@ export default {
       ).catch(nada);
 
       for (let pubkey of pubkeys) {
-        let uid = await g(`user:${pubkey}`);
-        let user = await g(`user:${uid}`);
-        if (!user || !user.updated) {
-          await q(`${pubkey}:profile:f2`, {
+        let user = await getUser(pubkey);
+
+        if (!user?.updated) {
+          q(`${pubkey}:profile:f2`, {
             limit: 1,
             kinds: [0],
             authors: [pubkey],
           }).catch(nada);
-
-          uid = await g(`user:${pubkey}`);
-          user = await g(`user:${uid}`);
         }
 
         if (!user)
