@@ -4,13 +4,14 @@ import { l } from "$lib/logging";
 import { fail } from "$lib/utils";
 import { nip19, finalizeEvent, getPublicKey } from "nostr-tools";
 import { Relay } from "nostr-tools/relay";
-import { SimplePool } from "nostr-tools";
+import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 
 export const serverPubkey = getPublicKey(
   nip19.decode(config.nostrKey).data as Uint8Array,
 );
 
-export let pool = new SimplePool();
+let alwaysTrue: any = (t: Event) => { t[Symbol("verified")] = true; return true; };
+export let pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
 
 export async function send(ev, url = config.nostr) {
   if (!(ev && ev.id)) return;
@@ -90,11 +91,10 @@ export let getRelays = async (pubkey): Promise<any> => {
   let filter = { authors: [pubkey], kinds: [10002] };
   let event = await pool.get([config.nostr], filter);
 
-    let read = relays;
-    let write = relays;
+  let read = relays;
+  let write = relays;
 
   if (event) {
-
     read = [];
     write = [];
     for (let r of event.tags) {

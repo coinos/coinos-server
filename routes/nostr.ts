@@ -32,20 +32,16 @@ export default {
       query: { tagsonly },
     } = req;
     try {
-      let { relays } = config;
-      ({ write: relays } = await getRelays(pubkey));
 
-      let ev = await pool.get([config.nostr], {
-        kinds: [3],
-        authors: [pubkey],
-      });
+      let filter = { kinds: [3], authors: [pubkey] };
+      let ev = await pool.get([config.nostr], filter);
+
       if (!ev) {
-        pool
-          .get(relays, {
-            kinds: [3],
-            authors: [pubkey],
-          })
-          .then(send);
+        let { relays } = config;
+        ({ write: relays } = await getRelays(pubkey));
+
+        filter = { kinds: [3], authors: [pubkey] };
+        pool.get(relays, filter).then(send);
       }
 
       let created_at;
@@ -64,20 +60,17 @@ export default {
           profiles.push(...(await pool.querySync([config.nostr], filter)));
         }
 
+        let filter: any = { cache: ["user_infos", { pubkeys }] };
+        let followers = JSON.parse(
+          (await pool.querySync([config.cache], filter)).find(
+            (e) => e.kind === 10000133,
+          ).content,
+        );
+
         for (let p of profiles) {
           let { content, pubkey } = p;
           let user = JSON.parse(content);
-
-          let cache = await g(`${pubkey}:followers`);
-          let followers;
-          if (cache && cache.t >= created_at) ({ followers } = cache);
-          else {
-            let filter = { "#p": [pubkey], kinds: [3] };
-            followers = await pool.querySync([config.nostr], filter);
-            s(`${pubkey}:followers`, { followers, t: created_at });
-          }
-
-          user.followers = followers.length;
+          user.followers = followers[pubkey];
           user.pubkey = pubkey;
           follows.push(user);
         }
