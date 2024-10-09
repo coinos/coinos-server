@@ -10,7 +10,10 @@ export const serverPubkey = getPublicKey(
   nip19.decode(config.nostrKey).data as Uint8Array,
 );
 
-let alwaysTrue: any = (t: Event) => { t[Symbol("verified")] = true; return true; };
+let alwaysTrue: any = (t: Event) => {
+  t[Symbol("verified")] = true;
+  return true;
+};
 export let pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
 
 export async function send(ev, url = config.nostr) {
@@ -107,14 +110,36 @@ export let getRelays = async (pubkey): Promise<any> => {
 };
 
 export let getProfile = async (pubkey) => {
-  if (await db.sIsMember("noprofile", pubkey)) return;
+  let noprofile = await db.sIsMember("noprofile", pubkey);
+  if (noprofile) return;
+  let pubkeys = [pubkey];
   let relays = [config.nostr];
-  let filter = { authors: [pubkey], kinds: [0] };
+  let filter: any = { authors: pubkeys, kinds: [0] };
+
   let ev = await pool.get(relays, filter);
-  if (ev) {
-    return JSON.parse(ev.content);
-  } else
-    getRelays(pubkey).then(({ write: relays }) =>
-      pool.get(relays, filter).then(send),
+
+  if (!ev) {
+    filter = { cache: ["user_infos", { pubkeys }] };
+    ev = (await pool.querySync([config.cache], filter)).find(
+      (e) => e.kind === 0,
     );
+  }
+
+  if (!ev) {
+    ({ write: relays } = await getRelays(pubkey));
+    ev = await pool.get(relays, filter);
+  }
+
+  if (ev) {
+    send(ev);
+    return JSON.parse(ev.content);
+  } else return anon(pubkey);
 };
+
+export let anon = (pubkey) => ({
+  name: pubkey.substr(0, 6),
+  pubkey,
+  anon: true,
+  follows: [],
+  followers: [],
+});

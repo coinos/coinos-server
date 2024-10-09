@@ -87,11 +87,17 @@ export default {
       if (key.length === 64) {
         let nostr: any = await getProfile(key);
         if (nostr) {
-          nostr.username = nostr.name;
+          nostr.username = nostr.name || key.substr(0, 6);
           nostr.display = nostr.display_name || nostr.displayName;
+          delete nostr.display_name;
+          delete nostr.displayName;
+          delete nostr.name;
         }
 
-        if (user) user.anon = false;
+        if (user) {
+          user.anon = false;
+          delete nostr.display;
+        }
 
         user = {
           ...nostr,

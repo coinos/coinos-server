@@ -1,15 +1,7 @@
 import config from "$config";
 import { bail, chunk, getUser, uniq } from "$lib/utils";
 import { g, s, db } from "$lib/db";
-import { send, getRelays, serverPubkey, pool } from "$lib/nostr";
-
-let anon = (pubkey) => ({
-  username: pubkey.substr(0, 6),
-  pubkey,
-  anon: true,
-  follows: [],
-  followers: [],
-});
+import { anon, send, getRelays, serverPubkey, pool } from "$lib/nostr";
 
 export default {
   async event(req, res) {
@@ -32,7 +24,6 @@ export default {
       query: { tagsonly },
     } = req;
     try {
-
       let filter = { kinds: [3], authors: [pubkey] };
       let ev = await pool.get([config.nostr], filter);
 
@@ -53,19 +44,14 @@ export default {
       let cache = await g(`${pubkey}:follows`);
       if (cache && cache.t >= created_at) ({ follows } = cache);
       else {
-        let profiles = [];
         let pubkeys = tags.map((t) => t[1]).filter((p) => p.length === 64);
-        for (let authors of chunk(pubkeys, 100)) {
-          let filter = { authors, kinds: [0] };
-          profiles.push(...(await pool.querySync([config.nostr], filter)));
-        }
-
         let filter: any = { cache: ["user_infos", { pubkeys }] };
-        let followers = JSON.parse(
-          (await pool.querySync([config.cache], filter)).find(
-            (e) => e.kind === 10000133,
-          ).content,
-        );
+        let infos = await pool.querySync([config.cache], filter);
+        let profiles = infos.filter((e) => e.kind === 0);
+
+        let f = infos.find((e) => e.kind === 10000133);
+        let followers = {};
+        if (f) followers = JSON.parse(f.content);
 
         for (let p of profiles) {
           let { content, pubkey } = p;
