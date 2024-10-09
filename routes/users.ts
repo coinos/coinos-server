@@ -15,7 +15,7 @@ import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
 import rpc from "@coinos/rpc";
 import { nip19 } from "nostr-tools";
-import { hex } from "@scure/base";
+import { getProfile } from "$lib/nostr";
 
 export default {
   upload,
@@ -78,19 +78,27 @@ export default {
     try {
       if (key.startsWith("npub")) {
         try {
-          key = hex.encode(nip19.decode(key).data as Uint8Array);
+          key = nip19.decode(key).data;
         } catch (e) {}
       }
 
       let user = await getUser(key);
 
-      if (!user && key.length === 64) {
+      if (key.length === 64) {
+        let nostr: any = await getProfile(key);
+        if (nostr) {
+          nostr.username = nostr.name;
+          nostr.display = nostr.display_name || nostr.displayName;
+        }
+
+        if (user) user.anon = false;
+
         user = {
+          ...nostr,
           currency: "USD",
-          username: key,
-          display: key.substr(0, 6),
           pubkey: key,
           anon: true,
+          ...user,
         };
       }
 
@@ -105,8 +113,10 @@ export default {
         "display",
         "id",
         "hidepay",
+        "lud16",
         "memoPrompt",
         "npub",
+        "picture",
         "profile",
         "prompt",
         "pubkey",

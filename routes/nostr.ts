@@ -1,6 +1,15 @@
-import { bail, nada, getUser, uniq } from "$lib/utils";
-import { g, db } from "$lib/db";
-import { pool, q, serverPubkey } from "$lib/nostr";
+import config from "$config";
+import { bail, chunk, getUser, uniq } from "$lib/utils";
+import { g, s, db } from "$lib/db";
+import { send, getRelays, serverPubkey, pool } from "$lib/nostr";
+
+let anon = (pubkey) => ({
+  username: pubkey.substr(0, 6),
+  pubkey,
+  anon: true,
+  follows: [],
+  followers: [],
+});
 
 export default {
   async event(req, res) {
@@ -12,91 +21,8 @@ export default {
 
     let { pubkey } = event;
 
-    event.user = (await g(`user:${pubkey}`)) || {
-      username: pubkey.substr(0, 6),
-      pubkey,
-      anon: true,
-      follows: [],
-      followers: [],
-    };
+    event.user = (await g(`user:${pubkey}`)) || anon(pubkey);
 
-    res.send(event);
-  },
-
-  async notes(req, res) {
-    let {
-      params: { pubkey },
-    } = req;
-    let user = await getUser(pubkey);
-
-    if (!user)
-      user = {
-        username: pubkey.substr(0, 6),
-        pubkey,
-        anon: true,
-        follows: [],
-        followers: [],
-      };
-
-    let params = {
-        kinds: [1],
-        authors: [pubkey],
-      },
-      opts = { since: 0 };
-
-    q(`${pubkey}:notes`, params, opts).catch(nada);
-
-    let ids = await db.sMembers(pubkey);
-
-    let events = ids.length
-      ? (await db.mGet(ids.map((k) => "ev:" + k))).map(JSON.parse)
-      : [];
-
-    res.send(events.map((e) => ({ ...e, user })));
-  },
-
-  async messages(req, res) {
-    let {
-      params: { pubkey, since = 0 },
-    } = req;
-    let params = {
-      kinds: [4],
-      authors: [pubkey],
-    };
-
-    let opts = { since };
-
-    await q(`${pubkey}:messages`, params, opts).catch(nada);
-
-    params = {
-      kinds: [4],
-      "#p": [pubkey],
-    };
-
-    await q(`${pubkey}:messages`, params, opts).catch(nada);
-
-    let messages = await db.sMembers(`${pubkey}:messages`);
-
-    messages = await Promise.all(
-      messages.map(async (id) => {
-        let m = await g(`ev:${id}`);
-
-        let aid = await g(`user:${m.pubkey}`);
-        m.author = await g(`user:${aid}`);
-
-        let rid = await g(`user:${m.tags[0][1]}`);
-        m.recipient = await g(`user:${rid}`);
-
-        return m;
-      }),
-    );
-
-    res.send(messages);
-  },
-
-  async broadcast(req, res) {
-    let { event } = req.body;
-    pool.send(["EVENT", event]);
     res.send(event);
   },
 
@@ -106,54 +32,70 @@ export default {
       query: { tagsonly },
     } = req;
     try {
-      let sub = `${pubkey}:follows`,
-        params = {
-          limit: 1,
-          kinds: [3],
-          authors: [pubkey],
-        },
-        opts = { timeout: 60000, eager: 60000 };
+      let { relays } = config;
+      ({ write: relays } = await getRelays(pubkey));
 
-      q(sub, params, opts).catch(nada);
-
-      let tags = (await g(`${pubkey}:follows`)) || [];
-      if (tagsonly) return res.send(tags);
-
-      let follows = [];
-
-      console.log("L", tags.length);
-
-      for (let f of tags) {
-        let [_, pubkey] = f;
-        let user = await getUser(pubkey);
-
-        if (!(user && user.updated)) {
-          console.log("Q", pubkey)
-          q(`${pubkey}:profile:f1`, {
-            limit: 1,
-            kinds: [0],
+      let ev = await pool.get([config.nostr], {
+        kinds: [3],
+        authors: [pubkey],
+      });
+      if (!ev) {
+        pool
+          .get(relays, {
+            kinds: [3],
             authors: [pubkey],
-          }).catch(nada);
-        }
-
-        if (!user) {
-          user = {
-            username: pubkey.substr(0, 6),
-            pubkey,
-            anon: true,
-          };
-        }
-
-        follows.push(user);
+          })
+          .then(send);
       }
 
-      follows = uniq(follows, (e) => e.pubkey);
-      follows.sort(
-        (a, b) => a.username && a.username.localeCompare(b.username),
-      );
+      let created_at;
+      let follows = [];
+      let tags = [];
+      if (ev) ({ created_at, tags } = ev);
+      if (!tags.length || tagsonly) return res.send(tags);
+
+      let cache = await g(`${pubkey}:follows`);
+      if (cache && cache.t >= created_at) ({ follows } = cache);
+      else {
+        let profiles = [];
+        let pubkeys = tags.map((t) => t[1]).filter((p) => p.length === 64);
+        for (let authors of chunk(pubkeys, 100)) {
+          let filter = { authors, kinds: [0] };
+          profiles.push(...(await pool.querySync([config.nostr], filter)));
+        }
+
+        for (let p of profiles) {
+          let { content, pubkey } = p;
+          let user = JSON.parse(content);
+
+          let cache = await g(`${pubkey}:followers`);
+          let followers;
+          if (cache && cache.t >= created_at) ({ followers } = cache);
+          else {
+            let filter = { "#p": [pubkey], kinds: [3] };
+            followers = await pool.querySync([config.nostr], filter);
+            s(`${pubkey}:followers`, { followers, t: created_at });
+          }
+
+          user.followers = followers.length;
+          user.pubkey = pubkey;
+          follows.push(user);
+        }
+
+        let followKeys = follows.map((f) => f.pubkey);
+        let missing = pubkeys
+          .filter((p) => !followKeys.includes(p))
+          .map((pubkey) => anon(pubkey));
+
+        follows.sort((a: any, b: any) => b.followers - a.followers);
+        follows.push(...missing);
+
+        s(`${pubkey}:follows`, { follows, t: created_at });
+      }
 
       res.send(follows);
     } catch (e) {
+      console.log("follows fail", e);
       bail(res, e.message);
     }
   },
@@ -163,38 +105,10 @@ export default {
       params: { pubkey },
     } = req;
     try {
-      let pubkeys = [
-        ...new Set([...(await db.sMembers(`${pubkey}:followers`))]),
-      ];
+      let pubkeys: any = await q({ "#p": [pubkey] });
+      pubkeys = pubkeys.map((e) => e.pubkey);
 
-      let followers = [];
-
-      q(
-        `${pubkey}:followers`,
-        { kinds: [3], "#p": [pubkey] },
-        { timeout: 60000, eager: 60000 },
-      ).catch(nada);
-
-      for (let pubkey of pubkeys) {
-        let user = await getUser(pubkey);
-
-        if (!user?.updated) {
-          q(`${pubkey}:profile:f2`, {
-            limit: 1,
-            kinds: [0],
-            authors: [pubkey],
-          }).catch(nada);
-        }
-
-        if (!user)
-          user = {
-            username: pubkey.substr(0, 6),
-            pubkey,
-            anon: true,
-          };
-
-        followers.push(user);
-      }
+      let followers: any = await q({ authors: [pubkeys], kinds: [0] });
 
       followers = uniq(followers, (e) => e.pubkey);
       followers.sort(

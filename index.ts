@@ -6,7 +6,6 @@ import { getLocations } from "$lib/locations";
 import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
-import { fillPool } from "$lib/nostr";
 import nwc from "$lib/nwc";
 
 import ecash from "$routes/ecash";
@@ -22,13 +21,7 @@ import rates from "$routes/rates";
 import shopify from "$routes/shopify";
 import users from "$routes/users";
 
-import sf from "$lib/strfry";
-console.log(await sf(
-  `scan '{"authors":["c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5"]}'`,
-));
-
 try {
-  fillPool();
   getLocations();
   getFx();
   catchUp();
@@ -56,10 +49,7 @@ app.post("/invoice", optional, invoices.create);
 app.get("/nostr.json", nostr.identities);
 app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);
-app.get("/:pubkey/notes", nostr.notes);
-app.get("/:pubkey/:since/messages", nostr.messages);
 app.get("/event/:id", nostr.event);
-app.post("/event", nostr.broadcast);
 
 app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);
@@ -139,9 +129,11 @@ let port: number = parseInt(process.env["PORT"]) || 3119;
 app.listen({ host, port });
 
 let logerr = (e: Error) =>
-  e.message.includes("Invalid") ||
-  e.message.includes("MASK") ||
-  e.message.includes("Rate") ||
+  // (e &&
+  //   e.message &&
+  //   (e.message.includes("Invalid") ||
+  //     e.message.includes("MASK") ||
+  //     e.message.includes("Rate"))) ||
   console.log(e);
 
 process.on("unhandledRejection", logerr);

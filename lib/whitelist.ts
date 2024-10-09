@@ -29,6 +29,7 @@ export default [
   "nsec",
   "nwc",
   "payments",
+  "picture",
   "profile",
   "prompt",
   "pubkey",

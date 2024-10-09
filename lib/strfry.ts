@@ -1,30 +1,58 @@
-import { connect } from "net";
+import { createServer, connect } from "net";
+import { randomUUID } from "crypto";
 
-export default (cmd) =>
-  new Promise((r, j) => {
-    let results = [];
-    let c = `/app/strfry ${cmd} 2>/dev/null\n`;
-    let client = connect("/sockets/ctrl", () => client.write(c));
+let exec = async (cmd) =>
+  new Promise((resolve, reject) => {
+    let c = `/app/strfry ${cmd} 2>/dev/null`;
+    let id = randomUUID();
+    const resultSocketPath = `/sockets/result_${id}`;
 
-    let s = "";
-    client.on("data", (data) => {
-      s += data.toString();
-   //   console.log("S", s);
+    const resultServer = createServer((socket) => {
+      let resultBuffer = "";
 
-      try {
-        let parts = s.split("}");
+      let results = [];
+      socket.on("data", (data) => {
+        resultBuffer += data.toString();
+
+        let parts = resultBuffer.split("\n");
 
         for (let i = 0; i < parts.length - 1; i++) {
-          let completeJson = parts[i] + "}";
-          results.push(JSON.parse(completeJson));
+          try {
+            let parsedObject = JSON.parse(parts[i]);
+            results.push(parsedObject);
+          } catch (e) {
+            console.error(parts[i]);
+          }
         }
 
-        s = parts[parts.length - 1];
-      } catch (err) {
-        console.error("Error parsing JSON:", err.message);
-      }
+        resultBuffer = parts[parts.length - 1];
+      });
+
+      socket.on("end", () => {
+        socket.write("DONE");
+        resolve(results);
+        socket.end();
+
+        resultServer.close();
+      });
     });
 
-    client.on("error", (e) => j(e.message));
-    client.on("close", () => r(results));
+    resultServer.listen(resultSocketPath, () => {
+      const controlClient = connect("/sockets/ctrl", () => {
+        const message = `${resultSocketPath} ${c}\n`;
+        controlClient.write(message);
+        controlClient.end();
+      });
+
+      controlClient.on("error", (e) =>
+        reject(`Control socket error: ${e.message}`),
+      );
+    });
+
+    resultServer.on("error", (e) =>
+      reject(`Result server error: ${e.message}`),
+    );
   });
+
+export let scan = (f) => exec(`scan '${JSON.stringify(f)}'\n`)
+export let sync = (r, f) => exec(`sync ${r} --dir down --filter '${JSON.stringify(f)}'\n`)

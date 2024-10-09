@@ -1,217 +1,26 @@
 import config from "$config";
+import { db } from "$lib/db";
 import { l } from "$lib/logging";
-import { Relay, RelayPool, getPublicKey } from "nostr";
-import { g, s, db } from "$lib/db";
-import { fail, wait } from "$lib/utils";
-import { nip19, finalizeEvent } from "nostr-tools";
-import { emit } from "$lib/sockets";
-import { hex } from "@scure/base";
-import { Relay as ntr } from "nostr-tools/relay";
+import { fail } from "$lib/utils";
+import { nip19, finalizeEvent, getPublicKey } from "nostr-tools";
+import { Relay } from "nostr-tools/relay";
+import { SimplePool } from "nostr-tools";
 
-export const serverPubkey = hex.encode(
-  getPublicKey(nip19.decode(config.nostrKey).data),
+export const serverPubkey = getPublicKey(
+  nip19.decode(config.nostrKey).data as Uint8Array,
 );
 
-export let coinos;
-export let pool;
+export let pool = new SimplePool();
 
-export let fillPool = () => {
+export async function send(ev, url = config.nostr) {
+  if (!(ev && ev.id)) return;
   try {
-    pool = RelayPool(config.relays);
-    pool.on("open", (relay) => {
-      if (relay.url.includes(config.nostr)) coinos = relay;
-      // relay.subscribe("live", { limit: 1 });
-    });
-
-    pool.on("event", async (_, sub, ev) => {
-      if (!coinos || coinos.ws.readyState !== WebSocket.OPEN) return;
-      if (timeouts[sub]) timeouts[sub].extend(ev);
-      try {
-        let content;
-        try {
-          content = JSON.parse(ev.content);
-        } catch (e) {
-          content = ev.content;
-        }
-
-        if (sub === "live") {
-          let { pubkey } = ev;
-
-          if (Math.abs(Math.floor(Date.now() / 1000) - ev.created_at) > 7200)
-            return;
-
-          if (seen.includes(ev.id)) return;
-          seen.push(ev.id);
-          seen.length > 1000 && seen.shift();
-
-          if (coinos && ev.kind < 5) {
-            // coinos.send(["EVENT", ev]);
-            ev.user = await getUser(pubkey);
-            // broadcast("event", ev);
-
-            if (ev.kind === 4) {
-              let uid = await g(`user:${ev.tags[0][1]}`);
-              if (uid) ev.recipient = await g(`user:${uid}`);
-              ev.author = ev.user;
-              emit(uid, "event", ev);
-            }
-          }
-        } else if (sub.includes("profile")) {
-          let { pubkey } = ev;
-          let user = await getUser(pubkey);
-
-          if (user.updated > ev.created_at) return;
-
-          if (content.name && user.username === pubkey.substr(0, 6))
-            user.username = content.name;
-
-          delete content.name;
-
-          user = {
-            ...user,
-            ...content,
-            updated: ev.created_at,
-          };
-
-          console.log("SAVING", pubkey);
-
-          await s(`user:${pubkey}`, user);
-        } else if (sub.includes("messages")) {
-          let pubkey = sub.split(":")[0];
-          await db.sAdd(`${pubkey}:messages`, ev.id);
-          await s(`ev:${ev.id}`, ev);
-        } else if (sub.includes("follows")) {
-          let pubkey = sub.split(":")[0];
-          await s(`${pubkey}:follows`, ev.tags);
-          for (let f of ev.tags) {
-            let [_, followPubkey] = f;
-            await db.sAdd(`${followPubkey}:followers`, pubkey);
-          }
-          coinos.send(ev);
-        } else if (sub.includes("followers")) {
-          let followed = sub.split(":")[0];
-          let { pubkey } = ev;
-          await db.sAdd(`${followed}:followers`, pubkey);
-          coinos.send(ev);
-        } else if (sub.includes("notes")) {
-          let pubkey = sub.split(":")[0];
-          await db.sAdd(pubkey, ev.id);
-          await s(`ev:${ev.id}`, ev);
-        }
-      } catch (e) {
-        console.log(e);
-      }
-    });
+    let r = await Relay.connect(url);
+    await r.publish(ev);
+    r.close();
   } catch (e) {
-    console.log("POOL", e);
+    console.log("nostr send error", e);
   }
-};
-
-let now = () => Math.round(Date.now() / 1000);
-
-let timeouts = {};
-export let q = async (sub, query, { timeout = 20000, eager = 20000 } = {}) =>
-  new Promise(async (r, j) => {
-    let start = Date.now();
-    let seen = [];
-    let rejected;
-    // query.since = await g(`since:${sub}`);
-    // if (now() - query.since < since) return r();
-
-    let done = { [sub]: [] };
-
-    let check = (s) => {
-      let elapsed = Date.now() - start;
-      if (rejected) return true;
-      if (
-        done[s] &&
-        (done[s].length === pool.relays.length ||
-          (done[s].length && elapsed > eager))
-      ) {
-        r();
-        if (timeouts[s]) timeouts[s].clear();
-        return true;
-      }
-    };
-
-    timeouts[sub] = {
-      async clear() {
-        clearTimeout(this.timer);
-        delete timeouts[sub];
-        pool.unsubscribe(sub);
-        await s(`since:${sub}`, now());
-      },
-      extend(ev) {
-        if (ev) {
-          if (seen.includes(ev.id)) return;
-          seen.push(ev.id);
-          seen.length > 1000 && seen.shift();
-        }
-
-        clearTimeout(this.timer);
-        this.timer = setTimeout(() => {
-          j(new Error(`query timed out: ${sub} ${Date.now()}`));
-          pool.unsubscribe(sub);
-          rejected = true;
-        }, timeout);
-      },
-      timer: undefined,
-    };
-
-    timeouts[sub].extend();
-    pool.subscribe(sub, query);
-
-    pool.on("eose", (relay, s) => {
-      if (done[s]) done[s].push(relay.url);
-      check(s);
-    });
-
-    try {
-      await wait(() => check(sub), 100, 200);
-    } catch (e) {
-      console.log(e);
-    }
-  });
-
-let seen = [];
-
-let getUser = async (pubkey) => {
-  let id = await g(`user:${pubkey}`);
-  let user = await g(`user:${id}`);
-  return (
-    user || {
-      username: pubkey.substr(0, 6),
-      pubkey,
-      anon: true,
-    }
-  );
-};
-
-function send(ev, url, opts = { timeout: 1000 }) {
-  let { timeout } = opts;
-
-  return new Promise((resolve, reject) => {
-    let relay = Relay(url);
-
-    function timeout_reached() {
-      relay.close();
-      reject(new Error("Request timeout"));
-    }
-
-    let timer = setTimeout(timeout_reached, timeout);
-
-    relay.on("open", () => {
-      clearTimeout(timer);
-      timer = setTimeout(timeout_reached, timeout);
-      relay.send(["EVENT", ev]);
-    });
-
-    relay.on("ok", (evid, ok, msg) => {
-      clearTimeout(timer);
-      relay.close();
-      resolve({ evid, ok, msg });
-    });
-  });
 }
 
 export async function handleZap(invoice) {
@@ -269,9 +78,43 @@ export async function handleZap(invoice) {
 
   await Promise.allSettled(
     relays.map(async (url) => {
-      let r = await ntr.connect(url);
+      let r = await Relay.connect(url);
       await r.publish(signed);
       r.close();
     }),
   );
 }
+
+export let getRelays = async (pubkey): Promise<any> => {
+  let { relays } = config;
+  let filter = { authors: [pubkey], kinds: [10002] };
+  let event = await pool.get([config.nostr], filter);
+
+    let read = relays;
+    let write = relays;
+
+  if (event) {
+
+    read = [];
+    write = [];
+    for (let r of event.tags) {
+      if (!r[2] || r[2] === "write") write.push(r[1]);
+      if (!r[2] || r[2] === "read") read.push(r[1]);
+    }
+  } else pool.get(relays, filter).then(send);
+
+  return { read, write };
+};
+
+export let getProfile = async (pubkey) => {
+  if (await db.sIsMember("noprofile", pubkey)) return;
+  let relays = [config.nostr];
+  let filter = { authors: [pubkey], kinds: [0] };
+  let ev = await pool.get(relays, filter);
+  if (ev) {
+    return JSON.parse(ev.content);
+  } else
+    getRelays(pubkey).then(({ write: relays }) =>
+      pool.get(relays, filter).then(send),
+    );
+};
