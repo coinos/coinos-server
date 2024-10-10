@@ -562,7 +562,7 @@ export let sendInternal = async ({
   let memo;
 
   let p = await debit({ hash, amount, memo, user: sender });
-  await credit({ hash, amount, memo, ref: recipient.id });
+  await credit({ hash, amount, memo, ref: sender.id });
   return p;
 };
 
