@@ -165,9 +165,10 @@ export let getCount = async (pubkey) => {
   let cache = await g(`${pubkey}:follows:n`);
   if (cache && cache.t >= created_at) ({ follows } = cache);
   else {
-    follows = ev.tags
-      .map((t) => t[0] === "p" && t[1])
-      .filter((p) => p && p.length === 64).length;
+    if (ev)
+      follows = ev.tags
+        .map((t) => t[0] === "p" && t[1])
+        .filter((p) => p && p.length === 64).length;
     await s(`${pubkey}:follows:n`, { follows, t: created_at });
   }
 
@@ -185,7 +186,7 @@ export let getCount = async (pubkey) => {
 
     let f = infos.find((e) => e.kind === 10000133);
     let counts = {};
-    if (f) {
+    if (f && f.content) {
       counts = JSON.parse(f.content);
       followers = counts[pubkey];
       await s(`${pubkey}:followers:n`, { followers, t: created_at });

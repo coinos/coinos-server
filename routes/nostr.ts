@@ -166,6 +166,7 @@ export default {
       let { pubkey } = req.params;
       res.send(await getCount(pubkey));
     } catch (e) {
+      console.log(e)
       bail(res, e.message);
     }
   },
