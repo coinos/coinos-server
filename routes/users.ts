@@ -15,7 +15,7 @@ import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
 import rpc from "@coinos/rpc";
 import { nip19 } from "nostr-tools";
-import { getProfile } from "$lib/nostr";
+import { getCount, getProfile } from "$lib/nostr";
 
 export default {
   upload,
@@ -111,6 +111,7 @@ export default {
       if (!user) return res.code(500).send("User not found");
 
       let whitelist = [
+        "about",
         "address",
         "anon",
         "banner",
@@ -127,6 +128,7 @@ export default {
         "prompt",
         "pubkey",
         "username",
+        "website"
       ];
 
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);

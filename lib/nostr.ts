@@ -1,5 +1,5 @@
 import config from "$config";
-import { db } from "$lib/db";
+import { g, s, db } from "$lib/db";
 import { l } from "$lib/logging";
 import { fail } from "$lib/utils";
 import { nip19, finalizeEvent, getPublicKey } from "nostr-tools";
@@ -15,16 +15,13 @@ let alwaysTrue: any = (t: Event) => {
   return true;
 };
 export let pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
+let opts = { maxWait: 2000 };
 
 export async function send(ev, url = config.nostr) {
   if (!(ev && ev.id)) return;
-  try {
-    let r = await Relay.connect(url);
-    await r.publish(ev);
-    r.close();
-  } catch (e) {
-    console.log("nostr send error", e);
-  }
+  let r = await Relay.connect(url);
+  await r.publish(ev);
+  r.close();
 }
 
 export async function handleZap(invoice) {
@@ -92,7 +89,7 @@ export async function handleZap(invoice) {
 export let getRelays = async (pubkey): Promise<any> => {
   let { relays } = config;
   let filter = { authors: [pubkey], kinds: [10002] };
-  let event = await pool.get([config.nostr], filter);
+  let event = await pool.get([config.nostr], filter, opts);
 
   let read = relays;
   let write = relays;
@@ -104,7 +101,11 @@ export let getRelays = async (pubkey): Promise<any> => {
       if (!r[2] || r[2] === "write") write.push(r[1]);
       if (!r[2] || r[2] === "read") read.push(r[1]);
     }
-  } else pool.get(relays, filter).then(send);
+  } else
+    pool
+      .get(relays, filter)
+      .then(send)
+      .catch(() => {});
 
   return { read, write };
 };
@@ -116,18 +117,18 @@ export let getProfile = async (pubkey) => {
   let relays = [config.nostr];
   let filter: any = { authors: pubkeys, kinds: [0] };
 
-  let ev = await pool.get(relays, filter);
+  let ev = await pool.get(relays, filter, opts);
 
   if (!ev) {
     filter = { cache: ["user_infos", { pubkeys }] };
-    ev = (await pool.querySync([config.cache], filter)).find(
+    ev = (await pool.querySync([config.cache], filter, opts)).find(
       (e) => e.kind === 0,
     );
   }
 
   if (!ev) {
     ({ write: relays } = await getRelays(pubkey));
-    ev = await pool.get(relays, filter);
+    ev = await pool.get(relays, filter, opts);
   }
 
   if (ev) {
@@ -143,3 +144,29 @@ export let anon = (pubkey) => ({
   follows: [],
   followers: [],
 });
+
+export let getCount = async (pubkey) => {
+  let filter: any = { kinds: [3], "#p": [pubkey] };
+  let ev = await pool.get([config.nostr], filter, opts);
+  let created_at;
+  if (ev) ({ created_at } = ev);
+
+  let count = 0;
+  let cache = await g(`${pubkey}:followers:n`);
+
+  if (cache && cache.t >= created_at) ({ count } = cache);
+  else {
+    let filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
+    let infos = await pool.querySync([config.cache], filter, opts);
+
+    let f = infos.find((e) => e.kind === 10000133);
+    let counts = {};
+    if (f) {
+      counts = JSON.parse(f.content);
+      count = counts[pubkey];
+      await s(`${pubkey}:count`, { count, t: created_at });
+    }
+  }
+
+  return count;
+};

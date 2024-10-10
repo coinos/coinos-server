@@ -168,9 +168,3 @@ export function formatReceipt(items, currency) {
 }
 
 export let t = ({ language = "en" }) => locales[language];
-
-export let chunk = (array, chunkSize) => array.reduce((all, one, i) => {
-  const chunkIndex = Math.floor(i / chunkSize);
-  (all[chunkIndex] = all[chunkIndex] || []).push(one);
-  return all;
-}, []);

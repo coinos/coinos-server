@@ -47,9 +47,11 @@ app.get("/invoice/:id", invoices.get);
 app.post("/invoice", optional, invoices.create);
 
 app.get("/nostr.json", nostr.identities);
+app.get("/:pubkey/count", nostr.count);
 app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);
 app.get("/event/:id", nostr.event);
+app.post("/event", auth, nostr.publish);
 
 app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);
