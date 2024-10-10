@@ -146,15 +146,39 @@ export let anon = (pubkey) => ({
 });
 
 export let getCount = async (pubkey) => {
-  let filter: any = { kinds: [3], "#p": [pubkey] };
-  let ev = await pool.get([config.nostr], filter, opts);
   let created_at;
+  let filter: any = { kinds: [3], authors: [pubkey] };
+  let ev = await pool.get([config.nostr], filter, opts);
+
+  if (!ev) {
+    let { relays } = config;
+    ({ write: relays } = await getRelays(pubkey));
+
+    filter = { kinds: [3], authors: [pubkey] };
+    ev = await pool.get(relays, filter, opts);
+    send(ev);
+  }
+
   if (ev) ({ created_at } = ev);
 
-  let count = 0;
-  let cache = await g(`${pubkey}:followers:n`);
+  let follows = 0;
+  let cache = await g(`${pubkey}:follows:n`);
+  if (cache && cache.t >= created_at) ({ follows } = cache);
+  else {
+    follows = ev.tags
+      .map((t) => t[0] === "p" && t[1])
+      .filter((p) => p && p.length === 64).length;
+    await s(`${pubkey}:follows:n`, { follows, t: created_at });
+  }
 
-  if (cache && cache.t >= created_at) ({ count } = cache);
+  filter = { kinds: [3], "#p": [pubkey] };
+  ev = await pool.get([config.nostr], filter, opts);
+  if (ev) ({ created_at } = ev);
+
+  let followers = 0;
+  cache = await g(`${pubkey}:followers:n`);
+
+  if (cache && cache.t >= created_at) ({ followers } = cache);
   else {
     let filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
     let infos = await pool.querySync([config.cache], filter, opts);
@@ -163,10 +187,10 @@ export let getCount = async (pubkey) => {
     let counts = {};
     if (f) {
       counts = JSON.parse(f.content);
-      count = counts[pubkey];
-      await s(`${pubkey}:count`, { count, t: created_at });
+      followers = counts[pubkey];
+      await s(`${pubkey}:followers:n`, { followers, t: created_at });
     }
   }
 
-  return count;
+  return { follows, followers };
 };

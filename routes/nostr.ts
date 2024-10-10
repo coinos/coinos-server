@@ -164,8 +164,7 @@ export default {
   async count(req, res) {
     try {
       let { pubkey } = req.params;
-      let count = await getCount(pubkey);
-      res.send(count);
+      res.send(await getCount(pubkey));
     } catch (e) {
       bail(res, e.message);
     }
