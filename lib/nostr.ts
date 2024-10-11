@@ -98,6 +98,7 @@ export let getRelays = async (pubkey): Promise<any> => {
     read = [];
     write = [];
     for (let r of event.tags) {
+      if (r[0] !== "r") continue;
       if (!r[2] || r[2] === "write") write.push(r[1]);
       if (!r[2] || r[2] === "read") read.push(r[1]);
     }
