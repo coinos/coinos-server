@@ -15,7 +15,7 @@ import { mail, templates } from "$lib/mail";
 import upload from "$lib/upload";
 import rpc from "@coinos/rpc";
 import { nip19 } from "nostr-tools";
-import { getCount, getProfile } from "$lib/nostr";
+import { getProfile } from "$lib/nostr";
 
 export default {
   upload,
@@ -128,7 +128,7 @@ export default {
         "prompt",
         "pubkey",
         "username",
-        "website"
+        "website",
       ];
 
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
@@ -701,8 +701,12 @@ export default {
       let { id } = req.body;
       let { id: uid } = req.user;
       let { type } = await g(`account:${id}`);
-      let node = rpc({ ...config[type], wallet: id });
-      await node.unloadWallet(id);
+      try {
+        let node = rpc({ ...config[type], wallet: id });
+        await node.unloadWallet(id);
+      } catch (e) {
+        warn("failed to unload wallet", id);
+      }
 
       await db
         .multi()
