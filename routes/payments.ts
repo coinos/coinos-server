@@ -444,12 +444,16 @@ export default {
       let r: any = await got(`${callback}?amount=${amount * 1000}`).json();
       if (r.reason) fail(r.reason);
       let { pr } = r;
-      let p = await sendLightning({ user, pr, amount, maxfee, memo });
 
-      if (!p) {
+      let { payee } = await ln.decode(pr);
+      let { id } = await ln.getinfo();
+
+      let p;
+      if (payee === id){ 
         p = await debit({ hash: pr, amount, memo, user });
         await credit({ hash: pr, amount, memo, ref: user.id });
-      }
+      } else p = await sendLightning({ user, pr, amount, maxfee, memo });
+  
 
       res.send(p);
     } catch (e) {
