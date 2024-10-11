@@ -449,11 +449,10 @@ export default {
       let { id } = await ln.getinfo();
 
       let p;
-      if (payee === id){ 
+      if (payee === id) {
         p = await debit({ hash: pr, amount, memo, user });
         await credit({ hash: pr, amount, memo, ref: user.id });
       } else p = await sendLightning({ user, pr, amount, maxfee, memo });
-  
 
       res.send(p);
     } catch (e) {

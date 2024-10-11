@@ -16,6 +16,7 @@ import { jwtStrategy } from "$lib/auth";
 const app = fastify({
   logger: pino(),
   disableRequestLogging: true,
+  // disableRequestLogging: false,
   maxParamLength: 500,
 });
 

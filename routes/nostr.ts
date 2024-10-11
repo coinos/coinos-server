@@ -1,5 +1,5 @@
 import config from "$config";
-import { bail, fail, getUser } from "$lib/utils";
+import { bail, fail, getUser, time } from "$lib/utils";
 import { g, s, db } from "$lib/db";
 import {
   anon,
@@ -62,7 +62,7 @@ export default {
       let filter = { kinds: [3], authors: [pubkey] };
       let ev = await pool.get([config.nostr], filter, opts);
 
-      if (!ev || tagsonly) {
+      if (!ev) {
         let { relays } = config;
         ({ write: relays } = await getRelays(pubkey));
 

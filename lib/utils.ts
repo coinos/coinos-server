@@ -170,12 +170,13 @@ export function formatReceipt(items, currency) {
 export let t = ({ language = "en" }) => locales[language];
 
 export let time = (() => {
-  let count = 0, started = false;
-  return () => {
+  let count = 0,
+    started = false;
+  return (s = "") => {
     if (!started) {
-      console.time('');
+      console.time("");
       started = true;
     }
-    console.timeLog('', ++count);
+    console.timeLog("", ++count, s);
   };
 })();
