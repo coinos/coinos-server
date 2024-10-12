@@ -30,7 +30,6 @@ export default async (req, res) => {
 
     res.send({ hash });
   } catch (e) {
-    console.log(e);
     err("problem uploading", e.message);
     bail(res, e.message);
   }

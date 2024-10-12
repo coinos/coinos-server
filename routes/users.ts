@@ -208,9 +208,6 @@ export default {
 
       let { confirm, password, pin, newpin, pubkey, username } = body;
 
-      console.log("PK", pubkey);
-      console.log("SK", body.nsec);
-
       if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
         user.pin = newpin;
