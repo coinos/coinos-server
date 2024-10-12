@@ -11,6 +11,7 @@ const users = {};
 
 export const emit = (uid, type, data) => {
   if (type === "payment" && data.amount > 0) {
+    console.log("SUBS", subscriptions.length);
     for (let i = subscriptions.length - 1; i >= 0; i--) {
       let s = subscriptions[i];
 
@@ -117,6 +118,7 @@ Bun.serve({
           store.sessions[data] = ws;
           break;
         case "subscribe":
+          console.log("SUBBING", data.id);
           subscriptions.push({ invoice: data, ws });
           break;
         default:
@@ -137,6 +139,10 @@ Bun.serve({
         if (store.sockets[uid] && store.sockets[uid][id]) {
           delete store.sockets[uid][id];
         }
+
+        let i;
+        ~(i = subscriptions.findIndex((s) => s.ws.id === id)) &&
+          subscriptions.splice(i, 1);
 
         if (all[id]) delete all[id];
       } catch (e) {
