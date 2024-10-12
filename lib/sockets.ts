@@ -118,7 +118,6 @@ Bun.serve({
           store.sessions[data] = ws;
           break;
         case "subscribe":
-          console.log("SUBBING", data.id);
           subscriptions.push({ invoice: data, ws });
           break;
         default:
