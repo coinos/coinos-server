@@ -14,7 +14,7 @@ export const emit = (uid, type, data) => {
     for (let i = subscriptions.length - 1; i >= 0; i--) {
       let s = subscriptions[i];
 
-      if (s.invoice && s.invoice.hash === data.hash) {
+      if (s.invoice && s.invoice.id === data.iid) {
         s.ws.send(JSON.stringify({ type, data }));
       }
     }
@@ -37,7 +37,7 @@ export const broadcast = (type, data) => {
     }
   }
 
-  Object.values(all).map((ws) => {
+  Object.values(all).map((ws: any) => {
     if (!sent.includes(ws.id)) ws.send(JSON.stringify({ type, data }));
   });
 };
@@ -74,7 +74,7 @@ Bun.serve({
     return new Response("Upgrade failed", { status: 500 });
   },
   websocket: {
-    async message(ws, message) {
+    async message(ws: any, message: string) {
       let type, data;
 
       try {
@@ -123,14 +123,14 @@ Bun.serve({
           warn("received socket message of unknown type", type, data);
       }
     },
-    open(ws) {
+    open(ws: any) {
       const id = v4();
       ws.id = id;
       ws.beats = 0;
       ws.send(JSON.stringify({ type: "connected", data: id }));
       all[id] = ws;
     },
-    close(ws) {
+    close(ws: any) {
       let { id } = ws;
       try {
         const uid = users[id];
