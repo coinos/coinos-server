@@ -11,7 +11,6 @@ const users = {};
 
 export const emit = (uid, type, data) => {
   if (type === "payment" && data.amount > 0) {
-    console.log("SUBS", subscriptions.length);
     for (let i = subscriptions.length - 1; i >= 0; i--) {
       let s = subscriptions[i];
 
