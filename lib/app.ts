@@ -7,17 +7,32 @@ import fastifySecureSession from "@fastify/secure-session";
 import fastifyProxy from "@fastify/http-proxy";
 import fastifyRateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
+import pino from "pino";
 
 import * as path from "path";
-import pino from "pino";
 
 import { jwtStrategy } from "$lib/auth";
 
 const app = fastify({
-  logger: pino(),
+  logger: true,
   disableRequestLogging: true,
-  // disableRequestLogging: false,
   maxParamLength: 500,
+});
+
+const reqLogger = pino(pino.destination("req"));
+const resLogger = pino(pino.destination("res"));
+
+app.addHook("onRequest", async (req) => {
+  reqLogger.info({ url: req.raw.url, id: req.id });
+});
+
+app.addHook("onResponse", async (req, reply) => {
+  resLogger.info({
+    id: req.id,
+    url: req.raw.url,
+    statusCode: reply.raw.statusCode,
+    durationMs: reply.elapsedTime,
+  });
 });
 
 app.register(fastifyRateLimit, {
@@ -38,7 +53,7 @@ app.register(fastifyProxy, {
   upstream: "http://localhost:3120",
   prefix: "/ws",
   rewritePrefix: "/ws",
-  websocket: true
+  websocket: true,
 });
 
 app.register(fastifySecureSession, {

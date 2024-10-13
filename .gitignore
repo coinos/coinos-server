@@ -13,3 +13,5 @@ routes/**/*.js
 lib/**/*.js
 watcher.log
 .history/
+res
+req

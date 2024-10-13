@@ -17,6 +17,14 @@ let alwaysTrue: any = (t: Event) => {
 export let pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
 let opts = { maxWait: 2000 };
 
+export let anon = (pubkey) => ({
+  name: pubkey.substr(0, 6),
+  pubkey,
+  anon: true,
+  follows: [],
+  followers: [],
+});
+
 export async function send(ev, url = config.nostr) {
   if (!(ev && ev.id)) return;
   let r = await Relay.connect(url);
@@ -112,76 +120,64 @@ export let getRelays = async (pubkey): Promise<any> => {
 };
 
 export let getProfile = async (pubkey) => {
-  let noprofile = await db.sIsMember("noprofile", pubkey);
-  if (noprofile) return;
-  let pubkeys = [pubkey];
-  let relays = [config.nostr];
-  let filter: any = { authors: pubkeys, kinds: [0] };
+  let profile = await g(`${pubkey}:profile`);
+  if (!profile) {
+    let pubkeys = [pubkey];
+    let relays = [config.nostr];
+    let filter: any = { authors: pubkeys, kinds: [0] };
 
-  let ev = await pool.get(relays, filter, opts);
+    let ev = await pool.get(relays, filter, opts);
 
-  if (!ev) {
-    filter = { cache: ["user_infos", { pubkeys }] };
-    ev = (await pool.querySync([config.cache], filter, opts)).find(
-      (e) => e.kind === 0,
-    );
+    if (!ev) {
+      filter = { cache: ["user_infos", { pubkeys }] };
+      ev = (await pool.querySync([config.cache], filter, opts)).find(
+        (e) => e.kind === 0,
+      );
+    }
+
+    if (!ev) {
+      ({ write: relays } = await getRelays(pubkey));
+      ev = await pool.get(relays, filter, opts);
+    }
+
+    if (ev) {
+      send(ev);
+      profile = JSON.parse(ev.content);
+    } else {
+      profile = anon(pubkey);
+    }
   }
 
-  if (!ev) {
-    ({ write: relays } = await getRelays(pubkey));
-    ev = await pool.get(relays, filter, opts);
-  }
-
-  if (ev) {
-    send(ev);
-    return JSON.parse(ev.content);
-  } else return anon(pubkey);
+  await s(`${pubkey}:profile`, profile);
+  return profile;
 };
 
-export let anon = (pubkey) => ({
-  name: pubkey.substr(0, 6),
-  pubkey,
-  anon: true,
-  follows: [],
-  followers: [],
-});
-
 export let getCount = async (pubkey) => {
-  let created_at;
-  let filter: any = { kinds: [3], authors: [pubkey] };
-  let ev = await pool.get([config.nostr], filter, opts);
+  let follows = await g(`${pubkey}:follows:n`);
+  let followers = await g(`${pubkey}:followers:n`);
 
-  if (!ev) {
-    let { relays } = config;
-    ({ write: relays } = await getRelays(pubkey));
+  if (!follows) {
+    let filter: any = { kinds: [3], authors: [pubkey] };
+    let ev = await pool.get([config.nostr], filter, opts);
 
-    filter = { kinds: [3], authors: [pubkey] };
-    ev = await pool.get(relays, filter, opts);
-    send(ev);
-  }
+    if (!ev) {
+      let { relays } = config;
+      ({ write: relays } = await getRelays(pubkey));
 
-  if (ev) ({ created_at } = ev);
+      filter = { kinds: [3], authors: [pubkey] };
+      ev = await pool.get(relays, filter, opts);
+      send(ev);
+    }
 
-  let follows = 0;
-  let cache = await g(`${pubkey}:follows:n`);
-  if (cache && cache.t >= created_at) ({ follows } = cache);
-  else {
-    if (ev)
+    if (ev) {
       follows = ev.tags
         .map((t) => t[0] === "p" && t[1])
         .filter((p) => p && p.length === 64).length;
-    await s(`${pubkey}:follows:n`, { follows, t: created_at });
+      await s(`${pubkey}:follows:n`, follows);
+    }
   }
 
-  filter = { kinds: [3], "#p": [pubkey] };
-  ev = await pool.get([config.nostr], filter, opts);
-  if (ev) ({ created_at } = ev);
-
-  let followers = 0;
-  cache = await g(`${pubkey}:followers:n`);
-
-  if (cache && cache.t >= created_at) ({ followers } = cache);
-  else {
+  if (!followers) {
     let filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
     let infos = await pool.querySync([config.cache], filter, opts);
 
@@ -190,9 +186,12 @@ export let getCount = async (pubkey) => {
     if (f && f.content) {
       counts = JSON.parse(f.content);
       followers = counts[pubkey];
-      await s(`${pubkey}:followers:n`, { followers, t: created_at });
+      await s(`${pubkey}:followers:n`, followers);
     }
   }
+
+  follows ||= 0;
+  followers ||= 0;
 
   return { follows, followers };
 };

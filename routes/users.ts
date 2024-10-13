@@ -299,7 +299,7 @@ export default {
     try {
       let { username, password, token: twofa } = req.body;
 
-      if (username !== "coinos" && username !== "funk")
+      if (username !== "coinos")
         l("logging in", username, req.headers["cf-connecting-ip"]);
 
       username = username.toLowerCase().replace(/\s/g, "");
