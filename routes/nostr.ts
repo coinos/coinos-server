@@ -85,7 +85,7 @@ export default {
 
         await s(`${pubkeys}:pubkeys`, pubkeys);
       }
-        if (!pubkeys.length || pubkeysOnly) return res.send(pubkeys);
+      if (!pubkeys.length || pubkeysOnly) return res.send(pubkeys);
 
       let cache = await g(`${pubkey}:follows`);
       if (cache && cache.t >= created_at) ({ follows } = cache);

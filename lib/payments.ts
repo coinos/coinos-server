@@ -512,6 +512,7 @@ export let sendLightning = async ({
   if (pays.find((p) => p.status === "pending"))
     fail("Payment is already underway");
 
+  await db.sAdd("pending", pr);
   p = await debit({
     hash: pr,
     amount: total,
@@ -533,8 +534,10 @@ export let sendLightning = async ({
     });
 
     try {
-      if (r.status === "complete") p = await finalize(r, p);
-      else await db.sAdd("pending", pr);
+      if (r.status === "complete") {
+        p = await finalize(r, p);
+        await db.sRem("pending", pr);
+      }
     } catch (e) {
       console.log("failed to process payment", e, p);
     }
