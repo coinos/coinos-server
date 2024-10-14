@@ -156,7 +156,7 @@ export let getCount = async (pubkey) => {
   let follows = await g(`${pubkey}:follows:n`);
   let followers = await g(`${pubkey}:followers:n`);
 
-  if (!follows) {
+  if (follows === null) {
     let filter: any = { kinds: [3], authors: [pubkey] };
     let ev = await pool.get([config.nostr], filter, opts);
 
@@ -179,7 +179,7 @@ export let getCount = async (pubkey) => {
     await s(`${pubkey}:follows:n`, follows);
   }
 
-  if (!followers) {
+  if (followers === null) {
     let filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
     let infos = await pool.querySync([config.cache], filter, opts);
 
