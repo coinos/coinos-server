@@ -66,6 +66,7 @@ export default async (user, ip) => {
     .set(`account:${id}`, account)
     .set(`${pubkey}:follows:n`, 0)
     .set(`${pubkey}:followers:n`, 0)
+      .set(`${pubkey}:pubkeys`, "[]")
     .lPush(`${id}:accounts`, id)
     .exec();
 

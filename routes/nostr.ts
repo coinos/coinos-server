@@ -56,34 +56,40 @@ export default {
   async follows(req, res) {
     let {
       params: { pubkey },
-      query: { tagsonly },
+      query: { pubkeysOnly, nocache },
     } = req;
     try {
-      let filter = { kinds: [3], authors: [pubkey] };
-      let ev = await pool.get([config.nostr], filter, opts);
-
-      if (!ev) {
-        let { relays } = config;
-        ({ write: relays } = await getRelays(pubkey));
-
-        filter = { kinds: [3], authors: [pubkey] };
-        ev = await pool.get(relays, filter, opts);
-        send(ev);
-      }
-
       let created_at;
       let follows = [];
-      let tags = [];
 
-      if (ev) ({ created_at, tags } = ev);
-      if (!tags.length || tagsonly) return res.send(tags);
+      let pubkeys = await g(`${pubkey}:pubkeys`);
+      if (!pubkeys || nocache) {
+        let filter = { kinds: [3], authors: [pubkey] };
+        let ev = await pool.get([config.nostr], filter, opts);
+
+        if (!ev) {
+          let { relays } = config;
+          ({ write: relays } = await getRelays(pubkey));
+
+          filter = { kinds: [3], authors: [pubkey] };
+          ev = await pool.get(relays, filter, opts);
+          send(ev);
+        }
+
+        let tags = [];
+
+        if (ev) ({ created_at, tags } = ev);
+        pubkeys = tags
+          .map((t) => t[0] === "p" && t[1])
+          .filter((p) => p && p.length === 64);
+
+        await s(`${pubkeys}:pubkeys`, pubkeys);
+      }
+        if (!pubkeys.length || pubkeysOnly) return res.send(pubkeys);
 
       let cache = await g(`${pubkey}:follows`);
       if (cache && cache.t >= created_at) ({ follows } = cache);
       else {
-        let pubkeys = tags
-          .map((t) => t[0] === "p" && t[1])
-          .filter((p) => p && p.length === 64);
         let filter: any = { cache: ["user_infos", { pubkeys }] };
         let infos = await pool.querySync([config.cache], filter, opts);
         let profiles = infos.filter((e) => e.kind === 0);
