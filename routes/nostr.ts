@@ -63,7 +63,7 @@ export default {
       let follows = [];
 
       let pubkeys = await g(`${pubkey}:pubkeys`);
-      if (!pubkeys || nocache) {
+        if (!pubkeys || !pubkeysOnly || nocache) {
         let filter = { kinds: [3], authors: [pubkey] };
         let ev = await pool.get([config.nostr], filter, opts);
 
