@@ -5,6 +5,7 @@ import { g, s } from "$lib/db";
 import { sleep } from "$lib/utils";
 import WebSocket from "ws";
 
+export let rate;
 let last;
 let ws;
 let connect = async () => {
@@ -28,7 +29,8 @@ let connect = async () => {
         (await got("https://api.nobitex.ir/v2/orderbook/BTCIRT").json()) as any
       ).lastTradePrice;
 
-      s("rate", msg.c);
+      rate = msg.c;
+      s("rate", rate);
       s("rates", rates);
       last = Date.now();
     } catch (e) {
