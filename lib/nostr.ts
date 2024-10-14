@@ -173,8 +173,10 @@ export let getCount = async (pubkey) => {
       follows = ev.tags
         .map((t) => t[0] === "p" && t[1])
         .filter((p) => p && p.length === 64).length;
-      await s(`${pubkey}:follows:n`, follows);
     }
+
+    follows ||= 0;
+    await s(`${pubkey}:follows:n`, follows);
   }
 
   if (!followers) {
@@ -186,12 +188,11 @@ export let getCount = async (pubkey) => {
     if (f && f.content) {
       counts = JSON.parse(f.content);
       followers = counts[pubkey];
-      await s(`${pubkey}:followers:n`, followers);
     }
-  }
 
-  follows ||= 0;
-  followers ||= 0;
+    followers ||= 0;
+    await s(`${pubkey}:followers:n`, followers);
+  }
 
   return { follows, followers };
 };
