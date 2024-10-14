@@ -27,11 +27,20 @@ app.addHook("onRequest", async (req) => {
 });
 
 app.addHook("onResponse", async (req, reply) => {
+  const rawCookies = req.raw.headers.cookie || "";
+
+  const cookies: any = rawCookies.split(";").reduce((acc, cookie) => {
+    const [key, value] = cookie.split("=").map((s) => s.trim());
+    if (key && value) acc[key] = value;
+    return acc;
+  }, {});
+
   resLogger.info({
     id: req.id,
     url: req.raw.url,
     statusCode: reply.raw.statusCode,
     durationMs: reply.elapsedTime,
+    username: cookies.username,
   });
 });
 
