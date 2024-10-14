@@ -83,7 +83,7 @@ export default {
           .map((t) => t[0] === "p" && t[1])
           .filter((p) => p && p.length === 64);
 
-        await s(`${pubkeys}:pubkeys`, pubkeys);
+        await s(`${pubkey}:pubkeys`, pubkeys);
       }
       if (!pubkeys.length || pubkeysOnly) return res.send(pubkeys);
 
