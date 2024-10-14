@@ -121,6 +121,7 @@ export let getRelays = async (pubkey): Promise<any> => {
 
 export let getProfile = async (pubkey) => {
   let profile = await g(`${pubkey}:profile`);
+
   if (!profile) {
     let pubkeys = [pubkey];
     let relays = [config.nostr];
@@ -129,15 +130,15 @@ export let getProfile = async (pubkey) => {
     let ev = await pool.get(relays, filter, opts);
 
     if (!ev) {
+      ({ write: relays } = await getRelays(pubkey));
+      ev = await pool.get(relays, filter, opts);
+    }
+
+    if (!ev) {
       filter = { cache: ["user_infos", { pubkeys }] };
       ev = (await pool.querySync([config.cache], filter, opts)).find(
         (e) => e.kind === 0,
       );
-    }
-
-    if (!ev) {
-      ({ write: relays } = await getRelays(pubkey));
-      ev = await pool.get(relays, filter, opts);
     }
 
     if (ev) {
@@ -163,8 +164,6 @@ export let getCount = async (pubkey) => {
     if (!ev) {
       let { relays } = config;
       ({ write: relays } = await getRelays(pubkey));
-
-      filter = { kinds: [3], authors: [pubkey] };
       ev = await pool.get(relays, filter, opts);
       send(ev);
     }
