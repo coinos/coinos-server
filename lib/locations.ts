@@ -5,8 +5,10 @@ import { fields, pick } from "$lib/utils";
 
 export let getLocations = async () => {
   try {
+    let previous = await g("locations");
     let since = await g("locations:since");
     if (!since) since = "2022-09-19T00:00:00Z";
+      if (Date.now() - new Date(since).getTime() < 60000) return;
 
     let locations: Array<any> = await got(
       `https://api.btcmap.org/v2/elements?updated_since=${since}`,
@@ -36,7 +38,6 @@ export let getLocations = async () => {
       }
     }
 
-    let previous = await g("locations");
     locations.push(...previous);
 
     await s("locations", locations);
