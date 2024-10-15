@@ -5,12 +5,11 @@ import { fields, pick } from "$lib/utils";
 
 export let getLocations = async () => {
   try {
-    let last = await g("locations:last");
-    let now = Date.now();
+    let since = await g("locations:since");
+    if (!since) since = "2022-09-19T00:00:00Z";
 
-    if (now - last < 60000) return g("locations");
     let locations: Array<any> = await got(
-      "https://api.btcmap.org/v2/elements?updated_since=2022-09-19T00:00:00Z",
+      `https://api.btcmap.org/v2/elements?updated_since=${since}`,
     ).json();
 
     locations = locations.filter(
@@ -37,8 +36,11 @@ export let getLocations = async () => {
       }
     }
 
+    let previous = await g("locations");
+    locations.push(...previous);
+
     await s("locations", locations);
-    await s("locations:last", now);
+    await s("locations:since", new Date().toISOString().split(".")[0] + "Z");
   } catch (e) {
     err("problem fetching locations", e);
   }
