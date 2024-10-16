@@ -809,14 +809,18 @@ let finalize = async (r, p) => {
 };
 
 let reverse = async (p) => {
-  await db.del(`payment:${p.hash}`);
-  await db.del(`payment:${p.id}`);
-
-  let total = Math.abs(p.amount);
+  let total = Math.abs(p.amount) + p.fee;
   let ourfee = p.ourfee || 0;
   let credit = Math.round(total * config.fee) - ourfee;
-  await db.incrBy(`balance:${p.uid}`, total + p.fee + ourfee);
 
-  await db.incrBy(`credit:${types.lightning}:${p.uid}`, credit);
-  await db.lRem(`${p.uid}:payments`, 1, p.id);
+  let k = await db.reverse(
+    `payment:${p.id}`,
+    `balance:${p.uid}`,
+    `credit:${types.lightning}:${p.uid}`,
+    `payment:${p.hash}`,
+    total,
+    credit,
+  );
+
+  warn("reversed", k);
 };

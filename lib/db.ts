@@ -1,9 +1,9 @@
 import config from "$config";
-import { fail, wait, sleep } from "$lib/utils";
+import { fail, sleep } from "$lib/utils";
 import { createClient, defineScript } from "redis";
-import { warn, l, err } from "$lib/logging";
+import { warn, err } from "$lib/logging";
 
-let SCRIPT = `
+let DEBIT = `
 local balanceKey = KEYS[1]
 local creditKey = KEYS[2]
 local amount = tonumber(ARGV[1])
@@ -27,15 +27,42 @@ redis.call('decrby', balanceKey, tostring(math.floor(amount + tip + fee + ourfee
 return ourfee
 `;
 
+let REVERSE = `
+local paymentKey = KEYS[1]
+local balanceKey = KEYS[2]
+local creditKey = KEYS[3]
+local hashKey = KEYS[4]
+
+local total = tonumber(ARGV[1])
+local credit = tonumber(ARGV[2])
+
+local payment = cjson.decode(redis.call('get', paymentKey))
+
+if payment ~= nil then
+  redis.call('incrby', balanceKey, total)
+  redis.call('incrby', creditKey, credit)
+  redis.call('del', paymentKey)
+  redis.call('del', hashKey)
+end
+
+return paymentKey
+`;
+
 let debit = defineScript({
   NUMBER_OF_KEYS: 2,
-  SCRIPT,
+  SCRIPT: DEBIT,
+  transformArguments: (...args) => args.map((a) => a.toString()),
+});
+
+let reverse = defineScript({
+  NUMBER_OF_KEYS: 4,
+  SCRIPT: REVERSE,
   transformArguments: (...args) => args.map((a) => a.toString()),
 });
 
 export let db = createClient({
   url: config.db,
-  scripts: { debit },
+  scripts: { debit, reverse },
   socket: {
     reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
   },

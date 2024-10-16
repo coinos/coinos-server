@@ -69,6 +69,7 @@ export default {
         maxSendable,
         metadata,
         nostrPubkey: serverPubkey,
+        commentAllowed: 512,
         callback: `${URL}/api/lnurl/${id}`,
         tag: "payRequest",
       });
@@ -81,7 +82,7 @@ export default {
   async lnurl(req, res) {
     let {
       params: { id },
-      query: { amount, nostr },
+      query: { amount, comment, nostr },
     } = req;
     try {
       let uid = await g(`lnurl:${id}`);
