@@ -818,6 +818,8 @@ let reverse = async (p) => {
     `balance:${p.uid}`,
     `credit:${types.lightning}:${p.uid}`,
     `payment:${p.hash}`,
+    `${p.uid}:payments`,
+    p.id,
     total,
     credit,
   );

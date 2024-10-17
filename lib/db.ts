@@ -32,6 +32,8 @@ local paymentKey = KEYS[1]
 local balanceKey = KEYS[2]
 local creditKey = KEYS[3]
 local hashKey = KEYS[4]
+local paymentsKey = KEYS[5]
+local pid = KEYS[6]
 
 local total = tonumber(ARGV[1])
 local credit = tonumber(ARGV[2])
@@ -43,9 +45,10 @@ if payment ~= nil then
   redis.call('incrby', creditKey, credit)
   redis.call('del', paymentKey)
   redis.call('del', hashKey)
+  redis.call('lrem', paymentsKey, 0, pid);
 end
 
-return paymentKey
+return pid 
 `;
 
 let debit = defineScript({
@@ -55,7 +58,7 @@ let debit = defineScript({
 });
 
 let reverse = defineScript({
-  NUMBER_OF_KEYS: 4,
+  NUMBER_OF_KEYS: 6,
   SCRIPT: REVERSE,
   transformArguments: (...args) => args.map((a) => a.toString()),
 });

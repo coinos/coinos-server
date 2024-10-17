@@ -95,6 +95,7 @@ export default {
           let p = await g(`payment:${pid}`);
           if (!p) {
             warn("user", id, "missing payment", pid);
+            await db.lRem(`${aid || id}:payments`, 0, pid);
             return p;
           }
           if (p.created < start || p.created > end) return;
