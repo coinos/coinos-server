@@ -91,10 +91,10 @@ export default {
     let payments = (await db.lRange(`${aid || id}:payments`, 0, -1)) || [];
     payments = (
       await Promise.all(
-        payments.map(async (id) => {
-          let p = await g(`payment:${id}`);
+        payments.map(async (pid) => {
+          let p = await g(`payment:${pid}`);
           if (!p) {
-            warn("missing payment", id);
+            warn("user", id, "missing payment", pid);
             return p;
           }
           if (p.created < start || p.created > end) return;
