@@ -6,10 +6,10 @@ import { notify } from "$lib/notifications";
 import { db, g, s } from "$lib/db";
 import { l, err, warn } from "$lib/logging";
 import {
-  f,
   btc,
   fail,
-  fiat,
+  fmt,
+  link,
   getInvoice,
   getPayment,
   getUser,
@@ -21,18 +21,14 @@ import {
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
 import got from "got";
-import { mqtt1, mqtt2 } from "$lib/mqtt";
-import { mail, templates } from "$lib/mail";
 import api from "$lib/api";
 import { bech32 } from "bech32";
 import rpc from "@coinos/rpc";
-
 import ln from "$lib/ln";
 
 let bc = rpc(config.bitcoin);
 let lq = rpc(config.liquid);
 
-let { URL } = process.env;
 let dust = 547;
 
 export let types = {
@@ -228,49 +224,18 @@ export let credit = async ({
     .incrBy(`${balanceKey}:${aid || uid}`, amount)
     .exec();
 
-  emit(uid, "payment", p);
-  notify(user, `Received ${amount} sats`);
-  callWebhook(inv, p);
-  l(username, "received", type, amount);
-
-  let items;
   if (inv.items && inv.items.length) {
     formatReceipt(inv.items, inv.currency);
     p.items = inv.items;
   }
 
-  if (config.mqtt1) {
-    if (!mqtt1.connected) await mqtt1.reconnect();
-    mqtt1.publish(
-      username,
-      `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${items}`,
-    );
-  }
-
-  if (config.mqtt2) {
-    if (!mqtt2.connected) await mqtt2.reconnect();
-    mqtt2.publish(
-      username,
-      `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${items}`,
-    );
-  }
-
-  try {
-    await completePayment(p, user);
-  } catch (e) {
-    console.log(e);
-  }
+  await completePayment(inv, p, user);
 
   return p;
 };
 
-let fmt = (sats) =>
-  "⚡️" +
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(sats);
-
-export let completePayment = async (p, user) => {
+export let completePayment = async (inv, p, user) => {
   let { id, autowithdraw, threshold, reserve, destination, username } = user;
-  let link = (id) => `${URL}/payment/${id}`;
   if (p.confirmed) {
     let withdrawal;
     if (autowithdraw) {
@@ -292,33 +257,12 @@ export let completePayment = async (p, user) => {
       }
     }
 
-    let { paymentReceived } = t(user);
-    if (user.verified && user.notify) {
-      mail(user, paymentReceived, templates.paymentReceived, {
-        ...t(user),
-        username,
-        payment: {
-          amount: fmt(p.amount),
-          link: link(p.id),
-          tip: p.tip ? fmt(p.tip) : undefined,
-          fiat: f(fiat(p.amount, p.rate), p.currency),
-          fiatTip: p.tip ? f(fiat(p.tip, p.rate), p.currency) : undefined,
-          memo: p.memo,
-          items:
-            p.items &&
-            p.items.map((i) => {
-              return {
-                quantity: i.quantity,
-                name: i.name,
-                total: i.quantity * i.price,
-                totalFiat: f(i.quantity * i.price, p.currency),
-              };
-            }),
-        },
-        withdrawal,
-      });
-    }
+    notify(p, user, withdrawal);
   }
+
+  l(username, "received", p.type, p.amount);
+  emit(user.id, "payment", p);
+  callWebhook(inv, p);
 };
 
 let pay = async ({ aid = undefined, amount, to, user }) => {

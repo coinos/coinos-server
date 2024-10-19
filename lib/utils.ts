@@ -5,6 +5,8 @@ import { g, s } from "$lib/db";
 import config from "$config";
 import { getPublicKey } from "nostr";
 
+  let { URL } = process.env;
+
 export let fail = (msg) => {
   throw new Error(msg);
 };
@@ -180,3 +182,9 @@ export let time = (() => {
     console.timeLog("", ++count, s);
   };
 })();
+
+export let fmt = (sats) =>
+  "⚡️" +
+  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(sats);
+
+export let link = (id) => `${URL}/payment/${id}`;

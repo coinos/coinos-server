@@ -102,7 +102,8 @@ app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
 app.post("/login", users.login);
 
-app.post("/subscribe", auth, users.subscribe);
+app.post("/subscription", auth, users.subscription);
+app.post("/subscription/delete", auth, users.deleteSubscription);
 app.post("/password", auth, users.password);
 app.post("/pin", auth, users.pin);
 app.post("/otpsecret", auth, users.otpsecret);

@@ -24,7 +24,7 @@ import {
   sendLightning,
   sendOnchain,
 } from "$lib/payments";
-import { mqtt1, mqtt2 } from "$lib/mqtt";
+import mqtt  from "$lib/mqtt";
 import got from "got";
 import api from "$lib/api";
 import rpc from "@coinos/rpc";
@@ -334,9 +334,8 @@ export default {
             .incrBy(`balance:${p.aid || p.uid}`, p.amount)
             .exec();
 
-          emit(p.uid, "payment", p);
           let user = await g(`user:${p.uid}`);
-          await completePayment(p, user);
+          await completePayment(invoice, p, user);
         }
       }
       res.send({});
@@ -407,12 +406,7 @@ export default {
 
       let { username } = user;
 
-      mqtt1.publish(
-        username,
-        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`,
-      );
-
-      mqtt2.publish(
+      mqtt.publish(
         username,
         `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`,
       );
