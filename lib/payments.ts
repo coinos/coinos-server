@@ -235,8 +235,8 @@ export let credit = async ({
 
 export let completePayment = async (inv, p, user) => {
   let { id, autowithdraw, threshold, reserve, destination, username } = user;
+  let withdrawal;
   if (p.confirmed) {
-    let withdrawal;
     if (autowithdraw) {
       try {
         let to = destination.trim();
