@@ -1,6 +1,5 @@
 import config from "$config";
 import { generate } from "$lib/invoices";
-import { emit } from "$lib/sockets";
 import { v4 } from "uuid";
 import { notify } from "$lib/notifications";
 import { db, g, s } from "$lib/db";
@@ -257,11 +256,10 @@ export let completePayment = async (inv, p, user) => {
       }
     }
 
-    notify(p, user, withdrawal);
   }
 
+  notify(p, user, withdrawal);
   l(username, "received", p.type, p.amount);
-  emit(user.id, "payment", p);
   callWebhook(inv, p);
 };
 
@@ -486,7 +484,6 @@ export let sendLightning = async ({
       console.log("failed to process payment", e, p);
     }
   } catch (e) {
-    await reverse(p);
     throw e;
   }
 

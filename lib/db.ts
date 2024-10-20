@@ -38,7 +38,7 @@ local pid = KEYS[6]
 local total = tonumber(ARGV[1])
 local credit = tonumber(ARGV[2])
 
-local payment = cjson.decode(redis.call('get', paymentKey))
+local payment = redis.call('get', paymentKey)
 
 if payment ~= nil then
   redis.call('incrby', balanceKey, total)
