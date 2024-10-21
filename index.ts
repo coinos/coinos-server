@@ -102,6 +102,7 @@ app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
 app.post("/login", users.login);
 
+app.get("/subscriptions", auth, users.subscriptions);
 app.post("/subscription", auth, users.subscription);
 app.post("/subscription/delete", auth, users.deleteSubscription);
 app.post("/password", auth, users.password);

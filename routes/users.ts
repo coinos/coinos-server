@@ -341,6 +341,16 @@ export default {
     }
   },
 
+  async subscriptions(req, res) {
+    try {
+      let { user } = req;
+      let subscriptions = await db.sMembers(`${user.id}:subscriptions`);
+      res.send(subscriptions);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
   async subscription(req, res) {
     try {
       let { subscription } = req.body;
