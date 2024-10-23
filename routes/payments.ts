@@ -1,33 +1,33 @@
 import config from "$config";
-import { emit } from "$lib/sockets";
-import { v4 } from "uuid";
+import api from "$lib/api";
+import { requirePin } from "$lib/auth";
 import { db, g, s, t } from "$lib/db";
-import { l, err, warn } from "$lib/logging";
+import { err, l, warn } from "$lib/logging";
+import mqtt from "$lib/mqtt";
 import {
+  build,
+  completePayment,
+  credit,
+  debit,
+  decode,
+  sendInternal,
+  sendLightning,
+  sendOnchain,
+  types,
+} from "$lib/payments";
+import { emit } from "$lib/sockets";
+import {
+  SATS,
   bail,
   fail,
   getInvoice,
   getPayment,
   getUser,
   sats,
-  SATS,
 } from "$lib/utils";
-import { requirePin } from "$lib/auth";
-import {
-  completePayment,
-  decode,
-  debit,
-  credit,
-  types,
-  build,
-  sendInternal,
-  sendLightning,
-  sendOnchain,
-} from "$lib/payments";
-import mqtt  from "$lib/mqtt";
-import got from "got";
-import api from "$lib/api";
 import rpc from "@coinos/rpc";
+import got from "got";
+import { v4 } from "uuid";
 
 import ln from "$lib/ln";
 
@@ -37,16 +37,16 @@ export default {
   },
 
   async create(req, res) {
-    let { body, user } = req;
+    const { body, user } = req;
     let { amount, hash, maxfee, fund, memo, payreq } = body;
-    let balance = await g(`balance:${user.id}`);
+    const balance = await g(`balance:${user.id}`);
 
     try {
       if (await g("freeze")) fail("Problem sending payment");
 
       if (typeof amount !== "undefined") {
         amount = parseInt(amount);
-        if (amount < 0 || amount > SATS || isNaN(amount))
+        if (amount < 0 || amount > SATS || Number.isNaN(amount))
           fail("Invalid amount");
       }
 
@@ -92,7 +92,7 @@ export default {
     payments = (
       await Promise.all(
         payments.map(async (pid) => {
-          let p = await g(`payment:${pid}`);
+          const p = await g(`payment:${pid}`);
           if (!p) {
             warn("user", id, "missing payment", pid);
             await db.lRem(`${aid || id}:payments`, 0, pid);
@@ -107,9 +107,9 @@ export default {
       .filter((p) => p)
       .sort((a, b) => b.created - a.created);
 
-    let count = payments.length;
+    const count = payments.length;
 
-    let fn = (a, b) => ({
+    const fn = (a, b) => ({
       ...a,
       [b.currency]: {
         tips: (a[b.currency] ? a[b.currency].tips : 0) + (b.tip || 0),
@@ -135,8 +135,8 @@ export default {
       },
     });
 
-    let incoming = payments.filter((p: any) => p.amount > 0).reduce(fn, {});
-    let outgoing = payments.filter((p: any) => p.amount < 0).reduce(fn, {});
+    const incoming = payments.filter((p: any) => p.amount > 0).reduce(fn, {});
+    const outgoing = payments.filter((p: any) => p.amount < 0).reduce(fn, {});
 
     if (limit) payments = payments.slice(offset, offset + limit);
 
@@ -145,10 +145,10 @@ export default {
 
   async get(req, res) {
     try {
-      let {
+      const {
         params: { hash },
       } = req;
-      let p = await getPayment(hash);
+      const p = await getPayment(hash);
       if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
       res.send(p);
     } catch (e) {
@@ -158,14 +158,14 @@ export default {
   },
 
   async parse(req, res) {
-    let {
+    const {
       body: { payreq },
       user,
     } = req;
     try {
-      let hour = 1000 * 60 * 60;
+      const hour = 1000 * 60 * 60;
       let nodes = await g("nodes");
-      let { last } = nodes || {};
+      const { last } = nodes || {};
 
       if (!last || last > Date.now() - hour) {
         ({ nodes } = await ln.listnodes());
@@ -173,15 +173,15 @@ export default {
         await s("nodes", nodes);
       }
 
-      let decoded = await ln.decodepay(payreq);
-      let { amount_msat, payee } = decoded;
-      let node = nodes.find((n) => n.nodeid === payee);
-      let alias = node ? node.alias : payee.substr(0, 12);
+      const decoded = await ln.decodepay(payreq);
+      const { amount_msat, payee } = decoded;
+      const node = nodes.find((n) => n.nodeid === payee);
+      const alias = node ? node.alias : payee.substr(0, 12);
 
-      let amount = Math.round(amount_msat / 1000);
+      const amount = Math.round(amount_msat / 1000);
       let ourfee = Math.round(amount * config.fee);
-      let credit = await g(`credit:lightning:${user.id}`);
-      let covered = Math.min(credit, ourfee) || 0;
+      const credit = await g(`credit:lightning:${user.id}`);
+      const covered = Math.min(credit, ourfee) || 0;
       ourfee -= covered;
 
       res.send({ alias, amount, ourfee });
@@ -191,10 +191,10 @@ export default {
   },
 
   async fund(req, res) {
-    let {
+    const {
       params: { name },
     } = req;
-    let amount = await g(`fund:${name}`);
+    const amount = await g(`fund:${name}`);
     if (typeof amount === "undefined" || amount === null)
       return bail(res, "fund not found");
     let payments = (await db.lRange(`fund:${name}:payments`, 0, -1)) || [];
@@ -209,10 +209,10 @@ export default {
   },
 
   async withdraw(req, res) {
-    let {
+    const {
       params: { name },
     } = req;
-    let maxWithdrawable = await g(`fund:${name}`);
+    const maxWithdrawable = await g(`fund:${name}`);
     res.send({
       tag: "withdrawRequest",
       callback: `${URL}/lnurlw/${name}`,
@@ -239,8 +239,8 @@ export default {
 
       if (!iid) {
         iid = v4();
-        let rates = await g("rates");
-        let { currency } = user;
+        const rates = await g("rates");
+        const { currency } = user;
         await s(`invoice:${iid}`, {
           currency,
           id: iid,
@@ -251,7 +251,7 @@ export default {
         });
       }
 
-      let payment = await credit({
+      const payment = await credit({
         hash: iid,
         amount,
         memo: id,
@@ -268,23 +268,23 @@ export default {
   },
 
   async confirm(req, res) {
-    let {
+    const {
       body: { txid, wallet, type },
     } = req;
 
     try {
-      let node = rpc({ ...config[type], wallet });
-      let { confirmations, details } = await node.getTransaction(txid);
-      let hot = wallet === config[type].wallet;
+      const node = rpc({ ...config[type], wallet });
+      const { confirmations, details } = await node.getTransaction(txid);
+      const hot = wallet === config[type].wallet;
       let aid;
       if (!hot) aid = wallet;
 
-      for (let { address, amount, asset, category, vout } of details) {
+      for (const { address, amount, asset, category, vout } of details) {
         if (!address) continue;
         if (type === types.liquid && asset !== config.liquid.btc) continue;
 
         if (category === "send") {
-          let p = await getPayment(txid);
+          const p = await getPayment(txid);
           if (!p) continue;
 
           if (confirmations) {
@@ -299,10 +299,10 @@ export default {
           continue;
         }
 
-        let p = await getPayment(`${txid}:${vout}`);
+        const p = await getPayment(`${txid}:${vout}`);
 
         if (!p) {
-          let invoice = await getInvoice(address);
+          const invoice = await getInvoice(address);
           if (!hot && aid !== invoice?.aid) continue;
           await credit({
             hash: address,
@@ -312,13 +312,13 @@ export default {
             aid,
           });
         } else if (confirmations >= 1) {
-          let id = `payment:${txid}:${vout}`;
-          let p = await getPayment(`${txid}:${vout}`);
+          const id = `payment:${txid}:${vout}`;
+          const p = await getPayment(`${txid}:${vout}`);
           if (!p) return db.sAdd("missed", id);
           if (p.confirmed) return;
 
-          let invoice = await getInvoice(address);
-          let { id: iid } = invoice;
+          const invoice = await getInvoice(address);
+          const { id: iid } = invoice;
 
           p.confirmed = true;
           invoice.received += parseInt(invoice.pending);
@@ -334,7 +334,7 @@ export default {
             .incrBy(`balance:${p.aid || p.uid}`, p.amount)
             .exec();
 
-          let user = await g(`user:${p.uid}`);
+          const user = await g(`user:${p.uid}`);
           await completePayment(invoice, p, user);
         }
       }
@@ -347,7 +347,7 @@ export default {
   },
 
   async fee(req, res) {
-    let { body, user } = req;
+    const { body, user } = req;
     try {
       res.send(await build({ ...body, user }));
     } catch (e) {
@@ -365,12 +365,12 @@ export default {
   },
 
   async send(req, res) {
-    let { body, user } = req;
+    const { body, user } = req;
     try {
       await requirePin({ body, user });
-      let { hash: txid } = await sendOnchain({ ...body, user });
-      let pid = await g(`payment:${txid}`);
-      let p = await g(`payment:${pid}`);
+      const { hash: txid } = await sendOnchain({ ...body, user });
+      const pid = await g(`payment:${txid}`);
+      const p = await g(`payment:${pid}`);
 
       res.send(p);
     } catch (e) {
@@ -381,7 +381,7 @@ export default {
   },
 
   async freeze(req, res) {
-    let {
+    const {
       body: { secret },
     } = req;
     try {
@@ -395,16 +395,16 @@ export default {
   },
 
   async print(req, res) {
-    let {
+    const {
       body: { id },
       user,
     } = req;
     try {
-      let p = await g(`payment:${id}`);
+      const p = await g(`payment:${id}`);
       if (p.uid !== user.id) fail("unauthorized");
       emit(user.id, "payment", p);
 
-      let { username } = user;
+      const { username } = user;
 
       mqtt.publish(
         username,
@@ -427,21 +427,21 @@ export default {
       lnaddress = decodeURIComponent(lnaddress);
       await requirePin({ body, user });
 
-      let [username, domain] = lnaddress.split("@");
-      let { minSendable, maxSendable, callback, metadata } = (await got(
+      const [username, domain] = lnaddress.split("@");
+      const { minSendable, maxSendable, callback, metadata } = (await got(
         `https://${domain}/.well-known/lnurlp/${username}`,
       ).json()) as any;
 
-      let memo = metadata["text/plain"] || "";
+      const memo = metadata["text/plain"] || "";
       if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
         fail("amount out of range");
 
-      let r: any = await got(`${callback}?amount=${amount * 1000}`).json();
+      const r: any = await got(`${callback}?amount=${amount * 1000}`).json();
       if (r.reason) fail(r.reason);
-      let { pr } = r;
+      const { pr } = r;
 
-      let { payee } = await ln.decode(pr);
-      let { id } = await ln.getinfo();
+      const { payee } = await ln.decode(pr);
+      const { id } = await ln.getinfo();
 
       let p;
       if (payee === id) {
@@ -457,7 +457,7 @@ export default {
   },
 
   async gateway(req, res) {
-    let {
+    const {
       body: { short_channel_id, webhook },
     } = req;
 
@@ -466,24 +466,24 @@ export default {
   },
 
   async replace(req, res) {
-    let {
+    const {
       body: { id },
       user,
     } = req;
     try {
-      let p = await g(`payment:${id}`);
+      const p = await g(`payment:${id}`);
       if (!p) fail("Payment not found");
       if (p.uid !== user.id) fail("unauthorized");
 
-      let { tx, type } = await decode(p.hex);
-      let node = rpc(config[type]);
+      const { tx, type } = await decode(p.hex);
+      const node = rpc(config[type]);
 
-      let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
+      const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
         r.json(),
       );
 
-      let outputs = [];
-      for (let {
+      const outputs = [];
+      for (const {
         scriptPubKey: { address },
         value,
       } of tx.vout) {
@@ -491,21 +491,21 @@ export default {
           outputs.push({ [address]: value });
       }
 
-      let raw = await node.createRawTransaction(tx.vin, outputs);
+      const raw = await node.createRawTransaction(tx.vin, outputs);
 
-      let newTx = await node.fundRawTransaction(raw, {
+      const newTx = await node.fundRawTransaction(raw, {
         fee_rate: fees.fastestFee + 50,
         replaceable: true,
         subtractFeeFromOutputs: [],
       });
 
-      let diff = sats(newTx.fee) - p.fee;
+      const diff = sats(newTx.fee) - p.fee;
       if (diff < 0) fail("fee must increase");
 
       if (config[type].walletpass)
         await node.walletPassphrase(config[type].walletpass, 300);
       p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
-      let r = await node.testMempoolAccept([p.hex]);
+      const r = await node.testMempoolAccept([p.hex]);
       if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
       warn("bump", user.username, p.hex);
 
@@ -517,12 +517,12 @@ export default {
   },
 
   async internal(req, res) {
-    let {
+    const {
       body: { username, amount },
       user: sender,
     } = req;
 
-    let recipient = await getUser(username);
+    const recipient = await getUser(username);
     res.send(await sendInternal({ amount, sender, recipient }));
   },
 };
