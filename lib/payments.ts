@@ -545,7 +545,9 @@ export const build = async ({
     r.json(),
   );
 
-  fees.fastestFee *= 1.1;
+  fees.hourFee = fees.halfHourFee;
+  fees.halfHourFee = fees.fastestFee;
+  fees.fastestFee = Math.round(fees.fastestFee * 1.1);
 
   if (!feeRate) {
     feeRate = fees.halfHourFee;
