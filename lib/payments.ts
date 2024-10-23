@@ -545,6 +545,8 @@ export const build = async ({
     r.json(),
   );
 
+  fees.fastestFee *= 1.1;
+
   if (!feeRate) {
     feeRate = fees.halfHourFee;
   }
