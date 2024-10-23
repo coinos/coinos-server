@@ -91,7 +91,7 @@ export let generate = async ({ invoice, user }) => {
   } else if (type === types.internal) {
     hash = id;
   } else {
-    fail("unrecognized type");
+    fail("unrecognized type", type);
   }
 
   invoice = {
