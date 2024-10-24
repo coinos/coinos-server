@@ -1,11 +1,11 @@
 import { g } from "$lib/db";
 import { generate } from "$lib/invoices";
-import { bail, pick } from "$lib/utils";
 import { err } from "$lib/logging";
+import { bail, pick } from "$lib/utils";
 
 export default {
   async get(req, res) {
-    let {
+    const {
       params: { id },
     } = req;
     let invoice = await g(`invoice:${id}`);
@@ -31,7 +31,7 @@ export default {
   async create(req, res) {
     let { body, user } = req;
     if (body.user) user = body.user;
-    let { invoice } = body;
+    const { invoice } = body;
 
     try {
       res.send(await generate({ invoice, user }));

@@ -1,7 +1,5 @@
 import config from "$config";
-let ln;
 
-let { LightningClient } = (await import("clightning-client")).default;
-ln = new LightningClient(config.lightning);
-
-export default ln;
+const { LightningClient } = (await import("clightning-client")).default;
+export default new LightningClient(config.lightning);
+export const lnb = new LightningClient(config.lightningb);

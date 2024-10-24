@@ -1,20 +1,20 @@
-import { g, s, db } from "$lib/db";
-import { get, claim, mint, check } from "$lib/ecash";
-import { bail, fail } from "$lib/utils";
-import { debit, credit, types } from "$lib/payments";
-import { v4 } from "uuid";
-import { l, err } from "$lib/logging";
+import { db, g, s } from "$lib/db";
+import { check, claim, get, mint } from "$lib/ecash";
+import { err, l } from "$lib/logging";
+import { credit, debit, types } from "$lib/payments";
 import { emit } from "$lib/sockets";
+import { bail, fail } from "$lib/utils";
+import { v4 } from "uuid";
 
-let { ecash: type } = types;
+const { ecash: type } = types;
 
 export default {
   async save(req, res) {
-    let {
+    const {
       body: { token },
     } = req;
     try {
-      let id = v4();
+      const id = v4();
       await s(`cash:${id}`, token);
       res.send({ id });
     } catch (e) {
@@ -24,12 +24,12 @@ export default {
   },
 
   async get(req, res) {
-    let {
+    const {
       params: { id, version },
     } = req;
     try {
-      let token = await get(id, version);
-      let status = await check(token);
+      const token = await get(id, version);
+      const status = await check(token);
       res.send({ token, status });
     } catch (e) {
       err(e.message);
@@ -38,17 +38,17 @@ export default {
   },
 
   async claim(req, res) {
-    let {
+    const {
       body: { token },
       user,
     } = req;
     try {
-      let amount = await claim(token);
+      const amount = await claim(token);
 
       let memo;
-      let hash = v4();
-      let { currency, id: uid } = user;
-      let rates = await g("rates");
+      const hash = v4();
+      const { currency, id: uid } = user;
+      const rates = await g("rates");
       await s(`invoice:${hash}`, {
         currency,
         id: hash,
@@ -68,18 +68,17 @@ export default {
   },
 
   async mint(req, res) {
-    let {
+    const {
       body: { amount },
       user,
     } = req;
     try {
-      let id = v4();
-      let hash = v4();
+      const id = v4();
+      const hash = v4();
 
-      let memo, rate;
-      let p = await debit({ hash, amount, user, type, memo, rate });
-      let token = await mint(amount);
-      p.memo = token;
+      const p = await debit({ hash, amount, user, type });
+      const token = await mint(amount);
+      p.memo = id;
       await s(`payment:${p.id}`, p);
       s(`cash:${id}`, token);
 
@@ -97,11 +96,11 @@ export default {
     } = req;
     try {
       amount = Math.round(amount / 1000);
-      let ref = preimage;
-      let { lightning: type } = types;
+      const ref = preimage;
+      const { lightning: type } = types;
       if (user.username !== "mint") fail("unauthorized");
-      let { id: uid, currency } = user;
-      let ourfee = await db.debit(
+      const { id: uid, currency } = user;
+      const ourfee = await db.debit(
         `balance:${uid}`,
         `credit:${type}:${uid}`,
         amount || 0,
@@ -110,13 +109,13 @@ export default {
         0,
       );
 
-      let rates = await g("rates");
-      let rate = rates[currency];
+      const rates = await g("rates");
+      const rate = rates[currency];
 
       if (ourfee.err) fail(ourfee.err);
 
-      let id = v4();
-      let p = {
+      const id = v4();
+      const p = {
         id,
         amount: -amount,
         hash,
