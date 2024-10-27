@@ -1,41 +1,36 @@
 import config from "$config";
-import { generate } from "$lib/invoices";
-import { emit } from "$lib/sockets";
-import { v4 } from "uuid";
-import { notify } from "$lib/notifications";
+import api from "$lib/api";
 import { db, g, s } from "$lib/db";
-import { l, err, warn } from "$lib/logging";
+import { generate } from "$lib/invoices";
+import ln from "$lib/ln";
+import { err, l, warn } from "$lib/logging";
+import { notify } from "$lib/notifications";
 import {
-  f,
+  SATS,
   btc,
   fail,
-  fiat,
+  fmt,
+  formatReceipt,
   getInvoice,
   getPayment,
   getUser,
-  sleep,
-  SATS,
+  link,
   sats,
-  formatReceipt,
+  sleep,
   t,
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
-import got from "got";
-import { mqtt1, mqtt2 } from "$lib/mqtt";
-import { mail, templates } from "$lib/mail";
-import api from "$lib/api";
-import { bech32 } from "bech32";
 import rpc from "@coinos/rpc";
+import { bech32 } from "bech32";
+import got from "got";
+import { v4 } from "uuid";
 
-import ln from "$lib/ln";
+const bc = rpc(config.bitcoin);
+const lq = rpc(config.liquid);
 
-let bc = rpc(config.bitcoin);
-let lq = rpc(config.liquid);
+const dust = 547;
 
-let { URL } = process.env;
-let dust = 547;
-
-export let types = {
+export const types = {
   internal: "internal",
   bitcoin: "bitcoin",
   lightning: "lightning",
@@ -45,7 +40,7 @@ export let types = {
   reconcile: "reconcile",
 };
 
-export let debit = async ({
+export const debit = async ({
   aid = undefined,
   hash,
   amount,
@@ -61,12 +56,12 @@ export let debit = async ({
   // if (!user.unlimited && amount > 1000000)
   //   fail(`⚡️${amount} exceeds max withdrawal of ⚡️1,000,000`);
   let ref;
-  let { id: uid, currency } = user;
+  const { id: uid, currency } = user;
 
-  let rates = await g("rates");
+  const rates = await g("rates");
   if (!rate) rate = rates[currency];
 
-  let invoice = await getInvoice(hash);
+  const invoice = await getInvoice(hash);
   let iid;
 
   if (invoice) {
@@ -75,7 +70,7 @@ export let debit = async ({
 
     ref = invoice.uid;
 
-    let equivalentRate =
+    const equivalentRate =
       invoice.rate * (rates[currency] / rates[invoice.currency]);
 
     if (Math.abs(invoice.rate / rates[invoice.currency] - 1) < 0.01) {
@@ -85,7 +80,7 @@ export let debit = async ({
     }
   }
 
-  let tip = parseInt(invoice?.tip) || null;
+  const tip = parseInt(invoice?.tip) || null;
   if (tip < 0) fail("Invalid tip");
 
   if (!amount || amount < 0) fail("Amount must be greater than zero");
@@ -109,8 +104,8 @@ export let debit = async ({
 
   if (ourfee.err) fail(ourfee.err);
 
-  let id = v4();
-  let p = {
+  const id = v4();
+  const p = {
     id,
     aid,
     amount: -amount,
@@ -140,7 +135,7 @@ export let debit = async ({
   return p;
 };
 
-export let credit = async ({
+export const credit = async ({
   hash,
   amount,
   memo = "",
@@ -150,7 +145,7 @@ export let credit = async ({
 }) => {
   amount = parseInt(amount) || 0;
 
-  let inv = await getInvoice(hash);
+  const inv = await getInvoice(hash);
   if (!inv) {
     await db.sAdd("missing", ref.split(":")[0]);
     return;
@@ -164,16 +159,16 @@ export let credit = async ({
   if (amount < 0 || tip < 0) fail("Invalid amount");
   if (type === types.internal) amount += tip;
 
-  let user = await getUser(inv.uid);
-  let { id: uid, currency, username } = user;
+  const user = await getUser(inv.uid);
+  const { id: uid, currency, username } = user;
 
-  let rates = await g("rates");
+  const rates = await g("rates");
   let rate = rates[currency];
 
   if (!rate) await sleep(1000);
   rate = rates[currency];
 
-  let equivalentRate = inv.rate * (rates[currency] / rates[inv.currency]);
+  const equivalentRate = inv.rate * (rates[currency] / rates[inv.currency]);
 
   if (Math.abs(inv.rate / rates[inv.currency] - 1) < 0.01) {
     rate = equivalentRate;
@@ -181,8 +176,8 @@ export let credit = async ({
     // warn("rate slipped", hash, invoice.rate, equivalentRate);
   }
 
-  let id = v4();
-  let p = {
+  const id = v4();
+  const p = {
     aid,
     id,
     iid: inv.id,
@@ -209,7 +204,7 @@ export let credit = async ({
 
   let balanceKey = "balance";
   if ([types.bitcoin, types.liquid].includes(type)) {
-    let [txid, vout] = ref.split(":").slice(-2);
+    const [txid, vout] = ref.split(":").slice(-2);
     p.confirmed = false;
     balanceKey = "pending";
     await s(`payment:${txid}:${vout}`, id);
@@ -217,7 +212,7 @@ export let credit = async ({
     await s(`payment:${hash}`, id);
   }
 
-  let m = await db.multi();
+  const m = await db.multi();
 
   if ([types.bitcoin, types.liquid, types.lightning].includes(type))
     m.incrBy(`credit:${type}:${uid}`, Math.round(amount * config.fee));
@@ -228,59 +223,28 @@ export let credit = async ({
     .incrBy(`${balanceKey}:${aid || uid}`, amount)
     .exec();
 
-  emit(uid, "payment", p);
-  notify(user, `Received ${amount} sats`);
-  callWebhook(inv, p);
-  l(username, "received", type, amount);
-
-  let items;
-  if (inv.items && inv.items.length) {
+  if (inv.items?.length) {
     formatReceipt(inv.items, inv.currency);
     p.items = inv.items;
   }
 
-  if (config.mqtt1) {
-    if (!mqtt1.connected) await mqtt1.reconnect();
-    mqtt1.publish(
-      username,
-      `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${items}`,
-    );
-  }
-
-  if (config.mqtt2) {
-    if (!mqtt2.connected) await mqtt2.reconnect();
-    mqtt2.publish(
-      username,
-      `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${items}`,
-    );
-  }
-
-  try {
-    await completePayment(p, user);
-  } catch (e) {
-    console.log(e);
-  }
+  await completePayment(inv, p, user);
 
   return p;
 };
 
-let fmt = (sats) =>
-  "⚡️" +
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(sats);
-
-export let completePayment = async (p, user) => {
-  let { id, autowithdraw, threshold, reserve, destination, username } = user;
-  let link = (id) => `${URL}/payment/${id}`;
+export const completePayment = async (inv, p, user) => {
+  const { id, autowithdraw, threshold, reserve, destination, username } = user;
+  let withdrawal;
   if (p.confirmed) {
-    let withdrawal;
     if (autowithdraw) {
       try {
-        let to = destination.trim();
-        let balance = await g(`balance:${id}`);
-        let amount = balance - reserve;
+        const to = destination.trim();
+        const balance = await g(`balance:${id}`);
+        const amount = balance - reserve;
         if (balance > threshold) {
           l("initiating autowithdrawal", amount, to, balance, threshold);
-          let w = await pay({ amount, to, user });
+          const w = await pay({ amount, to, user });
           withdrawal = {
             amount: fmt(-w.amount),
             link: link(w.id),
@@ -291,42 +255,20 @@ export let completePayment = async (p, user) => {
         warn(username, "autowithdraw failed", e.message);
       }
     }
-
-    let { paymentReceived } = t(user);
-    if (user.verified && user.notify) {
-      mail(user, paymentReceived, templates.paymentReceived, {
-        ...t(user),
-        username,
-        payment: {
-          amount: fmt(p.amount),
-          link: link(p.id),
-          tip: p.tip ? fmt(p.tip) : undefined,
-          fiat: f(fiat(p.amount, p.rate), p.currency),
-          fiatTip: p.tip ? f(fiat(p.tip, p.rate), p.currency) : undefined,
-          memo: p.memo,
-          items:
-            p.items &&
-            p.items.map((i) => {
-              return {
-                quantity: i.quantity,
-                name: i.name,
-                total: i.quantity * i.price,
-                totalFiat: f(i.quantity * i.price, p.currency),
-              };
-            }),
-        },
-        withdrawal,
-      });
-    }
   }
+
+  notify(p, user, withdrawal);
+  l(username, "received", p.type, p.amount);
+  callWebhook(inv, p);
 };
 
-let pay = async ({ aid = undefined, amount, to, user }) => {
+const pay = async ({ aid = undefined, amount, to, user }) => {
   if (!aid) aid = user.id;
   amount = parseInt(amount) || 0;
-  let lnurl, pr;
+  let lnurl;
+  let pr;
   if (to.includes("@") && to.includes(".")) {
-    let [name, domain] = to.split("@");
+    const [name, domain] = to.split("@");
     lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
   } else if (to.startsWith("lnurl")) {
     lnurl = Buffer.from(
@@ -334,10 +276,10 @@ let pay = async ({ aid = undefined, amount, to, user }) => {
     ).toString();
   }
 
-  let maxfee = getMaxFee(amount);
+  const maxfee = getMaxFee(amount);
   if (lnurl) {
     amount -= maxfee;
-    let { callback } = (await got(lnurl).json()) as any;
+    const { callback } = (await got(lnurl).json()) as any;
     ({ pr } = (await got(`${callback}?amount=${amount * 1000}`).json()) as any);
   } else if (to.startsWith("ln")) {
     amount -= maxfee;
@@ -349,8 +291,9 @@ let pay = async ({ aid = undefined, amount, to, user }) => {
     : await sendOnchain({ aid, amount, address: to, user, subtract: true });
 };
 
-export let decode = async (hex) => {
-  let type, tx;
+export const decode = async (hex) => {
+  let type;
+  let tx;
   try {
     tx = await bc.decodeRawTransaction(hex);
     type = types.bitcoin;
@@ -367,14 +310,14 @@ export let decode = async (hex) => {
   return { tx, type };
 };
 
-let inflight = {};
-export let sendOnchain = async (params) => {
+const inflight = {};
+export const sendOnchain = async (params) => {
   let { aid, hex, rate, user, signed } = params;
   if (!aid) aid = user.id;
   if (!hex) ({ hex } = await build(params));
 
-  let { tx, type } = await decode(hex);
-  let node =
+  const { tx, type } = await decode(hex);
+  const node =
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
   let { txid } = tx;
 
@@ -393,7 +336,7 @@ export let sendOnchain = async (params) => {
 
     ({ txid } = await node.decodeRawTransaction(hex));
 
-    let r = await node.testMempoolAccept([hex]);
+    const r = await node.testMempoolAccept([hex]);
     if (!r[0].allowed) fail("transaction rejected");
 
     let total = 0;
@@ -401,7 +344,7 @@ export let sendOnchain = async (params) => {
     let change = 0;
 
     if (type === types.liquid) {
-      for (let {
+      for (const {
         asset,
         scriptPubKey: { address, type },
         value,
@@ -420,18 +363,18 @@ export let sendOnchain = async (params) => {
       }
     } else {
       let totalIn = 0;
-      for await (let { txid, vout } of tx.vin) {
-        let hex = await node.getRawTransaction(txid);
-        let tx = await node.decodeRawTransaction(hex);
+      for await (const { txid, vout } of tx.vin) {
+        const hex = await node.getRawTransaction(txid);
+        const tx = await node.decodeRawTransaction(hex);
         totalIn += sats(tx.vout[vout].value);
       }
 
-      for (let {
+      for (const {
         scriptPubKey: { address },
         value,
       } of tx.vout) {
         total += sats(value);
-        let invoice = await g(`invoice:${address}`);
+        const invoice = await g(`invoice:${address}`);
         if (invoice?.aid === aid) fail("Cannot send to internal address");
 
         if ((await node.getAddressInfo(address)).ismine) {
@@ -442,9 +385,9 @@ export let sendOnchain = async (params) => {
       fee = totalIn - total;
     }
 
-    let amount = total - change;
+    const amount = total - change;
 
-    let p = await debit({
+    const p = await debit({
       aid,
       hash: txid,
       amount,
@@ -467,7 +410,7 @@ export let sendOnchain = async (params) => {
   }
 };
 
-let getMaxFee = (n) =>
+const getMaxFee = (n) =>
   Math.round(
     n < 100
       ? n * 5
@@ -482,7 +425,7 @@ let getMaxFee = (n) =>
               : n * 0.01,
   );
 
-export let sendLightning = async ({
+export const sendLightning = async ({
   user,
   pr,
   amount,
@@ -497,15 +440,15 @@ export let sendLightning = async ({
   }
 
   let total = amount;
-  let decoded = await ln.decode(pr);
-  let { amount_msat } = decoded;
+  const decoded = await ln.decode(pr);
+  const { amount_msat } = decoded;
   if (amount_msat) total = Math.round(amount_msat / 1000);
 
   maxfee = parseInt(maxfee) || getMaxFee(total);
 
   if (maxfee < 0) fail("Max fee cannot be negative");
 
-  let { pays } = await ln.listpays(pr);
+  const { pays } = await ln.listpays(pr);
   if (pays.find((p) => p.status === "complete"))
     fail("Invoice has already been paid");
 
@@ -542,14 +485,13 @@ export let sendLightning = async ({
       console.log("failed to process payment", e, p);
     }
   } catch (e) {
-    await reverse(p);
     throw e;
   }
 
   return p;
 };
 
-export let sendInternal = async ({
+export const sendInternal = async ({
   amount,
   invoice = undefined,
   recipient,
@@ -561,15 +503,15 @@ export let sendInternal = async ({
       user: recipient,
     });
 
-  let { hash } = invoice;
+  const { hash } = invoice;
   let memo;
 
-  let p = await debit({ hash, amount, memo, user: sender });
+  const p = await debit({ hash, amount, memo, user: sender });
   await credit({ hash, amount, memo, ref: sender.id });
   return p;
 };
 
-let getAddressType = async (a) => {
+const getAddressType = async (a) => {
   try {
     await bc.getAddressInfo(a);
     return types.bitcoin;
@@ -583,7 +525,7 @@ let getAddressType = async (a) => {
   }
 };
 
-export let build = async ({
+export const build = async ({
   aid,
   amount,
   address,
@@ -591,17 +533,21 @@ export let build = async ({
   subtract,
   user,
 }) => {
-  let type = await getAddressType(address);
+  const type = await getAddressType(address);
   if (!aid) aid = user.id;
-  let node =
+  const node =
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
 
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
-  let fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
+  const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
     r.json(),
   );
+
+  fees.hourFee = fees.halfHourFee;
+  fees.halfHourFee = fees.fastestFee;
+  fees.fastestFee = Math.round(fees.fastestFee * 1.1);
 
   if (!feeRate) {
     feeRate = fees.halfHourFee;
@@ -609,7 +555,7 @@ export let build = async ({
 
   if (feeRate < fees.economyFee) fail("fee rate too low");
 
-  let replaceable = false;
+  const replaceable = false;
 
   let outs = [{ [address]: btc(amount) }];
 
@@ -634,10 +580,10 @@ export let build = async ({
     else throw e;
   }
 
-  let balance = await g(`balance:${aid}`);
+  const balance = await g(`balance:${aid}`);
   let ourfee = Math.round(amount * config.fee);
-  let credit = await g(`credit:${type}:${aid}`);
-  let covered = Math.min(credit, ourfee);
+  const credit = await g(`credit:${type}:${aid}`);
+  const covered = Math.min(credit, ourfee);
   ourfee -= covered;
 
   if (aid) ourfee = 0;
@@ -659,16 +605,16 @@ export let build = async ({
     fee = sats(tx.fee);
   }
 
-  let inputs = [];
-  let { vin } = await node.decodeRawTransaction(tx.hex);
+  const inputs = [];
+  const { vin } = await node.decodeRawTransaction(tx.hex);
 
-  for (let { txid, vout } of vin) {
-    let rawTx = await node.getRawTransaction(txid);
-    let tx = await node.decodeRawTransaction(rawTx);
-    let prevOutput = tx.vout[vout];
-    let { address } = prevOutput.scriptPubKey;
-    let { hdkeypath: path } = await node.getAddressInfo(address);
-    let witnessUtxo = {
+  for (const { txid, vout } of vin) {
+    const rawTx = await node.getRawTransaction(txid);
+    const tx = await node.decodeRawTransaction(rawTx);
+    const prevOutput = tx.vout[vout];
+    const { address } = prevOutput.scriptPubKey;
+    const { hdkeypath: path } = await node.getAddressInfo(address);
+    const witnessUtxo = {
       amount: Math.round(prevOutput.value * SATS),
       script: prevOutput.scriptPubKey.hex,
     };
@@ -678,10 +624,10 @@ export let build = async ({
   return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs };
 };
 
-export let catchUp = async () => {
+export const catchUp = async () => {
   try {
-    let txns = [];
-    for (let [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
+    const txns = [];
+    for (const [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
       txns.push(
         ...(await n.listTransactions("*", 10)).filter((tx) => {
           tx.type = type;
@@ -690,7 +636,7 @@ export let catchUp = async () => {
       );
     }
 
-    for (let { txid, type } of txns) {
+    for (const { txid, type } of txns) {
       try {
         if (await db.zScore("seen", txid)) continue;
         await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
@@ -711,33 +657,33 @@ export let catchUp = async () => {
   setTimeout(catchUp, 10000);
 };
 
-export let reconcile = async (account, initial = false) => {
+export const reconcile = async (account, initial = false) => {
   try {
-    let { descriptors, id, uid, type } = account;
-    let user = await getUser(uid);
-    let node = rpc({ ...config[type], wallet: id });
+    const { descriptors, id, uid, type } = account;
+    const user = await getUser(uid);
+    const node = rpc({ ...config[type], wallet: id });
 
     let total;
 
     if (initial) {
-      let progress = await node.scanTxOutSet("status");
+      const progress = await node.scanTxOutSet("status");
       if (progress) return setTimeout(() => reconcile(account, initial), 1000);
 
-      let { total_amount } = await node.scanTxOutSet("start", descriptors);
+      const { total_amount } = await node.scanTxOutSet("start", descriptors);
       total = Math.round(total_amount * SATS);
     } else {
       total = Math.round((await node.getBalance({ minconf: 1 })) * SATS);
     }
 
-    let { balanceAdjustment: memo } = t(user);
+    const { balanceAdjustment: memo } = t(user);
 
-    let balance = await g(`balance:${id}`);
+    const balance = await g(`balance:${id}`);
 
-    let amount = Math.abs(total - balance);
-    let hash = v4();
+    const amount = Math.abs(total - balance);
+    const hash = v4();
 
     if (total > balance) {
-      let inv = {
+      const inv = {
         memo,
         type: types.reconcile,
         hash,
@@ -770,17 +716,17 @@ export let reconcile = async (account, initial = false) => {
   }
 };
 
-export let check = async () => {
+export const check = async () => {
   try {
-    let payments = await db.sMembers("pending");
+    const payments = await db.sMembers("pending");
 
-    for (let pr of payments) {
-      let p = await getPayment(pr);
+    for (const pr of payments) {
+      const p = await getPayment(pr);
       if (!p) continue;
-      let { pays } = await ln.listpays(pr);
+      const { pays } = await ln.listpays(pr);
 
-      let failed = !pays.length || pays.every((p) => p.status === "failed");
-      let completed = pays.find((p) => p.status === "complete");
+      const failed = !pays.length || pays.every((p) => p.status === "failed");
+      const completed = pays.find((p) => p.status === "complete");
 
       if (completed) await finalize(completed, p);
       else if (failed) await reverse(p);
@@ -792,11 +738,11 @@ export let check = async () => {
   setTimeout(check, 2000);
 };
 
-let finalize = async (r, p) => {
+const finalize = async (r, p) => {
   await db.sRem("pending", p.hash);
   l("payment completed", p.id, r.payment_preimage);
 
-  let maxfee = p.fee;
+  const maxfee = p.fee;
   p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
   p.ref = r.payment_preimage;
 
@@ -808,12 +754,12 @@ let finalize = async (r, p) => {
   return p;
 };
 
-let reverse = async (p) => {
-  let total = Math.abs(p.amount) + p.fee;
-  let ourfee = p.ourfee || 0;
-  let credit = Math.round(total * config.fee) - ourfee;
+const reverse = async (p) => {
+  const total = Math.abs(p.amount) + p.fee;
+  const ourfee = p.ourfee || 0;
+  const credit = Math.round(total * config.fee) - ourfee;
 
-  let k = await db.reverse(
+  const k = await db.reverse(
     `payment:${p.id}`,
     `balance:${p.uid}`,
     `credit:${types.lightning}:${p.uid}`,

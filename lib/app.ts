@@ -46,7 +46,7 @@ app.addHook("onResponse", async (req, reply) => {
 
 app.register(fastifyRateLimit, {
   allowList: (req) => req.raw.url?.includes("public"),
-  max: 100,
+  max: 500,
   timeWindow: 2000,
   keyGenerator: (req) => req.headers["cf-connecting-ip"] as string,
   errorResponseBuilder: () => {

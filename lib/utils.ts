@@ -1,42 +1,44 @@
-import locales from "$lib/locales/index";
-import { randomBytes, bytesToHex } from "@noble/hashes/utils";
-import migrate from "$lib/migrate";
-import { g, s } from "$lib/db";
 import config from "$config";
+import { g, s } from "$lib/db";
+import locales from "$lib/locales/index";
+import migrate from "$lib/migrate";
+import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { getPublicKey } from "nostr";
 
-export let fail = (msg) => {
+const { URL } = process.env;
+
+export const fail = (msg) => {
   throw new Error(msg);
 };
 
-export let nada = () => {};
+export const nada = () => {};
 
-export let sleep = (n) => new Promise((r) => setTimeout(r, n));
-export let wait = async (f, s = 300, n = 50) => {
+export const sleep = (n) => new Promise((r) => setTimeout(r, n));
+export const wait = async (f, s = 300, n = 50) => {
   let i = 0;
   while (!(await f()) && i < s) (await sleep(n)) && i++;
   if (i >= s) fail("timeout");
   return f();
 };
 
-export let prod = process.env.NODE_ENV === "production";
+export const prod = process.env.NODE_ENV === "production";
 
-export let bail = (res, msg) => res.code(500).send(msg);
+export const bail = (res, msg) => res.code(500).send(msg);
 
-export let SATS = 100000000;
-export let sats = (n) => Math.round(n * SATS);
-export let btc = (n) => parseFloat((n / SATS).toFixed(8));
-export let fiat = (n, r) => (n * r) / SATS;
+export const SATS = 100000000;
+export const sats = (n) => Math.round(n * SATS);
+export const btc = (n) => parseFloat((n / SATS).toFixed(8));
+export const fiat = (n, r) => (n * r) / SATS;
 
-export let uniq = (a, k) => [...new Map(a.map((x) => [k(x), x])).values()];
-export let pick = (O, K) =>
+export const uniq = (a, k) => [...new Map(a.map((x) => [k(x), x])).values()];
+export const pick = (O, K) =>
   K.reduce((o, k) => (typeof O[k] !== "undefined" && (o[k] = O[k]), o), {});
 
-export let bip21 = (address, { amount, memo, tip, type }) => {
+export const bip21 = (address, { amount, memo, tip, type }) => {
   if (!(amount || memo)) return address;
 
-  let network = { liquid: "liquidnetwork", bitcoin: "bitcoin" }[type];
-  let url = new URLSearchParams();
+  const network = { liquid: "liquidnetwork", bitcoin: "bitcoin" }[type];
+  const url = new URLSearchParams();
 
   if (amount) {
     url.append("amount", btc(amount + tip).toFixed(8));
@@ -48,7 +50,7 @@ export let bip21 = (address, { amount, memo, tip, type }) => {
   return `${network}:${address}?${url.toString()}`;
 };
 
-export let fields = [
+export const fields = [
   "cipher",
   "pubkey",
   "password",
@@ -68,9 +70,9 @@ export let fields = [
   "banner",
 ];
 
-export let getUser = async (username) => {
+export const getUser = async (username) => {
   if (username === "undefined") fail("invalid user");
-  let user = await migrate(username);
+  const user = await migrate(username);
   if (user && !user.anon && !user.nwc) {
     user.nwc = bytesToHex(randomBytes(32));
     await s(getPublicKey(user.nwc), user.id);
@@ -80,20 +82,20 @@ export let getUser = async (username) => {
   return user;
 };
 
-export let getInvoice = async (hash) => {
+export const getInvoice = async (hash) => {
   let iid = await g(`invoice:${hash}`);
-  if (iid && iid.id) iid = iid.id;
-  else if (iid && iid.hash) iid = iid.hash;
+  if (iid?.id) iid = iid.id;
+  else if (iid?.hash) iid = iid.hash;
   return await g(`invoice:${iid}`);
 };
 
-export let getPayment = async (id) => {
+export const getPayment = async (id) => {
   let p = await g(`payment:${id}`);
   if (typeof p === "string") p = await g(`payment:${p}`);
   return p;
 };
 
-export let f = (s, currency) =>
+export const f = (s, currency) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -106,14 +108,14 @@ export function formatReceipt(items, currency) {
     const words = text.split(" ");
     const lines = [];
     let currentLine = "";
-    words.forEach((word) => {
+    for (const word of words) {
       if (currentLine.length + word.length + 1 > maxWidth) {
         lines.push(currentLine);
         currentLine = word;
       } else {
         currentLine += (currentLine.length > 0 ? " " : "") + word;
       }
-    });
+    }
     if (currentLine) lines.push(currentLine);
     return lines;
   }
@@ -122,7 +124,7 @@ export function formatReceipt(items, currency) {
     let maxQuantityLength = 0;
     let maxPriceLength = 0;
 
-    items.forEach((item) => {
+    for (const item of items) {
       const quantityLength = String(item.quantity).length;
       if (quantityLength > maxQuantityLength) {
         maxQuantityLength = quantityLength;
@@ -132,7 +134,7 @@ export function formatReceipt(items, currency) {
       if (priceLength > maxPriceLength) {
         maxPriceLength = priceLength;
       }
-    });
+    }
 
     // Add padding to the widths for aesthetic spacing
     return {
@@ -154,7 +156,7 @@ export function formatReceipt(items, currency) {
       const nameLines = wrapText(item.name, nameColumnWidth);
 
       // Construct the full line(s) with the first line including the price
-      let fullLines = [
+      const fullLines = [
         `${quantityStr}${nameLines[0].padEnd(nameColumnWidth)}${priceStr}`,
       ];
       // Add any additional name lines, properly indented
@@ -167,11 +169,11 @@ export function formatReceipt(items, currency) {
     .join("\n");
 }
 
-export let t = ({ language = "en" }) => locales[language];
+export const t = ({ language = "en" }) => locales[language];
 
-export let time = (() => {
-  let count = 0,
-    started = false;
+export const time = (() => {
+  let count = 0;
+  let started = false;
   return (s = "") => {
     if (!started) {
       console.time("");
@@ -180,3 +182,10 @@ export let time = (() => {
     console.timeLog("", ++count, s);
   };
 })();
+
+export const fmt = (sats) =>
+  `⚡️${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
+    sats,
+  )}`;
+
+export const link = (id) => `${URL}/payment/${id}`;

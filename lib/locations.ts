@@ -1,7 +1,7 @@
 import { err } from "$lib/logging";
 import got from "got";
 import { g, s } from "$lib/db";
-import { fields, pick } from "$lib/utils";
+import { fields, pick, uniq } from "$lib/utils";
 
 export let getLocations = async () => {
   try {
@@ -40,7 +40,10 @@ export let getLocations = async () => {
 
     locations.push(...previous);
 
-    await s("locations", locations);
+    await s(
+      "locations",
+      uniq(locations, (l) => l.id),
+    );
     await s("locations:since", new Date().toISOString().split(".")[0] + "Z");
   } catch (e) {
     err("problem fetching locations", e);

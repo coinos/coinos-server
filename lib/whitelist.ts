@@ -33,6 +33,7 @@ export default [
   "profile",
   "prompt",
   "pubkey",
+  "push",
   "reserve",
   "salt",
   "seed",

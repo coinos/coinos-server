@@ -256,6 +256,7 @@ export default {
         "prompt",
         "profile",
         "pubkey",
+        "push",
         "reserve",
         "salt",
         "seed",
@@ -340,21 +341,38 @@ export default {
     }
   },
 
-  async subscribe(req, res) {
-    let { body, user } = req;
-    let { subscriptions } = user;
-    let { subscription } = body;
-    if (!subscriptions) subscriptions = [];
-    if (
-      !subscriptions.find(
-        (s) => JSON.stringify(s) === JSON.stringify(subscription),
-      )
-    )
-      subscriptions.push(subscription);
-    user.subscriptions = subscriptions;
-    l("subscribing", user.username);
-    await user.save();
-    res.sendStatus(201);
+  async subscriptions(req, res) {
+    try {
+      let { user } = req;
+      let subscriptions = await db.sMembers(`${user.id}:subscriptions`);
+      res.send(subscriptions);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
+  async subscription(req, res) {
+    try {
+      let { subscription } = req.body;
+      let { id } = req.user;
+      await db.sAdd(`${id}:subscriptions`, JSON.stringify(subscription));
+      res.send(subscription);
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
+  },
+
+  async deleteSubscription(req, res) {
+    try {
+      let { subscription } = req.body;
+      let { id } = req.user;
+      await db.sRem(`${id}:subscriptions`, JSON.stringify(subscription));
+      res.send(subscription);
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 
   async password(req, res) {
