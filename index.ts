@@ -127,6 +127,11 @@ app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 
+app.post("/echo", (req, res) => {
+  console.log("echo", req.body);
+  res.send(req.body);
+});
+
 let host: string = process.env["HOST"] || "0.0.0.0";
 let port: number = parseInt(process.env["PORT"]) || 3119;
 
