@@ -18,7 +18,7 @@ const dedup = (array) =>
 
 export const getLocations = async () => {
   try {
-    const previous = await g("locations");
+    const previous = await g("locations") || [];
     let since = await g("locations:since");
     if (!since) since = "2022-09-19T00:00:00Z";
     if (Date.now() - new Date(since).getTime() < 60000) return;
@@ -56,6 +56,7 @@ export const getLocations = async () => {
     await s("locations", dedup(locations));
     await s("locations:since", `${new Date().toISOString().split(".")[0]}Z`);
   } catch (e) {
+    console.log(e);
     err("problem fetching locations", e);
   }
 
