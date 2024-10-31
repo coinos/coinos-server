@@ -2,8 +2,8 @@ import { err, warn, l, line } from "$lib/logging";
 import { types } from "$lib/payments";
 import { archive, db, g, ga, s } from "$lib/db";
 
-let queued = {};
-let migrating = {};
+const queued = {};
+const migrating = {};
 
 async function migrate(id) {
   try {
@@ -35,7 +35,7 @@ async function migrate(id) {
       l("migrating", username);
 
       try {
-        let multi = await db
+        const multi = await db
           .multi()
           .set(`user:${username}`, id)
           .set(`user:${user.pubkey}`, id)
@@ -73,11 +73,11 @@ async function migrate(id) {
 
         let pid;
         while ((pid = await archive.rPop(`${id}:payments`))) {
-          let p = await ga(`payment:${pid}`);
-          let pos = await db.lPos(`${id}:payments`, pid);
+          const p = await ga(`payment:${pid}`);
+          const pos = await db.lPos(`${id}:payments`, pid);
           if (!p || pos) continue;
           if (p.type === types.internal && p.ref) {
-            let recipient = await g(`user:${p.ref}`);
+            const recipient = await g(`user:${p.ref}`);
             if (!recipient) queued[p.ref] = true;
           }
 
@@ -90,8 +90,8 @@ async function migrate(id) {
 
         let iid;
         while ((iid = await archive.rPop(`${id}:invoices`))) {
-          let inv = await ga(`invoice:${iid}`);
-          let pos = await db.lPos(`${id}:invoices`, iid);
+          const inv = await ga(`invoice:${iid}`);
+          const pos = await db.lPos(`${id}:invoices`, iid);
           if (!inv || pos) continue;
           await db.lPush(`${id}:invoices`, iid);
           await s(`invoice:${iid}`, inv);
@@ -114,10 +114,10 @@ async function migrate(id) {
   }
 }
 
-let keepMigrating = async () => {
+const keepMigrating = async () => {
   try {
     if (Object.keys(queued).length) {
-      let next = Object.keys(queued)[0];
+      const next = Object.keys(queued)[0];
       await migrate(next);
     }
   } catch (e) {

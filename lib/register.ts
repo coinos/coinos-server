@@ -8,7 +8,7 @@ import { db } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
 
-let valid = /^[\p{L}\p{N}]{2,24}$/u;
+const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
   let { password, pubkey, username } = user;
   l("registering", username);
@@ -18,10 +18,10 @@ export default async (user, ip) => {
   if (!valid.test(username))
     fail("Usernames can only have letters and numbers");
 
-  let id = v4();
+  const id = v4();
   user.id = id;
 
-  let exists = await getUser(username);
+  const exists = await getUser(username);
   if (exists) fail(`Username ${username} taken`);
 
   if (password) {
@@ -34,7 +34,7 @@ export default async (user, ip) => {
   user.currency = "USD";
   if (config.ipregistry) {
     try {
-      let {
+      const {
         location: { country: { code } },
       }: any = await got(
         `https://api.ipregistry.co/${ip}?key=${config.ipregistry}&fields=location.country.code`,
@@ -52,7 +52,7 @@ export default async (user, ip) => {
   user.migrated = true;
   user.locktime = 300;
 
-  let account = JSON.stringify({
+  const account = JSON.stringify({
     id,
     type: "ecash",
     name: "Spending",
@@ -66,7 +66,7 @@ export default async (user, ip) => {
     .set(`account:${id}`, account)
     .set(`${pubkey}:follows:n`, 0)
     .set(`${pubkey}:followers:n`, 0)
-      .set(`${pubkey}:pubkeys`, "[]")
+    .set(`${pubkey}:pubkeys`, "[]")
     .lPush(`${id}:accounts`, id)
     .exec();
 

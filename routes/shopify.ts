@@ -3,7 +3,7 @@ import { g } from "$lib/db";
 import { err } from "$lib/logging";
 import { getPayment } from "$lib/utils";
 
-let query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) { 
+const query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) { 
   orderMarkAsPaid(input: $input) { 
     order { id } 
     userErrors { 
@@ -14,15 +14,15 @@ let query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) {
 }`;
 
 export default async (req, res) => {
-  let {
+  const {
     body: { hash },
     params: { id },
   } = req;
-  let p = await getPayment(hash);
-  let user = await g(`user:${p.uid}`);
+  const p = await getPayment(hash);
+  const user = await g(`user:${p.uid}`);
 
   try {
-    let r = await got
+    const r = await got
       .post(
         `https://${user.shopifyStore}.myshopify.com/admin/api/2023-07/graphql.json`,
         {

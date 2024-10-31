@@ -368,7 +368,7 @@ export default {
       );
       let msg = e.message;
       if (msg.includes("500")) msg = "";
-      bail(res, "Failed to prepare transaction " + msg);
+      bail(res, `Failed to prepare transaction ${msg}`);
     }
   },
 

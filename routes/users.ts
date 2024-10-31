@@ -89,14 +89,14 @@ export default {
         if (nostr) {
           nostr.username = nostr.name || key.substr(0, 6);
           nostr.display = nostr.display_name || nostr.displayName;
-          delete nostr.display_name;
-          delete nostr.displayName;
-          delete nostr.name;
+          nostr.display_name = undefined;
+          nostr.displayName = undefined;
+          nostr.name = undefined;
         }
 
         if (user) {
           user.anon = false;
-          delete nostr.display;
+          nostr.display = undefined;
         }
 
         user = {
@@ -211,12 +211,13 @@ export default {
       if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
         user.pin = newpin;
-      if (user.pin === "delete") delete user.pin;
+      if (user.pin === "delete") user.pin = undefined;
 
       let exists;
       if (username) exists = await getUser(username);
 
-      let token, oldname;
+      let token;
+      let oldname;
       if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
         err("username taken", username, user.username, exists.username);
         fail("Username taken");
@@ -444,7 +445,7 @@ export default {
       headers: { authorization },
     } = req;
     username = username.toLowerCase();
-    if (!(authorization && authorization.includes(config.admin)))
+    if (!authorization?.includes(config.admin))
       return res.code(401).send("unauthorized");
 
     const { id, pubkey } = await g(
@@ -467,8 +468,9 @@ export default {
       body: { code, username, password },
       user: u,
     } = req;
-    const admin = u && u.admin;
-    let id, user;
+    const admin = u?.admin;
+    let id;
+    let user;
 
     if (admin) {
       id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);

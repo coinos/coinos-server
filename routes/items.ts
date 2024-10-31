@@ -4,12 +4,12 @@ import { bail, fail } from "$lib/utils";
 
 export default {
   async list(req, res) {
-    let {
+    const {
       params: { id: uid },
     } = req;
-    let items = [];
-    for (let id of await db.lRange(`${uid}:items`, 0, -1)) {
-      let item = await g(`item:${id}`);
+    const items = [];
+    for (const id of await db.lRange(`${uid}:items`, 0, -1)) {
+      const item = await g(`item:${id}`);
       if (item) items.push(item);
       else await db.lRem(`${uid}:items`, 0, id);
     }
@@ -18,11 +18,11 @@ export default {
   },
 
   async get(req, res) {
-    let {
+    const {
       params: { id },
     } = req;
     try {
-      let item = await g(`item:${id}`);
+      const item = await g(`item:${id}`);
       if (!item) fail("Item not found");
       res.send(item);
     } catch (e) {
@@ -31,7 +31,7 @@ export default {
   },
 
   async create(req, res) {
-    let {
+    const {
       body: item,
       user: { id },
     } = req;
@@ -53,12 +53,12 @@ export default {
   },
 
   async del(req, res) {
-    let {
+    const {
       body: { item },
       user: { id },
     } = req;
     try {
-      let n = await db.lRem(`${id}:items`, 0, item.id);
+      const n = await db.lRem(`${id}:items`, 0, item.id);
       if (n) db.del(`item:${item.id}`);
       else fail("item not found");
 
@@ -69,14 +69,14 @@ export default {
   },
 
   async sort(req, res) {
-    let {
+    const {
       body: { items },
       user: { id },
     } = req;
     try {
       await db.del(`${id}:items`);
 
-      for (let item of items) {
+      for (const item of items) {
         await db.rPush(`${id}:items`, item.id);
       }
 

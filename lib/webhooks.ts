@@ -6,13 +6,13 @@ export const callWebhook = async (invoice, payment) => {
   try {
     if (!invoice || !payment) return;
 
-    let { address, received, text, webhook, secret } = invoice;
+    const { address, received, text, webhook, secret } = invoice;
 
     if (webhook) {
-      let { amount, confirmed, hash, memo } = payment;
+      const { amount, confirmed, hash, memo } = payment;
 
       l("calling webhook", webhook, amount, hash, address, text);
-      let res = await got.post(webhook, {
+      const res = await got.post(webhook, {
         json: {
           address,
           amount,
@@ -23,7 +23,7 @@ export const callWebhook = async (invoice, payment) => {
           text,
           secret,
         },
-          https: { rejectUnauthorized: false }
+        https: { rejectUnauthorized: false },
       });
       return res;
     }

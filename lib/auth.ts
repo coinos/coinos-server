@@ -8,7 +8,7 @@ export const admin = {
   preValidation: fastifyPassport.authenticate(
     "jwt",
     { session: false },
-    function (req, res, err, user, info) {
+    (req, res, err, user, info) => {
       if (!user.admin) return res.code(401).send("unauthorized");
       req.user = user;
     },
@@ -19,7 +19,7 @@ export const optional = {
   preValidation: fastifyPassport.authenticate(
     "jwt",
     { session: false },
-    function (req, res, err, user, info) {
+    (req, res, err, user, info) => {
       req.user = user;
     },
   ),
@@ -45,7 +45,7 @@ export const jwtStrategy = new jwt.Strategy(
     secretOrKey: config.jwt,
   },
   async (payload, next) => {
-    let user = await getUser(payload.id);
+    const user = await getUser(payload.id);
     next(null, user);
   },
 );

@@ -51,7 +51,9 @@ export const generate = async ({ invoice, user }) => {
 
   const id = v4();
 
-  let hash, text, path;
+  let hash;
+  let text;
+  let path;
 
   if (account.seed) {
     type = "bitcoin";

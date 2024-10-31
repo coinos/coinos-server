@@ -1,23 +1,23 @@
 import config from "$config";
-import { g, s, db } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { l } from "$lib/logging";
 import { fail } from "$lib/utils";
-import { nip19, finalizeEvent, getPublicKey } from "nostr-tools";
-import { Relay } from "nostr-tools/relay";
+import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
+import { Relay } from "nostr-tools/relay";
 
 export const serverPubkey = getPublicKey(
   nip19.decode(config.nostrKey).data as Uint8Array,
 );
 
-let alwaysTrue: any = (t: Event) => {
+const alwaysTrue: any = (t: Event) => {
   t[Symbol("verified")] = true;
   return true;
 };
-export let pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
-let opts = { maxWait: 2000 };
+export const pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
+const opts = { maxWait: 2000 };
 
-export let anon = (pubkey) => ({
+export const anon = (pubkey) => ({
   name: pubkey.substr(0, 6),
   pubkey,
   anon: true,
@@ -26,78 +26,78 @@ export let anon = (pubkey) => ({
 });
 
 export async function send(ev, url = config.nostr) {
-  if (!(ev && ev.id)) return;
-  let r = await Relay.connect(url);
+  if (!ev?.id) return;
+  const r = await Relay.connect(url);
   await r.publish(ev);
   r.close();
 }
 
 export async function handleZap(invoice) {
-  let pubkey = serverPubkey;
-  let sk = nip19.decode(config.nostrKey).data as Uint8Array;
-  let zapreq = JSON.parse(invoice.description);
+  const pubkey = serverPubkey;
+  const sk = nip19.decode(config.nostrKey).data as Uint8Array;
+  const zapreq = JSON.parse(invoice.description);
 
   if (!zapreq.tags || zapreq.tags.length === 0) {
-    fail(`No tags found`);
+    fail("No tags found");
   }
 
-  let ptags = zapreq.tags.filter(
-    (t) => t && t.length && t.length >= 2 && t[0] === "p",
+  const ptags = zapreq.tags.filter(
+    (t) => t?.length && t.length >= 2 && t[0] === "p",
   );
 
   if (ptags.length !== 1) {
-    fail(`None or multiple p tags found`);
+    fail("None or multiple p tags found");
   }
 
-  let etags = zapreq.tags.filter(
-    (t) => t && t.length && t.length >= 2 && t[0] === "e",
+  const etags = zapreq.tags.filter(
+    (t) => t?.length && t.length >= 2 && t[0] === "e",
   );
 
   if (!(etags.length === 0 || etags.length === 1)) {
-    fail(`Expected none or 1 e tags`);
+    fail("Expected none or 1 e tags");
   }
 
-  let relays_tag = zapreq.tags.find(
-    (t) => t && t.length && t.length >= 2 && t[0] === "relays",
+  const relays_tag = zapreq.tags.find(
+    (t) => t?.length && t.length >= 2 && t[0] === "relays",
   );
 
   if (!relays_tag) {
-    fail(`No relays tag found`);
+    fail("No relays tag found");
   }
 
-  let relays = relays_tag.slice(1).filter((r) => r && r.startsWith("ws"));
-  let etag = etags.length > 0 && etags[0];
-  let ptag = ptags[0];
+  const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
+  const etag = etags.length > 0 && etags[0];
+  const ptag = ptags[0];
 
-  let kind = 9735;
-  let created_at = invoice.paid_at;
-  let content = zapreq.content;
+  const kind = 9735;
+  const created_at = invoice.paid_at;
+  const content = zapreq.content;
 
-  let tags = [ptag];
+  const tags = [ptag];
   if (etag) tags.push(etag);
 
   tags.push(["bolt11", invoice.bolt11]);
   tags.push(["description", invoice.description]);
   tags.push(["preimage", invoice.payment_preimage]);
 
-  let ev = { pubkey, kind, created_at, content, tags };
-  let signed = await finalizeEvent(ev, sk);
+  const ev = { pubkey, kind, created_at, content, tags };
+  const signed = await finalizeEvent(ev, sk);
 
   l("sending receipt");
 
   await Promise.allSettled(
     relays.map(async (url) => {
-      let r = await Relay.connect(url);
+      const r = await Relay.connect(url);
       await r.publish(signed);
       r.close();
     }),
   );
 }
 
-export let getRelays = async (pubkey): Promise<any> => {
-  let { relays } = config;
-  let filter = { authors: [pubkey], kinds: [10002] };
-  let event = await pool.get([config.nostr], filter, opts);
+export const getRelays = async (pubkey): Promise<any> => {
+  const { relays } = config;
+  const filter = { authors: [pubkey], kinds: [10002] };
+  const event = await pool.get([config.nostr], filter, opts);
 
   let read = relays;
   let write = relays;
@@ -105,7 +105,7 @@ export let getRelays = async (pubkey): Promise<any> => {
   if (event) {
     read = [];
     write = [];
-    for (let r of event.tags) {
+    for (const r of event.tags) {
       if (r[0] !== "r") continue;
       if (!r[2] || r[2] === "write") write.push(r[1]);
       if (!r[2] || r[2] === "read") read.push(r[1]);
@@ -119,11 +119,11 @@ export let getRelays = async (pubkey): Promise<any> => {
   return { read, write };
 };
 
-export let getProfile = async (pubkey) => {
+export const getProfile = async (pubkey) => {
   let profile = await g(`${pubkey}:profile`);
 
   if (!profile) {
-    let pubkeys = [pubkey];
+    const pubkeys = [pubkey];
     let relays = [config.nostr];
     let filter: any = { authors: pubkeys, kinds: [0] };
 
@@ -153,12 +153,12 @@ export let getProfile = async (pubkey) => {
   return profile;
 };
 
-export let getCount = async (pubkey) => {
+export const getCount = async (pubkey) => {
   let follows = await g(`${pubkey}:follows:n`);
   let followers = await g(`${pubkey}:followers:n`);
 
   if (follows === null) {
-    let filter: any = { kinds: [3], authors: [pubkey] };
+    const filter: any = { kinds: [3], authors: [pubkey] };
     let ev = await pool.get([config.nostr], filter, opts);
 
     if (!ev) {
@@ -179,12 +179,12 @@ export let getCount = async (pubkey) => {
   }
 
   if (followers === null) {
-    let filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
-    let infos = await pool.querySync([config.cache], filter, opts);
+    const filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
+    const infos = await pool.querySync([config.cache], filter, opts);
 
-    let f = infos.find((e) => e.kind === 10000133);
+    const f = infos.find((e) => e.kind === 10000133);
     let counts = {};
-    if (f && f.content) {
+    if (f?.content) {
       counts = JSON.parse(f.content);
       followers = counts[pubkey];
     }

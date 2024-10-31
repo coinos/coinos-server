@@ -12,7 +12,7 @@ const users = {};
 export const emit = (uid, type, data) => {
   if (type === "payment" && data.amount > 0) {
     for (let i = subscriptions.length - 1; i >= 0; i--) {
-      let s = subscriptions[i];
+      const s = subscriptions[i];
 
       if (s.invoice && s.invoice.id === data.iid) {
         s.ws.send(JSON.stringify({ type, data }));
@@ -21,7 +21,7 @@ export const emit = (uid, type, data) => {
   }
 
   if (!store.sockets[uid]) return;
-  for (let id in store.sockets[uid]) {
+  for (const id in store.sockets[uid]) {
     const ws = store.sockets[uid][id];
     ws.send(JSON.stringify({ type, data }));
   }
@@ -42,12 +42,12 @@ export const broadcast = (type, data) => {
   });
 };
 
-let track = async (ws, token) => {
-  let { id } = ws;
-  let { id: uid } = jwt.decode(token);
+const track = async (ws, token) => {
+  const { id } = ws;
+  const { id: uid } = jwt.decode(token);
 
   if (!uid) fail("Invalid JWT token");
-  let user = await getUser(uid);
+  const user = await getUser(uid);
   if (!user) fail(`User not found ${uid}`);
 
   if (!store.sockets[uid]) store.sockets[uid] = {};
@@ -75,7 +75,8 @@ Bun.serve({
   },
   websocket: {
     async message(ws: any, message: string) {
-      let type, data;
+      let type;
+      let data;
 
       try {
         ({ type, data } = JSON.parse(message));
@@ -104,7 +105,7 @@ Bun.serve({
             if (e.message.includes("not found"))
               ws.send(JSON.stringify({ type: "logout" }));
             setTimeout(
-              () => ws && ws.close(code, `closing due to error ${e.message}`),
+              () => ws?.close(code, `closing due to error ${e.message}`),
               1000,
             );
           }
@@ -131,10 +132,10 @@ Bun.serve({
       all[id] = ws;
     },
     close(ws: any) {
-      let { id } = ws;
+      const { id } = ws;
       try {
         const uid = users[id];
-        if (store.sockets[uid] && store.sockets[uid][id]) {
+        if (store.sockets[uid]?.[id]) {
           delete store.sockets[uid][id];
         }
 
@@ -150,10 +151,10 @@ Bun.serve({
   },
 });
 
-export let sendHeartbeat = () => {
+export const sendHeartbeat = () => {
   for (const uid in store.sockets) {
     for (const id in store.sockets[uid]) {
-      let ws = store.sockets[uid][id];
+      const ws = store.sockets[uid][id];
       ws.beats++;
       if (ws.beats > 10) ws.close(code, `${uid} ${id} lost heartbeat`);
     }

@@ -1,24 +1,24 @@
 import { createServer, connect } from "net";
 import { randomUUID } from "crypto";
 
-let exec = async (cmd) =>
+const exec = async (cmd) =>
   new Promise((resolve, reject) => {
-    let c = `/app/strfry ${cmd} 2>/dev/null`;
-    let id = randomUUID();
+    const c = `/app/strfry ${cmd} 2>/dev/null`;
+    const id = randomUUID();
     const resultSocketPath = `/sockets/result_${id}`;
 
     const resultServer = createServer((socket) => {
       let resultBuffer = "";
 
-      let results = [];
+      const results = [];
       socket.on("data", (data) => {
         resultBuffer += data.toString();
 
-        let parts = resultBuffer.split("\n");
+        const parts = resultBuffer.split("\n");
 
         for (let i = 0; i < parts.length - 1; i++) {
           try {
-            let parsedObject = JSON.parse(parts[i]);
+            const parsedObject = JSON.parse(parts[i]);
             results.push(parsedObject);
           } catch (e) {
             console.error(parts[i]);
@@ -54,5 +54,6 @@ let exec = async (cmd) =>
     );
   });
 
-export let scan = (f) => exec(`scan '${JSON.stringify(f)}'\n`)
-export let sync = (r, f) => exec(`sync ${r} --dir down --filter '${JSON.stringify(f)}'\n`)
+export const scan = (f) => exec(`scan '${JSON.stringify(f)}'\n`);
+export const sync = (r, f) =>
+  exec(`sync ${r} --dir down --filter '${JSON.stringify(f)}'\n`);

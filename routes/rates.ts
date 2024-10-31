@@ -3,7 +3,7 @@ import { rate } from "$lib/rates";
 
 export default {
   async fx(_, res) {
-    let { fx } = await g("fx");
+    const { fx } = await g("fx");
     res.send({ fx });
   },
 

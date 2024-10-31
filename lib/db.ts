@@ -3,7 +3,7 @@ import { fail, sleep } from "$lib/utils";
 import { createClient, defineScript } from "redis";
 import { warn, err } from "$lib/logging";
 
-let DEBIT = `
+const DEBIT = `
 local balanceKey = KEYS[1]
 local creditKey = KEYS[2]
 local amount = tonumber(ARGV[1])
@@ -27,7 +27,7 @@ redis.call('decrby', balanceKey, tostring(math.floor(amount + tip + fee + ourfee
 return ourfee
 `;
 
-let REVERSE = `
+const REVERSE = `
 local paymentKey = KEYS[1]
 local balanceKey = KEYS[2]
 local creditKey = KEYS[3]
@@ -51,19 +51,19 @@ end
 return pid 
 `;
 
-let debit = defineScript({
+const debit = defineScript({
   NUMBER_OF_KEYS: 2,
   SCRIPT: DEBIT,
   transformArguments: (...args) => args.map((a) => a.toString()),
 });
 
-let reverse = defineScript({
+const reverse = defineScript({
   NUMBER_OF_KEYS: 6,
   SCRIPT: REVERSE,
   transformArguments: (...args) => args.map((a) => a.toString()),
 });
 
-export let db = createClient({
+export const db = createClient({
   url: config.db,
   scripts: { debit, reverse },
   socket: {
@@ -71,14 +71,14 @@ export let db = createClient({
   },
 });
 
-export let archive = createClient({
+export const archive = createClient({
   url: config.archive,
   socket: {
     reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
   },
 });
 
-export let arc2 = createClient({
+export const arc2 = createClient({
   url: config.arc2,
   socket: {
     reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
@@ -117,8 +117,8 @@ db.on("end", () => {
 
 export default db;
 
-export let g = async (k) => {
-  let v = await db.get(k);
+export const g = async (k) => {
+  const v = await db.get(k);
   try {
     return JSON.parse(v);
   } catch (e) {
@@ -126,13 +126,13 @@ export let g = async (k) => {
   }
 };
 
-export let s = (k, v) => {
+export const s = (k, v) => {
   if (k === "user:null" || k === "user:undefined") fail("null user");
   db.set(k, JSON.stringify(v));
 };
 
-export let ga = async (k) => {
-  let v = await archive.get(k);
+export const ga = async (k) => {
+  const v = await archive.get(k);
   try {
     return JSON.parse(v);
   } catch (e) {
@@ -140,7 +140,7 @@ export let ga = async (k) => {
   }
 };
 
-export let sa = (k, v) => {
+export const sa = (k, v) => {
   if (k === "user:null" || k === "user:undefined") {
     warn("###### NULL USER #######");
     console.trace();
@@ -148,15 +148,15 @@ export let sa = (k, v) => {
   archive.set(k, JSON.stringify(v));
 };
 
-let retries = {};
-export let t = async (k, f) => {
+const retries = {};
+export const t = async (k, f) => {
   try {
     await db.watch(k);
     await f(await db.get(k), db);
   } catch (err) {
     if (!err.message.includes("watch")) throw err;
 
-    let r = retries[k] || 0;
+    const r = retries[k] || 0;
     retries[k] = r + 1;
 
     if (r < 10) {

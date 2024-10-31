@@ -6,23 +6,23 @@ import handlebars from "handlebars";
 import fs from "fs";
 import path from "path";
 
-let Charset = "UTF-8";
+const Charset = "UTF-8";
 
-export let templates = {
+export const templates = {
   verifyEmail: "templates/payments/verify.html",
   paymentReceived: "templates/payments/received.html",
   passwordReset: "templates/payments/reset.html",
 };
 
-export let mail = async (user, subject, template, params) => {
+export const mail = async (user, subject, template, params) => {
   try {
     l("sending mail", user.username, subject);
     if (!user.email) return;
 
-    let source = fs.readFileSync(template, "utf8");
-    let html = handlebars.compile(source)(params);
+    const source = fs.readFileSync(template, "utf8");
+    const html = handlebars.compile(source)(params);
 
-    let client = new SESClient({ region: "us-east-2" });
+    const client = new SESClient({ region: "us-east-2" });
 
     await client.send(
       new SendEmailCommand({

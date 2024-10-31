@@ -12,7 +12,7 @@ export default {
     if (typeof invoice === "string") invoice = await g(`invoice:${invoice}`);
 
     if (invoice) {
-      delete invoice.secret;
+      invoice.secret = undefined;
       invoice.user = pick(await g(`user:${invoice.uid}`), [
         "id",
         "profile",

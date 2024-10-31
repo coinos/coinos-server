@@ -8,12 +8,12 @@ import { SendEmailCommand } from "@aws-sdk/client-ses";
 export default {
   async send({ body }, res) {
     try {
-      let { email, message, username, token: response } = body;
+      const { email, message, username, token: response } = body;
 
-      let Charset = "UTF-8";
+      const Charset = "UTF-8";
 
-      let { recaptcha: secret } = config;
-      let { success } = await got
+      const { recaptcha: secret } = config;
+      const { success } = await got
         .post("https://www.google.com/recaptcha/api/siteverify", {
           form: {
             secret,
@@ -23,10 +23,10 @@ export default {
         .json();
 
       if (success || response === config.adminpass) {
-        delete body.token;
+        body.token = undefined;
 
         warn("support request from", email);
-        let client = new SESClient({ region: "us-east-2" });
+        const client = new SESClient({ region: "us-east-2" });
         await client.send(
           new SendEmailCommand({
             Destination: {
@@ -42,7 +42,7 @@ export default {
                 Charset,
                 Data:
                   body.subject ||
-                  "Support Request" + (username ? " From " + username : ""),
+                  `Support Request${username ? ` From ${username}` : ""}`,
               },
             },
             ReplyToAddresses: [email],
