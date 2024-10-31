@@ -1,16 +1,16 @@
 import config from "$config";
-import { emit } from "$lib/sockets";
 import { db, g, s } from "$lib/db";
-import { getUser, bip21, fail, SATS } from "$lib/utils";
-import { types } from "$lib/payments";
-import { v4 } from "uuid";
-import rpc from "@coinos/rpc";
 import ln from "$lib/ln";
+import { types } from "$lib/payments";
+import { emit } from "$lib/sockets";
+import { SATS, bip21, fail, getUser } from "$lib/utils";
+import rpc from "@coinos/rpc";
+import { v4 } from "uuid";
 
-let bc = rpc(config.bitcoin);
-let lq = rpc(config.liquid);
+const bc = rpc(config.bitcoin);
+const lq = rpc(config.liquid);
 
-export let generate = async ({ invoice, user }) => {
+export const generate = async ({ invoice, user }) => {
   let {
     bolt11,
     aid,
@@ -40,7 +40,7 @@ export let generate = async ({ invoice, user }) => {
   if (!account) account = await g(`account:${user.id}`);
   if (!account) fail("account not found");
 
-  let rates = await g("rates");
+  const rates = await g("rates");
   if (!currency) currency = user.currency;
   if (!rate) rate = rates[currency];
   if (fiat) amount = Math.round((SATS * fiat) / rate);
@@ -49,13 +49,13 @@ export let generate = async ({ invoice, user }) => {
   if (rate < 0) fail("invalid rate");
   if (memo && memo.length > 5000) fail("memo too long");
 
-  let id = v4();
+  const id = v4();
 
   let hash, text, path;
 
   if (account.seed) {
     type = "bitcoin";
-    let node = rpc({ ...config[type], wallet: aid });
+    const node = rpc({ ...config[type], wallet: aid });
     hash = await node.getNewAddress();
     text = bip21(hash, invoice);
 
@@ -63,7 +63,7 @@ export let generate = async ({ invoice, user }) => {
   } else if (type === types.lightning) {
     let r;
     if (bolt11) {
-      let { id: nodeid } = await ln.getinfo();
+      const { id: nodeid } = await ln.getinfo();
       r = await ln.decode(bolt11);
       if (r.payee !== nodeid) fail("invalid invoice");
       amount = Math.round(r.amount_msat / 1000);
@@ -91,7 +91,7 @@ export let generate = async ({ invoice, user }) => {
   } else if (type === types.internal) {
     hash = id;
   } else {
-    fail("unrecognized type", type);
+    fail(`unrecognized type ${type}`);
   }
 
   invoice = {
@@ -120,7 +120,7 @@ export let generate = async ({ invoice, user }) => {
   };
 
   if (type === "liquid") {
-    let { unconfidential } = await lq.getAddressInfo(hash);
+    const { unconfidential } = await lq.getAddressInfo(hash);
     await s(`invoice:${unconfidential}`, id);
   }
 
@@ -129,9 +129,9 @@ export let generate = async ({ invoice, user }) => {
   await db.lPush(`${aid}:invoices`, id);
 
   if (request_id) {
-    let request = await g(`request:${request_id}`);
+    const request = await g(`request:${request_id}`);
     if (request) {
-      let { invoice_id: prev } = request;
+      const { invoice_id: prev } = request;
       request.invoice_id = id;
       await s(`request:${request_id}`, request);
 
