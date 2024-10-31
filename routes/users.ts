@@ -1,27 +1,27 @@
 import { appendFile } from "node:fs/promises";
-import { g, s, db } from "$lib/db";
 import config from "$config";
-import { pick, bail, fail, getUser } from "$lib/utils";
-import jwt from "jsonwebtoken";
-import { authenticator } from "otplib";
-import whitelist from "$lib/whitelist";
-import { l, err, warn } from "$lib/logging";
-import { emit } from "$lib/sockets";
-import register from "$lib/register";
 import { requirePin } from "$lib/auth";
-import { v4 } from "uuid";
-import { reconcile, types } from "$lib/payments";
+import { db, g, s } from "$lib/db";
+import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-import upload from "$lib/upload";
-import rpc from "@coinos/rpc";
-import { nip19 } from "nostr-tools";
 import { getProfile } from "$lib/nostr";
+import { reconcile, types } from "$lib/payments";
+import register from "$lib/register";
+import { emit } from "$lib/sockets";
+import upload from "$lib/upload";
+import { bail, fail, getUser, pick } from "$lib/utils";
+import whitelist from "$lib/whitelist";
+import rpc from "@coinos/rpc";
+import jwt from "jsonwebtoken";
+import { nip19 } from "nostr-tools";
+import { authenticator } from "otplib";
+import { v4 } from "uuid";
 
 export default {
   upload,
 
   async me(req, res) {
-    let { user } = req;
+    const { user } = req;
     try {
       user.balance = await g(`balance:${user.id}`);
       user.prompt = !!user.prompt;
@@ -35,14 +35,14 @@ export default {
   },
 
   async list(req, res) {
-    let { user } = req;
+    const { user } = req;
     if (!user.admin) fail("unauthorized");
 
-    let users = [];
+    const users = [];
 
-    for await (let k of db.scanIterator({ MATCH: "balance:*" })) {
-      let uid = k.split(":")[1];
-      let user = await getUser(uid);
+    for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
+      const uid = k.split(":")[1];
+      const user = await getUser(uid);
 
       if (!user) {
         await db.del(`balance:${uid}`);
@@ -51,11 +51,11 @@ export default {
 
       user.balance = await g(k);
 
-      let payments = await db.lRange(`${uid}:payments`, 0, -1);
+      const payments = await db.lRange(`${uid}:payments`, 0, -1);
 
       let total = 0;
-      for (let pid of payments) {
-        let p = await g(`payment:${pid}`);
+      for (const pid of payments) {
+        const p = await g(`payment:${pid}`);
         if (!p) continue;
         total += p.amount;
         if (p.amount < 0)
@@ -85,7 +85,7 @@ export default {
       let user = await getUser(key);
 
       if (key.length === 64) {
-        let nostr: any = await getProfile(key);
+        const nostr: any = await getProfile(key);
         if (nostr) {
           nostr.username = nostr.name || key.substr(0, 6);
           nostr.display = nostr.display_name || nostr.displayName;
@@ -110,7 +110,7 @@ export default {
 
       if (!user) return res.code(500).send("User not found");
 
-      let whitelist = [
+      const whitelist = [
         "about",
         "address",
         "anon",
@@ -142,12 +142,12 @@ export default {
   },
 
   async create(req, res) {
-    let { body, headers } = req;
+    const { body, headers } = req;
     try {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
       let { user } = body;
-      let fields = [
+      const fields = [
         "profile",
         "cipher",
         "pubkey",
@@ -165,11 +165,11 @@ export default {
   },
 
   async disable2fa(req, res) {
-    let {
+    const {
       user,
       body: { token },
     } = req;
-    let { id, twofa, username, otpsecret } = user;
+    const { id, twofa, username, otpsecret } = user;
     if (twofa && !authenticator.check(token, otpsecret)) {
       return res.code(401).send("2fa required");
     }
@@ -183,11 +183,11 @@ export default {
   },
 
   async enable2fa(req, res) {
-    let {
+    const {
       user,
       body: { token },
     } = req;
-    let { id, otpsecret, username } = user;
+    const { id, otpsecret, username } = user;
     const isValid = authenticator.check(token, otpsecret);
     if (isValid) {
       user.twofa = true;
@@ -202,11 +202,11 @@ export default {
   },
 
   async update(req, res) {
-    let { user, body } = req;
+    const { user, body } = req;
     try {
       l("updating user", user.username);
 
-      let { confirm, password, pin, newpin, pubkey, username } = body;
+      const { confirm, password, pin, newpin, pubkey, username } = body;
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
@@ -236,7 +236,7 @@ export default {
         else fail("Key in use by another account");
       }
 
-      let attributes = [
+      const attributes = [
         "address",
         "autowithdraw",
         "banner",
@@ -267,7 +267,7 @@ export default {
         "shopifyStore",
       ];
 
-      for (let a of attributes) {
+      for (const a of attributes) {
         if (typeof body[a] !== "undefined") user[a] = body[a];
       }
 
@@ -330,8 +330,8 @@ export default {
       if (username !== "coinos" && username !== "funk")
         l("logged in", username);
 
-      let payload = { id: user.id };
-      let token = jwt.sign(payload, config.jwt);
+      const payload = { id: user.id };
+      const token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
       user = pick(user, whitelist);
       res.send({ user, token });
@@ -343,8 +343,8 @@ export default {
 
   async subscriptions(req, res) {
     try {
-      let { user } = req;
-      let subscriptions = await db.sMembers(`${user.id}:subscriptions`);
+      const { user } = req;
+      const subscriptions = await db.sMembers(`${user.id}:subscriptions`);
       res.send(subscriptions);
     } catch (e) {
       bail(res, e.message);
@@ -353,8 +353,8 @@ export default {
 
   async subscription(req, res) {
     try {
-      let { subscription } = req.body;
-      let { id } = req.user;
+      const { subscription } = req.body;
+      const { id } = req.user;
       await db.sAdd(`${id}:subscriptions`, JSON.stringify(subscription));
       res.send(subscription);
     } catch (e) {
@@ -365,8 +365,8 @@ export default {
 
   async deleteSubscription(req, res) {
     try {
-      let { subscription } = req.body;
-      let { id } = req.user;
+      const { subscription } = req.body;
+      const { id } = req.user;
       await db.sRem(`${id}:subscriptions`, JSON.stringify(subscription));
       res.send(subscription);
     } catch (e) {
@@ -376,7 +376,7 @@ export default {
   },
 
   async password(req, res) {
-    let {
+    const {
       body: { password },
       user,
     } = req;
@@ -391,7 +391,7 @@ export default {
   },
 
   async pin(req, res) {
-    let {
+    const {
       body: { pin },
       user,
     } = req;
@@ -401,7 +401,7 @@ export default {
   async otpsecret(req, res) {
     try {
       await requirePin(req);
-      let { otpsecret, username } = req.user;
+      const { otpsecret, username } = req.user;
       res.send({ secret: otpsecret, username });
     } catch (e) {
       res.code(500).send(e.message);
@@ -409,22 +409,24 @@ export default {
   },
 
   async contacts(req, res) {
-    let {
+    const {
       user: { id },
     } = req;
-    let lastlen = (await g(`${id}:lastlen`)) || 0;
-    let len = await db.lLen(`${id}:payments`);
-    let payments = (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
+    const lastlen = (await g(`${id}:lastlen`)) || 0;
+    const len = await db.lLen(`${id}:payments`);
+    const payments =
+      (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
     await db.set(`${id}:lastlen`, len);
 
-    let contacts = (await g(`${id}:contacts`)) || [];
+    const contacts = (await g(`${id}:contacts`)) || [];
 
-    for (let { ref } of (
+    for (const { ref } of (
       await Promise.all(
         payments.reverse().map(async (id) => await g(`payment:${id}`)),
       )
     ).filter((p) => p && p.type === types.internal && p.ref)) {
-      let i = contacts.findIndex((c) => c && c.id === ref);
+      if (ref === id) continue;
+      const i = contacts.findIndex((c) => c && c.id === ref);
       if (~i) contacts.splice(i, 1);
       let u = await g(`user:${ref}`);
       if (typeof u === "string") u = await g(`user:${ref}`);
@@ -445,14 +447,14 @@ export default {
     if (!(authorization && authorization.includes(config.admin)))
       return res.code(401).send("unauthorized");
 
-    let { id, pubkey } = await g(
+    const { id, pubkey } = await g(
       `user:${await g(`user:${username.replace(/\s/g, "").toLowerCase()}`)}`,
     );
-    let invoices = await db.lRange(`${id}:invoices`, 0, -1);
-    let payments = await db.lRange(`${id}:payments`, 0, -1);
+    const invoices = await db.lRange(`${id}:invoices`, 0, -1);
+    const payments = await db.lRange(`${id}:payments`, 0, -1);
 
-    for (let { id } of invoices) db.del(`invoice:${id}`);
-    for (let { id } of payments) db.del(`payment:${id}`);
+    for (const { id } of invoices) db.del(`invoice:${id}`);
+    for (const { id } of payments) db.del(`payment:${id}`);
     db.del(`user:${username.toLowerCase()}`);
     db.del(`user:${id}`);
     db.del(`user:${pubkey}`);
@@ -461,11 +463,11 @@ export default {
   },
 
   async reset(req, res) {
-    let {
+    const {
       body: { code, username, password },
       user: u,
     } = req;
-    let admin = u && u.admin;
+    const admin = u && u.admin;
     let id, user;
 
     if (admin) {
@@ -498,7 +500,7 @@ export default {
   },
 
   async printerlogin(req, res) {
-    let {
+    const {
       body: { username, topic },
     } = req;
     if (username === topic) res.send({ ok: true });
@@ -506,7 +508,7 @@ export default {
   },
 
   async acl(req, res) {
-    let {
+    const {
       body: { username, topic },
     } = req;
     if (username === topic) res.send({ ok: true });
@@ -514,7 +516,7 @@ export default {
   },
 
   async superuser(req, res) {
-    let {
+    const {
       body: { username },
     } = req;
     if (username === config.mqtt2.username) res.send({ ok: true });
@@ -522,16 +524,16 @@ export default {
   },
 
   async request(req, res) {
-    let {
+    const {
       body: { id, email },
     } = req;
     try {
-      let user = await g(`user:${id}`);
+      const user = await g(`user:${id}`);
 
       if (!user) fail("user not found");
       if (await g(`email:${email.toLowerCase()}`)) fail("Email already in use");
 
-      let { username } = user;
+      const { username } = user;
 
       if (email !== user.email) {
         user.verified = false;
@@ -539,10 +541,10 @@ export default {
         user.email = email;
       }
 
-      let code = v4();
+      const code = v4();
       await s(`verify:${code}`, { id, email });
-      let link = `${process.env.URL}/verify/${code}`;
-      let subject = "Email Verification";
+      const link = `${process.env.URL}/verify/${code}`;
+      const subject = "Email Verification";
 
       await mail(user, subject, templates.verifyEmail, {
         username,
@@ -556,13 +558,13 @@ export default {
   },
 
   async verify(req, res) {
-    let {
+    const {
       params: { code },
     } = req;
     try {
-      let { id, email } = await g(`verify:${code}`);
+      const { id, email } = await g(`verify:${code}`);
       if (!id) fail("verification failed");
-      let user = await g(`user:${id}`);
+      const user = await g(`user:${id}`);
       user.email = email;
       user.verified = true;
       await s(`user:${id}`, user);
@@ -575,16 +577,16 @@ export default {
   },
 
   async forgot(req, res) {
-    let {
+    const {
       body: { email },
     } = req;
     try {
-      let uid = await g(`email:${email.toLowerCase()}`);
-      let user = await g(`user:${uid}`);
+      const uid = await g(`email:${email.toLowerCase()}`);
+      const user = await g(`user:${uid}`);
 
       if (user) {
-        let code = v4();
-        let link = `${process.env.URL}/reset/${code}`;
+        const code = v4();
+        const link = `${process.env.URL}/reset/${code}`;
         await s(`reset:${code}`, uid);
 
         await mail(user, "Password reset", templates.passwordReset, {
@@ -600,39 +602,39 @@ export default {
   },
 
   async hidepay(req, res) {
-    let {
+    const {
       body: { username },
     } = req;
-    let u = await getUser(username);
+    const u = await getUser(username);
     u.hidepay = true;
     await s(`user:${u.id}`, u);
     res.send({});
   },
 
   async unlimit(req, res) {
-    let {
+    const {
       body: { username },
     } = req;
-    let u = await getUser(username);
+    const u = await getUser(username);
     u.unlimited = true;
     await s(`user:${u.id}`, u);
     res.send({});
   },
 
   async account(req, res) {
-    let { id } = req.params;
-    let account = await g(`account:${id}`);
+    const { id } = req.params;
+    const account = await g(`account:${id}`);
     account.balance = await g(`balance:${id}`);
     res.send(account);
   },
 
   async accounts(req, res) {
     try {
-      let { user } = req;
+      const { user } = req;
 
-      let accounts = [];
-      for (let id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
-        let account = await g(`account:${id}`);
+      const accounts = [];
+      for (const id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
+        const account = await g(`account:${id}`);
         account.balance = await g(`balance:${id}`);
 
         // if (account.seed) reconcile(account);
@@ -649,12 +651,12 @@ export default {
 
   async createAccount(req, res) {
     try {
-      let { fingerprint, pubkey, name, seed, type } = req.body;
-      let { user } = req;
-      let { id: uid } = user;
+      const { fingerprint, pubkey, name, seed, type } = req.body;
+      const { user } = req;
+      const { id: uid } = user;
 
-      let id = v4();
-      let account = { id, name, seed, type, uid, descriptors: [] };
+      const id = v4();
+      const account = { id, name, seed, type, uid, descriptors: [] };
 
       let node = rpc(config[type]);
 
@@ -667,9 +669,9 @@ export default {
 
       node = rpc({ ...config[type], wallet: id });
 
-      for (let i of [0, 1]) {
-        let desc = `wpkh([${fingerprint}]${pubkey}/${i}/*)`;
-        let { checksum } = await node.getDescriptorInfo(desc);
+      for (const i of [0, 1]) {
+        const desc = `wpkh([${fingerprint}]${pubkey}/${i}/*)`;
+        const { checksum } = await node.getDescriptorInfo(desc);
         account.descriptors.push({
           desc: `${desc}#${checksum}`,
           range: [0, 100],
@@ -701,10 +703,10 @@ export default {
   },
 
   async updateAccount(req, res) {
-    let { id } = req.params;
-    let { name } = req.body;
+    const { id } = req.params;
+    const { name } = req.body;
 
-    let account = await g(`account:${id}`);
+    const account = await g(`account:${id}`);
     account.name = name;
     await s(`account:${id}`, account);
 
@@ -713,11 +715,11 @@ export default {
 
   async deleteAccount(req, res) {
     try {
-      let { id } = req.body;
-      let { id: uid } = req.user;
-      let { type } = await g(`account:${id}`);
+      const { id } = req.body;
+      const { id: uid } = req.user;
+      const { type } = await g(`account:${id}`);
       try {
-        let node = rpc({ ...config[type], wallet: id });
+        const node = rpc({ ...config[type], wallet: id });
         await node.unloadWallet(id);
       } catch (e) {
         warn("failed to unload wallet", id);
