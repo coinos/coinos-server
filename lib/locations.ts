@@ -18,7 +18,7 @@ const dedup = (array) =>
 
 export const getLocations = async () => {
   try {
-    const previous = await g("locations") || [];
+    const previous = (await g("locations")) || [];
     let since = await g("locations:since");
     if (!since) since = "2022-09-19T00:00:00Z";
     if (Date.now() - new Date(since).getTime() < 60000) return;
@@ -45,6 +45,7 @@ export const getLocations = async () => {
     for await (const l of locations) {
       const username = l.tags["payment:coinos"];
       if (username) {
+        console.log(username);
         const uid = await g(`user:${username}`);
         const user = await g(`user:${uid}`);
         if (user) l.osm_json.tags.user = pick(user, fields);

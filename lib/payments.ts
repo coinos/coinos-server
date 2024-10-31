@@ -65,6 +65,9 @@ export const debit = async ({
   let iid;
 
   if (invoice) {
+    console.log("AMT", amount);
+    console.log("RCVD", invoice.received);
+    console.log(invoice.received >= amount);
     if (invoice.received >= amount) fail("Invoice already paid");
     ({ id: iid } = invoice);
 
@@ -436,7 +439,8 @@ export const sendLightning = async ({
 
   if (typeof amount !== "undefined") {
     amount = parseInt(amount);
-    if (amount < 0 || amount > SATS || isNaN(amount)) fail("Invalid amount");
+    if (amount < 0 || amount > SATS || Number.isNaN(amount))
+      fail("Invalid amount");
   }
 
   let total = amount;

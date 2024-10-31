@@ -1,10 +1,10 @@
-import { emit } from "$lib/sockets";
-import { err, warn } from "$lib/logging";
-import { db } from "$lib/db";
-import mqtt from "$lib/mqtt";
 import config from "$config";
+import { db } from "$lib/db";
+import { err, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-import { f, fmt, link, fiat, t } from "$lib/utils";
+import mqtt from "$lib/mqtt";
+import { emit } from "$lib/sockets";
+import { f, fiat, fmt, link, t } from "$lib/utils";
 import webpush from "web-push";
 
 if (config.vapid) {
@@ -17,8 +17,8 @@ if (config.vapid) {
 
 export const notify = async (p, user, withdrawal) => {
   emit(user.id, "payment", p);
-  let { username } = user;
-  let { paymentReceived } = t(user);
+  const { username } = user;
+  const { paymentReceived } = t(user);
 
   try {
     if (user.verified && user.notify) {
@@ -32,16 +32,14 @@ export const notify = async (p, user, withdrawal) => {
           fiat: f(fiat(p.amount, p.rate), p.currency),
           fiatTip: p.tip ? f(fiat(p.tip, p.rate), p.currency) : undefined,
           memo: p.memo,
-          items:
-            p.items &&
-            p.items.map((i) => {
-              return {
-                quantity: i.quantity,
-                name: i.name,
-                total: i.quantity * i.price,
-                totalFiat: f(i.quantity * i.price, p.currency),
-              };
-            }),
+          items: p.items?.map((i) => {
+            return {
+              quantity: i.quantity,
+              name: i.name,
+              total: i.quantity * i.price,
+              totalFiat: f(i.quantity * i.price, p.currency),
+            };
+          }),
         },
         withdrawal,
       });
@@ -50,15 +48,15 @@ export const notify = async (p, user, withdrawal) => {
     err("problem emailing", e.message);
   }
 
-  let subscriptions = await db.sMembers(`${user.id}:subscriptions`);
+  const subscriptions = await db.sMembers(`${user.id}:subscriptions`);
 
-  let payload = {
+  const payload = {
     title: paymentReceived,
     body: `${fmt(p.amount)} ${f(fiat(p.amount, p.rate), p.currency)}`,
     url: `/payment/${p.id}`,
   };
 
-  for (let s of subscriptions) {
+  for (const s of subscriptions) {
     webpush
       .sendNotification(JSON.parse(s), JSON.stringify(payload))
       .catch((e) => {

@@ -55,7 +55,15 @@ export default {
       let p;
 
       if (payreq) {
-        p = await sendLightning({ user, pr: payreq, amount, maxfee, memo });
+        const iid = await g(`invoice:${payreq}`);
+        if (iid) {
+          const invoice = await g(`invoice:${iid}`);
+          if (invoice.aid === user.id) fail("Cannot send to self");
+          hash = payreq;
+          if (!amount) ({ amount } = invoice);
+        } else {
+          p = await sendLightning({ user, pr: payreq, amount, maxfee, memo });
+        }
       }
 
       if (!p) {
