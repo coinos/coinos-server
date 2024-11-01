@@ -19,6 +19,7 @@ const methods = [
   "get_info",
   "make_invoice",
   "lookup_invoice",
+  "list_transactions"
 ];
 
 export default () => {
