@@ -37,6 +37,7 @@ local pid = KEYS[6]
 
 local total = tonumber(ARGV[1])
 local credit = tonumber(ARGV[2])
+local hash = ARGV[3]
 
 local payment = redis.call('get', paymentKey)
 
@@ -46,6 +47,7 @@ if payment ~= nil then
   redis.call('del', paymentKey)
   redis.call('del', hashKey)
   redis.call('lrem', paymentsKey, 0, pid);
+  redis.call('srem', 'pending', hash);
 end
 
 return pid 

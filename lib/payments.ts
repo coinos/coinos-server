@@ -456,7 +456,6 @@ export const sendLightning = async ({
   if (pays.find((p) => p.status === "pending"))
     fail("Payment is already underway");
 
-  await db.sAdd("pending", pr);
   p = await debit({
     hash: pr,
     amount: total,
@@ -466,27 +465,21 @@ export const sendLightning = async ({
     type: types.lightning,
   });
 
+  await db.sAdd("pending", pr);
+
   l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
 
-  let r;
-  try {
-    r = await ln.pay({
-      bolt11: pr.replace(/\s/g, "").toLowerCase(),
-      amount_msat: amount_msat ? undefined : amount * 1000,
-      maxfee: maxfee * 1000,
-      retry_for: 5,
-    });
+  const r = await ln.pay({
+    bolt11: pr.replace(/\s/g, "").toLowerCase(),
+    amount_msat: amount_msat ? undefined : amount * 1000,
+    maxfee: maxfee * 1000,
+    retry_for: 5,
+  });
 
-    try {
-      if (r.status === "complete") {
-        p = await finalize(r, p);
-        await db.sRem("pending", pr);
-      }
-    } catch (e) {
-      console.log("failed to process payment", e, p);
-    }
+  try {
+    if (r.status === "complete") p = await finalize(r, p);
   } catch (e) {
-    throw e;
+    console.log("failed to process payment", e, p);
   }
 
   return p;
@@ -769,6 +762,7 @@ const reverse = async (p) => {
     p.id,
     total,
     credit,
+    p.hash,
   );
 
   warn("reversed", k);
