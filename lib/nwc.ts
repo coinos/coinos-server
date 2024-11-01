@@ -1,19 +1,25 @@
 import config from "$config";
-import { err } from "$lib/logging";
 import { g } from "$lib/db";
-import { Relay } from "nostr";
-import { getInvoice, sleep } from "$lib/utils";
-import { sendInternal, sendLightning } from "$lib/payments";
-import { handleZap, serverPubkey } from "$lib/nostr";
-import { nip04, nip19, finalizeEvent } from "nostr-tools";
-import type { UnsignedEvent } from "nostr-tools";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
+import { err } from "$lib/logging";
+import { handleZap, serverPubkey } from "$lib/nostr";
+import { sendInternal, sendLightning } from "$lib/payments";
+import { getInvoice, sleep } from "$lib/utils";
+import { Relay } from "nostr";
+import { finalizeEvent, nip04, nip19 } from "nostr-tools";
+import type { UnsignedEvent } from "nostr-tools";
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
 
-const methods = ["pay_invoice", "get_balance", "get_info", "make_invoice"];
+const methods = [
+  "pay_invoice",
+  "get_balance",
+  "get_info",
+  "make_invoice",
+  "lookup_invoice",
+];
 
 export default () => {
   const r = new Relay("ws://strfry:7777");
@@ -152,5 +158,104 @@ const handle = (method, params, user) =>
         expires_at: created_at + expiry,
         metadata: {},
       });
+    },
+
+    async lookup_invoice() {
+      const { invoice, payment_hash } = params;
+
+      const { invoices } = await ln.listinvoices({
+        invstring: invoice,
+        payment_hash,
+      });
+
+      if (invoices.length) {
+        const {
+          amount_received_msat: amount,
+          expires_at,
+          preimage,
+          paid_at: settled_at,
+        } = invoices[0];
+
+        return result({
+          type: "incoming",
+          invoice,
+          description,
+          preimage,
+          payment_hash,
+          amount,
+          fees_paid: 0,
+          created_at: expires_at - 7 * 24 * 60 * 60,
+          expires_at,
+          settled_at,
+        });
+      }
+
+      const { pays } = await ln.listpays({ bolt11: invoice, payment_hash });
+
+      if (!pays.length)
+        return error({ code: "NOT_FOUND", message: "Invoice not found" });
+
+      const {
+        amount_msat: amount,
+        amount_sent_msat,
+        created_at,
+        preimage,
+        completed_at: settled_at,
+      } = pays[0];
+
+      return result({
+        type: "outgoing",
+        invoice,
+        preimage,
+        payment_hash,
+        amount,
+        fees_paid: amount_sent_msat - amount,
+        created_at,
+        settled_at,
+      });
+    },
+
+    async list_transactions() {
+      const {
+        from,
+        until,
+        limit = 10,
+        offset = 0,
+        unpaid = false,
+        type,
+      } = params;
+
+      const payments = await db.lRange(`${user.id}:payments`, 0, -1);
+
+      const transactions = [];
+      for (const pid of payments) {
+        const p = await g(`payment:${pid}`);
+        if (p.created < from || p.created > until) continue;
+        if (p.amount < 0 && type === "incoming") continue;
+        if (p.amount > 0 && type === "outgoing") continue;
+
+        const { payment_hash } =
+          p.type === "lightning"
+            ? p.amount > 0
+              ? await ln.listinvoices({ invstring: p.hash })
+              : await ln.listpays({ bolt11: p.hash })
+            : p.id;
+
+        transactions.push({
+          type: p.amount > 0 ? "incoming" : "outgoing",
+          invoice: p.hash,
+          description: p.memo,
+          preimage: p.ref,
+          payment_hash: p.hash,
+          amount: p.amount * 1000,
+          fees_paid: p.fee * 1000,
+          created_at: p.created / 1000,
+          expires_at: p.created / 1000 + 7 * 24 * 60 * 60,
+          settled_at: p.amount > 0 ? p.created / 1000 : undefined,
+          metadata: {},
+        });
+      }
+
+      return result({ transactions });
     },
   })[method](params);
