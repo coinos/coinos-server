@@ -1,5 +1,5 @@
 import config from "$config";
-import { g } from "$lib/db";
+import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err } from "$lib/logging";
@@ -19,7 +19,7 @@ const methods = [
   "get_info",
   "make_invoice",
   "lookup_invoice",
-  "list_transactions"
+  "list_transactions",
 ];
 
 export default () => {
