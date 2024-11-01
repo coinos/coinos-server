@@ -410,26 +410,11 @@ export const sendOnchain = async (params) => {
   }
 };
 
-const getMaxFee = (n) =>
-  Math.round(
-    n < 100
-      ? n * 5
-      : n < 1000
-        ? n
-        : n < 10000
-          ? n * 0.5
-          : n < 100000
-            ? n * 0.1
-            : n < 1000000
-              ? n * 0.05
-              : n * 0.01,
-  );
-
 export const sendLightning = async ({
   user,
   pr,
   amount,
-  maxfee,
+  maxfee = undefined,
   memo = undefined,
 }) => {
   let p;
@@ -445,8 +430,7 @@ export const sendLightning = async ({
   const { amount_msat } = decoded;
   if (amount_msat) total = Math.round(amount_msat / 1000);
 
-  maxfee = parseInt(maxfee) || getMaxFee(total);
-
+  if (maxfee) maxfee = parseInt(maxfee);
   if (maxfee < 0) fail("Max fee cannot be negative");
 
   const { pays } = await ln.listpays(pr);
@@ -459,7 +443,7 @@ export const sendLightning = async ({
   p = await debit({
     hash: pr,
     amount: total,
-    fee: maxfee,
+    fee: maxfee || 0,
     memo,
     user,
     type: types.lightning,
@@ -472,7 +456,7 @@ export const sendLightning = async ({
   const r = await ln.pay({
     bolt11: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
-    maxfee: maxfee * 1000,
+    maxfee: maxfee ? maxfee * 1000 : undefined,
     retry_for: 5,
   });
 
