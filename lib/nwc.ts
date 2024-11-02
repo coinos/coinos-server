@@ -228,7 +228,7 @@ const handle = (method, params, user) =>
 
       const payments = await db.lRange(`${user.id}:payments`, 0, -1);
 
-      const transactions = [];
+      let transactions = [];
       for (const pid of payments) {
         const p = await g(`payment:${pid}`);
         if (p.created < from || p.created > until) continue;
@@ -242,21 +242,24 @@ const handle = (method, params, user) =>
               : await ln.listpays({ bolt11: p.hash })
             : p.id;
 
+        const created_at = Math.floor(p.created / 1000);
+
         transactions.push({
           type: p.amount > 0 ? "incoming" : "outgoing",
           invoice: p.hash,
           description: p.memo,
           preimage: p.ref,
-          payment_hash: p.hash,
+          payment_hash,
           amount: p.amount * 1000,
           fees_paid: p.fee * 1000,
-          created_at: p.created / 1000,
-          expires_at: p.created / 1000 + 7 * 24 * 60 * 60,
-          settled_at: p.amount > 0 ? p.created / 1000 : undefined,
+          created_at,
+          expires_at: created_at + 7 * 24 * 60 * 60,
+          settled_at: p.amount > 0 ? created_at : undefined,
           metadata: {},
         });
       }
 
+      transactions = transactions.slice(offset, offset + limit);
       return result({ transactions });
     },
   })[method](params);
