@@ -250,7 +250,7 @@ const handle = (method, params, user) =>
           description: p.memo,
           preimage: p.ref,
           payment_hash,
-          amount: p.amount * 1000,
+          amount: Math.abs(p.amount * 1000),
           fees_paid: p.fee * 1000,
           created_at,
           expires_at: created_at + 7 * 24 * 60 * 60,
