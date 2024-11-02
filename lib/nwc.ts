@@ -22,6 +22,8 @@ const methods = [
   "list_transactions",
 ];
 
+const week = 7 * 24 * 60 * 60;
+
 export default () => {
   const r = new Relay("ws://strfry:7777");
 
@@ -172,6 +174,7 @@ const handle = (method, params, user) =>
       if (invoices.length) {
         const {
           amount_received_msat: amount,
+          description,
           expires_at,
           preimage,
           paid_at: settled_at,
@@ -185,7 +188,7 @@ const handle = (method, params, user) =>
           payment_hash,
           amount,
           fees_paid: 0,
-          created_at: expires_at - 7 * 24 * 60 * 60,
+          created_at: expires_at - week,
           expires_at,
           settled_at,
         });
@@ -217,14 +220,7 @@ const handle = (method, params, user) =>
     },
 
     async list_transactions() {
-      const {
-        from,
-        until,
-        limit = 10,
-        offset = 0,
-        unpaid = false,
-        type,
-      } = params;
+      const { from, until, limit = 10, offset = 0, type } = params;
 
       const payments = await db.lRange(`${user.id}:payments`, 0, -1);
 
@@ -253,7 +249,7 @@ const handle = (method, params, user) =>
           amount: Math.abs(p.amount * 1000),
           fees_paid: p.fee * 1000,
           created_at,
-          expires_at: created_at + 7 * 24 * 60 * 60,
+          expires_at: created_at + week,
           settled_at: p.amount > 0 ? created_at : undefined,
           metadata: {},
         });
