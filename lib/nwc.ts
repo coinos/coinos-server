@@ -103,9 +103,9 @@ const handle = (method, params, user) =>
       }
       await sendLightning({
         amount,
+        maxfee: undefined,
         user,
         pr,
-        maxfee: 50,
       });
 
       for (let i = 0; i < 10; i++) {
