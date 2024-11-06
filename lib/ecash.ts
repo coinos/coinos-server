@@ -90,3 +90,4 @@ export async function init(amount = 10000) {
     console.log(e);
   }
 }
+

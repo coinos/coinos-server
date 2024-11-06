@@ -45,7 +45,6 @@ export const getLocations = async () => {
     for await (const l of locations) {
       const username = l.tags["payment:coinos"];
       if (username) {
-        console.log(username);
         const uid = await g(`user:${username}`);
         const user = await g(`user:${uid}`);
         if (user) l.osm_json.tags.user = pick(user, fields);
