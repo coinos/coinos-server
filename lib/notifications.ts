@@ -17,8 +17,9 @@ if (config.vapid) {
 
 export const notify = async (p, user, withdrawal) => {
   emit(user.id, "payment", p);
-  const { username } = user;
+  let { username } = user;
   const { paymentReceived } = t(user);
+  username = username.replace(/\s/g, "");
 
   try {
     if (user.verified && user.notify) {
