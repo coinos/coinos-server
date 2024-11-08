@@ -457,7 +457,7 @@ export const sendLightning = async ({
     invstring: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
     maxfee: maxfee ? maxfee * 1000 : undefined,
-    retry_for: 5,
+    retry_for: 10,
   });
 
   try {
