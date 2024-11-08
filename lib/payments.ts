@@ -457,7 +457,6 @@ export const sendLightning = async ({
     invstring: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
     maxfee: maxfee ? maxfee * 1000 : 0,
-    retry_for: 10,
   });
 
   try {
@@ -737,7 +736,7 @@ const reverse = async (p) => {
   const ourfee = p.ourfee || 0;
   const credit = Math.round(total * config.fee) - ourfee;
 
-  const k = await db.reverse(
+  await db.reverse(
     `payment:${p.id}`,
     `balance:${p.uid}`,
     `credit:${types.lightning}:${p.uid}`,
@@ -749,5 +748,5 @@ const reverse = async (p) => {
     p.hash,
   );
 
-  warn("reversed", k);
+  warn("reversed", p.hash);
 };

@@ -45,23 +45,27 @@ export default () => {
       const uid = await g(pubkey);
       const user = await g(`user:${uid}`);
 
-      const result = await handle(method, params, user);
-      const payload = JSON.stringify({ result_type: method, ...result });
-      content = await nip04.encrypt(sk, pubkey, payload);
+      try {
+        const result = await handle(method, params, user);
+        const payload = JSON.stringify({ result_type: method, ...result });
+        content = await nip04.encrypt(sk, pubkey, payload);
 
-      let response: UnsignedEvent = {
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 23195,
-        pubkey: serverPubkey,
-        tags: [
-          ["p", pubkey],
-          ["e", ev.id],
-        ],
-        content,
-      };
+        let response: UnsignedEvent = {
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 23195,
+          pubkey: serverPubkey,
+          tags: [
+            ["p", pubkey],
+            ["e", ev.id],
+          ],
+          content,
+        };
 
-      response = await finalizeEvent(response, sk);
-      r.send(["EVENT", response]);
+        response = await finalizeEvent(response, sk);
+        r.send(["EVENT", response]);
+      } catch(e) {
+        err("problem with nwc", user.username, params, e.message);
+      }
     } catch (e) {
       err("problem with nwc", e.message);
     }
