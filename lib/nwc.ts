@@ -103,7 +103,7 @@ const handle = (method, params, user) =>
       }
       await sendLightning({
         amount,
-        maxfee: undefined,
+        maxfee: Math.max(5, Math.round(amount * 0.005)),
         user,
         pr,
       });
