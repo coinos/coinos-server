@@ -22,7 +22,7 @@
     "@noble/hashes": "^1.4.0",
     "bech32": "^2.0.0",
     "buffer-crc32": "^0.2.13",
-    "clightning-client": "github:SimonVrouwe/lightning-client-js#2022-11-04_improve_doc",
+    "clightning-client": "github:asoltys/lightning-client-js#master",
     "date-fns": "^2.21.3",
     "fastify": "^4.28.1",
     "file-type": "^18.0.0",
