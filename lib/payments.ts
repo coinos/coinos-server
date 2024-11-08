@@ -276,7 +276,7 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     ).toString();
   }
 
-  const maxfee = getMaxFee(amount);
+  const maxfee = Math.max(5, Math.round(amount * 0.005));
   if (lnurl) {
     amount -= maxfee;
     const { callback } = (await got(lnurl).json()) as any;
