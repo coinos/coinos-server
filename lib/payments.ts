@@ -456,7 +456,7 @@ export const sendLightning = async ({
   const r = await ln.renepay({
     invstring: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
-    maxfee: maxfee ? maxfee * 1000 : undefined,
+    maxfee: maxfee ? maxfee * 1000 : 0,
     retry_for: 10,
   });
 
@@ -700,7 +700,7 @@ export const check = async () => {
 
     for (const pr of payments) {
       const p = await getPayment(pr);
-      if (!p) continue;
+      if (!p || Date.now() - p.created < 10000) continue;
       const { pays } = await ln.listpays(pr);
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");
