@@ -64,7 +64,7 @@ export default () => {
         response = await finalizeEvent(response, sk);
         r.send(["EVENT", response]);
       } catch(e) {
-        err("problem with nwc", user.username, params, e.message);
+        err("problem with nwc", user.username, JSON.stringify(params), e.message);
       }
     } catch (e) {
       err("problem with nwc", e.message);
