@@ -39,6 +39,7 @@ export const generate = async ({ invoice, user }) => {
   let account = await g(`account:${aid}`);
   if (!account) account = await g(`account:${user.id}`);
   if (!account) fail("account not found");
+  aid = account.id;
 
   const rates = await g("rates");
   if (!currency) currency = user.currency;

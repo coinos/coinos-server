@@ -183,22 +183,27 @@ export default {
   },
 
   async enable2fa(req, res) {
-    const {
-      user,
-      body: { token },
-    } = req;
-    const { id, otpsecret, username } = user;
-    const isValid = authenticator.check(token, otpsecret);
-    if (isValid) {
-      user.twofa = true;
-      await s(`user:${id}`, user);
-      emit(username, "user", user);
-    } else {
-      return res.code(500).send("Invalid token");
-    }
+    try {
+      const {
+        user,
+        body: { token },
+      } = req;
+      const { id, otpsecret, username } = user;
+      const isValid = authenticator.check(token, otpsecret);
+      if (isValid) {
+        user.twofa = true;
+        await s(`user:${id}`, user);
+        emit(username, "user", user);
+      } else {
+        return res.code(500).send("Invalid token");
+      }
 
-    l("enabled 2fa", username);
-    res.send({});
+      l("enabled 2fa", username);
+      res.send({});
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 
   async update(req, res) {
