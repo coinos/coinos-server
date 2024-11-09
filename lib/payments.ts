@@ -699,7 +699,7 @@ export const check = async () => {
 
     for (const pr of payments) {
       const p = await getPayment(pr);
-      if (!p || Date.now() - p.created < 10000) continue;
+      if (!p || Date.now() - p.created < 60000) continue;
       const { pays } = await ln.listpays(pr);
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");
