@@ -1,8 +1,8 @@
-import got from "got";
 import config from "$config";
-import { err } from "$lib/logging";
 import { g, s } from "$lib/db";
+import { err } from "$lib/logging";
 import { sleep } from "$lib/utils";
+import got from "got";
 import WebSocket from "ws";
 
 export let rate;
@@ -58,8 +58,9 @@ export const getFx = async () => {
     try {
       if (config.fixer) {
         ({ rates: fx } = (await got(
-          `http://data.fixer.io/api/latest?access_key=${config.fixer}`,
+          `http://data.fixer.io/api/latest?access_key=${config.fixer}&base=USD`,
         ).json()) as any);
+
       } else {
         ({ fx } = (await got("https://coinos.io/api/fx").json()) as any);
       }
