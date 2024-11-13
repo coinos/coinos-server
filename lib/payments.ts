@@ -116,7 +116,7 @@ export const debit = async ({
     memo,
     iid,
     uid,
-    confirmed: ![types.bitcoin, types.liquid].includes(type),
+    confirmed: true,
     rate,
     currency,
     type,
