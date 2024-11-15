@@ -533,4 +533,9 @@ export default {
     const recipient = await getUser(username);
     res.send(await sendInternal({ amount, sender, recipient }));
   },
+
+  async decode(req, res) {
+    const { bolt11 } = req.params;
+    res.send(await ln.decode(bolt11));
+  },
 };
