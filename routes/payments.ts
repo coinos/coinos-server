@@ -181,8 +181,16 @@ export default {
         await s("nodes", nodes);
       }
 
-      const decoded = await ln.decodepay(payreq);
-      const { amount_msat, payee } = decoded;
+      const decoded = await ln.decode(payreq);
+
+      let amount_msat;
+      let payee;
+
+      if (decoded.type.includes("bolt12")) {
+        ({ invoice_amount_msat: amount_msat, invoice_node_id: payee } =
+          decoded);
+      } else ({ amount_msat, payee } = decoded);
+
       const node = nodes.find((n) => n.nodeid === payee);
       const alias = node ? node.alias : payee.substr(0, 12);
 
@@ -194,6 +202,7 @@ export default {
 
       res.send({ alias, amount, ourfee });
     } catch (e) {
+      err("problem parsing", e.message);
       bail(res, e.message);
     }
   },
@@ -537,5 +546,10 @@ export default {
   async decode(req, res) {
     const { bolt11 } = req.params;
     res.send(await ln.decode(bolt11));
+  },
+
+  async offer(req, res) {
+    const { offer } = req.params;
+    res.send(await ln.fetchinvoice(offer));
   },
 };

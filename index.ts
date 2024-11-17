@@ -67,6 +67,7 @@ app.post("/send", auth, payments.internal);
 app.post("/gateway", payments.gateway);
 app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
+app.get("/offer/:offer", payments.offer);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
