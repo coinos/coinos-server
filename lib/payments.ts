@@ -453,8 +453,9 @@ export const sendLightning = async ({
 
   l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
 
-  const r = await ln.renepay({
-    invstring: pr.replace(/\s/g, "").toLowerCase(),
+  const r = await ln.pay({
+    // invstring: pr.replace(/\s/g, "").toLowerCase(),
+    bolt11: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
     maxfee: maxfee ? maxfee * 1000 : 0,
   });
