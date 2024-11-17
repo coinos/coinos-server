@@ -202,6 +202,7 @@ export default {
 
       res.send({ alias, amount, ourfee });
     } catch (e) {
+      console.log(e);
       err("problem parsing", e.message);
       bail(res, e.message);
     }
@@ -548,8 +549,8 @@ export default {
     res.send(await ln.decode(bolt11));
   },
 
-  async offer(req, res) {
-    const { offer } = req.params;
-    res.send(await ln.fetchinvoice(offer));
+  async fetchinvoice(req, res) {
+    const { amount, offer } = req.body;
+    res.send(await ln.fetchinvoice(offer, amount ? amount * 1000 : null));
   },
 };

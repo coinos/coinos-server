@@ -1,12 +1,12 @@
 import app from "$lib/app";
-import { auth, admin, optional } from "$lib/auth";
+import { admin, auth, optional } from "$lib/auth";
 
 import { listenForLightning } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
+import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
-import nwc from "$lib/nwc";
 
 import ecash from "$routes/ecash";
 import email from "$routes/email";
@@ -67,7 +67,7 @@ app.post("/send", auth, payments.internal);
 app.post("/gateway", payments.gateway);
 app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
-app.get("/offer/:offer", payments.offer);
+app.post("/fetchinvoice", payments.fetchinvoice);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
@@ -134,12 +134,12 @@ app.post("/echo", (req, res) => {
   res.send(req.body);
 });
 
-let host: string = process.env["HOST"] || "0.0.0.0";
-let port: number = parseInt(process.env["PORT"]) || 3119;
+const host: string = process.env["HOST"] || "0.0.0.0";
+const port: number = parseInt(process.env["PORT"]) || 3119;
 
 app.listen({ host, port });
 
-let logerr = (e: Error) =>
+const logerr = (e: Error) =>
   // (e &&
   //   e.message &&
   //   (e.message.includes("Invalid") ||
