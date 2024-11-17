@@ -425,10 +425,11 @@ export const sendLightning = async ({
       fail("Invalid amount");
   }
 
-  let total = amount;
+  const total = amount;
   const decoded = await ln.decode(pr);
-  const { amount_msat } = decoded;
-  if (amount_msat) total = Math.round(amount_msat / 1000);
+  const amount_msat = decoded.type.includes("bolt12")
+    ? decoded.invoice_amount_msat
+    : decoded.amount_msat;
 
   if (maxfee) maxfee = parseInt(maxfee);
   if (maxfee < 0) fail("Max fee cannot be negative");
