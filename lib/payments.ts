@@ -459,6 +459,7 @@ export const sendLightning = async ({
     bolt11: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
     maxfee: maxfee ? maxfee * 1000 : 0,
+    retry_for: 20,
   });
 
   try {
@@ -701,7 +702,7 @@ export const check = async () => {
 
     for (const pr of payments) {
       const p = await getPayment(pr);
-      if (!p || Date.now() - p.created < 60000) continue;
+      if (!p || Date.now() - p.created < 20000) continue;
       const { pays } = await ln.listpays(pr);
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");
