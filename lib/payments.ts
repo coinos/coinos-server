@@ -414,7 +414,7 @@ export const sendLightning = async ({
   user,
   pr,
   amount,
-  maxfee = undefined,
+  fee = undefined,
   memo = undefined,
 }) => {
   let p;
@@ -431,8 +431,8 @@ export const sendLightning = async ({
     ? decoded.invoice_amount_msat
     : decoded.amount_msat;
 
-  if (maxfee) maxfee = parseInt(maxfee);
-  if (maxfee < 0) fail("Max fee cannot be negative");
+  fee = Math.max(parseInt(fee || 0), 5);
+  if (fee < 0) fail("Fee cannot be negative");
 
   const { pays } = await ln.listpays(pr);
   if (pays.find((p) => p.status === "complete"))
@@ -444,7 +444,7 @@ export const sendLightning = async ({
   p = await debit({
     hash: pr,
     amount: total,
-    fee: maxfee || 0,
+    fee,
     memo,
     user,
     type: types.lightning,
@@ -452,13 +452,13 @@ export const sendLightning = async ({
 
   await db.sAdd("pending", pr);
 
-  l("paying lightning invoice", pr.substr(-8), total, amount, maxfee);
+  l("paying lightning invoice", pr.substr(-8), total, amount, fee);
 
   const r = await ln.pay({
     // invstring: pr.replace(/\s/g, "").toLowerCase(),
     bolt11: pr.replace(/\s/g, "").toLowerCase(),
     amount_msat: amount_msat ? undefined : amount * 1000,
-    maxfee: maxfee ? maxfee * 1000 : 0,
+    maxfee: fee * 1000,
     retry_for: 20,
   });
 

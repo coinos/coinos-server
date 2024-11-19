@@ -157,9 +157,10 @@ export default {
         params: { hash },
       } = req;
       const p = await getPayment(hash);
-      if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+      if (p?.type === types.internal) p.with = await g(`user:${p.ref}`);
       res.send(p);
     } catch (e) {
+      console.log(e);
       err("failed to get payment", e.message);
       bail(res, e.message);
     }
