@@ -91,3 +91,23 @@ export async function init(amount = 10000) {
   }
 }
 
+export async function payNostr(token) {
+  const decodedToken = getDecodedToken(token);
+  if (!decodedToken) {
+    console.error("could not decode token");
+    return;
+  }
+  const proofs = token.getProofs(decodedToken);
+  const mint = token.getMint(decodedToken);
+  const paymentPayload: PaymentRequestPayload = {
+    id: request.id,
+    mint: mint,
+    unit: request.unit || "",
+    proofs: proofs,
+  };
+  const paymentPayloadString = JSON.stringify(paymentPayload);
+  await nostrStore.sendNip17DirectMessageToNprofile(
+    transport.target,
+    paymentPayloadString,
+  );
+}

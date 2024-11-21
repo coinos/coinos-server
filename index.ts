@@ -56,7 +56,7 @@ app.post("/event", auth, nostr.publish);
 app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);
-app.get("/payments/:hash", auth, payments.get);
+app.get("/payments/:hash", payments.get);
 app.post("/parse", auth, payments.parse);
 app.get("/fund/:name", payments.fund);
 app.get("/fund/:name/withdraw", payments.withdraw);
@@ -125,6 +125,7 @@ app.post("/unlimit", admin, users.unlimit);
 
 app.get("/cash/:id/:version", ecash.get);
 app.post("/cash", ecash.save);
+app.post("/cash/pay", ecash.pay);
 app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);

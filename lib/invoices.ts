@@ -13,6 +13,7 @@ const lq = rpc(config.liquid);
 export const generate = async ({ invoice, user }) => {
   let {
     bolt11,
+    bolt12,
     aid,
     currency,
     expiry,
@@ -71,6 +72,13 @@ export const generate = async ({ invoice, user }) => {
       if (r.payee !== nodeid) fail("invalid invoice");
       amount = Math.round(r.amount_msat / 1000);
       r.bolt11 = bolt11;
+    } else if (bolt12) {
+      r = await ln.offer({
+        amount_msat: amount ? `${amount + tip}sat` : "any",
+        label: id,
+        description: memo || "",
+        absolute_expiry: expiry,
+      });
     } else {
       expiry ||= 60 * 60 * 24 * 30;
       r = await ln.invoice({
