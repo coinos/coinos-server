@@ -1,14 +1,17 @@
 import config from "$config";
-import { bail, fail, getUser, time } from "$lib/utils";
-import { g, s, db } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import {
   anon,
-  send,
   getCount,
+  getProfile,
   getRelays,
-  serverPubkey,
   pool,
+  send,
+  serverPubkey,
 } from "$lib/nostr";
+import { bail, fail, getUser } from "$lib/utils";
+import { decode } from "nostr-tools/nip19";
+import type { ProfilePointer } from "nostr-tools/nip19";
 
 const opts = { maxWait: 2000 };
 
@@ -197,5 +200,13 @@ export default {
 
   async info(_, res) {
     res.send({ pubkey: serverPubkey });
+  },
+
+  async profile(req, res) {
+    const { profile } = req.params;
+    const { data } = decode(profile);
+    const { pubkey, relays } = data as ProfilePointer;
+    const user = await getProfile(pubkey, relays);
+    res.send(user);
   },
 };

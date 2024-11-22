@@ -14,9 +14,10 @@ import {
 const m = new CashuMint(config.mintUrl);
 const w = new CashuWallet(m);
 
-const enc = (proofs, v = 4) =>
-  (v === 4 ? getEncodedTokenV4 : getEncodedToken)({
-    token: [{ mint: config.mintUrl, proofs }],
+const enc = (proofs) =>
+  getEncodedToken({
+    mint: config.mintUrl,
+    proofs,
   });
 
 const dec = (token) => getDecodedToken(token).token[0];
@@ -28,9 +29,8 @@ const ext = async (mint) => {
   return issuerPk !== ourPk;
 };
 
-export async function get(id, v = 4) {
+export async function get(id) {
   const token = await g(`cash:${id}`);
-  if (v < 4) return enc(dec(token).proofs, 3);
   return token;
 }
 
@@ -46,13 +46,16 @@ export async function claim(token) {
   return rcvd.reduce((a, b) => a + b.amount, 0);
 }
 
-export async function mint(amount, v = 4) {
-  const { proofs } = dec(await g("cash"));
-  const { send, returnChange } = await w.send(amount, proofs);
-  const rcvd = await w.receive(enc(send, v));
-  const change = enc(returnChange, v);
+export async function mint(amount) {
+  const { keysets } = await m.getKeySets();
+  const w = new CashuWallet(m, { keysets });
+  const { proofs } = getDecodedToken(await g("cash"));
+  const { send, keep } = await w.send(amount, proofs);
+  console.log("SEND", send);
+  const rcvd = await w.receive(enc(send));
+  const change = enc(keep);
   await s("cash", change);
-  return enc(rcvd, v);
+  return enc(rcvd);
 }
 
 export async function check(token) {
@@ -79,10 +82,11 @@ export async function init(amount = 10000) {
       return state === MintQuoteState.PAID;
     });
 
-    const { proofs } = await w.mintTokens(amount, quote);
+    const proofs = await w.mintProofs(amount, quote);
 
     const cash = getEncodedTokenV4({
-      token: [{ mint: config.mintUrl, proofs }],
+      mint: config.mintUrl,
+      proofs,
     });
 
     await s("cash", cash);
@@ -90,24 +94,4 @@ export async function init(amount = 10000) {
     console.log(e);
   }
 }
-
-export async function payNostr(token) {
-  const decodedToken = getDecodedToken(token);
-  if (!decodedToken) {
-    console.error("could not decode token");
-    return;
-  }
-  const proofs = token.getProofs(decodedToken);
-  const mint = token.getMint(decodedToken);
-  const paymentPayload: PaymentRequestPayload = {
-    id: request.id,
-    mint: mint,
-    unit: request.unit || "",
-    proofs: proofs,
-  };
-  const paymentPayloadString = JSON.stringify(paymentPayload);
-  await nostrStore.sendNip17DirectMessageToNprofile(
-    transport.target,
-    paymentPayloadString,
-  );
-}
+init();

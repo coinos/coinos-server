@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g, s } from "$lib/db";
+import { g, s } from "$lib/db";
 import { l } from "$lib/logging";
 import { fail } from "$lib/utils";
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
@@ -119,12 +119,11 @@ export const getRelays = async (pubkey): Promise<any> => {
   return { read, write };
 };
 
-export const getProfile = async (pubkey) => {
+export const getProfile = async (pubkey, relays = [config.nostr]) => {
   let profile = await g(`${pubkey}:profile`);
 
   if (!profile) {
     const pubkeys = [pubkey];
-    let relays = [config.nostr];
     let filter: any = { authors: pubkeys, kinds: [0] };
 
     let ev = await pool.get(relays, filter, opts);

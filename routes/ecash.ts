@@ -1,26 +1,21 @@
 import { db, g, s } from "$lib/db";
-import { check, claim, get, mint, request } from "$lib/ecash";
+import { check, claim, get, mint } from "$lib/ecash";
 import { err, l } from "$lib/logging";
 import { credit, debit, types } from "$lib/payments";
 import { emit } from "$lib/sockets";
 import { bail, fail } from "$lib/utils";
-import {
-  PaymentRequest,
-  PaymentRequestPayload,
-  PaymentRequestTransport,
-  PaymentRequestTransportType,
-  decodePaymentRequest,
-  getDecodedToken,
-} from "@cashu/cashu-ts";
 import { v4 } from "uuid";
 const { ecash: type } = types;
 
 const sendCash = async ({ amount, user }) => {
+  console.log("HELLO", amount);
   const id = v4();
   const hash = v4();
 
   const p = await debit({ hash, amount, user, type });
+  console.log("P", p);
   const token = await mint(amount);
+  console.log("TOKEN", token);
   p.memo = id;
   await s(`payment:${p.id}`, p);
   s(`cash:${id}`, token);
@@ -93,8 +88,10 @@ export default {
       user,
     } = req;
     try {
+      console.log("OY");
       res.send(await sendCash({ amount, user }));
     } catch (e) {
+      console.log(e);
       err(e.message);
       bail(res, e.message);
     }
@@ -151,32 +148,5 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
-  },
-
-  async pay(req, res) {
-    const { user } = req;
-    const { request } = req.body;
-    const { amount } = decodePaymentRequest(request);
-    const { id, token } = await sendCash({ amount, user });
-
-
-      const decodedToken = getDecodedToken(token);
-      if (!decodedToken) {
-        console.error("could not decode token");
-        return;
-      }
-      const proofs = token.getProofs(decodedToken);
-      const mint = token.getMint(decodedToken);
-      const paymentPayload: PaymentRequestPayload = {
-        id: request.id,
-        mint: mint,
-        unit: request.unit || "",
-        proofs: proofs,
-      };
-      const paymentPayloadString = JSON.stringify(paymentPayload);
-      try {
-        await nostrStore.sendNip17DirectMessageToNprofile(transport.target, paymentPayloadString);
-
-    res.send({ id, token });
   },
 };

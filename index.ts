@@ -47,6 +47,7 @@ app.get("/invoice/:id", invoices.get);
 app.post("/invoice", optional, invoices.create);
 
 app.get("/nostr.json", nostr.identities);
+app.get("/profile/:profile", nostr.profile);
 app.get("/:pubkey/count", nostr.count);
 app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);
@@ -125,7 +126,6 @@ app.post("/unlimit", admin, users.unlimit);
 
 app.get("/cash/:id/:version", ecash.get);
 app.post("/cash", ecash.save);
-app.post("/cash/pay", ecash.pay);
 app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
