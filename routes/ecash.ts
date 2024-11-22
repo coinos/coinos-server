@@ -16,10 +16,11 @@ const sendCash = async ({ amount, user }) => {
   const p = await debit({ hash, amount, user, type });
   const token = await mint(parseInt(amount));
   p.memo = id;
-  await s(`payment:${p.id}`, p);
+  const { id: pid } = p;
+  await s(`payment:${pid}`, p);
   s(`cash:${id}`, token);
 
-  return { id, token };
+  return { id, token, pid };
 };
 
 export default {
@@ -39,10 +40,10 @@ export default {
 
   async get(req, res) {
     const {
-      params: { id, version },
+      params: { id },
     } = req;
     try {
-      const token = await get(id, version);
+      const token = await get(id);
       const status = await check(token);
       res.send({ token, status });
     } catch (e) {
