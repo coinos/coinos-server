@@ -206,7 +206,8 @@ export default {
     const { profile } = req.params;
     const { data } = decode(profile);
     const { pubkey, relays } = data as ProfilePointer;
-    const user = await getProfile(pubkey, relays);
-    res.send(user);
+    const recipient = await getProfile(pubkey, relays);
+    recipient.relays = relays;
+    res.send(recipient);
   },
 };
