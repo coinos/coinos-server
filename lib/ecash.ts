@@ -20,8 +20,6 @@ const enc = (proofs) =>
     proofs,
   });
 
-const dec = (token) => getDecodedToken(token).token[0];
-
 const ext = async (mint) => {
   const issuer = new CashuMint(mint);
   const { pubkey: issuerPk } = await issuer.getInfo();
@@ -35,8 +33,8 @@ export async function get(id) {
 }
 
 export async function claim(token) {
-  const { proofs: current } = dec(await g("cash"));
-  const { mint } = dec(token);
+  const { proofs: current } = getDecodedToken(await g("cash"));
+  const { mint } = getDecodedToken(token);
 
   if (await ext(mint)) fail("Unable to receive from other mints");
 
@@ -51,7 +49,6 @@ export async function mint(amount) {
   const w = new CashuWallet(m, { keysets });
   const { proofs } = getDecodedToken(await g("cash"));
   const { send, keep } = await w.send(amount, proofs);
-  console.log("SEND", send);
   const rcvd = await w.receive(enc(send));
   const change = enc(keep);
   await s("cash", change);
@@ -59,19 +56,21 @@ export async function mint(amount) {
 }
 
 export async function check(token) {
-  const o = dec(token);
+  const o = getDecodedToken(token);
   const { mint, proofs } = o;
   const total = proofs.reduce((a, b) => a + b.amount, 0);
 
   const external = await ext(mint);
 
-  const r = await w.checkProofsSpent(proofs);
-  const spent = r.reduce((a, b) => a + b.amount, 0);
+  let spent = 0;
+  for (const [i, p] of (await w.checkProofsStates(proofs)).entries()) {
+    if (p.state === "SPENT") spent += proofs[i].amount;
+  }
 
   return { total, spent, mint, external };
 }
 
-export async function init(amount = 10000) {
+export async function init(amount = 100000) {
   try {
     await new Promise((r) => setTimeout(r, 2000));
     const { quote, request } = await w.createMintQuote(amount);
@@ -94,4 +93,3 @@ export async function init(amount = 10000) {
     console.log(e);
   }
 }
-init();

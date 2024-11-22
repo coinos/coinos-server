@@ -7,15 +7,14 @@ import { bail, fail } from "$lib/utils";
 import { v4 } from "uuid";
 const { ecash: type } = types;
 
+Error.stackTraceLimit = 100; // Set this to the desired limit
+
 const sendCash = async ({ amount, user }) => {
-  console.log("HELLO", amount);
   const id = v4();
   const hash = v4();
 
   const p = await debit({ hash, amount, user, type });
-  console.log("P", p);
-  const token = await mint(amount);
-  console.log("TOKEN", token);
+  const token = await mint(parseInt(amount));
   p.memo = id;
   await s(`payment:${p.id}`, p);
   s(`cash:${id}`, token);
@@ -83,18 +82,9 @@ export default {
   },
 
   async mint(req, res) {
-    const {
-      body: { amount },
-      user,
-    } = req;
-    try {
-      console.log("OY");
-      res.send(await sendCash({ amount, user }));
-    } catch (e) {
-      console.log(e);
-      err(e.message);
-      bail(res, e.message);
-    }
+    const { body, user } = req;
+    const amount = parseInt(body.amount);
+    res.send(await sendCash({ amount, user }));
   },
 
   async melt(req, res) {
