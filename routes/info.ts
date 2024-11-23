@@ -21,7 +21,7 @@ export default {
     );
     const lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
 
-    const cash = getDecodedToken(await g("cash")).token[0].proofs.reduce(
+    const cash = getDecodedToken(await g("cash")).proofs.reduce(
       (a, b) => a + b.amount,
       0,
     );

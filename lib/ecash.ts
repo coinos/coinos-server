@@ -56,8 +56,7 @@ export async function mint(amount) {
 }
 
 export async function check(token) {
-  const o = getDecodedToken(token);
-  const { mint, proofs } = o;
+  const { mint, proofs } = getDecodedToken(token);
   const total = proofs.reduce((a, b) => a + b.amount, 0);
 
   const external = await ext(mint);
