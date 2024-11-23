@@ -111,7 +111,7 @@ export function request(uuid, amount, memo) {
     uuid,
     amount,
     unit,
-    config.mintUrl,
+    [config.mintUrl],
     memo,
   ).toEncodedRequest();
 }
