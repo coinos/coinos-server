@@ -1,5 +1,6 @@
 import config from "$config";
 import { db, g, s } from "$lib/db";
+import { request } from "$lib/ecash";
 import ln from "$lib/ln";
 import { types } from "$lib/payments";
 import { emit } from "$lib/sockets";
@@ -101,6 +102,9 @@ export const generate = async ({ invoice, user }) => {
     text = bip21(hash, invoice);
   } else if (type === types.internal) {
     hash = id;
+  } else if (type === types.ecash) {
+    hash = id;
+    text = request(id, amount, memo);
   } else {
     fail(`unrecognized type ${type}`);
   }

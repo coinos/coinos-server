@@ -4,6 +4,7 @@ import { err, l } from "$lib/logging";
 import { credit, debit, types } from "$lib/payments";
 import { emit } from "$lib/sockets";
 import { bail, fail } from "$lib/utils";
+import { getEncodedToken } from "@cashu/cashu-ts";
 import { v4 } from "uuid";
 const { ecash: type } = types;
 
@@ -137,6 +138,28 @@ export default {
 
       res.send(p);
     } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
+  async receive(req, res) {
+    try {
+      const { payload } = req.body;
+      const { id, proofs, mint, memo } = payload;
+      const { uid: ref } = await g(`invoice:${id}`);
+
+      const amount = await claim(
+        getEncodedToken({
+          mint,
+          proofs,
+        }),
+      );
+
+      await credit({ hash: id, amount, memo, ref, type });
+
+      res.send({ id });
+    } catch (e) {
+      err(e.message);
       bail(res, e.message);
     }
   },

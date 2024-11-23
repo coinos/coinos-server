@@ -6,11 +6,16 @@ import {
   CashuMint,
   CashuWallet,
   MintQuoteState,
+  PaymentRequest,
+  PaymentRequestTransport,
+  PaymentRequestTransportType,
   getDecodedToken,
   getEncodedToken,
   getEncodedTokenV4,
 } from "@cashu/cashu-ts";
+import { v4 } from "uuid";
 
+const { URL } = process.env;
 const m = new CashuMint(config.mintUrl);
 const w = new CashuWallet(m);
 
@@ -91,4 +96,22 @@ export async function init(amount = 100000) {
   } catch (e) {
     console.log(e);
   }
+}
+
+export function request(uuid, amount, memo) {
+  const target = `${URL}/ecash/${uuid}`;
+  const tags = [["n", "17"]];
+
+  const { POST: type } = PaymentRequestTransportType;
+  const transport = [{ type, target, tags }];
+  const unit = "sat";
+
+  return new PaymentRequest(
+    transport,
+    uuid,
+    amount,
+    unit,
+    config.mintUrl,
+    memo,
+  ).toEncodedRequest();
 }

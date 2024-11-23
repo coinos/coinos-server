@@ -131,6 +131,7 @@ app.post("/cash", ecash.save);
 app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
+app.post("/ecash/:id", ecash.receive);
 
 app.post("/echo", (req, res) => {
   console.log("echo", req.body);
