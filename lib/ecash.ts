@@ -99,7 +99,7 @@ export async function init(amount = 100000) {
 }
 
 export function request(uuid, amount, memo) {
-  const target = `${URL}/ecash/${uuid}`;
+  const target = `${URL}/api/ecash/${uuid}`;
 
   const { POST: type } = PaymentRequestTransportType;
   const transport = [{ type, target }];
