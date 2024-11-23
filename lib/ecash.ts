@@ -100,10 +100,9 @@ export async function init(amount = 100000) {
 
 export function request(uuid, amount, memo) {
   const target = `${URL}/ecash/${uuid}`;
-  const tags = [["n", "17"]];
 
   const { POST: type } = PaymentRequestTransportType;
-  const transport = [{ type, target, tags }];
+  const transport = [{ type, target }];
   const unit = "sat";
 
   return new PaymentRequest(
