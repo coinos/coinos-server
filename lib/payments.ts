@@ -527,13 +527,18 @@ export const build = async ({
 
   fees.hourFee = fees.halfHourFee;
   fees.halfHourFee = fees.fastestFee;
-  fees.fastestFee = Math.round(fees.fastestFee * 1.1);
+
+  if (type === types.bitcoin) {
+    fees.fastestFee = Math.round(fees.fastestFee * 1.1);
+    if (fees.fastestFee === fees.halfHourFee) fees.fastestFee++;
+    if (fees.hourFee === fees.halfHourFee) fees.hourFee--;
+  }
 
   if (!feeRate) {
     feeRate = fees.halfHourFee;
   }
 
-  if (feeRate < fees.economyFee) fail("fee rate too low");
+  if (feeRate < fees.hourFee) fail("fee rate too low");
 
   const replaceable = false;
 
