@@ -144,8 +144,7 @@ export default {
 
   async receive(req, res) {
     try {
-      const { payload } = req.body;
-      const { id, proofs, mint, memo } = payload;
+      const { id, proofs, mint, memo } = req.body;
       const { uid: ref } = await g(`invoice:${id}`);
 
       const amount = await claim(
@@ -159,6 +158,7 @@ export default {
 
       res.send({ id });
     } catch (e) {
+      console.log(e);
       err(e.message);
       bail(res, e.message);
     }
