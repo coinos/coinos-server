@@ -454,18 +454,24 @@ export const sendLightning = async ({
 
   l("paying lightning invoice", pr.substr(-8), total, amount, fee);
 
-  const r = await ln.pay({
-    // invstring: pr.replace(/\s/g, "").toLowerCase(),
-    bolt11: pr.replace(/\s/g, "").toLowerCase(),
-    amount_msat: amount_msat ? undefined : amount * 1000,
-    maxfee: fee * 1000,
-    retry_for: 20,
-  });
-
   try {
-    if (r.status === "complete") p = await finalize(r, p);
+    const r = await ln.xpay({
+      invstring: pr.replace(/\s/g, "").toLowerCase(),
+      // bolt11: pr.replace(/\s/g, "").toLowerCase(),
+      amount_msat: amount_msat ? undefined : amount * 1000,
+      maxfee: fee * 1000,
+      retry_for: 10,
+    });
+
+    try {
+      if (!r.failed_parts) p = await finalize(r, p);
+    } catch (e) {
+      warn("failed to process payment", p.id);
+    }
   } catch (e) {
-    console.log("failed to process payment", e, p);
+    err("failed to pay", pr.substr(-8));
+    reverse(p);
+    throw e;
   }
 
   return p;
@@ -707,7 +713,7 @@ export const check = async () => {
 
     for (const pr of payments) {
       const p = await getPayment(pr);
-      if (!p || Date.now() - p.created < 20000) continue;
+      if (!p || Date.now() - p.created < 10000) continue;
       const { pays } = await ln.listpays(pr);
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");
@@ -724,17 +730,24 @@ export const check = async () => {
 };
 
 const finalize = async (r, p) => {
+  let { preimage } = r;
+  if (!preimage) preimage = r.payment_preimage;
+  if (!preimage) fail("missing preimage");
+
   await db.sRem("pending", p.hash);
   l("payment completed", p.id, r.payment_preimage);
 
   const maxfee = p.fee;
-  p.fee = Math.round((r.amount_sent_msat - r.amount_msat) / 1000);
-  p.ref = r.payment_preimage;
+  const { amount_msat } = await ln.decode(p.hash);
+  p.fee = Math.round((r.amount_sent_msat - amount_msat) / 1000);
+  p.ref = preimage;
 
-  await s(`payment:${p.id}`, p);
+  if (!(await g(`payment:${p.id}`)).ref) {
+    await s(`payment:${p.id}`, p);
 
-  l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
-  await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+    l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
+    await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+  }
 
   return p;
 };
@@ -756,5 +769,5 @@ const reverse = async (p) => {
     p.hash,
   );
 
-  warn("reversed", p.hash);
+  warn("reversed", p.id);
 };
