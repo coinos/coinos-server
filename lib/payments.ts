@@ -127,7 +127,11 @@ export const debit = async ({
 
   await s(`payment:${hash}`, id);
   await s(`payment:${id}`, p);
-  await db.lPush(`${aid || uid}:payments`, id);
+  await db
+    .multi()
+    .lPush(`${aid || uid}:payments`, id)
+    .set(`${aid || uid}:payments:last`, p.created)
+    .exec();
 
   l(user.username, "sent", type, amount);
   //emit(user.id, "payment", p);
@@ -221,6 +225,7 @@ export const credit = async ({
     .set(`payment:${p.id}`, JSON.stringify(p))
     .lPush(`${aid || uid}:payments`, p.id)
     .incrBy(`${balanceKey}:${aid || uid}`, amount)
+    .set(`${aid || uid}:payments:last`, p.created)
     .exec();
 
   if (inv.items?.length) {

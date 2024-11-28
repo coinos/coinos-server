@@ -96,7 +96,9 @@ export default {
     if (limit) limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
-    let payments = (await db.lRange(`${aid || id}:payments`, 0, -1)) || [];
+    const range = start || end ? -1 : limit - 1;
+    let payments = (await db.lRange(`${aid || id}:payments`, 0, range)) || [];
+
     payments = (
       await Promise.all(
         payments.map(async (pid) => {
@@ -114,8 +116,6 @@ export default {
     )
       .filter((p) => p)
       .sort((a, b) => b.created - a.created);
-
-    const count = payments.length;
 
     const fn = (a, b) => ({
       ...a,
@@ -146,6 +146,7 @@ export default {
     const incoming = payments.filter((p: any) => p.amount > 0).reduce(fn, {});
     const outgoing = payments.filter((p: any) => p.amount < 0).reduce(fn, {});
 
+    const { length: count } = payments;
     if (limit) payments = payments.slice(offset, offset + limit);
 
     res.send({ payments, count, incoming, outgoing });
