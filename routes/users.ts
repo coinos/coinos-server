@@ -415,9 +415,8 @@ export default {
   },
 
   async contacts(req, res) {
-    const {
-      user: { id },
-    } = req;
+    const { params, user } = req;
+    const { id } = user;
     const lastlen = (await g(`${id}:lastlen`)) || 0;
     const len = await db.lLen(`${id}:payments`);
     const payments =
@@ -441,7 +440,9 @@ export default {
 
     await s(`${id}:contacts`, contacts);
 
-    res.send(contacts);
+    let { limit } = params;
+    limit ||= contacts.length;
+    res.send(contacts.slice(0, limit));
   },
 
   async del(req, res) {

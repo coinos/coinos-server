@@ -113,7 +113,7 @@ app.post("/subscription/delete", auth, users.deleteSubscription);
 app.post("/password", auth, users.password);
 app.post("/pin", auth, users.pin);
 app.post("/otpsecret", auth, users.otpsecret);
-app.get("/contacts", auth, users.contacts);
+app.get("/contacts/:limit?", auth, users.contacts);
 
 app.get("/:id/items", items.list);
 app.get("/items/:id", items.get);
