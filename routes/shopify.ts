@@ -1,6 +1,6 @@
 import got from "got";
 import { g } from "$lib/db";
-import { err } from "$lib/logging";
+import { l, err } from "$lib/logging";
 import { getPayment } from "$lib/utils";
 
 const query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) { 
@@ -21,6 +21,8 @@ export default async (req, res) => {
   const p = await getPayment(hash);
   const user = await g(`user:${p.uid}`);
 
+  l("marking shopify order paid", id, user.username, p.id, user.shopifyStore);
+
   try {
     const r = await got
       .post(
@@ -37,6 +39,8 @@ export default async (req, res) => {
         },
       )
       .json();
+
+    l("shopify success", r);
 
     res.send(r);
   } catch (e) {
