@@ -12,6 +12,7 @@ import type { UnsignedEvent } from "nostr-tools";
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
+const sk = nip19.decode(config.nostrKey).data as Uint8Array;
 
 const methods = [
   "pay_invoice",
@@ -25,17 +26,25 @@ const methods = [
 const week = 7 * 24 * 60 * 60;
 
 export default () => {
-  const r = new Relay("ws://strfry:7777");
+  const r = new Relay("ws://sf:7777");
 
-  r.on("open", (_) => {
+  r.on("open", async (_) => {
     r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey] });
+    let info: UnsignedEvent = {
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 13194,
+      tags: [["p", serverPubkey]],
+      pubkey: serverPubkey,
+      content: methods.join(" "),
+    };
+    info = await finalizeEvent(info, sk);
+    r.send(["EVENT", info]);
   });
 
   r.on("event", async (sub, ev) => {
     try {
       if (sub !== "nwc") return;
       let { content, pubkey } = ev;
-      const sk = nip19.decode(config.nostrKey).data as Uint8Array;
       const { params, method } = JSON.parse(
         await nip04.decrypt(sk, pubkey, content),
       );
@@ -63,10 +72,16 @@ export default () => {
 
         response = await finalizeEvent(response, sk);
         r.send(["EVENT", response]);
-      } catch(e) {
-        err("problem with nwc", user.username, JSON.stringify(params), e.message);
+      } catch (e) {
+        err(
+          "problem with nwc",
+          user.username,
+          JSON.stringify(params),
+          e.message,
+        );
       }
     } catch (e) {
+      console.log(e);
       err("problem with nwc", e.message);
     }
   });
