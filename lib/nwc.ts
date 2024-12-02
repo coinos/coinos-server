@@ -4,7 +4,7 @@ import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err } from "$lib/logging";
 import { handleZap, serverPubkey } from "$lib/nostr";
-import { sendInternal, sendLightning } from "$lib/payments";
+import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { getInvoice, sleep } from "$lib/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04, nip19 } from "nostr-tools";
@@ -122,9 +122,32 @@ const handle = (method, params, user) =>
       }
       await sendLightning({
         amount,
-        maxfee: Math.max(5, Math.round(amount * 0.005)),
+        fee: Math.max(5, Math.round(amount * 0.005)),
         user,
         pr,
+      });
+
+      for (let i = 0; i < 10; i++) {
+        const { pays } = await ln.listpays(pr);
+        const p = pays.find((p) => p.status === "complete");
+        if (p) {
+          const { preimage } = p;
+          return result({ preimage });
+        }
+        await sleep(2000);
+      }
+
+      return error({ code: "INTERNAL", message: "Payment timed out" });
+    },
+
+    async pay_keysend() {
+      const { amount, pubkey } = params;
+
+      await sendKeysend({
+        amount,
+        pubkey,
+        fee: Math.max(5, Math.round(amount * 0.005)),
+        user,
       });
 
       for (let i = 0; i < 10; i++) {

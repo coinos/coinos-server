@@ -281,18 +281,18 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     ).toString();
   }
 
-  const maxfee = Math.max(5, Math.round(amount * 0.005));
+  const fee = Math.max(5, Math.round(amount * 0.005));
   if (lnurl) {
-    amount -= maxfee;
+    amount -= fee;
     const { callback } = (await got(lnurl).json()) as any;
     ({ pr } = (await got(`${callback}?amount=${amount * 1000}`).json()) as any);
   } else if (to.startsWith("ln")) {
-    amount -= maxfee;
+    amount -= fee;
     pr = to;
   }
 
   return pr
-    ? await sendLightning({ user, pr, amount, maxfee })
+    ? await sendLightning({ user, pr, amount, fee })
     : await sendOnchain({ aid, amount, address: to, user, subtract: true });
 };
 
@@ -412,6 +412,39 @@ export const sendOnchain = async (params) => {
   } catch (e) {
     delete inflight[txid];
     throw e;
+  }
+};
+
+export const sendKeysend = async ({
+  amount,
+  pubkey,
+  fee,
+  memo = undefined,
+  user,
+}) => {
+  let p = await debit({
+    hash: pubkey,
+    amount,
+    fee,
+    memo,
+    user,
+    type: types.lightning,
+  });
+
+  fee = Math.max(parseInt(fee || 0), 5);
+  if (fee < 0) fail("Fee cannot be negative");
+
+  const r = await ln.keysend({
+    pubkey,
+    amount_msat: amount * 1000,
+    maxfee: fee * 1000,
+    retry_for: 10,
+  });
+
+  try {
+    if (r.status === "complete") p = await finalize(r, p);
+  } catch (e) {
+    warn("failed to process payment", p.id);
   }
 };
 

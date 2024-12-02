@@ -38,7 +38,7 @@ export default {
 
   async create(req, res) {
     const { body, user } = req;
-    let { amount, hash, maxfee, fund, memo, payreq } = body;
+    let { amount, hash, fee, fund, memo, payreq } = body;
     const balance = await g(`balance:${user.id}`);
 
     try {
@@ -62,7 +62,7 @@ export default {
           hash = payreq;
           if (!amount) ({ amount } = invoice);
         } else {
-          p = await sendLightning({ user, pr: payreq, amount, maxfee, memo });
+          p = await sendLightning({ user, pr: payreq, amount, fee, memo });
         }
       }
 
@@ -93,7 +93,7 @@ export default {
     } = req;
     if (!aid || aid === "undefined") aid = id;
 
-    if (limit) limit = parseInt(limit);
+    limit = parseInt(limit) || 25;
     offset = parseInt(offset) || 0;
 
     const range = start || end ? -1 : limit - 1;
@@ -439,7 +439,7 @@ export default {
 
   async lnaddress(req, res) {
     let {
-      params: { lnaddress, amount, maxfee = 5000 },
+      params: { lnaddress, amount, fee = 5000 },
       body,
       user,
     } = req;
@@ -467,7 +467,7 @@ export default {
       if (payee === id) {
         p = await debit({ hash: pr, amount, memo, user });
         await credit({ hash: pr, amount, memo, ref: user.id });
-      } else p = await sendLightning({ user, pr, amount, maxfee, memo });
+      } else p = await sendLightning({ user, pr, amount, fee, memo });
 
       res.send(p);
     } catch (e) {
