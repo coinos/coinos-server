@@ -28,6 +28,7 @@ return ourfee
 `;
 
 const REVERSE = `
+-- Keys
 local paymentKey = KEYS[1]
 local balanceKey = KEYS[2]
 local creditKey = KEYS[3]
@@ -35,22 +36,28 @@ local hashKey = KEYS[4]
 local paymentsKey = KEYS[5]
 local pid = KEYS[6]
 
+-- Arguments
 local total = tonumber(ARGV[1])
 local credit = tonumber(ARGV[2])
 local hash = ARGV[3]
 
-local payment = redis.call('get', paymentKey)
+-- Hardcoded TTL for the processing state
+local processingTTL = 5
 
-if payment ~= nil then
-  redis.call('incrby', balanceKey, total)
-  redis.call('incrby', creditKey, credit)
-  redis.call('del', paymentKey)
-  redis.call('del', hashKey)
-  redis.call('lrem', paymentsKey, 0, pid);
-  redis.call('srem', 'pending', hash);
+-- Attempt to atomically claim the payment with a timeout
+if redis.call('setex', paymentKey, processingTTL, 'processing') then
+    -- Only process if successfully claimed
+    redis.call('incrby', balanceKey, total)
+    redis.call('incrby', creditKey, credit)
+    redis.call('del', paymentKey)
+    redis.call('del', hashKey)
+    redis.call('lrem', paymentsKey, 0, pid)
+    redis.call('srem', 'pending', hash)
+    return pid
+else
+    -- Payment already being processed or processed
+    return nil
 end
-
-return pid 
 `;
 
 const debit = defineScript({
