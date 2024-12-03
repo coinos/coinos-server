@@ -15,6 +15,7 @@ const error = (error) => ({ error });
 const sk = nip19.decode(config.nostrKey).data as Uint8Array;
 
 const methods = [
+  "pay_keysend",
   "pay_invoice",
   "get_balance",
   "get_info",
