@@ -26,6 +26,7 @@ export default [
   "memoPrompt",
   "nip5",
   "notify",
+  "npub",
   "nsec",
   "nwc",
   "payments",
