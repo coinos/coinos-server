@@ -758,11 +758,15 @@ export const check = async () => {
       const failed = !pays.length || pays.every((p) => p.status === "failed");
       const completed = pays.find((p) => p.status === "complete");
 
-      if (completed) await finalize(completed, p);
-      else if (failed) await reverse(p);
+      try {
+        if (completed) await finalize(completed, p);
+        else if (failed) await reverse(p);
+      } catch(e) {
+        err("failed to finalize", p.id, e.message);
+      }
     }
   } catch (e) {
-    console.log("payment check failed", e);
+    err("payment check failed", e.message);
   }
 
   setTimeout(check, 2000);
@@ -792,9 +796,13 @@ const finalize = async (r, p) => {
 };
 
 const reverse = async (p) => {
-  const total = Math.abs(p.amount) + p.fee;
+  await sleep(Math.floor(Math.random() * (1500 - 500 + 1)) + 500);
+
+  const total = Math.abs(p.amount) + p.fee + p.ourfee;
   const ourfee = p.ourfee || 0;
   const credit = Math.round(total * config.fee) - ourfee;
+
+  l("reversing", p.id, p.amount, p.fee, total, ourfee, credit);
 
   await db.reverse(
     `payment:${p.id}`,

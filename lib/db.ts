@@ -28,7 +28,6 @@ return ourfee
 `;
 
 const REVERSE = `
--- Keys
 local paymentKey = KEYS[1]
 local balanceKey = KEYS[2]
 local creditKey = KEYS[3]
@@ -36,35 +35,20 @@ local hashKey = KEYS[4]
 local paymentsKey = KEYS[5]
 local pid = KEYS[6]
 
--- Arguments
 local total = tonumber(ARGV[1])
 local credit = tonumber(ARGV[2])
 local hash = ARGV[3]
 
--- Hardcoded TTL for the processing state (in milliseconds)
-local processingTTL = 5000
-
--- Generate a unique lock identifier for this script instance
-local uniqueId = tostring(redis.call('incr', 'lock:counter')) .. ':' .. redis.call('time')[2]
-
--- Attempt to atomically claim the payment with a lock
-local lockSet = redis.call('set', paymentKey, uniqueId, 'NX', 'PX', processingTTL)
-
-if lockSet then
-    -- Remove the lock immediately to prevent re-entry
+if redis.call('exists', paymentKey) == 1 then
     redis.call('del', paymentKey)
-
-    -- Proceed with processing
+    redis.call('srem', 'pending', hash)
     redis.call('incrby', balanceKey, total)
     redis.call('incrby', creditKey, credit)
     redis.call('del', hashKey)
     redis.call('lrem', paymentsKey, 0, pid)
-    redis.call('srem', 'pending', hash)
-
     return pid
 else
-    -- Another process holds the lock; throw an error
-    error("Payment has already been reversed")
+    error("Payment has already been reversed" .. paymentKey)
 end
 `;
 
