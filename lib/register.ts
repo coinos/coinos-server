@@ -8,6 +8,12 @@ import { db } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
 
+import { bytesToHex, randomBytes } from "@noble/hashes/utils";
+import { getPublicKey } from "nostr";
+import { encrypt as nip49encrypt } from "nostr-tools/nip49";
+
+import { nip19 } from "nostr-tools";
+
 const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
   let { password, pubkey, username } = user;
@@ -46,11 +52,17 @@ export default async (user, ip) => {
     }
   }
 
+  const sk = randomBytes(32);
+  user.pubkey ||= bytesToHex(getPublicKey(sk));
+  user.nsec = nip49encrypt(sk, password);
+
   user.currencies = [...new Set([user.currency, "CAD", "USD"])];
   user.fiat = false;
   user.otpsecret = authenticator.generateSecret();
   user.migrated = true;
   user.locktime = 300;
+  user.npub = nip19.npubEncode(user.pubkey);
+  user.nwc = bytesToHex(randomBytes(32));
 
   const account = JSON.stringify({
     id,
@@ -59,6 +71,7 @@ export default async (user, ip) => {
   });
 
   db.multi()
+    .set(getPublicKey(user.nwc), user.id)
     .set(`user:${id}`, JSON.stringify(user))
     .set(`user:${username}`, id)
     .set(`user:${pubkey}`, id)

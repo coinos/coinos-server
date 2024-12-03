@@ -156,10 +156,16 @@ export default {
         "salt",
       ];
 
-      user = await register(pick(user, fields), ip, false);
+      user = await register(pick(user, fields), ip);
+
+      const payload = { id: user.id };
+      const token = jwt.sign(payload, config.jwt);
+
       l("registered new user", user.username);
-      res.send(pick(user, whitelist));
+
+      res.send({ ...pick(user, whitelist), token });
     } catch (e) {
+      console.log(e);
       res.code(500).send(e.message);
     }
   },
