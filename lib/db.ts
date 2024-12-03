@@ -41,22 +41,30 @@ local total = tonumber(ARGV[1])
 local credit = tonumber(ARGV[2])
 local hash = ARGV[3]
 
--- Hardcoded TTL for the processing state
-local processingTTL = 5
+-- Hardcoded TTL for the processing state (in milliseconds)
+local processingTTL = 5000
 
--- Attempt to atomically claim the payment with a timeout
-if redis.call('setex', paymentKey, processingTTL, 'processing') then
-    -- Only process if successfully claimed
+-- Generate a unique lock identifier for this script instance
+local uniqueId = tostring(redis.call('incr', 'lock:counter')) .. ':' .. redis.call('time')[2]
+
+-- Attempt to atomically claim the payment with a lock
+local lockSet = redis.call('set', paymentKey, uniqueId, 'NX', 'PX', processingTTL)
+
+if lockSet then
+    -- Remove the lock immediately to prevent re-entry
+    redis.call('del', paymentKey)
+
+    -- Proceed with processing
     redis.call('incrby', balanceKey, total)
     redis.call('incrby', creditKey, credit)
-    redis.call('del', paymentKey)
     redis.call('del', hashKey)
     redis.call('lrem', paymentsKey, 0, pid)
     redis.call('srem', 'pending', hash)
+
     return pid
 else
-    -- Payment already being processed or processed
-    return nil
+    -- Another process holds the lock; throw an error
+    error("Payment has already been reversed")
 end
 `;
 
