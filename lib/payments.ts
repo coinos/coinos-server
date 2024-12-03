@@ -418,21 +418,20 @@ export const sendOnchain = async (params) => {
 export const sendKeysend = async ({
   amount,
   pubkey,
-  fee,
+  fee = undefined,
   memo = undefined,
   user,
 }) => {
-  let p = await debit({
-    hash: pubkey,
+  fee = Math.max(parseInt(fee || amount * 0.005), 5);
+
+  const p = await debit({
+    hash: v4(),
     amount,
     fee,
     memo,
     user,
     type: types.lightning,
   });
-
-  fee = Math.max(parseInt(fee || 0), 5);
-  if (fee < 0) fail("Fee cannot be negative");
 
   const r = await ln.keysend({
     pubkey,
@@ -441,11 +440,9 @@ export const sendKeysend = async ({
     retry_for: 10,
   });
 
-  try {
-    if (r.status === "complete") p = await finalize(r, p);
-  } catch (e) {
-    warn("failed to process payment", p.id);
-  }
+  if (r.status !== "complete") reverse(p);
+
+  return r;
 };
 
 export const sendLightning = async ({

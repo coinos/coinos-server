@@ -143,15 +143,14 @@ const handle = (method, params, user) =>
     async pay_keysend() {
       const { amount, pubkey } = params;
 
-      await sendKeysend({
+      const { payment_hash } = await sendKeysend({
         amount,
         pubkey,
-        fee: Math.max(5, Math.round(amount * 0.005)),
         user,
       });
 
       for (let i = 0; i < 10; i++) {
-        const { pays } = await ln.listpays(pr);
+        const { pays } = await ln.listpays({ payment_hash });
         const p = pays.find((p) => p.status === "complete");
         if (p) {
           const { preimage } = p;
