@@ -434,7 +434,7 @@ export const sendKeysend = async ({
   });
 
   const r = await ln.keysend({
-    pubkey,
+    destination: pubkey,
     amount_msat: amount * 1000,
     maxfee: fee * 1000,
     retry_for: 10,
