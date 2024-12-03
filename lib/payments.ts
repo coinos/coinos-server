@@ -416,6 +416,7 @@ export const sendOnchain = async (params) => {
 };
 
 export const sendKeysend = async ({
+  hash,
   amount,
   pubkey,
   fee = undefined,
@@ -424,8 +425,11 @@ export const sendKeysend = async ({
 }) => {
   fee = Math.max(parseInt(fee || amount * 0.005), 5);
 
-  const p = await debit({
-    hash: v4(),
+  let p = await g(`payment:${hash}`);
+  if (p) fail("duplicate keysend");
+
+  p = await debit({
+    hash,
     amount,
     fee,
     memo,

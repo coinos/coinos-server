@@ -56,7 +56,7 @@ export default () => {
       const user = await g(`user:${uid}`);
 
       try {
-        const result = await handle(method, params, user);
+        const result = await handle(method, params, user, ev);
         const payload = JSON.stringify({ result_type: method, ...result });
         content = await nip04.encrypt(sk, pubkey, payload);
 
@@ -88,7 +88,7 @@ export default () => {
   });
 };
 
-const handle = (method, params, user) =>
+const handle = (method, params, user, ev) =>
   ({
     async pay_invoice() {
       const { invoice: pr } = params;
@@ -145,6 +145,7 @@ const handle = (method, params, user) =>
       const { amount, pubkey } = params;
 
       const { payment_hash } = await sendKeysend({
+        hash: ev.id,
         amount,
         pubkey,
         user,
