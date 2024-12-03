@@ -144,24 +144,28 @@ const handle = (method, params, user, ev) =>
     async pay_keysend() {
       const { amount, pubkey } = params;
 
-      const { payment_hash } = await sendKeysend({
-        hash: ev.id,
-        amount,
-        pubkey,
-        user,
-      });
+      try {
+        const { payment_hash } = await sendKeysend({
+          hash: ev.id,
+          amount,
+          pubkey,
+          user,
+        });
 
-      for (let i = 0; i < 10; i++) {
-        const { pays } = await ln.listpays({ payment_hash });
-        const p = pays.find((p) => p.status === "complete");
-        if (p) {
-          const { preimage } = p;
-          return result({ preimage });
+        for (let i = 0; i < 10; i++) {
+          const { pays } = await ln.listpays({ payment_hash });
+          const p = pays.find((p) => p.status === "complete");
+          if (p) {
+            const { preimage } = p;
+            return result({ preimage });
+          }
+          await sleep(2000);
         }
-        await sleep(2000);
-      }
 
-      return error({ code: "INTERNAL", message: "Payment timed out" });
+        return error({ code: "INTERNAL", message: "Payment timed out" });
+      } catch (e) {
+        return error({ code: "INTERNAL", message: "Keysend payment failed" });
+      }
     },
 
     async get_info() {
