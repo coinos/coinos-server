@@ -131,9 +131,9 @@ export default {
 
     if (!inv) return res.send({ status: "ERROR", reason: "Not found" });
 
-    const { received, amount, preimage } = inv;
+    const { hash, received, amount, preimage } = inv;
     const settled = received >= amount;
 
-    res.send({ status: "OK", settled, preimage: preimage || null });
+    res.send({ pr: hash, status: "OK", settled, preimage: preimage || null });
   },
 };
