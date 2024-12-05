@@ -566,9 +566,10 @@ export const build = async ({
   amount = parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
-  const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
-    r.json(),
-  );
+  const fees: any =
+    type === types.liquid
+      ? { fastestFee: 0.1, halfHourFee: 0.1, hourFee: 0.1 }
+      : await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
 
   fees.hourFee = fees.halfHourFee;
   fees.halfHourFee = fees.fastestFee;
@@ -761,7 +762,7 @@ export const check = async () => {
       try {
         if (completed) await finalize(completed, p);
         else if (failed) await reverse(p);
-      } catch(e) {
+      } catch (e) {
         err("failed to finalize", p.id, e.message);
       }
     }
