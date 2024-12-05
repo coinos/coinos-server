@@ -1,12 +1,12 @@
 import { g, s } from "$lib/db";
-import { err, warn } from "$lib/logging";
-import { bail, getUser, fail } from "$lib/utils";
-import { v4 } from "uuid";
-import got from "got";
 import { generate } from "$lib/invoices";
-import { bech32 } from "bech32";
-import { types } from "$lib/payments";
+import { err, warn } from "$lib/logging";
 import { serverPubkey } from "$lib/nostr";
+import { types } from "$lib/payments";
+import { bail, fail, getUser } from "$lib/utils";
+import { bech32 } from "bech32";
+import got from "got";
+import { v4 } from "uuid";
 
 const { URL } = process.env;
 const host = URL.split("/").at(-1);
@@ -134,6 +134,6 @@ export default {
     const { received, amount, preimage } = inv;
     const settled = received >= amount;
 
-    res.send({ status: "OK", settled, preimage });
+    res.send({ status: "OK", settled, preimage: preimage || null });
   },
 };
