@@ -53,9 +53,12 @@ export default {
       query: { minSendable = 1000, maxSendable = 100000000000 },
     } = req;
     try {
-      const { id: uid } = await getUser(
+      const user = await getUser(
         username.replace("lightning:", "").replace(/\s/, "").toLowerCase(),
       );
+
+      if (!user) fail(`User ${username} not found`);
+      const { id: uid } = user;
 
       const metadata = JSON.stringify([
         ["text/plain", `Paying ${username}@${host}`],
