@@ -638,7 +638,7 @@ export default {
   async account(req, res) {
     const { id } = req.params;
     const account = await g(`account:${id}`);
-    account.balance = await g(`balance:${id}`);
+    if (account) account.balance = await g(`balance:${id}`);
     res.send(account);
   },
 
@@ -649,11 +649,10 @@ export default {
       const accounts = [];
       for (const id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
         const account = await g(`account:${id}`);
-        account.balance = await g(`balance:${id}`);
-
-        // if (account.seed) reconcile(account);
-
-        accounts.push(account);
+        if (account) {
+          account.balance = await g(`balance:${id}`);
+          accounts.push(account);
+        }
       }
 
       res.send(accounts.reverse());
