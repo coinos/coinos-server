@@ -93,7 +93,7 @@ export default {
     } = req;
     if (!aid || aid === "undefined") aid = id;
 
-    limit = parseInt(limit) || 25;
+    limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
     const range = start || end ? -1 : limit - 1;
