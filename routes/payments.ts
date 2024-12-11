@@ -96,7 +96,7 @@ export default {
     limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
-    const range = start || end ? -1 : limit - 1;
+    const range = !limit || start || end ? -1 : limit - 1;
     let payments = (await db.lRange(`${aid || id}:payments`, 0, range)) || [];
 
     payments = (
