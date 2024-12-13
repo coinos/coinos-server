@@ -422,6 +422,7 @@ export const sendKeysend = async ({
   fee = undefined,
   memo = undefined,
   user,
+  extratlvs = undefined,
 }) => {
   fee = Math.max(parseInt(fee || amount * 0.005), 5);
 
@@ -442,6 +443,7 @@ export const sendKeysend = async ({
     amount_msat: amount * 1000,
     maxfee: fee * 1000,
     retry_for: 10,
+    extratlvs,
   });
 
   if (r.status !== "complete") reverse(p);

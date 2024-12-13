@@ -560,6 +560,8 @@ export default {
       const link = `${process.env.URL}/verify/${code}`;
       const subject = "Email Verification";
 
+      l("verifying email", user.username, email);
+
       await mail(user, subject, templates.verifyEmail, {
         username,
         link,

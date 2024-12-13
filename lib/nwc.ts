@@ -142,7 +142,7 @@ const handle = (method, params, user, ev) =>
     },
 
     async pay_keysend() {
-      const { amount, pubkey } = params;
+      const { amount, pubkey, tlv_records: extratlvs } = params;
 
       try {
         const { payment_hash } = await sendKeysend({
@@ -150,6 +150,7 @@ const handle = (method, params, user, ev) =>
           amount,
           pubkey,
           user,
+          extratlvs,
         });
 
         for (let i = 0; i < 10; i++) {
