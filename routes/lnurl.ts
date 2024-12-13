@@ -54,7 +54,7 @@ export default {
     } = req;
     try {
       const user = await getUser(
-        username.replace("lightning:", "").replace(/\s/, "").toLowerCase(),
+        username.replace("lightning:", "").replace(/\s/, "").replace("=","").toLowerCase(),
       );
 
       if (!user) fail(`User ${username} not found`);
