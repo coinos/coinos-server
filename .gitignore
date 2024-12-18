@@ -16,3 +16,5 @@ watcher.log
 res
 req
 nobal.sh
+littlefs.img
+printer

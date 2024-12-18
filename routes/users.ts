@@ -1,4 +1,5 @@
-import { appendFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { appendFile, unlink } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
 import { db, g, s } from "$lib/db";
@@ -12,6 +13,7 @@ import upload from "$lib/upload";
 import { bail, fail, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
+import { $ } from "bun";
 import jwt from "jsonwebtoken";
 import { nip19 } from "nostr-tools";
 import { authenticator } from "otplib";
@@ -752,6 +754,30 @@ export default {
     } catch (e) {
       console.log(e);
       bail(res, e.message);
+    }
+  },
+
+  async printer(req, res) {
+    const { ssid, key, username, password } = req.body;
+    const dir = "./printer";
+    const path = `${dir}/config.txt`;
+
+    try {
+      await unlink(path);
+      await appendFile(path, `${ssid}\n`, "utf8");
+      await appendFile(path, `${key}\n`, "utf8");
+      await appendFile(path, `${username}\n`, "utf8");
+      await appendFile(path, `${password}\n`, "utf8");
+
+      const output = "./littlefs.img";
+      await $`./mklittlefs -c ${dir} -p 256 -b 4096 -s 0x20000 ${output}`;
+
+      res.header("Content-Type", "application/octet-stream");
+      res.header("Content-Disposition", "attachment; filename=littlefs.img");
+      console.log("sending back");
+      return res.send(createReadStream(output));
+    } catch (error) {
+      res.code(500).send({ error: "Failed to generate LittleFS image" });
     }
   },
 };

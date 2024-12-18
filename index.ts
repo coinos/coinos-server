@@ -106,6 +106,7 @@ app.get("/verify/:code", users.verify);
 app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
 app.post("/login", users.login);
+app.post("/printer", users.printer);
 
 app.get("/subscriptions", auth, users.subscriptions);
 app.post("/subscription", auth, users.subscription);

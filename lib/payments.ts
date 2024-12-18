@@ -38,6 +38,7 @@ export const types = {
   liquid: "liquid",
   ecash: "ecash",
   reconcile: "reconcile",
+  bolt12: "bolt12",
 };
 
 export const debit = async ({
