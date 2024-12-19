@@ -91,12 +91,12 @@ export const generate = async ({ invoice, user }) => {
       amount: amount ? `${amount + tip}sat` : "any",
       label: id,
       description: memo || "",
-      absolute_expiry: expiry,
     });
 
-    console.log("R", r);
     hash = r.bolt12;
     text = r.bolt12;
+
+    await s(`invoice:${r.offer_id}`, id);
   } else if (type === types.bitcoin) {
     hash = await bc.getNewAddress();
     text = bip21(hash, invoice);

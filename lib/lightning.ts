@@ -1,13 +1,14 @@
-import { handleZap } from "$lib/nostr";
+import { g, s } from "$lib/db";
 import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
-import { g, s } from "$lib/db";
+import { handleZap } from "$lib/nostr";
 import { credit, types } from "$lib/payments";
 import { getPayment } from "$lib/utils";
 
 export async function listenForLightning() {
   const inv = await ln.waitanyinvoice((await g("pay_index")) || 0);
   const {
+    local_offer_id,
     bolt11,
     description,
     pay_index,
@@ -23,7 +24,8 @@ export async function listenForLightning() {
   try {
     if (!preimage) return;
 
-    const id = await g(`invoice:${bolt11}`);
+    const id =
+      (await g(`invoice:${bolt11}`)) || (await g(`invoice:${local_offer_id}`));
     const invoice = await g(`invoice:${id}`);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
@@ -40,7 +42,7 @@ export async function listenForLightning() {
     if (p) return warn("already processed", bolt11);
 
     await credit({
-      hash: bolt11,
+      hash: bolt11 || local_offer_id,
       amount: received,
       memo: invoice.memo,
       ref: preimage,
