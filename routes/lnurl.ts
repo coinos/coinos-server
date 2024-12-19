@@ -54,7 +54,11 @@ export default {
     } = req;
     try {
       const user = await getUser(
-        username.replace("lightning:", "").replace(/\s/, "").replace("=","").toLowerCase(),
+        username
+          .replace("lightning:", "")
+          .replace(/\s/, "")
+          .replace("=", "")
+          .toLowerCase(),
       );
 
       if (!user) fail(`User ${username} not found`);
@@ -79,7 +83,8 @@ export default {
         tag: "payRequest",
       });
     } catch (e) {
-      warn("problem generating lnurlp request", username, e.message);
+      if (!e.message.includes("found"))
+        warn("problem generating lnurlp request", username, e.message);
       bail(res, e.message);
     }
   },
