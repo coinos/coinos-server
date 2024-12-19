@@ -27,6 +27,7 @@ import { v4 } from "uuid";
 
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
+const { URL } = process.env;
 
 const dust = 547;
 
@@ -165,7 +166,7 @@ export const credit = async ({
   if (type === types.internal) amount += tip;
 
   const user = await getUser(inv.uid);
-  const { id: uid, currency, username } = user;
+  const { id: uid, currency } = user;
 
   const rates = await g("rates");
   let rate = rates[currency];
@@ -257,6 +258,7 @@ export const completePayment = async (inv, p, user) => {
           };
         }
       } catch (e) {
+        console.log(e);
         withdrawal = { failed: true };
         warn(username, "autowithdraw failed", e.message);
       }
@@ -275,12 +277,21 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
   let pr;
   if (to.includes("@") && to.includes(".")) {
     const [name, domain] = to.split("@");
+    if (URL.includes(domain)) to = name;
     lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
   } else if (to.startsWith("lnurl")) {
     lnurl = Buffer.from(
       bech32.fromWords(bech32.decode(to, 20000).words),
     ).toString();
   }
+
+  const recipient = await getUser(to);
+  if (recipient)
+    return sendInternal({
+      amount,
+      recipient,
+      sender: user,
+    });
 
   const fee = Math.max(5, Math.round(amount * 0.005));
   if (lnurl) {
