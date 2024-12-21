@@ -90,7 +90,7 @@ export const generate = async ({ invoice, user }) => {
     const r = await ln.offer({
       amount: amount ? `${amount + tip}sat` : "any",
       label: id,
-      description: memo || "",
+      description: id,
     });
 
     hash = r.bolt12;
