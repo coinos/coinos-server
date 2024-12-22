@@ -38,7 +38,7 @@ export async function listenForLightning() {
       }
     }
 
-    const p = await getPayment(bolt11);
+    const p = await getPayment(bolt11 || local_offer_id);
     if (p) return warn("already processed", bolt11);
 
     await credit({
