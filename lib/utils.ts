@@ -45,7 +45,7 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
     if (type === "liquid") url.append("assetid", config.liquid.btc);
   }
 
-  if (memo) url.append("memo", memo);
+  if (memo) url.append("message", memo);
 
   return `${network}:${address}?${url.toString()}`;
 };
