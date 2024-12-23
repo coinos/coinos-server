@@ -90,8 +90,10 @@ export const generate = async ({ invoice, user }) => {
     const r = await ln.offer({
       amount: amount ? `${amount + tip}sat` : "any",
       label: id,
-      description: id,
+      description: memo || id,
     });
+
+    if (await g(`invoice:${r.offer_id}`)) fail("Duplicate offer exists");
 
     hash = r.bolt12;
     text = r.bolt12;
