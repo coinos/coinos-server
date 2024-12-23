@@ -53,3 +53,56 @@ export async function listenForLightning() {
     err("problem receiving lightning payment", e.message);
   }
 }
+
+
+export async function replay() {
+  const inv = await ln.waitanyinvoice(440516 - 1);
+  const {
+    local_offer_id,
+    bolt11,
+    description,
+    pay_index,
+    amount_received_msat,
+    payment_preimage: preimage,
+  } = inv;
+
+  const received = Math.round(amount_received_msat / 1000);
+  console.log("replaying", pay_index);
+
+  try {
+    if (!preimage) return;
+
+    const id =
+      (await g(`invoice:${bolt11}`)) || (await g(`invoice:${local_offer_id}`));
+    const invoice = await g(`invoice:${id}`);
+    if (!invoice) return warn("received lightning with no invoice", bolt11);
+
+    if (invoice?.memo) {
+      try {
+        if (JSON.parse(description).kind === 9734) await handleZap(inv);
+      } catch (e) {
+        if (!e.message.startsWith("Unexpected"))
+          warn("failed to handle zap", e.message);
+      }
+    }
+
+    const p = await getPayment(bolt11 || local_offer_id);
+    if (p) {
+      console.log(invoice);
+      return warn("already processed", bolt11, local_offer_id);
+    }
+
+    await credit({
+      hash: bolt11 || local_offer_id,
+      amount: received,
+      memo: invoice.memo,
+      ref: preimage,
+      type: types.lightning,
+    });
+  } catch (e) {
+    console.log(e);
+    err("problem receiving lightning payment", e.message);
+  }
+}
+
+// replay();
