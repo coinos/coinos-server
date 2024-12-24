@@ -225,12 +225,13 @@ const handle = (method, params, user, ev) =>
           description,
           expires_at,
           preimage,
+          bolt11,
           paid_at: settled_at,
         } = invoices[0];
 
         return result({
           type: "incoming",
-          invoice,
+          invoice: bolt11,
           description,
           preimage,
           payment_hash,
