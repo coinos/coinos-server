@@ -1,9 +1,11 @@
-import { g, s } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
+import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { serverPubkey } from "$lib/nostr";
+import { credit } from "$lib/payments";
 import { types } from "$lib/payments";
-import { bail, fail, getUser } from "$lib/utils";
+import { bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
 import got from "got";
 import { v4 } from "uuid";
@@ -137,13 +139,54 @@ export default {
     const {
       params: { id },
     } = req;
-    const inv = await g(`invoice:${id}`);
-
+    const inv = await getInvoice(id);
     if (!inv) return res.send({ status: "ERROR", reason: "Not found" });
 
     const { hash, received, amount, preimage } = inv;
     const settled = received >= amount;
 
     res.send({ pr: hash, status: "OK", settled, preimage: preimage || null });
+  },
+
+  async withdraw(req, res) {
+    try {
+      const { pr, k1: id } = req.query;
+      const invoice = await getInvoice(pr);
+      const { amount_msat } = await ln.decode(pr);
+      const amount = Math.ceil(amount_msat / 1000);
+      await db.debit(`fund:${id}`, "", amount, 0, 0, 0);
+      let p;
+      if (invoice) {
+        const { hash } = invoice;
+        p = await credit({ hash, amount, memo: id, ref: id, type: types.fund });
+      } else {
+        await ln.xpay({
+          invstring: pr.replace(/\s/g, "").toLowerCase(),
+          maxfee: 0,
+          retry_for: 10,
+        });
+        const rates = await g("rates");
+        p = {
+          id: v4(),
+          amount: -amount,
+          hash: pr,
+          confirmed: true,
+          rate: rates.USD,
+          currency: "USD",
+          type: types.fund,
+          ref: id,
+          created: Date.now(),
+        };
+        await s(`payment:${p.id}`, p);
+        await s(`payment:${pr}`, p);
+      }
+
+      await db.lPush(`fund:${id}:payments`, p.id);
+      res.send({ status: "OK" });
+    } catch (e) {
+      console.log(e);
+      warn("lnurlw failed", e.message);
+      res.send({ status: "ERROR", reason: "Withdrawal failed" });
+    }
   },
 };

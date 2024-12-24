@@ -30,6 +30,7 @@ import got from "got";
 import { v4 } from "uuid";
 
 import ln from "$lib/ln";
+const { URL } = process.env;
 
 export default {
   async info(_, res) {
@@ -232,14 +233,14 @@ export default {
     const {
       params: { name },
     } = req;
-    const maxWithdrawable = await g(`fund:${name}`);
+    const balance = await g(`fund:${name}`);
     res.send({
       tag: "withdrawRequest",
-      callback: `${URL}/lnurlw/${name}`,
+      callback: `${URL}/api/lnurlw`,
       k1: name,
       defaultDescription: `Withdraw from coinos fund ${name}`,
-      minWithdrawable: 0,
-      maxWithdrawable,
+      minWithdrawable: balance * 1000,
+      maxWithdrawable: balance * 1000,
     });
   },
 
@@ -249,39 +250,42 @@ export default {
       user,
     } = req;
     try {
+      const { id: uid } = user;
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
-      await t(`fund:${id}`, async (balance, db) => {
-        if (balance < amount) fail("Insufficient funds");
-        await db.multi().decrBy(`fund:${id}`, amount).exec();
-      });
+      await db.debit(`fund:${id}`, "", amount, 0, 0, 0);
+
+      const rates = await g("rates");
+      const { currency } = user;
+      const rate = rates[currency];
 
       if (!iid) {
         iid = v4();
-        const rates = await g("rates");
-        const { currency } = user;
         await s(`invoice:${iid}`, {
           currency,
           id: iid,
           hash: iid,
-          rate: rates[currency],
-          uid: user.id,
+          rate,
+          uid,
           received: 0,
         });
       }
 
       const payment = await credit({
+        aid: user.id,
         hash: iid,
         amount,
         memo: id,
         ref: id,
         type: types.fund,
       });
+
       await db.lPush(`fund:${id}:payments`, payment.id);
 
       res.send({ payment });
     } catch (e) {
+      console.log(e);
       warn("problem withdrawing from fund", e.message);
       bail(res, e.message);
     }
