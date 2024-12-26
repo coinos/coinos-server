@@ -10,12 +10,13 @@ export async function listenForLightning() {
   const {
     local_offer_id,
     bolt11,
+    bolt12,
     description,
     pay_index,
     amount_received_msat,
     payment_preimage: preimage,
   } = inv;
-
+  
   await s("pay_index", pay_index);
   setTimeout(listenForLightning);
 
@@ -33,20 +34,20 @@ export async function listenForLightning() {
       try {
         if (JSON.parse(description).kind === 9734) await handleZap(inv);
       } catch (e) {
-        if (!e.message.startsWith("Unexpected"))
+        if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);
       }
     }
 
-    const p = await getPayment(bolt11 || local_offer_id);
-    if (p) return warn("already processed", bolt11);
+    const p = await getPayment(bolt11 || bolt12);
+    if (p) return warn("already processed", bolt11 || bolt12);
 
     await credit({
-      hash: bolt11 || local_offer_id,
+      hash: bolt11 || bolt12,
       amount: received,
       memo: invoice.memo,
       ref: preimage,
-      type: types.lightning,
+      type: bolt12 ? types.bolt12 : types.lightning,
     });
   } catch (e) {
     console.log(e);
@@ -55,19 +56,18 @@ export async function listenForLightning() {
 }
 
 
-export async function replay() {
-  const inv = await ln.waitanyinvoice(440516 - 1);
+export async function replay(index) {
+  const inv = await ln.waitanyinvoice(index - 1);
   const {
     local_offer_id,
     bolt11,
+    bolt12,
     description,
-    pay_index,
     amount_received_msat,
     payment_preimage: preimage,
   } = inv;
 
   const received = Math.round(amount_received_msat / 1000);
-  console.log("replaying", pay_index);
 
   try {
     if (!preimage) return;
@@ -81,28 +81,25 @@ export async function replay() {
       try {
         if (JSON.parse(description).kind === 9734) await handleZap(inv);
       } catch (e) {
-        if (!e.message.startsWith("Unexpected"))
+        if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);
       }
     }
 
-    const p = await getPayment(bolt11 || local_offer_id);
+    const p = await getPayment(bolt11 || bolt12);
     if (p) {
-      console.log(invoice);
-      return warn("already processed", bolt11, local_offer_id);
+      return warn("already processed", bolt11 || bolt12);
     }
 
     await credit({
-      hash: bolt11 || local_offer_id,
+      hash: bolt11 || bolt12,
       amount: received,
       memo: invoice.memo,
       ref: preimage,
-      type: types.lightning,
+      type: bolt12 ? types.bolt12 : types.lightning,
     });
   } catch (e) {
     console.log(e);
     err("problem receiving lightning payment", e.message);
   }
 }
-
-// replay();

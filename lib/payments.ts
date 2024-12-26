@@ -67,7 +67,7 @@ export const debit = async ({
   let iid;
 
   if (invoice) {
-    if (invoice.received >= amount) fail("Invoice already paid");
+    if (invoice.received >= amount && invoice.type !== types.bolt12) fail("Invoice already paid");
     ({ id: iid } = invoice);
 
     ref = invoice.uid;
@@ -151,7 +151,15 @@ export const credit = async ({
 }) => {
   amount = parseInt(amount) || 0;
 
-  const inv = await getInvoice(hash);
+  let inv;
+  if (type === types.bolt12) {
+    let { invoices } = await ln.listinvoices({ invstring: hash });
+    let { local_offer_id } = invoices[0];
+    inv = await getInvoice(local_offer_id);
+  } else {
+    inv = await getInvoice(hash);
+  }
+
   if (!inv) {
     await db.sAdd("missing", ref.split(":")[0]);
     return;

@@ -3,7 +3,7 @@ Error.stackTraceLimit = Infinity;
 import app from "$lib/app";
 import { admin, auth, optional } from "$lib/auth";
 
-import { listenForLightning } from "$lib/lightning";
+import { listenForLightning, replay } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
@@ -135,13 +135,11 @@ app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 app.post("/ecash/:id", ecash.receive);
-app.get(
-  "/liquid-asset-proof-c938c75d110b18aed74b45caf613ebfc1eeb9f77ab48f85016eca850489d07c2",
-  (_, res) =>
-    res.send(
-      "Authorize linking the domain name coinos.io to the Liquid asset c938c75d110b18aed74b45caf613ebfc1eeb9f77ab48f85016eca850489d07c2",
-    ),
-);
+
+app.get("/replay/:index", (req,res) => {
+  replay(req.params.index);
+  res.send({});
+});
 
 app.post("/echo", (req, res) => {
   console.log("echo", req.body);
@@ -153,13 +151,6 @@ const port: number = parseInt(process.env["PORT"]) || 3119;
 
 app.listen({ host, port });
 
-const logerr = (e: Error) =>
-  // (e &&
-  //   e.message &&
-  //   (e.message.includes("Invalid") ||
-  //     e.message.includes("MASK") ||
-  //     e.message.includes("Rate"))) ||
-  console.log(e);
-
+const logerr = (e: Error) => console.log(e);
 process.on("unhandledRejection", logerr);
 process.on("uncaughtException", logerr);
