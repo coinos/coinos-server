@@ -3,7 +3,7 @@ Error.stackTraceLimit = Infinity;
 import app from "$lib/app";
 import { admin, auth, optional } from "$lib/auth";
 
-import { listenForLightning, replay } from "$lib/lightning";
+import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
 import { getLocations } from "$lib/locations";
 import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
@@ -128,6 +128,7 @@ app.post("/shopify/:id", shopify);
 
 app.post("/hidepay", admin, users.hidepay);
 app.post("/unlimit", admin, users.unlimit);
+app.get("/bolt12", fixBolt12);
 
 app.get("/cash/:id/:version", ecash.get);
 app.post("/cash", ecash.save);

@@ -1,4 +1,4 @@
-import { g, s } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
@@ -16,7 +16,7 @@ export async function listenForLightning() {
     amount_received_msat,
     payment_preimage: preimage,
   } = inv;
-  
+
   await s("pay_index", pay_index);
   setTimeout(listenForLightning);
 
@@ -54,7 +54,6 @@ export async function listenForLightning() {
     err("problem receiving lightning payment", e.message);
   }
 }
-
 
 export async function replay(index) {
   const inv = await ln.waitanyinvoice(index - 1);
@@ -103,3 +102,23 @@ export async function replay(index) {
     err("problem receiving lightning payment", e.message);
   }
 }
+
+export const fixBolt12 = async (_, res) => {
+  for await (const k of db.scanIterator({ MATCH: "payment:*" })) {
+    const p = await g(k);
+    if (p.type === "bolt12") {
+      console.log(k);
+      const { invoices } = await ln.listinvoices({ invstring: p.hash });
+      const { local_offer_id } = invoices[0];
+      const oid = await g(`payment:${local_offer_id}`);
+      const op = await g(`payment:${oid}`);
+      if (op) {
+        db.del(`payment:${oid}`);
+        db.del(`payment:${local_offer_id}`);
+        db.decrBy(`balance:${op.uid}`, op.amount);
+      }
+    }
+  }
+
+  res.send({});
+};
