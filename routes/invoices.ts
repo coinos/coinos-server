@@ -1,7 +1,7 @@
-import { g } from "$lib/db";
+import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
-import { bail, pick } from "$lib/utils";
+import { bail, getInvoice, pick } from "$lib/utils";
 
 export default {
   async get(req, res) {
@@ -40,5 +40,12 @@ export default {
       err("problem generating invoice", e.message);
       bail(res, e.message);
     }
+  },
+
+  async list(req, res) {
+    const { id } = req.user;
+    let invoices = await db.lRange(`${id}:invoices`, 0, -1);
+    invoices = await Promise.all(invoices.map((i) => getInvoice(i)));
+    res.send(invoices);
   },
 };

@@ -46,6 +46,7 @@ app.get("/rates", rates.index);
 app.get("/locations", locations.list);
 
 app.get("/invoice/:id", invoices.get);
+app.get("/invoices", auth, invoices.list);
 app.post("/invoice", optional, invoices.create);
 
 app.get("/nostr.json", nostr.identities);
@@ -134,8 +135,13 @@ app.post("/claim", auth, ecash.claim);
 app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 app.post("/ecash/:id", ecash.receive);
-app.get("/liquid-asset-proof-c938c75d110b18aed74b45caf613ebfc1eeb9f77ab48f85016eca850489d07c2", (_, res) => res.send("Authorize linking the domain name coinos.io to the Liquid asset c938c75d110b18aed74b45caf613ebfc1eeb9f77ab48f85016eca850489d07c2"));
-
+app.get(
+  "/liquid-asset-proof-c938c75d110b18aed74b45caf613ebfc1eeb9f77ab48f85016eca850489d07c2",
+  (_, res) =>
+    res.send(
+      "Authorize linking the domain name coinos.io to the Liquid asset c938c75d110b18aed74b45caf613ebfc1eeb9f77ab48f85016eca850489d07c2",
+    ),
+);
 
 app.post("/echo", (req, res) => {
   console.log("echo", req.body);
