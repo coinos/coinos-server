@@ -212,7 +212,7 @@ const handle = (method, params, user, ev) =>
     },
 
     async lookup_invoice() {
-      const { invoice, payment_hash } = params;
+      let { invoice, payment_hash } = params;
 
       const { invoices } = await ln.listinvoices({
         invstring: invoice,
@@ -224,15 +224,17 @@ const handle = (method, params, user, ev) =>
           amount_received_msat: amount,
           description,
           expires_at,
-          preimage,
+          payment_preimage,
           paid_at: settled_at,
         } = invoices[0];
+
+        ({ bolt11: invoice, payment_hash } = invoices[0]);
 
         return result({
           type: "incoming",
           invoice,
           description,
-          preimage,
+          preimage: payment_preimage,
           payment_hash,
           amount,
           fees_paid: 0,
@@ -254,6 +256,8 @@ const handle = (method, params, user, ev) =>
         preimage,
         completed_at: settled_at,
       } = pays[0];
+
+      ({ bolt11: invoice, payment_hash } = pays[0]);
 
       return result({
         type: "outgoing",
