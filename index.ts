@@ -109,6 +109,8 @@ app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
 app.post("/login", users.login);
 app.post("/printer", users.printer);
+app.get("/challenge", users.challenge);
+app.post("/nostrLogin", users.nostrLogin);
 
 app.get("/subscriptions", auth, users.subscriptions);
 app.post("/subscription", auth, users.subscription);
@@ -137,7 +139,7 @@ app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 app.post("/ecash/:id", ecash.receive);
 
-app.get("/replay/:index", (req,res) => {
+app.get("/replay/:index", (req, res) => {
   replay(req.params.index);
   res.send({});
 });

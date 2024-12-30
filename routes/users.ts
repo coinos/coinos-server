@@ -15,7 +15,7 @@ import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
-import { nip19 } from "nostr-tools";
+import { nip19, verifyEvent } from "nostr-tools";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
@@ -343,6 +343,44 @@ export default {
 
       if (username !== "coinos" && username !== "funk")
         l("logged in", username);
+
+      const payload = { id: user.id };
+      const token = jwt.sign(payload, config.jwt);
+      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      user = pick(user, whitelist);
+      res.send({ user, token });
+    } catch (e) {
+      err("login error", e.message, req.socket.remoteAddress);
+      res.code(401).send({});
+    }
+  },
+
+  async challenge(_, res) {
+    const id = v4();
+    await db.set(`challenge:${id}`, id, { EX: 300 });
+    res.send({ id });
+  },
+
+  async nostrLogin(req, res) {
+    try {
+      const { event, id, twofa } = req.body;
+      const challenge = await g(`challenge:${id}`);
+      if (!challenge) fail("Invalid or expired login challenge");
+
+      if (!verifyEvent(event) || event.content !== id)
+        fail("Invalid signature or challenge mismatch.");
+
+      let user = await getUser(event.pubkey);
+      const { username } = user;
+      l("logging in", username, req.headers["cf-connecting-ip"]);
+
+      if (
+        user.twofa &&
+        (typeof twofa === "undefined" ||
+          !authenticator.check(twofa, user.otpsecret))
+      ) {
+        return res.code(401).send("2fa required");
+      }
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
