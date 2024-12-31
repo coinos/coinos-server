@@ -80,7 +80,7 @@ export const getUser = async (username) => {
     update = true;
   }
 
-  if (user.profile) {
+  if (user?.profile) {
     user.picture = `https://coinos.io/api/public/${user.profile}.webp`;
     delete user.profile;
 
@@ -90,7 +90,7 @@ export const getUser = async (username) => {
     update = true;
   }
 
-  if (user.address) {
+  if (user?.address) {
     user.about = user.address;
     delete user.address;
     update = true;
