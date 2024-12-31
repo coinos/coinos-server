@@ -56,7 +56,7 @@ export default async (user, ip) => {
 
   if (!pubkey) {
     const sk = randomBytes(32);
-    const pubkey = getPublicKey(sk);
+    pubkey = getPublicKey(sk);
     user.pubkey = pubkey;
     user.nsec = nip49encrypt(sk, password);
   }
