@@ -116,7 +116,6 @@ export default {
 
       const whitelist = [
         "about",
-        "address",
         "anon",
         "banner",
         "banner",
@@ -254,7 +253,7 @@ export default {
       }
 
       const attributes = [
-        "address",
+        "about",
         "autowithdraw",
         "banner",
         "cipher",
@@ -263,25 +262,25 @@ export default {
         "destination",
         "display",
         "email",
-        "language",
         "fiat",
+        "language",
         "locktime",
         "memoPrompt",
         "nip5",
         "notify",
         "nsec",
-        "prompt",
         "profile",
+        "prompt",
         "pubkey",
         "push",
         "reserve",
         "salt",
         "seed",
+        "shopifyStore",
+        "shopifyToken",
         "threshold",
         "tokens",
         "twofa",
-        "shopifyToken",
-        "shopifyStore",
       ];
 
       for (const a of attributes) {
@@ -389,6 +388,11 @@ export default {
         };
 
         user = await register(user, ip);
+        user.display = k0.display_name || k0.displayName;
+        user.picture = k0.picture;
+        user.banner = k0.banner;
+        user.about = k0.about;
+        await s(`user:${user.id}`, user);
       }
 
       const { username } = user;

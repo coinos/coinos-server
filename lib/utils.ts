@@ -71,13 +71,32 @@ export const fields = [
 ];
 
 export const getUser = async (username) => {
+  let update;
   if (username === "undefined") fail("invalid user");
   const user = await migrate(username);
   if (user && !user.anon && !user.nwc) {
     user.nwc = bytesToHex(randomBytes(32));
     await s(getPublicKey(user.nwc), user.id);
-    await s(`user:${user.id}`, user);
+    update = true;
   }
+
+  if (user.profile) {
+    user.picture = `https://coinos.io/api/public/${user.profile}.webp`;
+    delete user.profile;
+
+    if (user.banner) {
+      user.banner = `https://coinos.io/api/public/${user.banner}.webp`;
+    }
+    update = true;
+  }
+
+  if (user.address) {
+    user.about = user.address;
+    delete user.address;
+    update = true;
+  }
+
+  if (update) s(`user:${user.id}`, user);
 
   return user;
 };
