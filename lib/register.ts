@@ -1,22 +1,18 @@
-import { got } from "got";
-import { authenticator } from "otplib";
-import { v4 } from "uuid";
-
 import config from "$config";
 import countries from "$lib/countries";
 import { db } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
-
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
-import { getPublicKey } from "nostr";
+import { got } from "got";
+import { getPublicKey, nip19 } from "nostr-tools";
 import { encrypt as nip49encrypt } from "nostr-tools/nip49";
-
-import { nip19 } from "nostr-tools";
+import { authenticator } from "otplib";
+import { v4 } from "uuid";
 
 const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
-  let { password, pubkey, username } = user;
+  let { password, username } = user;
   l("registering", username);
 
   if (!username) fail("Username required");
@@ -53,14 +49,15 @@ export default async (user, ip) => {
   }
 
   const sk = randomBytes(32);
-  user.pubkey ||= bytesToHex(getPublicKey(sk));
+  const pubkey = getPublicKey(sk);
+  user.pubkey = pubkey;
   user.nsec = nip49encrypt(sk, password);
-
   user.currencies = [...new Set([user.currency, "CAD", "USD"])];
   user.fiat = false;
   user.otpsecret = authenticator.generateSecret();
   user.migrated = true;
   user.locktime = 300;
+
   user.npub = nip19.npubEncode(user.pubkey);
   user.nwc = bytesToHex(randomBytes(32));
 

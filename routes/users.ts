@@ -13,9 +13,11 @@ import upload from "$lib/upload";
 import { bail, fail, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
+import { randomBytes } from "@noble/hashes/utils";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
-import { nip19, verifyEvent } from "nostr-tools";
+import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
+import { encrypt as nip49encrypt } from "nostr-tools/nip49";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
@@ -167,6 +169,7 @@ export default {
 
       res.send({ ...pick(user, whitelist), token });
     } catch (e) {
+      console.log(e);
       err("problem registering", e.message);
       res.code(500).send(e.message);
     }
@@ -538,9 +541,15 @@ export default {
 
     try {
       user.pin = null;
-      user.pubkey = null;
       user.cipher = null;
       user.salt = null;
+
+      if (user.nsec) {
+        const sk = randomBytes(32);
+        user.pubkey = getPublicKey(sk);
+        user.nsec = nip49encrypt(sk, password);
+      }
+
       user.password = await Bun.password.hash(password, {
         algorithm: "bcrypt",
         cost: 4,
