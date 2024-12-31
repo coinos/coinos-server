@@ -367,17 +367,32 @@ export default {
   async nostrLogin(req, res) {
     try {
       const { event, id, twofa } = req.body;
+      const ip = req.headers["cf-connecting-ip"];
       const challenge = await g(`challenge:${id}`);
+      const { pubkey: key } = event;
       if (!challenge) fail("Invalid or expired login challenge");
 
       if (!verifyEvent(event) || event.content !== id)
         fail("Invalid signature or challenge mismatch.");
 
-      let user = await getUser(event.pubkey);
-      if (!user) fail("Pubkey not found");
+      let user = await getUser(key);
+      if (!user) {
+        const k0 = await getProfile(key);
+        let username = k0?.name;
+        const exists = await getUser(username);
+        if (exists) username = key.substr(0, 24);
+
+        user = {
+          username,
+          password: v4(),
+          pubkey: key,
+        };
+
+        user = await register(user, ip);
+      }
 
       const { username } = user;
-      l("logging in", username, req.headers["cf-connecting-ip"]);
+      l("logging in", username, ip);
 
       if (
         user.twofa &&
@@ -393,6 +408,7 @@ export default {
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
+      console.log(e);
       err("login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }

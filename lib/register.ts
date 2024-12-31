@@ -12,7 +12,7 @@ import { v4 } from "uuid";
 
 const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
-  let { password, username } = user;
+  let { password, pubkey, username } = user;
   l("registering", username);
 
   if (!username) fail("Username required");
@@ -48,17 +48,20 @@ export default async (user, ip) => {
     }
   }
 
-  const sk = randomBytes(32);
-  const pubkey = getPublicKey(sk);
-  user.pubkey = pubkey;
-  user.nsec = nip49encrypt(sk, password);
   user.currencies = [...new Set([user.currency, "CAD", "USD"])];
   user.fiat = false;
   user.otpsecret = authenticator.generateSecret();
   user.migrated = true;
   user.locktime = 300;
 
-  user.npub = nip19.npubEncode(user.pubkey);
+  if (!pubkey) {
+    const sk = randomBytes(32);
+    const pubkey = getPublicKey(sk);
+    user.pubkey = pubkey;
+    user.nsec = nip49encrypt(sk, password);
+  }
+
+  user.npub = nip19.npubEncode(pubkey);
   user.nwc = bytesToHex(randomBytes(32));
 
   const account = JSON.stringify({
