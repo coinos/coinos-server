@@ -239,7 +239,7 @@ export default {
       callback: `${URL}/api/lnurlw`,
       k1: name,
       defaultDescription: `Withdraw from coinos fund ${name}`,
-      minWithdrawable: balance * 1000,
+      minWithdrawable: balance > 0 ? 1000 : 0,
       maxWithdrawable: balance * 1000,
     });
   },

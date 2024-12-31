@@ -371,6 +371,8 @@ export default {
         fail("Invalid signature or challenge mismatch.");
 
       let user = await getUser(event.pubkey);
+      if (!user) fail("Pubkey not found");
+
       const { username } = user;
       l("logging in", username, req.headers["cf-connecting-ip"]);
 
