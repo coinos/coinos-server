@@ -127,7 +127,6 @@ export default {
         "memoPrompt",
         "npub",
         "picture",
-        "profile",
         "prompt",
         "pubkey",
         "username",
@@ -151,7 +150,6 @@ export default {
       if (!body.user) fail("no user object provided");
       let { user } = body;
       const fields = [
-        "profile",
         "cipher",
         "pubkey",
         "password",
@@ -269,7 +267,7 @@ export default {
         "nip5",
         "notify",
         "nsec",
-        "profile",
+        "picture",
         "prompt",
         "pubkey",
         "push",
@@ -506,7 +504,7 @@ export default {
       if (~i) contacts.splice(i, 1);
       let u = await g(`user:${ref}`);
       if (typeof u === "string") u = await g(`user:${ref}`);
-      if (u) contacts.unshift(pick(u, ["id", "profile", "username"]));
+      if (u) contacts.unshift(pick(u, ["id", "picture", "username"]));
     }
 
     await s(`${id}:contacts`, contacts);

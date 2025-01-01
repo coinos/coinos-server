@@ -1,4 +1,5 @@
 export default [
+  "about",
   "admin",
   "anon",
   "autowithdraw",

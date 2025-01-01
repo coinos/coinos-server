@@ -1,8 +1,8 @@
-import { fileTypeFromBuffer } from "file-type";
-import { writeFileSync } from "fs";
-import { bail, fail } from "$lib/utils";
 import { createHash } from "crypto";
+import { writeFileSync } from "fs";
 import { err } from "$lib/logging";
+import { bail, fail } from "$lib/utils";
+import { fileTypeFromBuffer } from "file-type";
 
 const sharp = require("sharp");
 

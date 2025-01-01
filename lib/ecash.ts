@@ -7,13 +7,11 @@ import {
   CashuWallet,
   MintQuoteState,
   PaymentRequest,
-  PaymentRequestTransport,
   PaymentRequestTransportType,
   getDecodedToken,
   getEncodedToken,
   getEncodedTokenV4,
 } from "@cashu/cashu-ts";
-import { v4 } from "uuid";
 
 const { URL } = process.env;
 const m = new CashuMint(config.mintUrl);
