@@ -15,7 +15,7 @@ export default {
       invoice.secret = undefined;
       invoice.user = pick(await g(`user:${invoice.uid}`), [
         "id",
-        "profile",
+        "picture",
         "banner",
         "currency",
         "username",
