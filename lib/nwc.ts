@@ -98,6 +98,7 @@ const handle = (method, params, user, ev) =>
 
       if (payee === id) {
         const invoice = await getInvoice(pr);
+        console.log("invoice", invoice, pr);
         const recipient = await g(`user:${invoice.uid}`);
 
         const { id: preimage } = await sendInternal({
@@ -107,7 +108,7 @@ const handle = (method, params, user, ev) =>
           sender: user,
         });
 
-        if (invoice.memo.includes("9734")) {
+        if (invoice.memo?.includes("9734")) {
           const { invoices } = await ln.listinvoices({ invstring: pr });
           const inv = invoices[0];
           inv.payment_preimage = preimage;
