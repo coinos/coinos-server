@@ -67,7 +67,8 @@ export const debit = async ({
   let iid;
 
   if (invoice) {
-    if (invoice.received >= amount && invoice.type !== types.bolt12) fail("Invoice already paid");
+    if (invoice.received >= amount && invoice.type !== types.bolt12)
+      fail("Invoice already paid");
     ({ id: iid } = invoice);
 
     ref = invoice.uid;
@@ -87,6 +88,8 @@ export const debit = async ({
 
   if (!amount || amount < 0) fail("Amount must be greater than zero");
 
+  let creditType = type;
+  if (creditType === types.bolt12) creditType = types.lightning;
   let ourfee: any = [types.bitcoin, types.liquid, types.lightning].includes(
     type,
   )
@@ -97,7 +100,7 @@ export const debit = async ({
 
   ourfee = await db.debit(
     `balance:${aid || uid}`,
-    `credit:${type}:${aid ? 0 : uid}`,
+    `credit:${creditType}:${aid ? 0 : uid}`,
     amount || 0,
     tip || 0,
     fee || 0,
@@ -153,8 +156,8 @@ export const credit = async ({
 
   let inv;
   if (type === types.bolt12) {
-    let { invoices } = await ln.listinvoices({ invstring: hash });
-    let { local_offer_id } = invoices[0];
+    const { invoices } = await ln.listinvoices({ invstring: hash });
+    const { local_offer_id } = invoices[0];
     inv = await getInvoice(local_offer_id);
   } else {
     inv = await getInvoice(hash);
@@ -228,8 +231,10 @@ export const credit = async ({
 
   const m = await db.multi();
 
-  if ([types.bitcoin, types.liquid, types.lightning].includes(type))
-    m.incrBy(`credit:${type}:${uid}`, Math.round(amount * config.fee));
+  let creditType = type;
+  if (creditType === types.bolt12) creditType = types.lightning;
+  if ([types.bitcoin, types.liquid, types.lightning].includes(creditType))
+    m.incrBy(`credit:${creditType}:${uid}`, Math.round(amount * config.fee));
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
     .set(`payment:${p.id}`, JSON.stringify(p))
