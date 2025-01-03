@@ -166,7 +166,6 @@ export default {
 
       res.send({ ...pick(user, whitelist), token });
     } catch (e) {
-      console.log(e);
       err("problem registering", e.message);
       res.code(500).send(e.message);
     }
