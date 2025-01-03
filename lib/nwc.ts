@@ -98,7 +98,6 @@ const handle = (method, params, user, ev) =>
 
       if (payee === id) {
         const invoice = await getInvoice(pr);
-        console.log("invoice", invoice, pr);
         const recipient = await g(`user:${invoice.uid}`);
 
         const { id: preimage } = await sendInternal({
