@@ -33,65 +33,69 @@ export async function send(ev, url = config.nostr) {
 }
 
 export async function handleZap(invoice) {
-  const pubkey = serverPubkey;
-  const sk = nip19.decode(config.nostrKey).data as Uint8Array;
-  const zapreq = JSON.parse(invoice.description);
+  try {
+    const pubkey = serverPubkey;
+    const sk = nip19.decode(config.nostrKey).data as Uint8Array;
+    const zapreq = JSON.parse(invoice.description);
 
-  if (!zapreq.tags || zapreq.tags.length === 0) {
-    fail("No tags found");
-  }
+    if (!zapreq.tags || zapreq.tags.length === 0) {
+      fail("No tags found");
+    }
 
-  const ptags = zapreq.tags.filter(
-    (t) => t?.length && t.length >= 2 && t[0] === "p",
-  );
+    const ptags = zapreq.tags.filter(
+      (t) => t?.length && t.length >= 2 && t[0] === "p",
+    );
 
-  if (ptags.length !== 1) {
-    fail("None or multiple p tags found");
-  }
+    if (ptags.length !== 1) {
+      fail("None or multiple p tags found");
+    }
 
-  const etags = zapreq.tags.filter(
-    (t) => t?.length && t.length >= 2 && t[0] === "e",
-  );
+    const etags = zapreq.tags.filter(
+      (t) => t?.length && t.length >= 2 && t[0] === "e",
+    );
 
-  if (!(etags.length === 0 || etags.length === 1)) {
-    fail("Expected none or 1 e tags");
-  }
+    if (!(etags.length === 0 || etags.length === 1)) {
+      fail("Expected none or 1 e tags");
+    }
 
-  const relays_tag = zapreq.tags.find(
-    (t) => t?.length && t.length >= 2 && t[0] === "relays",
-  );
+    const relays_tag = zapreq.tags.find(
+      (t) => t?.length && t.length >= 2 && t[0] === "relays",
+    );
 
-  if (!relays_tag) {
-    fail("No relays tag found");
-  }
+    if (!relays_tag) {
+      fail("No relays tag found");
+    }
 
-  const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
-  const etag = etags.length > 0 && etags[0];
-  const ptag = ptags[0];
+    const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
+    const etag = etags.length > 0 && etags[0];
+    const ptag = ptags[0];
 
-  const kind = 9735;
-  const created_at = invoice.paid_at;
-  const content = zapreq.content;
+    const kind = 9735;
+    const created_at = invoice.paid_at;
+    const content = zapreq.content;
 
-  const tags = [ptag];
-  if (etag) tags.push(etag);
+    const tags = [ptag];
+    if (etag) tags.push(etag);
 
-  tags.push(["bolt11", invoice.bolt11]);
-  tags.push(["description", invoice.description]);
-  tags.push(["preimage", invoice.payment_preimage]);
+    tags.push(["bolt11", invoice.bolt11]);
+    tags.push(["description", invoice.description]);
+    tags.push(["preimage", invoice.payment_preimage]);
 
-  const ev = { pubkey, kind, created_at, content, tags };
-  const signed = await finalizeEvent(ev, sk);
+    const ev = { pubkey, kind, created_at, content, tags };
+    const signed = await finalizeEvent(ev, sk);
 
-  l("sending receipt");
+    l("sending receipt");
 
-  await Promise.allSettled(
     relays.map(async (url) => {
-      const r = await Relay.connect(url);
-      await r.publish(signed);
-      r.close();
-    }),
-  );
+      try {
+        const r = await Relay.connect(url);
+        await r.publish(signed);
+        setTimeout(() => r.close(), 1000);
+      } catch(e) {}
+    });
+  } catch(e) {
+    warn("failed to send receipt", e.message);
+  }
 }
 
 export const getRelays = async (pubkey): Promise<any> => {

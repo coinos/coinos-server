@@ -32,7 +32,7 @@ export async function listenForLightning() {
 
     if (invoice?.memo) {
       try {
-        if (JSON.parse(description).kind === 9734) await handleZap(inv);
+        if (JSON.parse(description).kind === 9734) handleZap(inv);
       } catch (e) {
         if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);
@@ -78,7 +78,7 @@ export async function replay(index) {
 
     if (invoice?.memo) {
       try {
-        if (JSON.parse(description).kind === 9734) await handleZap(inv);
+        if (JSON.parse(description).kind === 9734) handleZap(inv);
       } catch (e) {
         if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);
