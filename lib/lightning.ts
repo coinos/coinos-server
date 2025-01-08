@@ -30,6 +30,9 @@ export async function listenForLightning() {
     const invoice = await g(`invoice:${id}`);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
+    const p = await getPayment(bolt11 || bolt12);
+    if (p) return warn("already processed", bolt11 || bolt12);
+
     if (invoice?.memo) {
       try {
         if (JSON.parse(description).kind === 9734) handleZap(inv);
@@ -38,9 +41,6 @@ export async function listenForLightning() {
           warn("failed to handle zap", e.message);
       }
     }
-
-    const p = await getPayment(bolt11 || bolt12);
-    if (p) return warn("already processed", bolt11 || bolt12);
 
     await credit({
       hash: bolt11 || bolt12,
@@ -76,6 +76,9 @@ export async function replay(index) {
     const invoice = await g(`invoice:${id}`);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
+    const p = await getPayment(bolt11 || bolt12);
+    if (p) return warn("already processed", bolt11 || bolt12);
+
     if (invoice?.memo) {
       try {
         if (JSON.parse(description).kind === 9734) handleZap(inv);
@@ -83,11 +86,6 @@ export async function replay(index) {
         if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);
       }
-    }
-
-    const p = await getPayment(bolt11 || bolt12);
-    if (p) {
-      return warn("already processed", bolt11 || bolt12);
     }
 
     await credit({
