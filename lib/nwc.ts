@@ -123,7 +123,6 @@ const handle = (method, params, user, ev) =>
       }
       await sendLightning({
         amount,
-        fee: Math.max(5, Math.round(amount * 0.005)),
         user,
         pr,
       });

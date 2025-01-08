@@ -497,7 +497,7 @@ export const sendLightning = async ({
     ? decoded.invoice_amount_msat
     : decoded.amount_msat;
 
-  fee = Math.max(parseInt(fee || 0), 5);
+  fee = Math.max(parseInt(fee || 0), 2);
   if (fee < 0) fail("Fee cannot be negative");
 
   const { pays } = await ln.listpays(pr);
