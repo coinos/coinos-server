@@ -51,11 +51,9 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
 };
 
 export const fields = [
-  "cipher",
   "pubkey",
   "password",
   "username",
-  "salt",
   "currency",
   "currencies",
   "fiat",

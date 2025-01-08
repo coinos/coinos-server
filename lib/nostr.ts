@@ -91,9 +91,9 @@ export async function handleZap(invoice) {
         const r = await Relay.connect(url);
         await r.publish(signed);
         setTimeout(() => r.close(), 1000);
-      } catch(e) {}
+      } catch (e) {}
     });
-  } catch(e) {
+  } catch (e) {
     warn("failed to send receipt", e.message);
   }
 }

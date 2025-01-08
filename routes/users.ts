@@ -149,13 +149,7 @@ export default {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
       let { user } = body;
-      const fields = [
-        "cipher",
-        "pubkey",
-        "password",
-        "username",
-        "salt",
-      ];
+      const fields = ["pubkey", "password", "username"];
 
       user = await register(pick(user, fields), ip);
 
@@ -253,7 +247,6 @@ export default {
         "about",
         "autowithdraw",
         "banner",
-        "cipher",
         "currencies",
         "currency",
         "destination",
@@ -271,7 +264,6 @@ export default {
         "pubkey",
         "push",
         "reserve",
-        "salt",
         "seed",
         "shopifyStore",
         "shopifyToken",
@@ -374,7 +366,7 @@ export default {
       let user = await getUser(key);
       if (!user) {
         const k0 = await getProfile(key);
-        let username = k0?.name;
+        let username = k0?.name?.replace(/[^a-zA-Z0-9 ]/g, "");
         const exists = await getUser(username);
         if (exists) username = key.substr(0, 24);
 
@@ -558,8 +550,6 @@ export default {
 
     try {
       user.pin = null;
-      user.cipher = null;
-      user.salt = null;
 
       if (user.nsec) {
         const sk = randomBytes(32);
