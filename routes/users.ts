@@ -13,7 +13,7 @@ import upload from "$lib/upload";
 import { bail, fail, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
-import { randomBytes } from "@noble/hashes/utils";
+import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
@@ -212,7 +212,29 @@ export default {
     try {
       l("updating user", user.username);
 
-      const { confirm, password, pin, newpin, pubkey, username } = body;
+      const { confirm, password, pin, newpin, username } = body;
+
+      let { pubkey } = body;
+      if (pubkey) {
+        const { challenge } = body;
+        const event = JSON.parse(body.event);
+        const c = await g(`challenge:${challenge}`);
+        if (!c) fail("Invalid or expired login challenge");
+
+        if (
+          !verifyEvent(event) ||
+          event.content !== challenge ||
+          event.pubkey !== pubkey
+        )
+          fail("Invalid signature or challenge mismatch.");
+
+        pubkey = pubkey.replace(/\s*/g, "");
+        if (pubkey.startsWith("npub")) pubkey = nip19.decode(pubkey).data;
+        if (pubkey.length !== 64) fail(`Invalid pubkey ${pubkey}`);
+        await db.del(`user:${user.pubkey}`);
+        user.pubkey = pubkey;
+        user.nsec = undefined;
+      }
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
       if (typeof newpin !== "undefined" && newpin.length === 6)
@@ -224,7 +246,11 @@ export default {
 
       let token;
       let oldname;
-      if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
+      if (
+        username &&
+        user.username.toLowerCase() !== username.toLowerCase() &&
+        exists
+      ) {
         err("username taken", username, user.username, exists.username);
         fail("Username taken");
       } else if (username) {
@@ -261,7 +287,6 @@ export default {
         "nsec",
         "picture",
         "prompt",
-        "pubkey",
         "push",
         "reserve",
         "seed",
@@ -349,18 +374,18 @@ export default {
   async challenge(_, res) {
     const id = v4();
     await db.set(`challenge:${id}`, id, { EX: 300 });
-    res.send({ id });
+    res.send({ challenge: id });
   },
 
   async nostrLogin(req, res) {
     try {
-      const { event, id, twofa } = req.body;
+      const { event, challenge, twofa } = req.body;
       const ip = req.headers["cf-connecting-ip"];
-      const challenge = await g(`challenge:${id}`);
+      const c = await g(`challenge:${challenge}`);
       const { pubkey: key } = event;
-      if (!challenge) fail("Invalid or expired login challenge");
+      if (!c) fail("Invalid or expired login challenge");
 
-      if (!verifyEvent(event) || event.content !== id)
+      if (!verifyEvent(event) || event.content !== challenge)
         fail("Invalid signature or challenge mismatch.");
 
       let user = await getUser(key);
