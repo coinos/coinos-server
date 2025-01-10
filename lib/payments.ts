@@ -217,6 +217,7 @@ export const credit = async ({
   else {
     inv.received += amount;
     inv.preimage = ref;
+    inv.settled = Date.now();
   }
 
   let balanceKey = "balance";

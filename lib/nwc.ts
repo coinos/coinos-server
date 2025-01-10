@@ -223,23 +223,23 @@ const handle = (method, params, user, ev) =>
           amount_received_msat: amount,
           description,
           expires_at,
-          payment_preimage,
           paid_at: settled_at,
         } = invoices[0];
 
         ({ bolt11: invoice, payment_hash } = invoices[0]);
+        const { preimage, settled } = await getInvoice(invoice);
 
         return result({
           type: "incoming",
           invoice,
           description,
-          preimage: payment_preimage,
+          preimage,
           payment_hash,
           amount,
           fees_paid: 0,
           created_at: expires_at - week,
           expires_at,
-          settled_at,
+          settled_at: settled_at || Math.round(settled / 1000),
         });
       }
 
