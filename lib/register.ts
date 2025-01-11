@@ -54,8 +54,9 @@ export default async (user, ip) => {
   user.migrated = true;
   user.locktime = 300;
 
+  let sk;
   if (!pubkey) {
-    const sk = randomBytes(32);
+    sk = randomBytes(32);
     pubkey = getPublicKey(sk);
     user.pubkey = pubkey;
     user.nsec = nip49encrypt(sk, password);
@@ -84,6 +85,7 @@ export default async (user, ip) => {
     .exec();
 
   l("new user", username);
+  if (sk) user.sk = bytesToHex(sk);
 
   return user;
 };

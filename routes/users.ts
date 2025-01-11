@@ -158,7 +158,7 @@ export default {
 
       l("registered new user", user.username);
 
-      res.send({ ...pick(user, whitelist), token });
+      res.send({ ...pick(user, whitelist), sk: user.sk, token });
     } catch (e) {
       err("problem registering", e.message);
       res.code(500).send(e.message);
