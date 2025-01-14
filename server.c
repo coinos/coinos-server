@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #define SOCKET_PATH "/sockets/ctrl"
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 262144
 
 void handle_client(const char *result_socket, const char *command);
 

@@ -1,5 +1,3 @@
-Error.stackTraceLimit = Infinity;
-
 import app from "$lib/app";
 import { admin, auth, optional } from "$lib/auth";
 

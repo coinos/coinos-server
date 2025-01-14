@@ -10,7 +10,7 @@ import { reconcile, types } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
-import { bail, fail, getUser, pick } from "$lib/utils";
+import { bail, fail, publicFields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
@@ -114,29 +114,10 @@ export default {
 
       if (!user) return res.code(500).send("User not found");
 
-      const whitelist = [
-        "about",
-        "anon",
-        "banner",
-        "banner",
-        "currency",
-        "display",
-        "id",
-        "hidepay",
-        "lud16",
-        "memoPrompt",
-        "npub",
-        "picture",
-        "prompt",
-        "pubkey",
-        "username",
-        "website",
-      ];
-
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
       user.prompt = !!user.prompt;
 
-      res.send(pick(user, whitelist));
+      res.send(pick(user, publicFields));
     } catch (e) {
       err("problem getting user", e.message);
       res.code(500).send(e.message);
@@ -213,9 +194,17 @@ export default {
       l("updating user", user.username);
 
       const { confirm, password, pin, newpin, username } = body;
+      let exists;
 
       let { pubkey } = body;
       if (pubkey) {
+        exists = await getUser(pubkey);
+        if (exists && ![username].includes(exists.username)) {
+          warn("key in use", pubkey, exists.username);
+          if (exists.anon) await db.del(`user:${pubkey}`);
+          else fail("Key in use by another account");
+        }
+
         const { challenge } = body;
         const event = JSON.parse(body.event);
         const c = await g(`challenge:${challenge}`);
@@ -241,32 +230,21 @@ export default {
         user.pin = newpin;
       if (user.pin === "delete") user.pin = undefined;
 
-      let exists;
-      if (username) exists = await getUser(username);
+      if (username) {
+        let oldname;
+        exists = await getUser(username);
 
-      let token;
-      let oldname;
-      if (
-        username &&
-        user.username.toLowerCase() !== username.toLowerCase() &&
-        exists
-      ) {
-        err("username taken", username, user.username, exists.username);
-        fail("Username taken");
-      } else if (username) {
-        if (user.username.toLowerCase() !== username.toLowerCase())
-          l("changing username", user.username, username);
+        if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
+          err("username taken", username, user.username, exists.username);
+          fail("Username taken");
+        } else if (username) {
+          if (user.username.toLowerCase() !== username.toLowerCase())
+            l("changing username", user.username, username);
 
-        await db.del(`user:${user.username}`);
-        oldname = user.username;
-        user.username = username;
-      }
-
-      if (pubkey) exists = await getUser(pubkey);
-      if (exists && ![oldname, username].includes(exists.username)) {
-        warn("key in use", pubkey, exists.username);
-        if (exists.anon) await db.del(`user:${pubkey}`);
-        else fail("Key in use by another account");
+          await db.del(`user:${user.username}`);
+          oldname = user.username;
+          user.username = username;
+        }
       }
 
       const attributes = [
@@ -319,7 +297,7 @@ export default {
       if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
 
       emit(user.id, "user", user);
-      res.send({ user, token });
+      res.send({ user });
     } catch (e) {
       warn("failed to update", user.username, e.message);
       bail(res, e.message);

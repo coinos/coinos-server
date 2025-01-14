@@ -2,6 +2,7 @@ import config from "$config";
 import { g, s } from "$lib/db";
 import locales from "$lib/locales/index";
 import migrate from "$lib/migrate";
+import whitelist from "$lib/whitelist";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { getPublicKey } from "nostr";
 
@@ -68,7 +69,7 @@ export const fields = [
   "banner",
 ];
 
-export const getUser = async (username) => {
+export const getUser = async (username, fields = whitelist) => {
   let update;
   if (username === "undefined") fail("invalid user");
   const user = await migrate(username);
@@ -206,3 +207,22 @@ export const fmt = (sats) =>
   )}`;
 
 export const link = (id) => `${URL}/payment/${id}`;
+
+export const publicFields = [
+  "about",
+  "anon",
+  "banner",
+  "banner",
+  "currency",
+  "display",
+  "id",
+  "hidepay",
+  "lud16",
+  "memoPrompt",
+  "npub",
+  "picture",
+  "prompt",
+  "pubkey",
+  "username",
+  "website",
+];

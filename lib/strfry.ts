@@ -1,5 +1,5 @@
-import { createServer, connect } from "net";
 import { randomUUID } from "crypto";
+import { connect, createServer } from "net";
 
 const exec = async (cmd) =>
   new Promise((resolve, reject) => {
@@ -13,7 +13,6 @@ const exec = async (cmd) =>
       const results = [];
       socket.on("data", (data) => {
         resultBuffer += data.toString();
-
         const parts = resultBuffer.split("\n");
 
         for (let i = 0; i < parts.length - 1; i++) {
@@ -44,16 +43,17 @@ const exec = async (cmd) =>
         controlClient.end();
       });
 
-      controlClient.on("error", (e) =>
-        reject(`Control socket error: ${e.message}`),
-      );
+      controlClient.on("error", (e) => {
+        reject(`Control socket error: ${e.message}`);
+      });
     });
 
-    resultServer.on("error", (e) =>
-      reject(`Result server error: ${e.message}`),
-    );
+    resultServer.on("error", (e) => {
+      reject(`Result server error: ${e.message}`);
+    });
   });
 
+export const count = (f) => exec(`scan --count '${JSON.stringify(f)}'\n`);
 export const scan = (f) => exec(`scan '${JSON.stringify(f)}'\n`);
 export const sync = (r, f) =>
   exec(`sync ${r} --dir down --filter '${JSON.stringify(f)}'\n`);

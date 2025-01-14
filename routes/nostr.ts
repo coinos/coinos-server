@@ -9,7 +9,8 @@ import {
   send,
   serverPubkey,
 } from "$lib/nostr";
-import { bail, fail, getUser } from "$lib/utils";
+import { count, scan } from "$lib/strfry";
+import { bail, fail, getUser, publicFields } from "$lib/utils";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
 
@@ -59,65 +60,41 @@ export default {
   async follows(req, res) {
     const {
       params: { pubkey },
-      query: { pubkeysOnly, nocache },
+      query: { limit = 20, offset = 0, pubkeysOnly },
     } = req;
     try {
-      let created_at;
+      const events = await scan({ authors: [pubkey], kinds: [3] });
+      if (!events.length) return res.send([]);
+
+      const event = events[0];
+      const pubkeys = event.tags
+        .filter((tag) => tag[0] === "p")
+        .map((tag) => tag[1])
+        .slice(offset, limit);
+
       let follows = [];
-
-      let pubkeys = await g(`${pubkey}:pubkeys`);
-      if (!pubkeys || !pubkeysOnly || nocache) {
-        let filter = { kinds: [3], authors: [pubkey] };
-        let ev = await pool.get([config.nostr], filter, opts);
-
-        if (!ev) {
-          let { relays } = config;
-          ({ write: relays } = await getRelays(pubkey));
-
-          filter = { kinds: [3], authors: [pubkey] };
-          ev = await pool.get(relays, filter, opts);
-          send(ev);
-        }
-
-        let tags = [];
-
-        if (ev) ({ created_at, tags } = ev);
-        pubkeys = tags
-          .map((t) => t[0] === "p" && t[1])
-          .filter((p) => p && p.length === 64);
-
-        await s(`${pubkey}:pubkeys`, pubkeys);
-      }
-      if (!pubkeys.length || pubkeysOnly) return res.send(pubkeys);
-
-      const cache = await g(`${pubkey}:follows`);
-      if (cache && cache.t >= created_at) ({ follows } = cache);
+      if (pubkeysOnly) follows = pubkeys;
       else {
-        const filter: any = { cache: ["user_infos", { pubkeys }] };
-        const infos = await pool.querySync([config.cache], filter, opts);
-        const profiles = infos.filter((e) => e.kind === 0);
-
-        const f = infos.find((e) => e.kind === 10000133);
-        let counts = {};
-        if (f) counts = JSON.parse(f.content);
-
+        const profiles = await scan({ authors: pubkeys, kinds: [0] });
         for (const p of profiles) {
           const { content, pubkey } = p;
-          const user = JSON.parse(content);
-          user.count = counts[pubkey];
+          let user = await getUser(pubkey, publicFields);
+          user = { ...user, ...JSON.parse(content) };
           user.pubkey = pubkey;
           follows.push(user);
         }
 
-        const followKeys = follows.map((f) => f.pubkey);
-        const missing = pubkeys
-          .filter((p) => !followKeys.includes(p))
-          .map((pubkey) => anon(pubkey));
+        const keys = follows.map((f) => f.pubkey);
+        const missing = await Promise.all(
+          pubkeys
+            .filter((p) => !keys.includes(p))
+            .map(
+              async (pubkey) =>
+                (await getUser(pubkey, publicFields)) || anon(pubkey),
+            ),
+        );
 
-        follows.sort((a: any, b: any) => b.count - a.count);
         follows.push(...missing);
-
-        s(`${pubkey}:follows`, { follows, t: created_at });
       }
 
       res.send(follows);
@@ -130,38 +107,36 @@ export default {
   async followers(req, res) {
     const {
       params: { pubkey },
+      query: { limit = 20, offset = 0 },
     } = req;
     try {
-      let filter: any = { kinds: [3], "#p": [pubkey] };
-      const ev = await pool.get([config.nostr], filter, opts);
-      let created_at;
-      if (ev) ({ created_at } = ev);
+      const filter = { kinds: [3], "#p": [pubkey] };
+      const events = await scan({ ...filter, limit });
+      if (!events.length) return res.send([]);
 
-      let followers = [];
-      const cache = await g(`${pubkey}:followers`);
-      if (cache && cache.t >= created_at) ({ followers } = cache);
-      else {
-        filter = { cache: ["user_followers", { pubkey }] };
-        const data = await pool.querySync([config.cache], filter, opts);
-        for (const ev of data.filter((f) => f.kind === 0)) {
-          const { content, pubkey } = ev;
-          const user = JSON.parse(content);
-          user.pubkey = pubkey;
-          followers.push(user);
-        }
+      const pubkeys = events.map((e) => e.pubkey).slice(offset, limit);
 
-        const pubkeys = followers.map((f) => f.pubkey);
-        filter = { cache: ["user_infos", { pubkeys }] };
-        const infos = await pool.querySync([config.cache], filter, opts);
-
-        let counts = {};
-        const f = infos.find((e) => e.kind === 10000133);
-        if (f) counts = JSON.parse(f.content);
-        followers.map((f) => (f.count = counts[f.pubkey]));
-        followers.sort((a: any, b: any) => b.count - a.count);
-
-        await s(`${pubkey}:followers`, { followers, t: created_at });
+      const followers = [];
+      const profiles = await scan({ authors: pubkeys, kinds: [0] });
+      for (const p of profiles) {
+        const { content, pubkey } = p;
+        let user = await getUser(pubkey, publicFields);
+        user = { ...user, ...JSON.parse(content) };
+        user.pubkey = pubkey;
+        followers.push(user);
       }
+
+      const keys = followers.map((f) => f.pubkey);
+      const missing = await Promise.all(
+        pubkeys
+          .filter((p) => !keys.includes(p))
+          .map(
+            async (pubkey) =>
+              (await getUser(pubkey, publicFields)) || anon(pubkey),
+          ),
+      );
+
+      followers.push(...missing);
 
       res.send(followers);
     } catch (e) {

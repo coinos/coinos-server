@@ -44,6 +44,7 @@
     "readable-stream-clone": "^0.0.7",
     "redis": "^4.6.10",
     "sharp": "^0.33.5",
+    "strfry-rpc": "^0.0.1",
     "uuid": "8",
     "web-push": "^3.6.7",
     "ws": "^7.4.6"

@@ -1,6 +1,7 @@
 import config from "$config";
 import { g, s } from "$lib/db";
 import { l } from "$lib/logging";
+import { count, scan } from "$lib/strfry";
 import { fail } from "$lib/utils";
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
@@ -18,7 +19,7 @@ export const pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
 const opts = { maxWait: 2000 };
 
 export const anon = (pubkey) => ({
-  name: pubkey.substr(0, 6),
+  username: pubkey.substr(0, 6),
   pubkey,
   anon: true,
   follows: [],
@@ -101,15 +102,16 @@ export async function handleZap(invoice) {
 export const getRelays = async (pubkey): Promise<any> => {
   const { relays } = config;
   const filter = { authors: [pubkey], kinds: [10002] };
-  const event = await pool.get([config.nostr], filter, opts);
+  const result = await scan(filter);
 
   let read = relays;
   let write = relays;
 
-  if (event) {
+  if (result.length) {
+    const { tags } = result[0];
     read = [];
     write = [];
-    for (const r of event.tags) {
+    for (const r of tags) {
       if (r[0] !== "r") continue;
       if (!r[2] || r[2] === "write") write.push(r[1]);
       if (!r[2] || r[2] === "read") read.push(r[1]);
@@ -157,44 +159,15 @@ export const getProfile = async (pubkey, relays = [config.nostr]) => {
 };
 
 export const getCount = async (pubkey) => {
-  let follows = await g(`${pubkey}:follows:n`);
-  let followers = await g(`${pubkey}:followers:n`);
+  try {
+    const result = await scan({ authors: [pubkey], kinds: [3] });
+    const follows = result.length
+      ? result[0].tags.filter((t) => t[0] === "p").length
+      : 0;
 
-  if (follows === null) {
-    const filter: any = { kinds: [3], authors: [pubkey] };
-    let ev = await pool.get([config.nostr], filter, opts);
-
-    if (!ev) {
-      let { relays } = config;
-      ({ write: relays } = await getRelays(pubkey));
-      ev = await pool.get(relays, filter, opts);
-      send(ev);
-    }
-
-    if (ev) {
-      follows = ev.tags
-        .map((t) => t[0] === "p" && t[1])
-        .filter((p) => p && p.length === 64).length;
-    }
-
-    follows ||= 0;
-    await s(`${pubkey}:follows:n`, follows);
+    const [followers] = await count({ "#p": [pubkey], kinds: [3] });
+    return { follows, followers };
+  } catch (e) {
+    console.log(e);
   }
-
-  if (followers === null) {
-    const filter: any = { cache: ["user_infos", { pubkeys: [pubkey] }] };
-    const infos = await pool.querySync([config.cache], filter, opts);
-
-    const f = infos.find((e) => e.kind === 10000133);
-    let counts = {};
-    if (f?.content) {
-      counts = JSON.parse(f.content);
-      followers = counts[pubkey];
-    }
-
-    followers ||= 0;
-    await s(`${pubkey}:followers:n`, followers);
-  }
-
-  return { follows, followers };
 };
