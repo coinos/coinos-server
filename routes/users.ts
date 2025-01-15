@@ -10,7 +10,7 @@ import { reconcile, types } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
-import { bail, fail, publicFields, getUser, pick } from "$lib/utils";
+import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
@@ -117,7 +117,7 @@ export default {
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
       user.prompt = !!user.prompt;
 
-      res.send(pick(user, publicFields));
+      res.send(pick(user, fields));
     } catch (e) {
       err("problem getting user", e.message);
       res.code(500).send(e.message);

@@ -1,20 +1,17 @@
 import config from "$config";
-import { db, g, s } from "$lib/db";
+import { db, g } from "$lib/db";
 import {
   anon,
   getCount,
   getProfile,
   getRelays,
-  pool,
   send,
   serverPubkey,
 } from "$lib/nostr";
-import { count, scan } from "$lib/strfry";
-import { bail, fail, getUser, publicFields } from "$lib/utils";
+import { scan } from "$lib/strfry";
+import { bail, fail, fields, getUser } from "$lib/utils";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
-
-const opts = { maxWait: 2000 };
 
 export default {
   async event(req, res) {
@@ -78,7 +75,7 @@ export default {
         const profiles = await scan({ authors: pubkeys, kinds: [0] });
         for (const p of profiles) {
           const { content, pubkey } = p;
-          let user = await getUser(pubkey, publicFields);
+          let user = await getUser(pubkey, fields);
           user = { ...user, ...JSON.parse(content) };
           user.pubkey = pubkey;
           follows.push(user);
@@ -89,8 +86,7 @@ export default {
           pubkeys
             .filter((p) => !keys.includes(p))
             .map(
-              async (pubkey) =>
-                (await getUser(pubkey, publicFields)) || anon(pubkey),
+              async (pubkey) => (await getUser(pubkey, fields)) || anon(pubkey),
             ),
         );
 
@@ -120,7 +116,7 @@ export default {
       const profiles = await scan({ authors: pubkeys, kinds: [0] });
       for (const p of profiles) {
         const { content, pubkey } = p;
-        let user = await getUser(pubkey, publicFields);
+        let user = await getUser(pubkey, fields);
         user = { ...user, ...JSON.parse(content) };
         user.pubkey = pubkey;
         followers.push(user);
@@ -131,8 +127,7 @@ export default {
         pubkeys
           .filter((p) => !keys.includes(p))
           .map(
-            async (pubkey) =>
-              (await getUser(pubkey, publicFields)) || anon(pubkey),
+            async (pubkey) => (await getUser(pubkey, fields)) || anon(pubkey),
           ),
       );
 

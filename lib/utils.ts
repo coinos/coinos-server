@@ -51,25 +51,7 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
   return `${network}:${address}?${url.toString()}`;
 };
 
-export const fields = [
-  "pubkey",
-  "password",
-  "username",
-  "currency",
-  "currencies",
-  "fiat",
-  "otpsecret",
-  "balance",
-  "ip",
-  "pin",
-  "display",
-  "haspin",
-  "profile",
-  "prompt",
-  "banner",
-];
-
-export const getUser = async (username, fields = whitelist) => {
+export const getUser = async (username, fields) => {
   let update;
   if (username === "undefined") fail("invalid user");
   const user = await migrate(username);
@@ -97,7 +79,7 @@ export const getUser = async (username, fields = whitelist) => {
 
   if (update) s(`user:${user.id}`, user);
 
-  return user;
+  return fields ? pick(user, fields) : user;
 };
 
 export const getInvoice = async (hash) => {
@@ -208,7 +190,7 @@ export const fmt = (sats) =>
 
 export const link = (id) => `${URL}/payment/${id}`;
 
-export const publicFields = [
+export const fields = [
   "about",
   "anon",
   "banner",
