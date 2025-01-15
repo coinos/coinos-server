@@ -5,8 +5,6 @@ import { err } from "$lib/logging";
 import { bail, getInvoice, pick } from "$lib/utils";
 import rpc from "@coinos/rpc";
 
-const bc = rpc(config.bitcoin);
-
 export default {
   async get(req, res) {
     const {
@@ -54,8 +52,17 @@ export default {
   },
 
   async sign(req, res) {
-    const { address, message } = req.body;
-    const signature = await bc.signMessage({ address, message });
-    res.send({ signature });
+    try {
+      const { address, message, type = "bitcoin" } = req.body;
+      const node = rpc(config[type]);
+
+      if (config[type].walletpass)
+        await node.walletPassphrase(config[type].walletpass, 300);
+
+      const signature = await node.signMessage({ address, message });
+      res.send({ signature });
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 };
