@@ -79,7 +79,7 @@ export const getUser = async (username, fields) => {
 
   if (update) s(`user:${user.id}`, user);
 
-  return fields ? pick(user, fields) : user;
+  return fields && user ? pick(user, fields) : user;
 };
 
 export const getInvoice = async (hash) => {
