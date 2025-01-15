@@ -64,14 +64,14 @@ export default {
       if (!events.length) return res.send([]);
 
       const event = events[0];
-      const pubkeys = event.tags
+      let pubkeys = event.tags
         .filter((tag) => tag[0] === "p")
-        .map((tag) => tag[1])
-        .slice(offset, limit);
+        .map((tag) => tag[1]);
 
       let follows = [];
       if (pubkeysOnly) follows = pubkeys;
       else {
+        pubkeys = pubkeys.slice(limit, offset);
         const profiles = await scan({ authors: pubkeys, kinds: [0] });
         for (const p of profiles) {
           const { content, pubkey } = p;

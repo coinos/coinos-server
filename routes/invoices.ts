@@ -1,7 +1,11 @@
+import config from "$config";
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
 import { bail, getInvoice, pick } from "$lib/utils";
+import rpc from "@coinos/rpc";
+
+const bc = rpc(config.bitcoin);
 
 export default {
   async get(req, res) {
@@ -47,5 +51,11 @@ export default {
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
     invoices = await Promise.all(invoices.map((i) => getInvoice(i)));
     res.send(invoices);
+  },
+
+  async sign(req, res) {
+    const { address, message } = req.body;
+    const signature = await bc.signMessage({ address, message });
+    res.send({ signature });
   },
 };

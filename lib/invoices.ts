@@ -13,6 +13,7 @@ const lq = rpc(config.liquid);
 
 export const generate = async ({ invoice, user }) => {
   let {
+    address_type = "bech32",
     bolt11,
     aid,
     currency,
@@ -60,7 +61,7 @@ export const generate = async ({ invoice, user }) => {
   if (account.seed) {
     type = "bitcoin";
     const node = rpc({ ...config[type], wallet: aid });
-    hash = await node.getNewAddress();
+    hash = await node.getNewAddress({ address_type });
     text = bip21(hash, invoice);
 
     ({ hdkeypath: path } = await node.getAddressInfo(hash));
@@ -100,10 +101,10 @@ export const generate = async ({ invoice, user }) => {
 
     await s(`invoice:${r.offer_id}`, id);
   } else if (type === types.bitcoin) {
-    hash = await bc.getNewAddress();
+    hash = await bc.getNewAddress({ address_type });
     text = bip21(hash, invoice);
   } else if (type === types.liquid) {
-    hash = await lq.getNewAddress();
+    hash = await lq.getNewAddress({ address_type });
     text = bip21(hash, invoice);
   } else if (type === types.internal) {
     hash = id;

@@ -46,6 +46,7 @@ app.get("/locations", locations.list);
 app.get("/invoice/:id", invoices.get);
 app.get("/invoices", auth, invoices.list);
 app.post("/invoice", optional, invoices.create);
+app.post("/sign", auth, invoices.sign);
 
 app.get("/nostr.json", nostr.identities);
 app.get("/profile/:profile", nostr.profile);
