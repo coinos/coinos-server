@@ -2,7 +2,7 @@ import config from "$config";
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
-import { bail, getInvoice, pick } from "$lib/utils";
+import { bail, fields, getInvoice, getUser } from "$lib/utils";
 import rpc from "@coinos/rpc";
 
 export default {
@@ -15,14 +15,7 @@ export default {
 
     if (invoice) {
       invoice.secret = undefined;
-      invoice.user = pick(await g(`user:${invoice.uid}`), [
-        "id",
-        "picture",
-        "banner",
-        "currency",
-        "username",
-        "pubkey",
-      ]);
+      invoice.user = await getUser(invoice.uid, fields);
 
       invoice.items ||= [];
     }

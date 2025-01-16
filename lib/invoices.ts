@@ -13,7 +13,7 @@ const lq = rpc(config.liquid);
 
 export const generate = async ({ invoice, user }) => {
   let {
-    address_type = "bech32",
+    address_type,
     bolt11,
     aid,
     currency,
@@ -31,6 +31,7 @@ export const generate = async ({ invoice, user }) => {
     webhook,
     secret,
   } = invoice;
+
 
   amount = parseInt(amount || 0);
   tip = parseInt(tip) || null;
@@ -101,9 +102,11 @@ export const generate = async ({ invoice, user }) => {
 
     await s(`invoice:${r.offer_id}`, id);
   } else if (type === types.bitcoin) {
+    address_type ||= "bech32"
     hash = await bc.getNewAddress({ address_type });
     text = bip21(hash, invoice);
   } else if (type === types.liquid) {
+    address_type ||= "blech32"
     hash = await lq.getNewAddress({ address_type });
     text = bip21(hash, invoice);
   } else if (type === types.internal) {
@@ -118,6 +121,7 @@ export const generate = async ({ invoice, user }) => {
   invoice = {
     amount,
     aid,
+    address_type,
     created: Date.now(),
     currency,
     hash,
