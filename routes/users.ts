@@ -130,7 +130,7 @@ export default {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
       let { user } = body;
-      const fields = ["pubkey", "password", "username"];
+      const fields = ["pubkey", "password", "username", "picture"];
 
       user = await register(pick(user, fields), ip);
 
