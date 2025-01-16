@@ -1,7 +1,7 @@
 import config from "$config";
-import { g, s } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { l } from "$lib/logging";
-import { count, scan } from "$lib/strfry";
+import { count, scan, sync } from "$lib/strfry";
 import { fail } from "$lib/utils";
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
@@ -125,36 +125,21 @@ export const getRelays = async (pubkey): Promise<any> => {
   return { read, write };
 };
 
-export const getProfile = async (pubkey, relays = [config.nostr]) => {
-  let profile = await g(`${pubkey}:profile`);
+export const getProfile = async (pubkey) => {
+  let profile = await g(`profile:${pubkey}`);
+  if (profile) return profile;
 
-  if (!profile) {
-    const pubkeys = [pubkey];
-    let filter: any = { authors: pubkeys, kinds: [0] };
+  const filter = { authors: [pubkey], kinds: [0] };
+  const events = await scan(filter);
 
-    let ev = await pool.get(relays, filter, opts);
-
-    if (!ev) {
-      ({ write: relays } = await getRelays(pubkey));
-      ev = await pool.get(relays, filter, opts);
-    }
-
-    if (!ev) {
-      filter = { cache: ["user_infos", { pubkeys }] };
-      ev = (await pool.querySync([config.cache], filter, opts)).find(
-        (e) => e.kind === 0,
-      );
-    }
-
-    if (ev) {
-      send(ev);
-      profile = JSON.parse(ev.content);
-    } else {
-      profile = anon(pubkey);
-    }
+  if (events.length) {
+    profile = JSON.parse(events[0].content);
+  } else {
+    profile = anon(pubkey);
   }
 
-  await s(`${pubkey}:profile`, profile);
+  await db.set(`profile:${pubkey}`, JSON.stringify(profile), { EX: 300 });
+
   return profile;
 };
 

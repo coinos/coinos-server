@@ -1,5 +1,6 @@
 import config from "$config";
 import { db, g } from "$lib/db";
+import ln from "$lib/ln";
 import {
   anon,
   getCount,
@@ -8,24 +9,69 @@ import {
   send,
   serverPubkey,
 } from "$lib/nostr";
-import { scan } from "$lib/strfry";
+import { scan, sync } from "$lib/strfry";
 import { bail, fail, fields, getUser } from "$lib/utils";
+import got from "got";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
+import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
 
 export default {
   async event(req, res) {
-    const {
-      params: { id },
-    } = req;
-    const event = await g(`ev:${id}`);
-    if (!event) return bail(res, "event not found");
+    let { id } = req.params;
+    if (id.startsWith("nevent")) id = decode(id).data.id;
+    if (id.startsWith("note")) id = decode(id).data;
+    const filter = { ids: [id] };
+    let events = await scan(filter);
+    if (!events.length) {
+      await sync("wss://relay.primal.net", filter);
+      events = await scan(filter);
+    }
+    if (!events.length) return bail(res, "event not found");
+    res.send(events[0]);
+  },
 
-    const { pubkey } = event;
+  async zaps(req, res) {
+    try {
+      let { id } = req.params;
+      if (id.startsWith("nevent")) id = decode(id).data.id;
+      if (id.startsWith("note")) id = decode(id).data;
+      const filter = { kinds: [9735], "#e": [id] };
+      let events = await scan(filter);
+      if (!events.length) {
+        await sync("wss://relay.primal.net", filter);
+        events = await scan(filter);
+      }
+      if (!events.length) return bail(res, "event not found");
 
-    event.user = (await g(`user:${pubkey}`)) || anon(pubkey);
+      const zaps = [];
+      for (const { tags } of events) {
+        const bolt11 = tags.find((t) => t[0] === "bolt11")?.[1];
+        const description = tags.find((t) => t[0] === "description")?.[1];
+        const { pubkey } = JSON.parse(description);
+        let amount = 0;
+        try {
+          const { amount_msat } = await ln.decode(bolt11);
+          if (amount_msat) amount = Math.round(amount_msat / 1000);
+        } catch (e) {}
 
-    res.send(event);
+        let user;
+        if (pubkey) {
+          try {
+            user = await getUser(pubkey, fields);
+            if (!user) user = await getProfile(pubkey);
+            user.pubkey = pubkey;
+          } catch (e) {}
+        }
+
+        zaps.push({ amount, user });
+      }
+
+      res.send(zaps.filter((z) => z.amount > 0));
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 
   async publish(req, res) {
@@ -179,5 +225,36 @@ export default {
     const recipient = await getProfile(pubkey, relays);
     recipient.relays = relays;
     res.send(recipient);
+  },
+
+  async zapRequest(req, res) {
+    try {
+      const { amount, pubkey, id } = req.body;
+      const event = await makeZapRequest({
+        profile: pubkey,
+        event: id,
+        amount,
+        relays: [config.nostr],
+        comment: "",
+      });
+
+      res.send(event);
+    } catch (e) {
+      console.log(e);
+    }
+  },
+
+  async zap(req, res) {
+    const { event } = req.body;
+    const amount = event.tags.find((t) => t[0] === "amount")[1];
+    const pubkey = event.tags.find((t) => t[0] === "p")[1];
+    const content = JSON.stringify(await getProfile(pubkey));
+    const callback = await getZapEndpoint({ content });
+    const url = new URL(callback);
+    url.searchParams.set("amount", amount * 1000);
+    url.searchParams.set("nostr", encodeURIComponent(JSON.stringify(event)));
+    const json = await got(url.toString()).json();
+
+    res.send(json);
   },
 };
