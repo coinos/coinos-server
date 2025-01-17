@@ -1,6 +1,6 @@
 import config from "$config";
 import { db, g, s } from "$lib/db";
-import { l } from "$lib/logging";
+import { l, warn } from "$lib/logging";
 import { count, scan, sync } from "$lib/strfry";
 import { fail } from "$lib/utils";
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";

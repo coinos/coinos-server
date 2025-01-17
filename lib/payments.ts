@@ -4,6 +4,7 @@ import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
+import { handleZap } from "$lib/nostr";
 import { notify } from "$lib/notifications";
 import {
   SATS,
@@ -547,6 +548,7 @@ export const sendLightning = async ({
 export const sendInternal = async ({
   amount,
   invoice = undefined,
+  memo = undefined,
   recipient,
   sender,
 }) => {
@@ -557,10 +559,17 @@ export const sendInternal = async ({
     });
 
   const { hash } = invoice;
-  let memo;
-
   const p = await debit({ hash, amount, memo, user: sender });
   await credit({ hash, amount, memo, ref: sender.id });
+
+  if (invoice.memo?.includes("9734")) {
+    const { invoices } = await ln.listinvoices({ invstring: hash });
+    const inv = invoices[0];
+    inv.payment_preimage = p.id;
+    inv.paid_at = Math.floor(Date.now() / 1000);
+    handleZap(inv).catch(console.log);
+  }
+
   return p;
 };
 

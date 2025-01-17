@@ -55,9 +55,10 @@ export default {
 
       let p;
 
+      const invoice = await getInvoice(payreq || hash);
+      const recipient = invoice ? await getUser(invoice.uid) : undefined;
       if (payreq) {
-        const invoice = await getInvoice(payreq);
-        if (invoice && invoice.uid !== (await g("user:mint"))) {
+        if (invoice && recipient.username !== "mint") {
           if (invoice.aid === user.id) fail("Cannot send to self");
           hash = payreq;
           if (!amount) ({ amount } = invoice);
@@ -68,8 +69,13 @@ export default {
 
       if (!p) {
         if (hash) {
-          p = await debit({ hash, amount, memo, user });
-          await credit({ hash, amount, memo, ref: user.id });
+          p = await sendInternal({
+            invoice,
+            amount,
+            memo,
+            recipient,
+            sender: user,
+          });
         } else if (fund) {
           p = await debit({ hash, amount, memo: fund, user, type: types.fund });
           await db.incrBy(`fund:${fund}`, amount);
