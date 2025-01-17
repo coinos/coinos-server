@@ -56,9 +56,8 @@ export default {
       let p;
 
       if (payreq) {
-        const iid = await g(`invoice:${payreq}`);
-        if (iid) {
-          const invoice = await g(`invoice:${iid}`);
+        const invoice = await getInvoice(payreq);
+        if (invoice && invoice.uid !== (await g("user:mint"))) {
           if (invoice.aid === user.id) fail("Cannot send to self");
           hash = payreq;
           if (!amount) ({ amount } = invoice);
