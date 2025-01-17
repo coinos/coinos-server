@@ -51,7 +51,7 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
   return `${network}:${address}?${url.toString()}`;
 };
 
-export const getUser = async (username, fields) => {
+export const getUser = async (username, fields = undefined) => {
   let update;
   if (username === "undefined") fail("invalid user");
   const user = await migrate(username);

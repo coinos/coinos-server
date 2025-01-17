@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g } from "$lib/db";
+import { db } from "$lib/db";
 import ln from "$lib/ln";
 import {
   anon,
@@ -12,6 +12,7 @@ import {
 import { scan, sync } from "$lib/strfry";
 import { bail, fail, fields, getUser } from "$lib/utils";
 import got from "got";
+import type { Event } from "nostr-tools";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
@@ -23,10 +24,12 @@ export default {
     if (id.startsWith("note")) id = decode(id).data;
     const filter = { ids: [id] };
     let events = await scan(filter);
+
     if (!events.length) {
       await sync("wss://relay.primal.net", filter);
       events = await scan(filter);
     }
+
     if (!events.length) return bail(res, "event not found");
     res.send(events[0]);
   },
@@ -42,7 +45,7 @@ export default {
         await sync("wss://relay.primal.net", filter);
         events = await scan(filter);
       }
-      if (!events.length) return bail(res, "event not found");
+      if (!events.length) return res.send([]);
 
       const zaps = [];
       for (const { tags } of events) {
@@ -202,7 +205,7 @@ export default {
     } = req;
     let names = {};
     if (name) {
-      names = { [name]: (await getUser(name)).pubkey };
+      names = { [name]: (await getUser(name, fields)).pubkey };
     } else {
       const records = await db.sMembers("nip5");
       for (const s of records) {
@@ -249,9 +252,9 @@ export default {
     const amount = event.tags.find((t) => t[0] === "amount")[1];
     const pubkey = event.tags.find((t) => t[0] === "p")[1];
     const content = JSON.stringify(await getProfile(pubkey));
-    const callback = await getZapEndpoint({ content });
+    const callback = await getZapEndpoint({ content } as Event);
     const url = new URL(callback);
-    url.searchParams.set("amount", amount * 1000);
+    url.searchParams.set("amount", (amount * 1000).toString());
     url.searchParams.set("nostr", encodeURIComponent(JSON.stringify(event)));
     const json = await got(url.toString()).json();
 
