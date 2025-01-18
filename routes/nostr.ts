@@ -9,6 +9,7 @@ import {
   send,
   serverPubkey,
 } from "$lib/nostr";
+import { parseContent } from "$lib/notes";
 import { scan, sync } from "$lib/strfry";
 import { bail, fail, fields, getUser } from "$lib/utils";
 import got from "got";
@@ -31,7 +32,23 @@ export default {
     }
 
     if (!events.length) return bail(res, "event not found");
+
     res.send(events[0]);
+  },
+
+  async parse(req, res) {
+    const { event } = req.body;
+    const parts = parseContent(event);
+    const names = {};
+
+    for (const { type, value } of parts) {
+      if (type.includes("nprofile")) {
+        const { name } = await getProfile(value.pubkey);
+        names[value.pubkey] = name;
+      }
+    }
+
+    res.send({ parts, names });
   },
 
   async zaps(req, res) {

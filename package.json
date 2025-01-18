@@ -41,6 +41,7 @@
     "pino": "8",
     "pino-pretty": "^7.0.0",
     "pump": "^3.0.0",
+    "ramda": "^0.30.1",
     "readable-stream-clone": "^0.0.7",
     "redis": "^4.6.10",
     "sharp": "^0.33.5",
