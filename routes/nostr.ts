@@ -265,6 +265,7 @@ export default {
   },
 
   async zap(req, res) {
+    try {
     const { event } = req.body;
     const amount = event.tags.find((t) => t[0] === "amount")[1];
     const pubkey = event.tags.find((t) => t[0] === "p")[1];
@@ -273,8 +274,13 @@ export default {
     const url = new URL(callback);
     url.searchParams.set("amount", (amount * 1000).toString());
     url.searchParams.set("nostr", JSON.stringify(event));
+      console.log("URL", url.toString());
     const json = await got(url.toString()).json();
 
     res.send(json);
+    } catch(e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 };
