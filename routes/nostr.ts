@@ -253,7 +253,7 @@ export default {
       const event = await makeZapRequest({
         profile: pubkey,
         event: id,
-        amount,
+        amount: amount * 1000,
         relays: [config.nostr],
         comment: "",
       });
@@ -273,7 +273,7 @@ export default {
       const callback = await getZapEndpoint({ content } as Event);
 
       const encodedEvent = encodeURI(JSON.stringify(event));
-      const url = `${callback}?amount=${amount * 1000}&nostr=${encodedEvent}`;
+      const url = `${callback}?amount=${amount}&nostr=${encodedEvent}`;
       const json = await got(url).json();
 
       res.send(json);
