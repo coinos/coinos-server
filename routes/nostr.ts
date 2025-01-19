@@ -271,11 +271,10 @@ export default {
       const pubkey = event.tags.find((t) => t[0] === "p")[1];
       const content = JSON.stringify(await getProfile(pubkey));
       const callback = await getZapEndpoint({ content } as Event);
-      const url = new URL(callback);
-      url.searchParams.set("amount", (amount * 1000).toString());
-      url.searchParams.set("nostr", encodeURI(JSON.stringify(event)));
-      console.log("URL", url.toString());
-      const json = await got(url.toString()).json();
+
+      const encodedEvent = encodeURI(JSON.stringify(event));
+      const url = `${callback}?amount=${amount * 1000}&nostr=${encodedEvent}`;
+      const json = await got(url).json();
 
       res.send(json);
     } catch (e) {
