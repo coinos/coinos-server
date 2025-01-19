@@ -273,7 +273,7 @@ export default {
       const callback = await getZapEndpoint({ content } as Event);
       const url = new URL(callback);
       url.searchParams.set("amount", (amount * 1000).toString());
-      url.searchParams.set("nostr", JSON.stringify(event));
+      url.searchParams.set("nostr", encodeURI(JSON.stringify(event)));
       console.log("URL", url.toString());
       const json = await got(url.toString()).json();
 
