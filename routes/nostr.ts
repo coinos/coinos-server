@@ -42,7 +42,7 @@ export default {
     const names = {};
 
     for (const { type, value } of parts) {
-      if (type.includes("nprofile")) {
+      if (type.includes("nprofile") || type.includes("npub")) {
         const { name } = await getProfile(value.pubkey);
         names[value.pubkey] = name;
       }
