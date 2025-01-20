@@ -59,6 +59,8 @@ app.post("/parseEvent", nostr.parse);
 app.get("/zaps/:id", nostr.zaps);
 app.post("/zap", auth, nostr.zap);
 app.post("/zapRequest", auth, nostr.zapRequest);
+app.get("/thread/:id", nostr.thread);
+app.get("/firehose", nostr.firehose);
 
 app.get("/info", payments.info);
 app.post("/payments", auth, payments.create);

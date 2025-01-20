@@ -5,7 +5,7 @@ import { requirePin } from "$lib/auth";
 import { db, g, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-import { getProfile } from "$lib/nostr";
+import { getNostrUser, getProfile } from "$lib/nostr";
 import { reconcile, types } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
@@ -13,7 +13,7 @@ import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
-import { bytesToHex, randomBytes } from "@noble/hashes/utils";
+import { randomBytes } from "@noble/hashes/utils";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
@@ -86,37 +86,7 @@ export default {
         } catch (e) {}
       }
 
-      let user = await getUser(key);
-
-      if (key.length === 64) {
-        const nostr: any = await getProfile(key);
-        if (nostr) {
-          nostr.username = nostr.name || key.substr(0, 6);
-          nostr.display = nostr.display_name || nostr.displayName;
-          nostr.display_name = undefined;
-          nostr.displayName = undefined;
-          nostr.name = undefined;
-        }
-
-        if (user) {
-          user.anon = false;
-          nostr.display = undefined;
-        }
-
-        user = {
-          ...nostr,
-          currency: "USD",
-          pubkey: key,
-          anon: true,
-          ...user,
-        };
-      }
-
-      if (!user) return res.code(500).send("User not found");
-
-      if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
-      user.prompt = !!user.prompt;
-
+      const user = await getNostrUser(key);
       res.send(pick(user, fields));
     } catch (e) {
       err("problem getting user", e.message);

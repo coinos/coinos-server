@@ -2,7 +2,7 @@ import config from "$config";
 import { db, g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { count, scan, sync } from "$lib/strfry";
-import { fail } from "$lib/utils";
+import { fail, fields, getUser, pick } from "$lib/utils";
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
@@ -155,4 +155,39 @@ export const getCount = async (pubkey) => {
   } catch (e) {
     console.log(e);
   }
+};
+
+export const getNostrUser = async (key) => {
+  let user = await getUser(key);
+
+  if (key.length === 64) {
+    const nostr: any = await getProfile(key);
+    if (nostr) {
+      nostr.username = nostr.name || key.substr(0, 6);
+      nostr.display = nostr.display_name || nostr.displayName;
+      nostr.display_name = undefined;
+      nostr.displayName = undefined;
+      nostr.name = undefined;
+    }
+
+    if (user) {
+      user.anon = false;
+      nostr.display = undefined;
+    }
+
+    user = {
+      ...nostr,
+      currency: "USD",
+      pubkey: key,
+      anon: true,
+      ...user,
+    };
+  }
+
+  if (!user) fail("User not found");
+
+  if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
+  user.prompt = !!user.prompt;
+
+  return pick(user, fields);
 };

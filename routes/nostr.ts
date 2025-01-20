@@ -4,6 +4,7 @@ import ln from "$lib/ln";
 import {
   anon,
   getCount,
+  getNostrUser,
   getProfile,
   getRelays,
   send,
@@ -17,6 +18,7 @@ import type { Event } from "nostr-tools";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
+import { Relay } from "nostr-tools/relay";
 
 export default {
   async event(req, res) {
@@ -49,6 +51,61 @@ export default {
     }
 
     res.send({ parts, names });
+  },
+
+  async thread(req, res) {
+    try {
+      const { id } = req.params;
+      const relay = await Relay.connect("wss://relay.primal.net");
+
+      console.log("ID", id);
+      const event: Event = await new Promise((resolve) => {
+        const sub = relay.subscribe([{ ids: [id] }], {
+          async onevent(event) {
+            resolve(event);
+          },
+          oneose() {
+            sub.close();
+          },
+        });
+      });
+
+      const thread = [];
+
+      const root =
+        event.tags.find((tag) => tag[0] === "e" && tag[3] === "root")?.[1] ||
+        event.id;
+
+      await new Promise<void>((resolve) => {
+        const sub = relay.subscribe([{ kinds: [1], "#e": [root] }], {
+          async onevent(event) {
+            thread.push(event);
+          },
+          oneose() {
+            sub.close();
+            resolve();
+          },
+        });
+      });
+
+      for (const e of thread) {
+        e.author = await getNostrUser(e.pubkey);
+        console.log("AUTHOR", e.author);
+        e.parts = parseContent(e);
+        e.names = {};
+        for (const { type, value } of e.parts) {
+          if (type.includes("nprofile") || type.includes("npub")) {
+            const { name } = await getProfile(value.pubkey);
+            e.names[value.pubkey] = name;
+          }
+        }
+      }
+
+      res.send(thread);
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 
   async zaps(req, res) {
