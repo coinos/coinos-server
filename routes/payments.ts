@@ -20,6 +20,7 @@ import {
   SATS,
   bail,
   fail,
+  fields,
   getInvoice,
   getPayment,
   getUser,
@@ -115,7 +116,7 @@ export default {
             return p;
           }
           if (p.created < start || p.created > end) return;
-          if (p.type === types.internal) p.with = await g(`user:${p.ref}`);
+          if (p.type === types.internal) p.with = await getUser(p.ref, fields);
           return p;
         }),
       )
@@ -164,7 +165,7 @@ export default {
         params: { hash },
       } = req;
       const p = await getPayment(hash);
-      if (p?.type === types.internal) p.with = await g(`user:${p.ref}`);
+      if (p?.type === types.internal) p.with = await getUser(p.ref, fields);
       res.send(p);
     } catch (e) {
       console.log(e);
