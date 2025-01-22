@@ -113,7 +113,7 @@ const handle = (method, params, user, ev) =>
           inv.payment_preimage = preimage;
           inv.paid_at = Math.floor(Date.now() / 1000);
           try {
-            await handleZap(inv);
+            await handleZap(inv, pubkey);
           } catch (e) {
             console.log("zap receipt failed", e);
           }

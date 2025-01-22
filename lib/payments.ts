@@ -567,7 +567,7 @@ export const sendInternal = async ({
     const inv = invoices[0];
     inv.payment_preimage = p.id;
     inv.paid_at = Math.floor(Date.now() / 1000);
-    handleZap(inv).catch(console.log);
+    handleZap(inv, sender.pubkey).catch(console.log);
   }
 
   return p;

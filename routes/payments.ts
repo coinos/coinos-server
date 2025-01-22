@@ -40,6 +40,7 @@ export default {
 
   async create(req, res) {
     const { body, user } = req;
+
     let { amount, hash, fee, fund, memo, payreq } = body;
     const balance = await g(`balance:${user.id}`);
 

@@ -3,7 +3,7 @@ import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { credit, types } from "$lib/payments";
-import { getPayment } from "$lib/utils";
+import { getPayment, getUser } from "$lib/utils";
 
 export async function listenForLightning() {
   const inv = await ln.waitanyinvoice((await g("pay_index")) || 0);
@@ -35,7 +35,10 @@ export async function listenForLightning() {
 
     if (invoice?.memo) {
       try {
-        if (JSON.parse(description).kind === 9734) handleZap(inv);
+        if (JSON.parse(description).kind === 9734) {
+          const { pubkey } = await getUser(invoice.uid);
+          handleZap(inv, pubkey);
+        }
       } catch (e) {
         if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);
@@ -81,7 +84,10 @@ export async function replay(index) {
 
     if (invoice?.memo) {
       try {
-        if (JSON.parse(description).kind === 9734) handleZap(inv);
+        if (JSON.parse(description).kind === 9734) {
+          const { pubkey } = await getUser(invoice.uid);
+          handleZap(inv, pubkey);
+        }
       } catch (e) {
         if (!e.message.includes("Unexpected"))
           warn("failed to handle zap", e.message);

@@ -33,7 +33,7 @@ export async function send(ev, url = config.nostr) {
   r.close();
 }
 
-export async function handleZap(invoice) {
+export async function handleZap(invoice, sender = undefined) {
   try {
     const pubkey = serverPubkey;
     const sk = nip19.decode(config.nostrKey).data as Uint8Array;
@@ -59,6 +59,10 @@ export async function handleZap(invoice) {
       fail("Expected none or 1 e tags");
     }
 
+    const atags = zapreq.tags.filter(
+      (t) => t?.length && t.length >= 2 && t[0] === "a",
+    );
+
     const relays_tag = zapreq.tags.find(
       (t) => t?.length && t.length >= 2 && t[0] === "relays",
     );
@@ -69,6 +73,7 @@ export async function handleZap(invoice) {
 
     const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
     const etag = etags.length > 0 && etags[0];
+    const atag = atags.length > 0 && atags[0];
     const ptag = ptags[0];
 
     const kind = 9735;
@@ -77,6 +82,8 @@ export async function handleZap(invoice) {
 
     const tags = [ptag];
     if (etag) tags.push(etag);
+    if (atag) tags.push(atag);
+    if (sender) tags.push(["P", sender]);
 
     tags.push(["bolt11", invoice.bolt11]);
     tags.push(["description", invoice.description]);
@@ -129,11 +136,10 @@ export const getProfile = async (pubkey) => {
   let profile = await g(`profile:${pubkey}`);
   if (profile) return profile;
 
-  const filter = { authors: [pubkey], kinds: [0] };
-  const events = await scan(filter);
+  const event = await get({ authors: [pubkey], kinds: [0] });
 
-  if (events.length) {
-    profile = JSON.parse(events[0].content);
+  if (event) {
+    profile = JSON.parse(event.content);
   } else {
     profile = anon(pubkey);
   }
@@ -190,4 +196,26 @@ export const getNostrUser = async (key) => {
   user.prompt = !!user.prompt;
 
   return pick(user, fields);
+};
+
+export const q = async (f) => {
+  const events = await scan(f);
+  const k = JSON.stringify(f).replace(/[^a-zA-Z0-9]/g, "");
+  const since = await g(`${k}:since}`);
+  if (since) f.since = since;
+
+  const p = sync("wss://relay.primal.net", f).then(async () => {
+    const r = await scan(f);
+    if (r.length) await s(`${k}:since`, r[r.length - 1].created_at);
+    return r;
+  });
+
+  if (events.length > 0) return events;
+  return p;
+};
+
+export const get = async (f) => {
+  f.limit = 1;
+  const events = await q(f);
+  return events[0];
 };

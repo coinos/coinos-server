@@ -3,35 +3,31 @@ import { db } from "$lib/db";
 import ln from "$lib/ln";
 import {
   anon,
+  get,
   getCount,
   getNostrUser,
   getProfile,
   getRelays,
+  q,
   send,
   serverPubkey,
 } from "$lib/nostr";
 import { parseContent } from "$lib/notes";
-import { scan, sync } from "$lib/strfry";
+import { load, scan, sync } from "$lib/strfry";
 import { bail, fail, fields, getUser } from "$lib/utils";
 import got from "got";
 import type { Event } from "nostr-tools";
+import { verifyEvent } from "nostr-tools";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
-import { Relay } from "nostr-tools/relay";
 
 export default {
   async event(req, res) {
     let { id } = req.params;
     if (id.startsWith("nevent")) id = decode(id).data.id;
     if (id.startsWith("note")) id = decode(id).data;
-    const filter = { ids: [id] };
-    let events = await scan(filter);
-
-    if (!events.length) {
-      await sync("wss://relay.primal.net", filter);
-      events = await scan(filter);
-    }
+    const events = await q({ ids: [id] });
 
     if (!events.length) return bail(res, "event not found");
 
@@ -56,41 +52,22 @@ export default {
   async thread(req, res) {
     try {
       const { id } = req.params;
-      const relay = await Relay.connect("wss://relay.primal.net");
 
-      console.log("ID", id);
-      const event: Event = await new Promise((resolve) => {
-        const sub = relay.subscribe([{ ids: [id] }], {
-          async onevent(event) {
-            resolve(event);
-          },
-          oneose() {
-            sub.close();
-          },
-        });
-      });
+      const event = await get({ ids: [id] });
 
-      const thread = [];
+      const rootId = event.tags.find(
+        (tag) => tag[0] === "e" && tag[3] === "root",
+      )?.[1];
 
-      const root =
-        event.tags.find((tag) => tag[0] === "e" && tag[3] === "root")?.[1] ||
-        event.id;
+      let root;
+      if (rootId) root = await get({ ids: [rootId] });
+      else root = event;
 
-      await new Promise<void>((resolve) => {
-        const sub = relay.subscribe([{ kinds: [1], "#e": [root] }], {
-          async onevent(event) {
-            thread.push(event);
-          },
-          oneose() {
-            sub.close();
-            resolve();
-          },
-        });
-      });
+      const thread = [root, ...(await q({ kinds: [1], "#e": [root.id] }))];
 
-      for (const e of thread) {
+      for (const t of thread) {
+        const e = t as any;
         e.author = await getNostrUser(e.pubkey);
-        console.log("AUTHOR", e.author);
         e.parts = parseContent(e);
         e.names = {};
         for (const { type, value } of e.parts) {
@@ -135,13 +112,10 @@ export default {
         let user;
         if (pubkey) {
           try {
-            user = await getUser(pubkey, fields);
-            if (!user) user = await getProfile(pubkey);
-            user.pubkey = pubkey;
+            user = await getNostrUser(pubkey);
+            zaps.push({ amount, user });
           } catch (e) {}
         }
-
-        zaps.push({ amount, user });
       }
 
       res.send(zaps.filter((z) => z.amount > 0));
@@ -155,20 +129,10 @@ export default {
     try {
       const { event } = req.body;
       const { pubkey } = req.user;
-      const { write: relays } = await getRelays(pubkey);
-      if (!relays.includes(config.nostr)) relays.push(config.nostr);
-
-      let ok;
-      for (const url of relays) {
-        try {
-          await send(event, url);
-          ok = true;
-        } catch (e) {
-          console.log("failed to publish to", url);
-        }
-      }
-
-      if (!ok) fail("failed to publish");
+      // const { write: relays } = await getRelays(pubkey);
+      // if (!relays.includes(config.nostr)) relays.push(config.nostr);
+      if (!verifyEvent(event)) fail("Invalid event");
+      await load(JSON.stringify(event));
       if (event.kind === 3) db.del(`${pubkey}:follows`);
 
       res.send({});
@@ -219,6 +183,33 @@ export default {
       res.send(follows);
     } catch (e) {
       console.log("follows fail", e);
+      bail(res, e.message);
+    }
+  },
+
+  async events(req, res) {
+    const {
+      params: { pubkey },
+    } = req;
+    try {
+      const events = await q({ kinds: [1], authors: [pubkey], limit: 20 });
+
+      for (const v of events) {
+        const e = v as any;
+        e.author = await getNostrUser(e.pubkey);
+        e.parts = parseContent(e);
+        e.names = {};
+        for (const { type, value } of e.parts) {
+          if (type.includes("nprofile") || type.includes("npub")) {
+            const { name } = await getProfile(value.pubkey);
+            e.names[value.pubkey] = name;
+          }
+        }
+      }
+
+      res.send(events);
+    } catch (e) {
+      console.log(e);
       bail(res, e.message);
     }
   },
@@ -306,7 +297,8 @@ export default {
 
   async zapRequest(req, res) {
     try {
-      const { amount, pubkey, id } = req.body;
+      const { amount, id } = req.body;
+      const { pubkey } = await get({ ids: [id] });
       const event = await makeZapRequest({
         profile: pubkey,
         event: id,
@@ -328,6 +320,7 @@ export default {
       const pubkey = event.tags.find((t) => t[0] === "p")[1];
       const content = JSON.stringify(await getProfile(pubkey));
       const callback = await getZapEndpoint({ content } as Event);
+      if (!callback || callback === "null") fail("Lightning address not found");
 
       const encodedEvent = encodeURI(JSON.stringify(event));
       const url = `${callback}?amount=${amount}&nostr=${encodedEvent}`;

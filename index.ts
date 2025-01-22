@@ -53,6 +53,7 @@ app.get("/profile/:profile", nostr.profile);
 app.get("/:pubkey/count", nostr.count);
 app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);
+app.get("/:pubkey/events", nostr.events);
 app.get("/event/:id", nostr.event);
 app.post("/event", auth, nostr.publish);
 app.post("/parseEvent", nostr.parse);
