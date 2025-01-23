@@ -25,8 +25,7 @@ export async function listenForLightning() {
   try {
     if (!preimage) return;
 
-    const id =
-      (await g(`invoice:${bolt11}`)) || (await g(`invoice:${local_offer_id}`));
+    const id = bolt11 ? (await g(`invoice:${bolt11}`)) : (await g(`invoice:${local_offer_id}`));
     const invoice = await g(`invoice:${id}`);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
@@ -74,8 +73,7 @@ export async function replay(index) {
   try {
     if (!preimage) return;
 
-    const id =
-      (await g(`invoice:${bolt11}`)) || (await g(`invoice:${local_offer_id}`));
+    const id = bolt11 ? (await g(`invoice:${bolt11}`)) : (await g(`invoice:${local_offer_id}`));
     const invoice = await g(`invoice:${id}`);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
