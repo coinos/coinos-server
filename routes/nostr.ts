@@ -178,7 +178,8 @@ export default {
       query: { limit = 20, offset = 0, pubkeysOnly },
     } = req;
     try {
-      let follows = await g(`${pubkey}:follows`);
+      const k = `${pubkey}:follows${pubkeysOnly ? ":pubkeys" : ""}`;
+      let follows = await g(k);
       if (follows?.length) return res.send(follows);
 
       const event = await get({ authors: [pubkey], kinds: [3] });
@@ -204,9 +205,7 @@ export default {
           .map((r) => r.value);
       }
 
-      await db.set(`${pubkey}:follows`, JSON.stringify(follows), {
-        EX: 300,
-      });
+      await db.set(k, JSON.stringify(follows), { EX: 300 });
 
       res.send(follows);
     } catch (e) {
