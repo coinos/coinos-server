@@ -72,7 +72,10 @@ const exec = async (cmd: string, data = ""): Promise<Event[]> =>
 //   return r;
 // };
 
-export const load = (data) => exec(`echo '${data}' | /app/strfry import --no-verify\n`);
+export const load = (data) =>
+  exec(
+    `echo '${data.replace(/'/g, "'\\''")}' | /app/strfry import --no-verify\n`,
+  );
 export const count = (f) =>
   exec(`/app/strfry scan --count '${JSON.stringify(f)}'\n`);
 export const scan = (f) => exec(`/app/strfry scan '${JSON.stringify(f)}'\n`);

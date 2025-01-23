@@ -1,5 +1,5 @@
 import config from "$config";
-import { db } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 import {
   anon,
@@ -133,56 +133,14 @@ export default {
       // if (!relays.includes(config.nostr)) relays.push(config.nostr);
       if (!verifyEvent(event)) fail("Invalid event");
       await load(JSON.stringify(event));
-      if (event.kind === 3) db.del(`${pubkey}:follows`);
+
+      if (event.kind === 3) {
+        db.del(`${pubkey}:follows`);
+        db.del(`${pubkey}:follows:n`);
+      }
 
       res.send({});
     } catch (e) {
-      bail(res, e.message);
-    }
-  },
-
-  async follows(req, res) {
-    const {
-      params: { pubkey },
-      query: { limit = 20, offset = 0, pubkeysOnly },
-    } = req;
-    try {
-      const events = await scan({ authors: [pubkey], kinds: [3] });
-      if (!events.length) return res.send([]);
-
-      const event = events[0];
-      let pubkeys = event.tags
-        .filter((tag) => tag[0] === "p")
-        .map((tag) => tag[1]);
-
-      let follows = [];
-      if (pubkeysOnly) follows = pubkeys;
-      else {
-        pubkeys = pubkeys.slice(limit, offset);
-        const profiles = await scan({ authors: pubkeys, kinds: [0] });
-        for (const p of profiles) {
-          const { content, pubkey } = p;
-          let user = await getUser(pubkey, fields);
-          user = { ...user, ...JSON.parse(content) };
-          user.pubkey = pubkey;
-          follows.push(user);
-        }
-
-        const keys = follows.map((f) => f.pubkey);
-        const missing = await Promise.all(
-          pubkeys
-            .filter((p) => !keys.includes(p))
-            .map(
-              async (pubkey) => (await getUser(pubkey, fields)) || anon(pubkey),
-            ),
-        );
-
-        follows.push(...missing);
-      }
-
-      res.send(follows);
-    } catch (e) {
-      console.log("follows fail", e);
       bail(res, e.message);
     }
   },
@@ -214,38 +172,76 @@ export default {
     }
   },
 
+  async follows(req, res) {
+    const {
+      params: { pubkey },
+      query: { limit = 20, offset = 0, pubkeysOnly },
+    } = req;
+    try {
+      let follows = await g(`${pubkey}:follows`);
+      if (follows?.length) return res.send(follows);
+
+      const event = await get({ authors: [pubkey], kinds: [3] });
+      if (!event) return res.send([]);
+
+      let pubkeys = event.tags
+        .filter((tag) => tag[0] === "p")
+        .map((tag) => tag[1]);
+
+      follows = [];
+      if (pubkeysOnly) follows = pubkeys;
+      else {
+        pubkeys = pubkeys.slice(offset, offset + limit);
+        follows = (
+          await Promise.allSettled(
+            pubkeys.map(async (pubkey) => ({
+              ...(await getProfile(pubkey)),
+              pubkey,
+            })),
+          )
+        )
+          .filter((r) => r.status === "fulfilled")
+          .map((r) => r.value);
+      }
+
+      await db.set(`${pubkey}:follows`, JSON.stringify(follows), {
+        EX: 300,
+      });
+
+      res.send(follows);
+    } catch (e) {
+      console.log("follows fail", e);
+      bail(res, e.message);
+    }
+  },
+
   async followers(req, res) {
     const {
       params: { pubkey },
       query: { limit = 20, offset = 0 },
     } = req;
     try {
-      const filter = { kinds: [3], "#p": [pubkey] };
-      const events = await scan({ ...filter, limit });
+      let followers = await g(`${pubkey}:followers`);
+      if (followers?.length) return res.send(followers);
+
+      const events = await q({ kinds: [3], "#p": [pubkey], limit });
       if (!events.length) return res.send([]);
 
-      const pubkeys = events.map((e) => e.pubkey).slice(offset, limit);
+      const pubkeys = events.map((e) => e.pubkey).slice(offset, offset + limit);
+      followers = (
+        await Promise.allSettled(
+          pubkeys.map(async (pubkey) => ({
+            ...(await getProfile(pubkey)),
+            pubkey,
+          })),
+        )
+      )
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => r.value);
 
-      const followers = [];
-      const profiles = await scan({ authors: pubkeys, kinds: [0] });
-      for (const p of profiles) {
-        const { content, pubkey } = p;
-        let user = await getUser(pubkey, fields);
-        user = { ...user, ...JSON.parse(content) };
-        user.pubkey = pubkey;
-        followers.push(user);
-      }
-
-      const keys = followers.map((f) => f.pubkey);
-      const missing = await Promise.all(
-        pubkeys
-          .filter((p) => !keys.includes(p))
-          .map(
-            async (pubkey) => (await getUser(pubkey, fields)) || anon(pubkey),
-          ),
-      );
-
-      followers.push(...missing);
+      await db.set(`${pubkey}:followers`, JSON.stringify(followers), {
+        EX: 300,
+      });
 
       res.send(followers);
     } catch (e) {

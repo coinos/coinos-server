@@ -151,12 +151,21 @@ export const getProfile = async (pubkey) => {
 
 export const getCount = async (pubkey) => {
   try {
-    const result = await scan({ authors: [pubkey], kinds: [3] });
-    const follows = result.length
-      ? result[0].tags.filter((t) => t[0] === "p").length
-      : 0;
+    let follows = await g(`${pubkey}:follows:n`);
 
-    const [followers] = await count({ "#p": [pubkey], kinds: [3] });
+    if (!follows) {
+      const result = await get({ authors: [pubkey], kinds: [3] });
+      follows = result ? result.tags.filter((t) => t[0] === "p").length : 0;
+      await db.set(`${pubkey}:follows:n`, follows, { EX: 300 });
+    }
+
+    let followers = await g(`${pubkey}:followers:n`);
+
+    if (!followers) {
+      [followers] = await count({ "#p": [pubkey], kinds: [3] });
+      await db.set(`${pubkey}:followers:n`, followers, { EX: 300 });
+    }
+
     return { follows, followers };
   } catch (e) {
     console.log(e);
