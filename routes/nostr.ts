@@ -1,15 +1,12 @@
-import config from "$config";
 import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 import {
-  anon,
+  EX,
   get,
   getCount,
   getNostrUser,
   getProfile,
-  getRelays,
   q,
-  send,
   serverPubkey,
 } from "$lib/nostr";
 import { parseContent } from "$lib/notes";
@@ -24,14 +21,63 @@ import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
 
 export default {
   async event(req, res) {
-    let { id } = req.params;
-    if (id.startsWith("nevent")) id = decode(id).data.id;
-    if (id.startsWith("note")) id = decode(id).data;
-    const events = await q({ ids: [id] });
+    try {
+      let { id } = req.params;
+      const full = req.url.endsWith("full");
 
-    if (!events.length) return bail(res, "event not found");
+      if (id.startsWith("nevent")) id = decode(id).data.id;
+      if (id.startsWith("note")) id = decode(id).data;
 
-    res.send(events[0]);
+      const k = `event:${id}${full ? ":full" : ""}`;
+      let event = await g(k);
+      if (event) return res.send(event);
+
+      event = await get({ ids: [id] });
+      if (!full) return res.send(event);
+
+      const parts = parseContent(event);
+      const names = {};
+
+      for (const { type, value } of parts) {
+        if (type.includes("nprofile") || type.includes("npub")) {
+          const { name } = await getProfile(value.pubkey);
+          names[value.pubkey] = name;
+        }
+      }
+
+      event.parts = parts;
+      event.names = names;
+      event.author = await getProfile(event.pubkey);
+
+      const zapEvents = await scan({ kinds: [9735], "#e": [id] });
+      const zaps = [];
+      for (const { tags } of zapEvents) {
+        const bolt11 = tags.find((t) => t[0] === "bolt11")?.[1];
+        const description = tags.find((t) => t[0] === "description")?.[1];
+        const { pubkey } = JSON.parse(description);
+        let amount = 0;
+        try {
+          const { amount_msat } = await ln.decode(bolt11);
+          if (amount_msat) amount = Math.round(amount_msat / 1000);
+        } catch (e) {}
+
+        let user;
+        if (pubkey) {
+          try {
+            user = await getNostrUser(pubkey);
+            zaps.push({ amount, user });
+          } catch (e) {}
+        }
+      }
+
+      event.zaps = zaps.filter((z) => z.amount > 0);
+      await db.set(k, JSON.stringify(event), { EX });
+
+      res.send(event);
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 
   async parse(req, res) {
@@ -67,7 +113,7 @@ export default {
 
       for (const t of thread) {
         const e = t as any;
-        e.author = await getNostrUser(e.pubkey);
+        e.author = await getProfile(e.pubkey);
         e.parts = parseContent(e);
         e.names = {};
         for (const { type, value } of e.parts) {
@@ -154,7 +200,7 @@ export default {
 
       for (const v of events) {
         const e = v as any;
-        e.author = await getNostrUser(e.pubkey);
+        e.author = await getProfile(e.pubkey);
         e.parts = parseContent(e);
         e.names = {};
         for (const { type, value } of e.parts) {
@@ -205,7 +251,7 @@ export default {
           .map((r) => r.value);
       }
 
-      await db.set(k, JSON.stringify(follows), { EX: 300 });
+      await db.set(k, JSON.stringify(follows), { EX });
 
       res.send(follows);
     } catch (e) {
@@ -238,9 +284,7 @@ export default {
         .filter((r) => r.status === "fulfilled")
         .map((r) => r.value);
 
-      await db.set(`${pubkey}:followers`, JSON.stringify(followers), {
-        EX: 300,
-      });
+      await db.set(`${pubkey}:followers`, JSON.stringify(followers), { EX });
 
       res.send(followers);
     } catch (e) {
@@ -252,6 +296,7 @@ export default {
   async count(req, res) {
     try {
       const { pubkey } = req.params;
+      // res.send({ followers: 0, follows: 0 });
       res.send(await getCount(pubkey));
     } catch (e) {
       console.log(e);

@@ -7,6 +7,8 @@ import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
 
+export const EX = 60 * 60 * 24;
+
 export const serverPubkey = getPublicKey(
   nip19.decode(config.nostrKey).data as Uint8Array,
 );
@@ -144,7 +146,7 @@ export const getProfile = async (pubkey) => {
     profile = anon(pubkey);
   }
 
-  await db.set(`profile:${pubkey}`, JSON.stringify(profile), { EX: 300 });
+  await db.set(`profile:${pubkey}`, JSON.stringify(profile), { EX });
 
   return profile;
 };
@@ -153,17 +155,21 @@ export const getCount = async (pubkey) => {
   try {
     let follows = await g(`${pubkey}:follows:n`);
 
-    if (!follows) {
+    if (follows === null) {
       const result = await get({ authors: [pubkey], kinds: [3] });
       follows = result ? result.tags.filter((t) => t[0] === "p").length : 0;
-      await db.set(`${pubkey}:follows:n`, follows, { EX: 300 });
+      await db.set(`${pubkey}:follows:n`, follows, { EX });
     }
 
-    let followers = await g(`${pubkey}:followers:n`);
+    const k = `${pubkey}:followers:n`;
+    let followers = await g(k);
 
-    if (!followers) {
-      [followers] = await count({ "#p": [pubkey], kinds: [3] });
-      await db.set(`${pubkey}:followers:n`, followers, { EX: 300 });
+    if (followers === null) {
+      [followers] = await count({
+        "#p": [pubkey],
+        kinds: [3],
+      });
+      await db.set(k, followers, { EX });
     }
 
     return { follows, followers };

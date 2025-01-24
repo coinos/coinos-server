@@ -55,6 +55,7 @@ app.get("/:pubkey/followers", nostr.followers);
 app.get("/:pubkey/follows", nostr.follows);
 app.get("/:pubkey/events", nostr.events);
 app.get("/event/:id", nostr.event);
+app.get("/event/:id/full", nostr.event);
 app.post("/event", auth, nostr.publish);
 app.post("/parseEvent", nostr.parse);
 app.get("/zaps/:id", nostr.zaps);
