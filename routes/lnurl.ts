@@ -94,7 +94,7 @@ export default {
   async lnurl(req, res) {
     const {
       params: { id },
-      query: { amount, comment, nostr, lnurl },
+      query: { amount, comment, nostr },
     } = req;
     try {
       const uid = await g(`lnurl:${id}`);
@@ -103,7 +103,7 @@ export default {
       let { username } = user;
       username = username.replace(/\s/g, "").toLowerCase();
 
-      const memo = `Paying ${username}@${host}` || comment;
+      const memo = comment ?? `Paying ${username}@${host}`;
       let metadata = JSON.stringify([
         ["text/plain", memo],
         ["text/identifier", `${username}@${host}`],
