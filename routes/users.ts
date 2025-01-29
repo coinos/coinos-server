@@ -520,6 +520,13 @@ export default {
 
     if (!user) fail("user not found");
 
+    warn(
+      "password reset",
+      user.username,
+      code,
+      req.headers["cf-connecting-ip"],
+    );
+
     try {
       user.pin = null;
 
