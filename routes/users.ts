@@ -568,13 +568,11 @@ export default {
   },
 
   async request(req, res) {
-    const {
-      body: { id, email },
-    } = req;
-    try {
-      const user = await g(`user:${id}`);
+    const { email } = req.body;
+    const { user } = req;
+    const { id } = user;
 
-      if (!user) fail("user not found");
+    try {
       if (await g(`email:${email.toLowerCase()}`)) fail("Email already in use");
 
       const { username } = user;
