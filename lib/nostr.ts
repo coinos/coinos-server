@@ -1,13 +1,15 @@
 import config from "$config";
 import { db, g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
-import { count, scan, sync } from "$lib/strfry";
+import { scan } from "$lib/strfry";
 import { fail, fields, getUser, pick } from "$lib/utils";
 import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
+import type { Event } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
 
 export const EX = 60 * 60 * 24;
+const coinos = await Relay.connect(config.nostr);
 
 export const serverPubkey = getPublicKey(
   nip19.decode(config.nostrKey).data as Uint8Array,
@@ -158,7 +160,8 @@ export const getCount = async (pubkey) => {
     if (follows === null) {
       const result = await get({ authors: [pubkey], kinds: [3] });
       follows = result ? result.tags.filter((t) => t[0] === "p").length : 0;
-      if (follows?.length) await db.set(`${pubkey}:follows:n`, JSON.stringify(follows), { EX });
+      if (follows?.length)
+        await db.set(`${pubkey}:follows:n`, JSON.stringify(follows), { EX });
     }
 
     const k = `${pubkey}:followers:n`;
@@ -215,19 +218,28 @@ export const getNostrUser = async (key) => {
 };
 
 export const q = async (f) => {
-  const events = await scan(f);
+  let events = (await scan(f)) as Event[];
   const k = JSON.stringify(f).replace(/[^a-zA-Z0-9]/g, "");
   const since = await g(`${k}:since}`);
   if (since) f.since = since;
 
-  const p = sync("wss://relay.primal.net", f).then(async () => {
-    const r = await scan(f);
-    if (r.length) await s(`${k}:since`, r[r.length - 1].created_at);
-    return r;
+  const p = new Promise((resolve) => {
+    const r = [];
+    pool.subscribeMany(["wss://relay.primal.net"], [f], {
+      onevent(e) {
+        r.push(e);
+        coinos.publish(e);
+      },
+      oneose() {
+        resolve(r);
+      },
+    });
   });
 
-  if (events.length > 0) return events;
-  return p;
+  if (events.length) return events;
+  events = (await p) as Event[];
+  if (events.length) db.set(`${k}:since`, events[events.length - 1].created_at);
+  return events;
 };
 
 export const get = async (f) => {

@@ -1,3 +1,4 @@
+import config from "$config";
 import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 import {
@@ -6,11 +7,12 @@ import {
   getCount,
   getNostrUser,
   getProfile,
+  pool,
   q,
   serverPubkey,
 } from "$lib/nostr";
 import { parseContent } from "$lib/notes";
-import { load, scan, sync } from "$lib/strfry";
+import { scan } from "$lib/strfry";
 import { bail, fail, fields, getUser } from "$lib/utils";
 import got from "got";
 import type { Event } from "nostr-tools";
@@ -36,18 +38,12 @@ export default {
       if (!full) return res.send(event);
 
       const parts = parseContent(event);
-      const names = {};
 
-      for (const { type, value } of parts) {
-        if (type.includes("nprofile") || type.includes("npub")) {
-          const { name } = await getProfile(value.pubkey);
-          names[value.pubkey] = name;
-        }
-      }
-
-      event.parts = parts;
-      event.names = names;
-      event.author = await getProfile(event.pubkey);
+      let pubkeys = parts
+        .filter(
+          ({ type }) => type.includes("nprofile") || type.includes("npub"),
+        )
+        .map(({ value }) => value.pubkey);
 
       const zapEvents = await scan({ kinds: [9735], "#e": [id] });
       const zaps = [];
@@ -61,16 +57,52 @@ export default {
           if (amount_msat) amount = Math.round(amount_msat / 1000);
         } catch (e) {}
 
-        let user;
-        if (pubkey) {
-          try {
-            user = await getNostrUser(pubkey);
-            zaps.push({ amount, user });
-          } catch (e) {}
-        }
+        zaps.push({ amount, pubkey });
       }
 
-      event.zaps = zaps.filter((z) => z.amount > 0);
+      pubkeys.push(event.pubkey);
+      pubkeys.push(...zaps.map((z) => z.pubkey));
+      pubkeys = [...new Set(pubkeys)];
+      const profiles = await scan({ kinds: [0], authors: pubkeys });
+      const found = profiles.map((p) => p.pubkey);
+      const missing = pubkeys.filter((p) => !found.includes(p));
+
+      const missingProfiles = (
+        await pool.querySync(config.relays, {
+          kinds: [0],
+          authors: missing,
+        })
+      )
+        .reduce((a, b) => {
+          a.set(
+            b.pubkey,
+            b.created_at > (a.get(b.pubkey)?.created_at || 0)
+              ? b
+              : a.get(b.pubkey),
+          );
+          return a;
+        }, new Map())
+        .values();
+
+      profiles.push(...missingProfiles);
+
+      event.parts = parts;
+      event.names = profiles.reduce((a, b) => {
+        const { content } = b;
+        const { name } = JSON.parse(content);
+        a[b.pubkey] = name;
+        return a;
+      }, {});
+
+      event.author = profiles.find((p) => p.pubkey === event.pubkey);
+
+      event.zaps = zaps
+        .filter((z) => z.amount > 0)
+        .map(({ amount, pubkey }) => ({
+          amount,
+          user: profiles.find((p) => p.pubkey === pubkey),
+        }));
+
       await db.set(k, JSON.stringify(event), { EX });
 
       res.send(event);

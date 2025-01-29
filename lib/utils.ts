@@ -2,7 +2,6 @@ import config from "$config";
 import { g, s } from "$lib/db";
 import locales from "$lib/locales/index";
 import migrate from "$lib/migrate";
-import whitelist from "$lib/whitelist";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { getPublicKey } from "nostr";
 
