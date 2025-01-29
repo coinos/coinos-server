@@ -158,7 +158,7 @@ export const getCount = async (pubkey) => {
     if (follows === null) {
       const result = await get({ authors: [pubkey], kinds: [3] });
       follows = result ? result.tags.filter((t) => t[0] === "p").length : 0;
-      await db.set(`${pubkey}:follows:n`, follows, { EX });
+      if (follows?.length) await db.set(`${pubkey}:follows:n`, JSON.stringify(follows), { EX });
     }
 
     const k = `${pubkey}:followers:n`;
@@ -169,7 +169,8 @@ export const getCount = async (pubkey) => {
         "#p": [pubkey],
         kinds: [3],
       });
-      await db.set(k, followers, { EX });
+
+      if (followers?.length) await db.set(k, JSON.stringify(followers), { EX });
     }
 
     return { follows, followers };
