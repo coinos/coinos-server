@@ -76,7 +76,8 @@ export default () => {
       } catch (e) {
         err(
           "problem with nwc",
-          user.username,
+          pubkey,
+          user?.username,
           JSON.stringify(params),
           e.message,
         );

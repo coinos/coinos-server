@@ -12,7 +12,7 @@ async function migrate(id) {
 
     let user = await g(`user:${id}`);
     if (typeof user === "string") user = await g(`user:${user}`);
-    if (user) return user;
+    return user;
 
     user = await ga(`user:${id}`);
 

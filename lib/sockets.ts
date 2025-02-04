@@ -121,7 +121,7 @@ Bun.serve({
           subscriptions.push({ invoice: data, ws });
           break;
         default:
-          warn("received socket message of unknown type", type, data);
+          // warn("received socket message of unknown type", type, data);
       }
     },
     open(ws: any) {

@@ -1,7 +1,7 @@
 import config from "$config";
 import api from "$lib/api";
 import { requirePin } from "$lib/auth";
-import { db, g, s, t } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
 import {
@@ -45,8 +45,6 @@ export default {
     const balance = await g(`balance:${user.id}`);
 
     try {
-      if (await g("freeze")) fail("Problem sending payment");
-
       if (typeof amount !== "undefined") {
         amount = parseInt(amount);
         if (amount < 0 || amount > SATS || Number.isNaN(amount))
@@ -405,7 +403,6 @@ export default {
 
       res.send(p);
     } catch (e) {
-      console.log(e);
       warn(user.username, "payment failed", e.message);
       res.code(500).send(e.message);
     }

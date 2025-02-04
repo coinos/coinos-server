@@ -113,7 +113,16 @@ app.post("/superuser", users.superuser);
 app.get("/verify/:code", users.verify);
 app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
-app.post("/login", users.login);
+app.post("/login", {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: "5 seconds",
+        keyGenerator: (req) => req.headers["cf-connecting-ip"] as string, // IP-based rate limiting
+      },
+    },
+  },
+  users.login);
 app.post("/printer", users.printer);
 app.get("/challenge", users.challenge);
 app.post("/nostrLogin", users.nostrLogin);
