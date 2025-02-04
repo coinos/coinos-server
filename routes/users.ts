@@ -161,12 +161,14 @@ export default {
   async update(req, res) {
     const { user, body } = req;
     try {
-      const { id: tokid } = jwt.verify(req.headers.authorization.split(" ")[1], config.jwt);
+      const { id: tokid } = jwt.verify(
+        req.headers.authorization.split(" ")[1],
+        config.jwt,
+      );
       l("updating user", user.username, tokid);
 
       const { confirm, password, pin, newpin, username } = body;
       let exists;
-
 
       let { pubkey } = body;
       if (pubkey) {
@@ -295,7 +297,10 @@ export default {
           ))
       ) {
         // warn("invalid username or password attempt", username);
-        await appendFile("failedlogins.txt", `${Date.now()} : ${username} : ${password}\n`);
+        await appendFile(
+          "failedlogins.txt",
+          `${Date.now()} : ${username} : ${password}\n`,
+        );
         return res.code(401).send({});
       }
 
@@ -333,10 +338,14 @@ export default {
       const { event, challenge, twofa } = req.body;
       const ip = req.headers["cf-connecting-ip"];
       const c = await g(`challenge:${challenge}`);
-      const { pubkey: key } = event;
+      const { pubkey: key, kind } = event;
+      if (kind !== 27235) fail("Invalid event");
       if (!c) fail("Invalid or expired login challenge");
 
-      if (!verifyEvent(event) || event.content !== challenge)
+      if (
+        !verifyEvent(event) ||
+        event.tags.find((t) => t[0] === "challenge")?.[1] !== challenge
+      )
         fail("Invalid signature or challenge mismatch.");
 
       let user = await getUser(key);
