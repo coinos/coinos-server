@@ -87,7 +87,7 @@ export async function handleZap(invoice, sender = undefined) {
     const tags = [ptag];
     if (etag) tags.push(etag);
     if (atag) tags.push(atag);
-    if (sender) tags.push(["P", sender]);
+    if (sender) tags.push(["P", zapreq.pubkey]);
 
     tags.push(["bolt11", invoice.bolt11]);
     tags.push(["description", invoice.description]);
