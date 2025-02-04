@@ -796,6 +796,7 @@ export const reconcile = async (account, initial = false) => {
 };
 
 export const check = async () => {
+  if (process.env.URL.includes("dev")) return;
   try {
     const payments = await db.sMembers("pending");
 
