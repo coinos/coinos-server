@@ -101,26 +101,28 @@ const handle = (method, params, user, ev) =>
         const invoice = await getInvoice(pr);
         const recipient = await g(`user:${invoice.uid}`);
 
-        const { id: preimage } = await sendInternal({
-          amount,
-          invoice,
-          recipient,
-          sender: user,
-        });
+        if (recipient?.username !== "mint") {
+          const { id: preimage } = await sendInternal({
+            amount,
+            invoice,
+            recipient,
+            sender: user,
+          });
 
-        if (invoice.memo?.includes("9734")) {
-          const { invoices } = await ln.listinvoices({ invstring: pr });
-          const inv = invoices[0];
-          inv.payment_preimage = preimage;
-          inv.paid_at = Math.floor(Date.now() / 1000);
-          try {
-            await handleZap(inv, user.pubkey);
-          } catch (e) {
-            console.log("zap receipt failed", e);
+          if (invoice.memo?.includes("9734")) {
+            const { invoices } = await ln.listinvoices({ invstring: pr });
+            const inv = invoices[0];
+            inv.payment_preimage = preimage;
+            inv.paid_at = Math.floor(Date.now() / 1000);
+            try {
+              await handleZap(inv, user.pubkey);
+            } catch (e) {
+              console.log("zap receipt failed", e);
+            }
           }
-        }
 
-        return result({ preimage });
+          return result({ preimage });
+        }
       }
       await sendLightning({
         amount,
