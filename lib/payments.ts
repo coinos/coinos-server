@@ -54,21 +54,13 @@ export const debit = async ({
   rate = undefined,
 }) => {
   amount = parseInt(amount);
-  let blacklisted = await db.sIsMember("blacklist", user?.username?.toLowerCase());
-  let whitelisted = await db.sIsMember("whitelist", user?.username?.toLowerCase());
+  // let whitelisted = await db.sIsMember("whitelist", user?.username?.toLowerCase());
 
-  if (type !== types.internal && blacklisted && !whitelisted && amount > 500) {
+  if (type !== types.internal && (await g("freeze"))) {
     warn("Blocking payment", amount, hash, user.username, user.id);
     fail("Problem sending payment");
   }
 
-  if (type !== types.internal && (await g("freeze")) && amount > 1000000 && !whitelisted) {
-    warn("Blocking payment", amount, hash, user.username, user.id);
-    fail("Problem sending payment");
-  }
-
-  // if (!user.unlimited && amount > 1000000)
-  //   fail(`⚡️${amount} exceeds max withdrawal of ⚡️1,000,000`);
   let ref;
   const { id: uid, currency } = user;
 
