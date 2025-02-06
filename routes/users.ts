@@ -541,12 +541,7 @@ export default {
 
     try {
       user.pin = null;
-
-      if (user.nsec) {
-        const sk = randomBytes(32);
-        user.pubkey = getPublicKey(sk);
-        user.nsec = nip49encrypt(sk, password);
-      }
+      user.nsec = null;
 
       user.password = await Bun.password.hash(password, {
         algorithm: "bcrypt",
@@ -651,7 +646,7 @@ export default {
       if (user) {
         const code = v4();
         const link = `${process.env.URL}/reset/${code}`;
-        await s(`reset:${code}`, uid);
+        await db.set(`reset:${code}`, uid, { EX: 300 });
 
         await mail(user, "Password reset", templates.passwordReset, {
           ...user,
