@@ -5,7 +5,7 @@ import { requirePin } from "$lib/auth";
 import { db, g, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-import { getNostrUser, getProfile } from "$lib/nostr";
+import { getNostrUser, getProfile, serverPubkey } from "$lib/nostr";
 import { reconcile, types } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
@@ -261,6 +261,7 @@ export default {
       }
 
       user.haspin = !!user.pin;
+      user.destination = user.destination.trim();
       await s(`user:${user.pubkey}`, user.id);
       await s(
         `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
@@ -819,6 +820,70 @@ export default {
       return res.send(createReadStream(output));
     } catch (error) {
       res.code(500).send({ error: "Failed to generate LittleFS image" });
+    }
+  },
+
+  async app(req, res) {
+    const { pubkey } = req.params;
+    const app = await g(pubkey);
+    res.send(app);
+  },
+
+  async apps(req, res) {
+    const { user } = req;
+    const pubkeys = await db.sMembers(`${user.id}:apps`);
+    const apps = await Promise.all(pubkeys.map((p) => g(p)));
+
+    const { host } = new URL(process.env.URL);
+    const lud16 = `${user.username}@${host}`;
+    const relay = encodeURIComponent(config.nostr);
+
+    await Promise.all(
+      apps.map(async (a) => {
+        if (a.secret)
+          a.nwc = `nostr+walletconnect://${serverPubkey}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
+
+        a.spent = (await db.lRange(`${a.pubkey}:payments`, 0, -1)).reduce(
+          (a, b) => a + (Math.abs(b.amount) + b.fee + b.ourfee),
+          0,
+        );
+      }),
+    );
+
+    res.send(apps);
+  },
+
+  async updateApp(req, res) {
+    try {
+      let { secret, pubkey, max_amount, budget_renewal, name } = req.body;
+      const { user } = req;
+      const uid = user.id;
+      let app = await g(pubkey);
+      if (app && uid !== app.uid) fail("Unauthorized");
+      if (secret) pubkey = getPublicKey(secret);
+      app = { ...app, pubkey, max_amount, budget_renewal, name, uid, secret };
+      await s(pubkey, app);
+      await db.sAdd(`${uid}:apps`, pubkey);
+      res.send({});
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
+  },
+
+  async deleteApp(req, res) {
+    try {
+      const { user } = req;
+      const uid = user.id;
+      const { pubkey } = req.body;
+      const app = await g(pubkey);
+      if (app && uid !== app.uid) fail("Unauthorized");
+      await db.sRem(`${uid}:apps`, pubkey);
+      await db.del(pubkey);
+      res.send({});
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
     }
   },
 };

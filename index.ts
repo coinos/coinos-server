@@ -113,7 +113,9 @@ app.post("/superuser", users.superuser);
 app.get("/verify/:code", users.verify);
 app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
-app.post("/login", {
+app.post(
+  "/login",
+  {
     config: {
       rateLimit: {
         max: 5,
@@ -122,10 +124,15 @@ app.post("/login", {
       },
     },
   },
-  users.login);
+  users.login,
+);
 app.post("/printer", users.printer);
 app.get("/challenge", users.challenge);
 app.post("/nostrLogin", users.nostrLogin);
+app.get("/app/:pubkey", auth, users.app);
+app.get("/apps", auth, users.apps);
+app.post("/app", auth, users.updateApp);
+app.post("/apps/delete", auth, users.deleteApp);
 
 app.get("/subscriptions", auth, users.subscriptions);
 app.post("/subscription", auth, users.subscription);

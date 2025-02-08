@@ -52,11 +52,11 @@ export default () => {
 
       if (!methods.includes(method)) return;
 
-      const uid = await g(pubkey);
-      const user = await g(`user:${uid}`);
+      const app = await g(pubkey);
+      const user = await g(`user:${app.uid}`);
 
       try {
-        const result = await handle(method, params, user, ev);
+        const result = await handle(method, params, ev, app, user);
         const payload = JSON.stringify({ result_type: method, ...result });
         content = await nip04.encrypt(sk, pubkey, payload);
 
@@ -77,7 +77,7 @@ export default () => {
         err(
           "problem with nwc",
           pubkey,
-          user?.username,
+          app?.name,
           JSON.stringify(params),
           e.message,
         );
@@ -89,7 +89,7 @@ export default () => {
   });
 };
 
-const handle = (method, params, user, ev) =>
+const handle = (method, params, ev, app, user) =>
   ({
     async pay_invoice() {
       const { invoice: pr } = params;
@@ -102,12 +102,16 @@ const handle = (method, params, user, ev) =>
         const recipient = await g(`user:${invoice.uid}`);
 
         if (recipient?.username !== "mint") {
-          const { id: preimage } = await sendInternal({
+          const { id: pid } = await sendInternal({
             amount,
             invoice,
             recipient,
             sender: user,
           });
+
+          const preimage = pid;
+          if (app.pubkey !== user.pubkey)
+            await db.lPush(`${pubkey}:payments`, pid);
 
           if (invoice.memo?.includes("9734")) {
             const { invoices } = await ln.listinvoices({ invstring: pr });
@@ -124,11 +128,14 @@ const handle = (method, params, user, ev) =>
           return result({ preimage });
         }
       }
-      await sendLightning({
+
+      const { id: pid } = await sendLightning({
         amount,
         user,
         pr,
       });
+
+      if (app.pubkey !== user.pubkey) await db.lPush(`${pubkey}:payments`, pid);
 
       for (let i = 0; i < 10; i++) {
         const { pays } = await ln.listpays(pr);
@@ -144,7 +151,8 @@ const handle = (method, params, user, ev) =>
     },
 
     async pay_keysend() {
-      const { amount, pubkey, tlv_records: extratlvs } = params;
+      const { amount: amount_msat, pubkey, tlv_records: extratlvs } = params;
+      const amount = Math.round(amount_msat / 1000);
 
       try {
         const { payment_hash } = await sendKeysend({
@@ -276,7 +284,9 @@ const handle = (method, params, user, ev) =>
     async list_transactions() {
       const { from, until, limit = 10, offset = 0, type } = params;
 
-      const payments = await db.lRange(`${user.id}:payments`, 0, -1);
+      const { pubkey } = app;
+      const k = pubkey === user.pubkey ? user.id : pubkey;
+      const payments = await db.lRange(`${k}:payments`, 0, -1);
 
       let transactions = [];
       for (const pid of payments) {
