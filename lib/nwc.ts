@@ -97,6 +97,23 @@ const handle = (method, params, ev, app, user) =>
       const { id } = await ln.getinfo();
       const amount = Math.round(amount_msat / 1000);
 
+      const periods = {
+        daily: 60 * 60 * 24,
+        weekly: 60 * 60 * 24 * 7,
+        monthly: 60 * 60 * 24 * 7 * 30,
+        yearly: 60 * 60 * 24 * 7 * 30 * 365,
+        never: 60 * 60 * 24 * 7 * 30 * 365 * 10,
+      };
+
+      let payments = await db.lRange(`${app.pubkey}:payments`, 0, -1);
+      payments = payments.filter(
+        (p) => p.created > Date.now() - periods[app.budget_renewal],
+      );
+
+      const spent = payments.reduce((a, b) => a + Math.abs(b.amount), 0);
+      if (spent + amount > app.max_amount)
+        fail(`Budget exceeded: ${spent + amount} of ${max_amount}`);
+
       if (payee === id) {
         const invoice = await getInvoice(pr);
         const recipient = await g(`user:${invoice.uid}`);
@@ -111,7 +128,7 @@ const handle = (method, params, ev, app, user) =>
 
           const preimage = pid;
           if (app.pubkey !== user.pubkey)
-            await db.lPush(`${pubkey}:payments`, pid);
+            await db.lPush(`${app.pubkey}:payments`, pid);
 
           if (invoice.memo?.includes("9734")) {
             const { invoices } = await ln.listinvoices({ invstring: pr });
@@ -135,7 +152,7 @@ const handle = (method, params, ev, app, user) =>
         pr,
       });
 
-      if (app.pubkey !== user.pubkey) await db.lPush(`${pubkey}:payments`, pid);
+      await db.lPush(`${app.pubkey}:payments`, pid);
 
       for (let i = 0; i < 10; i++) {
         const { pays } = await ln.listpays(pr);
