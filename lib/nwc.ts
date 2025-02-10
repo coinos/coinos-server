@@ -6,6 +6,7 @@ import { err } from "$lib/logging";
 import { handleZap, serverPubkey } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { getInvoice, sleep } from "$lib/utils";
+import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04, nip19 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
@@ -46,10 +47,15 @@ export default () => {
     try {
       if (sub !== "nwc") return;
       let { content, pubkey } = ev;
+      console.log("CONTENT", content);
+      console.log("SK", bytesToHex(sk));
+      console.log("PK", pubkey);
       const { params, method } = JSON.parse(
         await nip04.decrypt(sk, pubkey, content),
       );
 
+      console.log("PARAMS", params);
+      console.log("METHOD", method);
       if (!methods.includes(method)) return;
 
       const app = await g(pubkey);
@@ -74,6 +80,7 @@ export default () => {
         response = await finalizeEvent(response, sk);
         r.send(["EVENT", response]);
       } catch (e) {
+        console.log(e);
         err(
           "problem with nwc",
           pubkey,
@@ -96,6 +103,7 @@ const handle = (method, params, ev, app, user) =>
       const { amount_msat, payee } = await ln.decode(pr);
       const { id } = await ln.getinfo();
       const amount = Math.round(amount_msat / 1000);
+      const { max_amount, budget_renewal, pubkey } = app;
 
       const periods = {
         daily: 60 * 60 * 24,
@@ -105,14 +113,26 @@ const handle = (method, params, ev, app, user) =>
         never: 60 * 60 * 24 * 7 * 30 * 365 * 10,
       };
 
-      let payments = await db.lRange(`${app.pubkey}:payments`, 0, -1);
+      const pids = await db.lRange(`${pubkey}:payments`, 0, -1);
+      let payments = await Promise.all(pids.map((pid) => g(`payment:${pid}`)));
       payments = payments.filter(
-        (p) => p.created > Date.now() - periods[app.budget_renewal],
+        (p) => p.created > Date.now() - periods[budget_renewal],
       );
 
-      const spent = payments.reduce((a, b) => a + Math.abs(b.amount), 0);
-      if (spent + amount > app.max_amount)
-        fail(`Budget exceeded: ${spent + amount} of ${max_amount}`);
+      const spent = payments.reduce(
+        (a, b) =>
+          a +
+          (Math.abs(parseInt(b.amount || 0)) +
+            parseInt(b.fee || 0) +
+            parseInt(b.ourfee || 0)),
+        0,
+      );
+
+      if (spent + amount > max_amount)
+        return error({
+          code: "INTERNAL",
+          message: `Budget exceeded: ${spent + amount} of ${max_amount}`,
+        });
 
       if (payee === id) {
         const invoice = await getInvoice(pr);
@@ -127,8 +147,7 @@ const handle = (method, params, ev, app, user) =>
           });
 
           const preimage = pid;
-          if (app.pubkey !== user.pubkey)
-            await db.lPush(`${app.pubkey}:payments`, pid);
+          if (pubkey !== user.pubkey) await db.lPush(`${pubkey}:payments`, pid);
 
           if (invoice.memo?.includes("9734")) {
             const { invoices } = await ln.listinvoices({ invstring: pr });
@@ -152,7 +171,7 @@ const handle = (method, params, ev, app, user) =>
         pr,
       });
 
-      await db.lPush(`${app.pubkey}:payments`, pid);
+      await db.lPush(`${pubkey}:payments`, pid);
 
       for (let i = 0; i < 10; i++) {
         const { pays } = await ln.listpays(pr);

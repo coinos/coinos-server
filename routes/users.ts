@@ -843,8 +843,16 @@ export default {
         if (a.secret)
           a.nwc = `nostr+walletconnect://${serverPubkey}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
 
-        a.spent = (await db.lRange(`${a.pubkey}:payments`, 0, -1)).reduce(
-          (a, b) => a + (Math.abs(b.amount) + b.fee + b.ourfee),
+        const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
+        const payments = await Promise.all(
+          pids.map((pid) => g(`payment:${pid}`)),
+        );
+        a.spent = payments.reduce(
+          (a, b) =>
+            a +
+            (Math.abs(parseInt(b.amount || 0)) +
+              parseInt(b.fee || 0) +
+              parseInt(b.ourfee || 0)),
           0,
         );
       }),
