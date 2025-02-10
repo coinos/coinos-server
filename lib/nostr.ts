@@ -75,7 +75,6 @@ export async function handleZap(invoice, sender = undefined) {
       fail("No relays tag found");
     }
 
-    const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
     const etag = etags.length > 0 && etags[0];
     const atag = atags.length > 0 && atags[0];
     const ptag = ptags[0];
@@ -98,6 +97,8 @@ export async function handleZap(invoice, sender = undefined) {
 
     l("sending receipt");
 
+    const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
+      relays.push(config.nostr);
     relays.map(async (url) => {
       try {
         const r = await Relay.connect(url);
