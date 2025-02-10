@@ -289,29 +289,27 @@ export default {
       username = username.toLowerCase().replace(/\s/g, "");
       let user = await getUser(username);
 
-      if (
-        !user ||
-        (user.password &&
-          !(
-            (config.adminpass && password === config.adminpass) ||
-            (await Bun.password.verify(password, user.password))
-          ))
-      ) {
-        // warn("invalid username or password attempt", username);
-        await appendFile(
-          "failedlogins.txt",
-          `${Date.now()} : ${username} : ${password}\n`,
-        );
-        return res.code(401).send({});
-      }
+      if (password !== config?.adminpass) {
+        if (
+          !user ||
+          !user.password ||
+          !(await Bun.password.verify(password, user.password))
+        ) {
+          // warn("invalid username or password attempt", username);
+          await appendFile(
+            "failedlogins.txt",
+            `${Date.now()} : ${username} : ${password}\n`,
+          );
+          return res.code(401).send({});
+        }
 
-      if (
-        !(config.adminpass && password === config.adminpass) &&
-        user.twofa &&
-        (typeof twofa === "undefined" ||
-          !authenticator.check(twofa, user.otpsecret))
-      ) {
-        return res.code(401).send("2fa required");
+        if (
+          user.twofa &&
+          (typeof twofa === "undefined" ||
+            !authenticator.check(twofa, user.otpsecret))
+        ) {
+          return res.code(401).send("2fa required");
+        }
       }
 
       if (username !== "coinos" && username !== "funk" && username !== "btcpos")

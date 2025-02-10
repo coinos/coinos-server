@@ -860,3 +860,19 @@ const reverse = async (p) => {
 
   warn("reversed", p.id);
 };
+
+const freezeCheck = async () => {
+  const funds = await ln.listfunds();
+  const balance = Math.round(
+    funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
+  );
+  const threshold = await g("freezethreshold");
+  if (balance < threshold) {
+    await s("hardfreeze", true);
+  } else {
+    await s("hardfreeze", false);
+  }
+
+  setTimeout(freezeCheck, 5000);
+};
+freezeCheck();
