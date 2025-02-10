@@ -47,15 +47,10 @@ export default () => {
     try {
       if (sub !== "nwc") return;
       let { content, pubkey } = ev;
-      console.log("CONTENT", content);
-      console.log("SK", bytesToHex(sk));
-      console.log("PK", pubkey);
       const { params, method } = JSON.parse(
         await nip04.decrypt(sk, pubkey, content),
       );
 
-      console.log("PARAMS", params);
-      console.log("METHOD", method);
       if (!methods.includes(method)) return;
 
       const app = await g(pubkey);
