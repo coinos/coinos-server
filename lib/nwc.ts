@@ -6,7 +6,6 @@ import { err } from "$lib/logging";
 import { handleZap, serverPubkey } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { getInvoice, sleep } from "$lib/utils";
-import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04, nip19 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
@@ -75,7 +74,6 @@ export default () => {
         response = await finalizeEvent(response, sk);
         r.send(["EVENT", response]);
       } catch (e) {
-        console.log(e);
         err(
           "problem with nwc",
           pubkey,
