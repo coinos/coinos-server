@@ -1,6 +1,6 @@
 import config from "$config";
 import countries from "$lib/countries";
-import { db } from "$lib/db";
+import { db, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
@@ -80,10 +80,9 @@ export default async (user, ip) => {
   };
 
   await s(app.pubkey, app);
-  await db.sAdd(`${uid}:apps`, app.pubkey);
+  await db.sAdd(`${id}:apps`, app.pubkey);
 
   db.multi()
-    .set(getPublicKey(user.nwc), user.id)
     .set(`user:${id}`, JSON.stringify(user))
     .set(`user:${username}`, id)
     .set(`user:${pubkey}`, id)
