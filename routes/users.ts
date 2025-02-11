@@ -261,7 +261,7 @@ export default {
       }
 
       user.haspin = !!user.pin;
-      user.destination = user.destination.trim();
+      if (user.destination) user.destination = user.destination.trim();
       await s(`user:${user.pubkey}`, user.id);
       await s(
         `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
