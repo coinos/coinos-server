@@ -830,7 +830,7 @@ export default {
 
     const { host } = new URL(process.env.URL);
     const lud16 = `${user.username}@${host}`;
-    const relay = encodeURIComponent(config.nostr);
+    const relay = encodeURIComponent(config.publicRelay);
 
     await Promise.all(
       apps.map(async (a) => {
