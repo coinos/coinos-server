@@ -5,7 +5,7 @@ import ln from "$lib/ln";
 import { err, l } from "$lib/logging";
 import { handleZap, serverPubkey } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
-import { getInvoice, sleep } from "$lib/utils";
+import { fail, getInvoice, sleep } from "$lib/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04, nip19 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
@@ -58,10 +58,11 @@ export default () => {
 
       if (!methods.includes(method)) return;
 
-      const app = await g(pubkey);
-      const user = await g(`user:${app.uid}`);
-
       try {
+        const app = await g(pubkey);
+        if (!app) fail(`pubkey not found`);
+        const user = await g(`user:${app.uid}`);
+
         const result = await handle(method, params, ev, app, user);
         const payload = JSON.stringify({ result_type: method, ...result });
         content = await nip04.encrypt(sk, pubkey, payload);
@@ -83,13 +84,12 @@ export default () => {
         err(
           "problem with nwc",
           pubkey,
-          app?.name,
+          method,
           JSON.stringify(params),
           e.message,
         );
       }
     } catch (e) {
-      console.log(e);
       err("problem with nwc", e.message);
     }
   });
