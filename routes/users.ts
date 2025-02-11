@@ -179,16 +179,12 @@ export default {
           else fail("Key in use by another account");
         }
 
-        const { challenge } = body;
         const event = JSON.parse(body.event);
+        const challenge = event.tags.find((t) => t[0] === "challenge")[1];
         const c = await g(`challenge:${challenge}`);
-        if (!c) fail("Invalid or expired login challenge");
+        if (!c) fail("Invalid or expired challenge");
 
-        if (
-          !verifyEvent(event) ||
-          event.content !== challenge ||
-          event.pubkey !== pubkey
-        )
+        if (!verifyEvent(event) || event.pubkey !== pubkey)
           fail("Invalid signature or challenge mismatch.");
 
         pubkey = pubkey.replace(/\s*/g, "");
@@ -332,7 +328,7 @@ export default {
     res.send({ challenge: id });
   },
 
-  async nostrLogin(req, res) {
+  async nostrAuth(req, res) {
     try {
       const { event, challenge, twofa } = req.body;
       const ip = req.headers["cf-connecting-ip"];

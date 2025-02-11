@@ -63,13 +63,24 @@ export default async (user, ip) => {
   }
 
   user.npub = nip19.npubEncode(pubkey);
-  user.nwc = bytesToHex(randomBytes(32));
 
   const account = JSON.stringify({
     id,
     type: "ecash",
     name: "Spending",
   });
+
+  const secret = bytesToHex(randomBytes(32));
+  const app = {
+    secret,
+    pubkey: getPublicKey(secret),
+    max_amount: 10000,
+    budget_renewal: "weekly",
+    name: username,
+  };
+
+  await s(app.pubkey, app);
+  await db.sAdd(`${uid}:apps`, app.pubkey);
 
   db.multi()
     .set(getPublicKey(user.nwc), user.id)

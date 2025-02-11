@@ -3,7 +3,7 @@ import { db, g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { scan } from "$lib/strfry";
 import { fail, fields, getUser, pick } from "$lib/utils";
-import { finalizeEvent, getPublicKey, nip19 } from "nostr-tools";
+import { finalizeEvent, getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
@@ -30,8 +30,8 @@ export const anon = (pubkey) => ({
   followers: [],
 });
 
-export async function send(ev, url = config.nostr) {
-  if (!ev?.id) return;
+export async function publish(ev, url = config.nostr) {
+  if (!verifyEvent(ev)) fail("Invalid event");
   const r = await Relay.connect(url);
   await r.publish(ev);
   r.close();
@@ -98,7 +98,7 @@ export async function handleZap(invoice, sender = undefined) {
     l("sending receipt");
 
     const relays = relays_tag.slice(1).filter((r) => r?.startsWith("ws"));
-      relays.push(config.nostr);
+    relays.push(config.nostr);
     relays.map(async (url) => {
       try {
         const r = await Relay.connect(url);

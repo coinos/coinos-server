@@ -2,7 +2,7 @@ import config from "$config";
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
-import { err } from "$lib/logging";
+import { err, l } from "$lib/logging";
 import { handleZap, serverPubkey } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { getInvoice, sleep } from "$lib/utils";
@@ -228,6 +228,7 @@ const handle = (method, params, ev, app, user) =>
 
     async make_invoice() {
       const { amount, description, description_hash, expiry } = params;
+      l("nwc make_invoice", user.username);
 
       const invoice = {
         amount: Math.round(amount / 1000),

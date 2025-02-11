@@ -128,7 +128,7 @@ app.post(
 );
 app.post("/printer", users.printer);
 app.get("/challenge", users.challenge);
-app.post("/nostrLogin", users.nostrLogin);
+app.post("/nostrAuth", users.nostrAuth);
 app.get("/app/:pubkey", auth, users.app);
 app.get("/apps", auth, users.apps);
 app.post("/app", auth, users.updateApp);

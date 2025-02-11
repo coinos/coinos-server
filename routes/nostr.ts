@@ -8,6 +8,7 @@ import {
   getNostrUser,
   getProfile,
   pool,
+  publish,
   q,
   serverPubkey,
 } from "$lib/nostr";
@@ -16,7 +17,6 @@ import { scan } from "$lib/strfry";
 import { bail, fail, fields, getUser } from "$lib/utils";
 import got from "got";
 import type { Event } from "nostr-tools";
-import { verifyEvent } from "nostr-tools";
 import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
@@ -207,10 +207,8 @@ export default {
     try {
       const { event } = req.body;
       const { pubkey } = req.user;
-      // const { write: relays } = await getRelays(pubkey);
-      // if (!relays.includes(config.nostr)) relays.push(config.nostr);
-      if (!verifyEvent(event)) fail("Invalid event");
-      await load(JSON.stringify(event));
+
+      await publish(event);
 
       if (event.kind === 3) {
         db.del(`${pubkey}:follows`);
@@ -219,6 +217,7 @@ export default {
 
       res.send({});
     } catch (e) {
+      console.log(e);
       bail(res, e.message);
     }
   },
