@@ -5,7 +5,7 @@ import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
-import { notify } from "$lib/notifications";
+import { notify, nwcNotify } from "$lib/notifications";
 import {
   SATS,
   btc,
@@ -144,6 +144,7 @@ export const debit = async ({
 
   l(user.username, "sent", type, amount);
   //emit(user.id, "payment", p);
+  if (![types.lightning, types.bolt12].includes(type)) nwcNotify(p, user);
 
   return p;
 };
@@ -283,6 +284,7 @@ export const completePayment = async (inv, p, user) => {
     }
   }
 
+  nwcNotify(p);
   notify(p, user, withdrawal);
   l(username, "received", p.type, p.amount);
   callWebhook(inv, p);
@@ -821,6 +823,7 @@ const finalize = async (r, p) => {
 
   await db.sRem("pending", p.hash);
   l("payment completed", p.id, r.payment_preimage);
+  nwcNotify(p);
 
   const maxfee = p.fee;
   const { amount_msat } = await ln.decode(p.hash);

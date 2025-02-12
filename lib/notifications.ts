@@ -1,10 +1,13 @@
 import config from "$config";
 import { db } from "$lib/db";
+import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import mqtt from "$lib/mqtt";
+import { publish, serverSecret } from "$lib/nostr";
 import { emit } from "$lib/sockets";
-import { f, fiat, fmt, link, t } from "$lib/utils";
+import { f, fiat, fmt, getUser, link, nada, t } from "$lib/utils";
+import { finalizeEvent } from "nostr-tools";
 import webpush from "web-push";
 
 if (config.vapid) {
@@ -72,5 +75,47 @@ export const notify = async (p, user, withdrawal) => {
       username,
       `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${p.items}`,
     );
+  }
+};
+
+export const nwcNotify = async (p) => {
+  try {
+    const user = await getUser(p.uid);
+    const pubkeys = await db.sMembers(`${user.id}:apps`);
+    if (pubkeys.length) {
+      let payment_hash = "";
+      if (p.type === "lightning") ({ payment_hash } = await ln.decode(p.hash));
+      for (const pubkey of pubkeys) {
+        const notification = {
+          type: p.amount > 0 ? "incoming" : "outgoing",
+          invoice: p.hash,
+          description: p.memo,
+          preimage: p.ref,
+          payment_hash: payment_hash,
+          amount: Math.abs(p.amount) * 1000,
+          fees_paid: (parseInt(p.fee) || 0) * 1000,
+          created_at: p.created,
+          settled_at: p.created,
+        };
+
+        const content = JSON.stringify({
+          notification_type: p.amount > 0 ? "payment_received" : "payment_sent",
+          notification,
+        });
+
+        const unsigned = {
+          content,
+          tags: [["p", pubkey]],
+          kind: 23196,
+          created_at: Math.floor(Date.now() / 1000),
+        };
+
+        const event = finalizeEvent(unsigned, serverSecret);
+
+        publish(event).catch(nada);
+      }
+    }
+  } catch (e) {
+    warn("nwc notification failed", e.message);
   }
 };

@@ -3,6 +3,7 @@ import { db, g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { scan } from "$lib/strfry";
 import { fail, fields, getUser, pick } from "$lib/utils";
+import { bytesToHex } from "@noble/hashes/utils";
 import { finalizeEvent, getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
@@ -11,9 +12,11 @@ import { Relay } from "nostr-tools/relay";
 export const EX = 60 * 60 * 24;
 const coinos = await Relay.connect(config.nostr);
 
-export const serverPubkey = getPublicKey(
+export const serverSecret = bytesToHex(
   nip19.decode(config.nostrKey).data as Uint8Array,
 );
+
+export const serverPubkey = getPublicKey(serverSecret);
 
 const alwaysTrue: any = (t: Event) => {
   t[Symbol("verified")] = true;
@@ -40,7 +43,6 @@ export async function publish(ev, url = config.nostr) {
 export async function handleZap(invoice, sender = undefined) {
   try {
     const pubkey = serverPubkey;
-    const sk = nip19.decode(config.nostrKey).data as Uint8Array;
     const zapreq = JSON.parse(invoice.description);
 
     if (!zapreq.tags || zapreq.tags.length === 0) {
@@ -93,7 +95,7 @@ export async function handleZap(invoice, sender = undefined) {
     tags.push(["preimage", invoice.payment_preimage]);
 
     const ev = { pubkey, kind, created_at, content, tags };
-    const signed = await finalizeEvent(ev, sk);
+    const signed = await finalizeEvent(ev, serverSecret);
 
     l("sending receipt");
 

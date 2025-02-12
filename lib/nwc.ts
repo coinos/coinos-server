@@ -22,6 +22,7 @@ const methods = [
   "make_invoice",
   "lookup_invoice",
   "list_transactions",
+  "notifications",
 ];
 
 const week = 7 * 24 * 60 * 60;
@@ -31,14 +32,19 @@ export default () => {
 
   r.on("open", async (_) => {
     r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey] });
-    let info: UnsignedEvent = {
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 13194,
-      tags: [["p", serverPubkey]],
-      pubkey: serverPubkey,
-      content: methods.join(" "),
-    };
-    info = await finalizeEvent(info, sk);
+    const info = await finalizeEvent(
+      {
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 13194,
+        tags: [
+          ["p", serverPubkey],
+          ["notifications", "payment_received payment_sent"],
+        ],
+        pubkey: serverPubkey,
+        content: methods.join(" "),
+      },
+      sk,
+    );
     r.send(["EVENT", info]);
   });
 
@@ -314,9 +320,7 @@ const handle = (method, params, ev, app, user) =>
     async list_transactions() {
       const { from, until, limit = 10, offset = 0, type } = params;
 
-      const { pubkey } = app;
-      const k = pubkey === user.pubkey ? user.id : pubkey;
-      const payments = await db.lRange(`${k}:payments`, 0, -1);
+      const payments = await db.lRange(`${user.id}:payments`, 0, -1);
 
       let transactions = [];
       for (const pid of payments) {
