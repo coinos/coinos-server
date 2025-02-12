@@ -60,9 +60,10 @@ export const debit = async ({
   );
 
   if (
-    (amount > (await g("withdrawallimit")) && !whitelisted) ||
-    amount > (await g(`${type}:limit`)) ||
-    (await g("hardfreeze"))
+    (await g("hardfreeze")) ||
+    ((await g("freeze")) && type !== types.internal) ||
+    (amount > (await g("limit")) && !whitelisted) ||
+    amount > (await g(`${type}:limit`))
   ) {
     warn("Blocking", user.username, amount, hash, user.id);
     fail("Problem sending payment");
@@ -877,7 +878,7 @@ const freezeCheck = async () => {
     funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
   );
 
-  const bcbalance = Math.round(await bc.getBalance()) * SATS;
+  const bcbalance = Math.round(await bc.getBalance() * SATS);
   const { bitcoin } = await lq.getBalance();
   const lqbalance = Math.round(bitcoin * SATS);
 
@@ -888,6 +889,10 @@ const freezeCheck = async () => {
   await s("lightning:limit", Math.max(lnbalance - lnthreshold, 0));
   await s("bitcoin:limit", Math.max(lqbalance - lqthreshold, 0));
   await s("liquid:limit", Math.max(bcbalance - bcthreshold, 0));
+
+  await s("fund:limit", Math.max(lnbalance - lnthreshold, 0));
+  await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));
+  await s("bolt12:limit", Math.max(lnbalance - lnthreshold, 0));
 
   setTimeout(freezeCheck, 10000);
 };
