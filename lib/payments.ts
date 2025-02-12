@@ -54,10 +54,17 @@ export const debit = async ({
   rate = undefined,
 }) => {
   amount = parseInt(amount);
-  // let whitelisted = await db.sIsMember("whitelist", user?.username?.toLowerCase());
+  const whitelisted = await db.sIsMember(
+    "whitelist",
+    user?.username?.toLowerCase().trim(),
+  );
 
-  if (type !== types.internal && (await g("freeze"))) {
-    warn("Blocking payment", amount, hash, user.username, user.id);
+  if (
+    (amount > (await g("withdrawallimit")) && !whitelisted) ||
+    amount > (await g(`${type}:limit`)) ||
+    (await g("hardfreeze"))
+  ) {
+    warn("Blocking", user.username, amount, hash, user.id);
     fail("Problem sending payment");
   }
 
@@ -866,16 +873,22 @@ const reverse = async (p) => {
 
 const freezeCheck = async () => {
   const funds = await ln.listfunds();
-  const balance = Math.round(
+  const lnbalance = Math.round(
     funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
   );
-  const threshold = await g("freezethreshold");
-  if (balance < threshold) {
-    await s("hardfreeze", true);
-  } else {
-    await s("hardfreeze", false);
-  }
 
-  setTimeout(freezeCheck, 5000);
+  const bcbalance = Math.round(await bc.getBalance()) * SATS;
+  const { bitcoin } = await lq.getBalance();
+  const lqbalance = Math.round(bitcoin * SATS);
+
+  const lnthreshold = await g("lightning:threshold");
+  const bcthreshold = await g("bitcoin:threshold");
+  const lqthreshold = await g("liquid:threshold");
+
+  await s("lightning:limit", Math.max(lnbalance - lnthreshold, 0));
+  await s("bitcoin:limit", Math.max(lqbalance - lqthreshold, 0));
+  await s("liquid:limit", Math.max(bcbalance - bcthreshold, 0));
+
+  setTimeout(freezeCheck, 10000);
 };
 freezeCheck();
