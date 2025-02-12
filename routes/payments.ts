@@ -238,6 +238,7 @@ export default {
     const {
       params: { name },
     } = req;
+    fail("disabled");
     const balance = await g(`fund:${name}`);
     res.send({
       tag: "withdrawRequest",
@@ -255,6 +256,7 @@ export default {
       user,
     } = req;
     try {
+      fail("disabled");
       const { id: uid } = user;
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
@@ -290,8 +292,7 @@ export default {
 
       res.send({ payment });
     } catch (e) {
-      console.log(e);
-      warn("problem withdrawing from fund", e.message);
+      warn("problem withdrawing from fund", user.username, e.message);
       bail(res, e.message);
     }
   },

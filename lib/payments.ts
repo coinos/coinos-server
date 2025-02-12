@@ -59,13 +59,12 @@ export const debit = async ({
     user?.username?.toLowerCase().trim(),
   );
 
-  if (
-    (await g("hardfreeze")) ||
-    ((await g("freeze")) && type !== types.internal) ||
-    (amount > (await g("limit")) && !whitelisted) ||
-    amount > (await g(`${type}:limit`))
-  ) {
-    warn("Blocking", user.username, amount, hash, user.id);
+  let serverLimit = await g(`${type}:limit`);
+  let userLimit = await g("limit");
+  let frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== types.internal);
+
+  if (frozen || (amount > userLimit && !whitelisted) || amount > serverLimit) {
+    warn("Blocking", user.username, amount, hash, user.id, type, frozen, userLimit, serverLimit);
     fail("Problem sending payment");
   }
 
@@ -506,7 +505,6 @@ export const sendLightning = async ({
       fail("Invalid amount");
   }
 
-  const total = amount;
   const decoded = await ln.decode(pr);
   const amount_msat = decoded.type.includes("bolt12")
     ? decoded.invoice_amount_msat
@@ -524,7 +522,7 @@ export const sendLightning = async ({
 
   p = await debit({
     hash: pr,
-    amount: total,
+    amount: amount_msat ? Math.round(amount_msat / 1000) : amount,
     fee,
     memo,
     user,
@@ -533,7 +531,7 @@ export const sendLightning = async ({
 
   await db.sAdd("pending", pr);
 
-  l("paying lightning invoice", pr.substr(-8), total, amount, fee);
+  l("paying lightning invoice", pr.substr(-8), amount, fee);
 
   try {
     const r = await ln.xpay({
@@ -887,8 +885,8 @@ const freezeCheck = async () => {
   const lqthreshold = await g("liquid:threshold");
 
   await s("lightning:limit", Math.max(lnbalance - lnthreshold, 0));
-  await s("bitcoin:limit", Math.max(lqbalance - lqthreshold, 0));
-  await s("liquid:limit", Math.max(bcbalance - bcthreshold, 0));
+  await s("bitcoin:limit", Math.max(bcbalance - bcthreshold, 0));
+  await s("liquid:limit", Math.max(lqbalance - lqthreshold, 0));
 
   await s("fund:limit", Math.max(lnbalance - lnthreshold, 0));
   await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));

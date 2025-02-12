@@ -1,18 +1,17 @@
-import config from "$config";
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l } from "$lib/logging";
-import { handleZap, serverPubkey } from "$lib/nostr";
+import { handleZap, serverPubkey, serverSecret } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
 import { Relay } from "nostr";
-import { finalizeEvent, nip04, nip19 } from "nostr-tools";
+import { finalizeEvent, nip04 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
+import { hexToBytes } from "@noble/hashes/utils";
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
-const sk = nip19.decode(config.nostrKey).data as Uint8Array;
 
 const methods = [
   "pay_keysend",
@@ -40,10 +39,9 @@ export default () => {
           ["p", serverPubkey],
           ["notifications", "payment_received payment_sent"],
         ],
-        pubkey: serverPubkey,
         content: methods.join(" "),
       },
-      sk,
+      hexToBytes(serverSecret),
     );
     r.send(["EVENT", info]);
   });
@@ -51,9 +49,11 @@ export default () => {
   r.on("event", async (sub, ev) => {
     try {
       if (sub !== "nwc") return;
+      if (await db.sIsMember("handled", ev.id)) return;
+      db.sAdd("handled", ev.id);
       let { content, pubkey } = ev;
       const { params, method } = JSON.parse(
-        await nip04.decrypt(sk, pubkey, content),
+        await nip04.decrypt(serverSecret, pubkey, content),
       );
 
       if (!methods.includes(method)) return;
@@ -65,7 +65,7 @@ export default () => {
 
         const result = await handle(method, params, ev, app, user);
         const payload = JSON.stringify({ result_type: method, ...result });
-        content = await nip04.encrypt(sk, pubkey, payload);
+        content = await nip04.encrypt(serverSecret, pubkey, payload);
 
         let response: UnsignedEvent = {
           created_at: Math.floor(Date.now() / 1000),
@@ -78,9 +78,10 @@ export default () => {
           content,
         };
 
-        response = await finalizeEvent(response, sk);
+        response = await finalizeEvent(response, hexToBytes(serverSecret));
         r.send(["EVENT", response]);
       } catch (e) {
+        console.log(e);
         err(
           "problem with nwc",
           pubkey,

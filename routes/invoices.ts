@@ -31,7 +31,7 @@ export default {
     try {
       res.send(await generate({ invoice, user }));
     } catch (e) {
-      err("problem generating invoice", e.message);
+      err("problem generating invoice", req.user?.username, body.user?.username, e.message);
       bail(res, e.message);
     }
   },
