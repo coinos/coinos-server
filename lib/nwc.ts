@@ -5,10 +5,10 @@ import { err, l } from "$lib/logging";
 import { handleZap, serverPubkey, serverSecret } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
+import { hexToBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
-import { hexToBytes } from "@noble/hashes/utils";
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
@@ -330,12 +330,15 @@ const handle = (method, params, ev, app, user) =>
         if (p.amount < 0 && type === "incoming") continue;
         if (p.amount > 0 && type === "outgoing") continue;
 
-        const { payment_hash } =
-          p.type === "lightning"
-            ? p.amount > 0
-              ? await ln.listinvoices({ invstring: p.hash })
-              : await ln.listpays({ bolt11: p.hash })
-            : p.id;
+        let payment_hash;
+        try {
+          ({ payment_hash } =
+            p.type === "lightning"
+              ? p.amount > 0
+                ? await ln.listinvoices({ invstring: p.hash })
+                : await ln.listpays({ bolt11: p.hash })
+              : p.id);
+        } catch (e) {}
 
         const created_at = Math.floor(p.created / 1000);
 
