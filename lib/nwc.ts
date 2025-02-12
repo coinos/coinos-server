@@ -330,15 +330,15 @@ const handle = (method, params, ev, app, user) =>
         if (p.amount < 0 && type === "incoming") continue;
         if (p.amount > 0 && type === "outgoing") continue;
 
-        let payment_hash;
-        try {
-          ({ payment_hash } =
-            p.type === "lightning"
-              ? p.amount > 0
+        let payment_hash = p.id;
+        if (p.type === "lightning") {
+          try {
+            ({ payment_hash } =
+              p.amount > 0
                 ? await ln.listinvoices({ invstring: p.hash })
-                : await ln.listpays({ bolt11: p.hash })
-              : p.id);
-        } catch (e) {}
+                : await ln.listpays({ bolt11: p.hash }));
+          } catch (e) {}
+        }
 
         const created_at = Math.floor(p.created / 1000);
 
