@@ -70,10 +70,12 @@ export default async (user, ip) => {
     name: "Spending",
   });
 
-  const secret = bytesToHex(randomBytes(32));
+  const bytes = randomBytes(32);
+  const secret = bytesToHex(bytes);
   const app = {
+    uid: id,
     secret,
-    pubkey: getPublicKey(secret),
+    pubkey: getPublicKey(bytes),
     max_amount: 10000,
     budget_renewal: "weekly",
     name: username,

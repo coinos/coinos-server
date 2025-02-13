@@ -123,6 +123,7 @@ const handle = (method, params, ev, app, user) =>
         (a, b) =>
           a +
           (Math.abs(parseInt(b.amount || 0)) +
+            parseInt(b.tip || 0) +
             parseInt(b.fee || 0) +
             parseInt(b.ourfee || 0)),
         0,
@@ -348,7 +349,7 @@ const handle = (method, params, ev, app, user) =>
           description: p.memo,
           preimage: p.ref,
           payment_hash,
-          amount: Math.abs(p.amount * 1000),
+          amount: (Math.abs(p.amount) + p.tip) * 1000,
           fees_paid: p.fee * 1000,
           created_at,
           expires_at: created_at + week,
