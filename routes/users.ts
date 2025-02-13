@@ -819,7 +819,7 @@ export default {
 
   async app(req, res) {
     const { pubkey } = req.params;
-    const app = await g(pubkey);
+    const app = await g(`app:${pubkey}`);
     res.send(app);
   },
 
@@ -864,7 +864,7 @@ export default {
       if (app && uid !== app.uid) fail("Unauthorized");
       if (secret) pubkey = getPublicKey(secret);
       app = { ...app, pubkey, max_amount, budget_renewal, name, uid, secret };
-      await s(pubkey, app);
+      await s(`app:${pubkey}`, app);
       await db.sAdd(`${uid}:apps`, pubkey);
       res.send({});
     } catch (e) {
@@ -881,7 +881,7 @@ export default {
       const app = await g(pubkey);
       if (app && uid !== app.uid) fail("Unauthorized");
       await db.sRem(`${uid}:apps`, pubkey);
-      await db.del(pubkey);
+      await db.del(`app:${pubkey}`);
       res.send({});
     } catch (e) {
       console.log(e);

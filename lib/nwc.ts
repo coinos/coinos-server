@@ -59,8 +59,8 @@ export default () => {
       if (!methods.includes(method)) return;
 
       try {
-        const app = await g(pubkey);
-        if (!app) fail(`pubkey not found`);
+        const app = await g(`app:${pubkey}`);
+        if (!app) fail("pubkey not found");
         const user = await g(`user:${app.uid}`);
 
         const result = await handle(method, params, ev, app, user);

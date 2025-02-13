@@ -81,7 +81,7 @@ export default async (user, ip) => {
     name: username,
   };
 
-  await s(app.pubkey, app);
+  await s(`app:${app.pubkey}`, app);
   await db.sAdd(`${id}:apps`, app.pubkey);
 
   db.multi()
