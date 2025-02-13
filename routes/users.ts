@@ -826,7 +826,7 @@ export default {
   async apps(req, res) {
     const { user } = req;
     const pubkeys = await db.sMembers(`${user.id}:apps`);
-    const apps = await Promise.all(pubkeys.map((p) => g(p)));
+    const apps = await Promise.all(pubkeys.map((p) => g(`app:${p}`)));
 
     const { host } = new URL(process.env.URL);
     const lud16 = `${user.username}@${host}`;
