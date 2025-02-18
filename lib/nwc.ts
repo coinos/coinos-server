@@ -1,7 +1,7 @@
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
-import { err, l } from "$lib/logging";
+import { err, warn, l } from "$lib/logging";
 import { handleZap, serverPubkey, serverSecret } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
@@ -56,6 +56,8 @@ export default () => {
         await nip04.decrypt(serverSecret, pubkey, content),
       );
 
+      db.sAdd("activeNwc", pubkey);
+
       if (!methods.includes(method)) return;
 
       try {
@@ -106,11 +108,11 @@ const handle = (method, params, ev, app, user) =>
       const { max_amount, budget_renewal, pubkey } = app;
 
       const periods = {
-        daily: 60 * 60 * 24,
-        weekly: 60 * 60 * 24 * 7,
-        monthly: 60 * 60 * 24 * 7 * 30,
-        yearly: 60 * 60 * 24 * 7 * 30 * 365,
-        never: 60 * 60 * 24 * 7 * 30 * 365 * 10,
+        daily: 60 * 60 * 24 * 1000,
+        weekly: 60 * 60 * 24 * 7 * 1000,
+        monthly: 60 * 60 * 24 * 30 * 1000,
+        yearly: 60 * 60 * 24 * 365 * 1000,
+        never: 60 * 60 * 24 * 365 * 10 * 1000,
       };
 
       const pids = await db.lRange(`${pubkey}:payments`, 0, -1);
@@ -129,11 +131,13 @@ const handle = (method, params, ev, app, user) =>
         0,
       );
 
-      if (spent + amount > max_amount)
+      if (spent + amount > max_amount) {
+        warn("budget exceeded", pubkey, user?.username, spent, amount, max_amount);
         return error({
           code: "INTERNAL",
           message: `Budget exceeded: ${spent + amount} of ${max_amount}`,
         });
+      }
 
       if (payee === id) {
         const invoice = await getInvoice(pr);

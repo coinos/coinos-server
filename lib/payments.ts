@@ -54,14 +54,20 @@ export const debit = async ({
   rate = undefined,
 }) => {
   amount = parseInt(amount);
+
   const whitelisted = await db.sIsMember(
     "whitelist",
     user?.username?.toLowerCase().trim(),
   );
 
+  const blacklisted = await db.sIsMember(
+    "blacklist",
+    user?.username?.toLowerCase().trim(),
+  );
+
   let serverLimit = await g(`${type}:limit`);
   let userLimit = await g("limit");
-  let frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== types.internal);
+  let frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== types.internal) || blacklisted;
 
   if (frozen || (amount > userLimit && !whitelisted) || amount > serverLimit) {
     warn("Blocking", user.username, amount, hash, user.id, type, frozen, userLimit, serverLimit);
