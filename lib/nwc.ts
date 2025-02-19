@@ -56,7 +56,7 @@ export default () => {
         await nip04.decrypt(serverSecret, pubkey, content),
       );
 
-      db.sAdd("activeNwc", pubkey);
+      // db.sAdd("activeNwc", pubkey);
 
       if (!methods.includes(method)) return;
 
@@ -105,7 +105,7 @@ const handle = (method, params, ev, app, user) =>
       const { amount_msat, payee } = await ln.decode(pr);
       const { id } = await ln.getinfo();
       const amount = Math.round(amount_msat / 1000);
-      const { max_amount, budget_renewal, pubkey } = app;
+      const { max_amount, budget_renewal, pubkey, created } = app;
 
       const periods = {
         daily: 60 * 60 * 24 * 1000,
@@ -131,7 +131,8 @@ const handle = (method, params, ev, app, user) =>
         0,
       );
 
-      if (spent + amount > max_amount) {
+      const whitelisted = await db.sIsMember("activeNwc", pubkey);
+      if ((amount > 1000 && !(whitelisted || created)) || spent + amount > max_amount) {
         warn("budget exceeded", pubkey, user?.username, spent, amount, max_amount);
         return error({
           code: "QUOTA_EXCEEDED",
