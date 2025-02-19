@@ -838,9 +838,10 @@ export default {
           a.nwc = `nostr+walletconnect://${serverPubkey}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
 
         const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
-        const payments = await Promise.all(
+        let payments = await Promise.all(
           pids.map((pid) => g(`payment:${pid}`)),
         );
+        payments = payments.filter((p) => p);
         a.spent = payments.reduce(
           (a, b) =>
             a +
