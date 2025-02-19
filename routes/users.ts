@@ -862,11 +862,24 @@ export default {
       const { user } = req;
       const uid = user.id;
       let app = await g(pubkey);
+
       if (app && uid !== app.uid) fail("Unauthorized");
       if (secret) pubkey = getPublicKey(secret);
-      app = { ...app, pubkey, max_amount, budget_renewal, name, uid, secret };
+
+      app = {
+        ...app,
+        pubkey,
+        max_amount,
+        budget_renewal,
+        name,
+        uid,
+        secret,
+        created: Date.now(),
+      };
+
       await s(`app:${pubkey}`, app);
       await db.sAdd(`${uid}:apps`, pubkey);
+
       res.send({});
     } catch (e) {
       console.log(e);

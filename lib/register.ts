@@ -79,6 +79,7 @@ export default async (user, ip) => {
     max_amount: 10000,
     budget_renewal: "weekly",
     name: username,
+    created: Date.now(),
   };
 
   await s(`app:${app.pubkey}`, app);
