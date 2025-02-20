@@ -13,11 +13,9 @@ import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
-import { randomBytes } from "@noble/hashes/utils";
 import { $ } from "bun";
 import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
-import { encrypt as nip49encrypt } from "nostr-tools/nip49";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
@@ -172,6 +170,7 @@ export default {
 
       let { pubkey } = body;
       if (pubkey) {
+        pubkey = pubkey.trim();
         exists = await getUser(pubkey);
         if (exists && ![username].includes(exists.username)) {
           warn("key in use", pubkey, exists.username);
@@ -201,7 +200,6 @@ export default {
       if (user.pin === "delete") user.pin = undefined;
 
       if (username) {
-        let oldname;
         exists = await getUser(username);
 
         if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
@@ -212,7 +210,6 @@ export default {
             l("changing username", user.username, username);
 
           await db.del(`user:${user.username}`);
-          oldname = user.username;
           user.username = username;
         }
       }
