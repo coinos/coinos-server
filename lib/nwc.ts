@@ -132,7 +132,7 @@ const handle = (method, params, ev, app, user) =>
       );
 
       const whitelisted = await db.sIsMember("activeNwc", pubkey);
-      if ((amount > 1000 && !(whitelisted || created)) || spent + amount > max_amount) {
+      if ((amount > 1000 && !(whitelisted || created)) || (max_amount > 0 && (spent + amount > max_amount))) {
         warn("budget exceeded", pubkey, user?.username, spent, amount, max_amount);
         return error({
           code: "QUOTA_EXCEEDED",

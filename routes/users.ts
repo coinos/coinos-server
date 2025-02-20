@@ -866,7 +866,7 @@ export default {
       if (app && uid !== app.uid) fail("Unauthorized");
       if (secret) pubkey = getPublicKey(secret);
 
-      if (!app) app = { created: Date.now };
+      if (!app) app = { created: Date.now() };
 
       app = {
         ...app,
