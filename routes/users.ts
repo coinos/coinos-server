@@ -863,8 +863,6 @@ export default {
       if (app && uid !== app.uid) fail("Unauthorized");
       if (secret) pubkey = getPublicKey(secret);
 
-      if (!app) app = { created: Date.now() };
-
       app = {
         ...app,
         pubkey,
@@ -874,6 +872,8 @@ export default {
         uid,
         secret,
       };
+
+      if (!app?.created) app.created = Date.now();
 
       await s(`app:${pubkey}`, app);
       await db.sAdd(`${uid}:apps`, pubkey);
