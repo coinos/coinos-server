@@ -65,12 +65,25 @@ export const debit = async ({
     user?.username?.toLowerCase().trim(),
   );
 
-  let serverLimit = await g(`${type}:limit`);
-  let userLimit = await g("limit");
-  let frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== types.internal) || blacklisted;
+  const serverLimit = await g(`${type}:limit`);
+  const userLimit = await g("limit");
+  const frozen =
+    (await g("hardfreeze")) ||
+    ((await g("freeze")) && type !== types.internal) ||
+    blacklisted;
 
   if (frozen || (amount > userLimit && !whitelisted) || amount > serverLimit) {
-    warn("Blocking", user.username, amount, hash, user.id, type, frozen, userLimit, serverLimit);
+    warn(
+      "Blocking",
+      user.username,
+      amount,
+      hash,
+      user.id,
+      type,
+      frozen,
+      userLimit,
+      serverLimit,
+    );
     fail("Problem sending payment");
   }
 
@@ -511,12 +524,18 @@ export const sendLightning = async ({
       fail("Invalid amount");
   }
 
-  const decoded = await ln.decode(pr);
-  const amount_msat = decoded.type.includes("bolt12")
-    ? decoded.invoice_amount_msat
-    : decoded.amount_msat;
+  let { type, invoice_amount_msat, amount_msat, invoice_node_id, payee } =
+    await ln.decode(pr);
+  if (type.includes("bolt12")) {
+    amount_msat = invoice_amount_msat;
+    payee = invoice_node_id;
+  }
 
-  fee = Math.max(parseInt(fee || 0), 2);
+  let minfee = 2;
+  const { channels } = await ln.listpeerchannels();
+  if (channels.some((c) => c.peer_id === payee)) minfee = 0;
+
+  fee = Math.max(parseInt(fee || 0), minfee);
   if (fee < 0) fail("Fee cannot be negative");
 
   const { pays } = await ln.listpays(pr);
@@ -882,7 +901,7 @@ const freezeCheck = async () => {
     funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
   );
 
-  const bcbalance = Math.round(await bc.getBalance() * SATS);
+  const bcbalance = Math.round((await bc.getBalance()) * SATS);
   const { bitcoin } = await lq.getBalance();
   const lqbalance = Math.round(bitcoin * SATS);
 
