@@ -10,13 +10,13 @@ import { encrypt as nip49encrypt } from "nostr-tools/nip49";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
-const valid = /^[\p{L}\p{N} ]{2,24}$/u;
+const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
   let { password, pubkey, username } = user;
   l("registering", username);
 
   if (!username) fail("Username required");
-  username = username.toLowerCase();
+  username = username.toLowerCase().replace(/\s/g, "");
   if (!valid.test(username))
     fail("Usernames can only have letters and numbers");
 
