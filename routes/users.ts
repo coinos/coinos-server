@@ -19,7 +19,7 @@ import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
-import type { Payment, PaymentType } from "$lib/types";
+import { PaymentType } from "$lib/types";
 
 export default {
   upload,
