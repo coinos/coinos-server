@@ -1,12 +1,14 @@
 import { db, g, s } from "$lib/db";
 import { check, claim, get, mint } from "$lib/ecash";
 import { err, l } from "$lib/logging";
-import { credit, debit, types } from "$lib/payments";
+import { credit, debit } from "$lib/payments";
 import { emit } from "$lib/sockets";
 import { bail, fail } from "$lib/utils";
 import { getEncodedToken } from "@cashu/cashu-ts";
 import { v4 } from "uuid";
-const { ecash: type } = types;
+
+import { PaymentType } from "$lib/types";
+const { ecash: type } = PaymentType;
 
 Error.stackTraceLimit = 100; // Set this to the desired limit
 
@@ -97,7 +99,7 @@ export default {
     try {
       amount = Math.round(amount / 1000);
       const ref = preimage;
-      const { lightning: type } = types;
+      const { lightning: type } = PaymentType;
       if (user.username !== "mint") fail("unauthorized");
       const { id: uid, currency } = user;
       const ourfee = await db.debit(

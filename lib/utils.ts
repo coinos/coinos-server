@@ -1,9 +1,6 @@
 import config from "$config";
-import { g, s } from "$lib/db";
+import { g } from "$lib/db";
 import locales from "$lib/locales/index";
-import migrate from "$lib/migrate";
-import { bytesToHex, randomBytes } from "@noble/hashes/utils";
-import { getPublicKey } from "nostr";
 
 const { URL } = process.env;
 
@@ -51,32 +48,10 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
 };
 
 export const getUser = async (username, fields = undefined) => {
-  let update;
   if (username === "undefined") fail("invalid user");
-  const user = await migrate(username);
-  if (user && !user.anon && !user.nwc) {
-    user.nwc = bytesToHex(randomBytes(32));
-    await s(getPublicKey(user.nwc), user.id);
-    update = true;
-  }
-
-  if (user?.profile) {
-    user.picture = `https://coinos.io/api/public/${user.profile}.webp`;
-    delete user.profile;
-
-    if (user.banner) {
-      user.banner = `https://coinos.io/api/public/${user.banner}.webp`;
-    }
-    update = true;
-  }
-
-  if (user?.address) {
-    user.about = user.address;
-    delete user.address;
-    update = true;
-  }
-
-  if (update) s(`user:${user.id}`, user);
+  const k = username?.replace(/\s/g, "").toLowerCase();
+  let user = await g(`user:${k}`);
+  if (typeof user === "string") user = await g(`user:${user}`);
 
   return fields && user ? pick(user, fields) : user;
 };

@@ -13,7 +13,6 @@ import {
   sendInternal,
   sendLightning,
   sendOnchain,
-  types,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
 import {
@@ -29,6 +28,8 @@ import {
 import rpc from "@coinos/rpc";
 import got from "got";
 import { v4 } from "uuid";
+
+import { PaymentType } from "$lib/types";
 
 import ln from "$lib/ln";
 const { URL } = process.env;
@@ -77,7 +78,7 @@ export default {
             sender: user,
           });
         } else if (fund) {
-          p = await debit({ hash, amount, memo: fund, user, type: types.fund });
+          p = await debit({ hash, amount, memo: fund, user, type: PaymentType.fund });
           await db.incrBy(`fund:${fund}`, amount);
           await db.lPush(`fund:${fund}:payments`, p.id);
           l("funded fund", fund);
@@ -115,7 +116,7 @@ export default {
             return p;
           }
           if (p.created < start || p.created > end) return;
-          if (p.type === types.internal) p.with = await getUser(p.ref, fields);
+          if (p.type === PaymentType.internal) p.with = await getUser(p.ref, fields);
           return p;
         }),
       )
@@ -164,7 +165,7 @@ export default {
         params: { hash },
       } = req;
       const p = await getPayment(hash);
-      if (p?.type === types.internal) p.with = await getUser(p.ref, fields);
+      if (p?.type === PaymentType.internal) p.with = await getUser(p.ref, fields);
       res.send(p);
     } catch (e) {
       console.log(e);
@@ -285,7 +286,7 @@ export default {
         amount,
         memo: id,
         ref: id,
-        type: types.fund,
+        type: PaymentType.fund,
       });
 
       await db.lPush(`fund:${id}:payments`, payment.id);
@@ -311,7 +312,7 @@ export default {
 
       for (const { address, amount, asset, category, vout } of details) {
         if (!address) continue;
-        if (type === types.liquid && asset !== config.liquid.btc) continue;
+        if (type === PaymentType.liquid && asset !== config.liquid.btc) continue;
 
         if (category === "send") {
           const p = await getPayment(txid);

@@ -4,11 +4,12 @@ import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { serverPubkey } from "$lib/nostr";
 import { credit } from "$lib/payments";
-import { types } from "$lib/payments";
 import { bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
 import got from "got";
 import { v4 } from "uuid";
+
+import { PaymentType } from "$lib/types";
 
 const { URL } = process.env;
 const host = URL.split("/").at(-1);
@@ -124,7 +125,7 @@ export default {
         invoice: {
           amount: Math.round(amount / 1000),
           memo: metadata,
-          type: types.lightning,
+          type: PaymentType.lightning,
         },
         user,
       });
@@ -158,7 +159,13 @@ export default {
       let p;
       if (invoice) {
         const { hash } = invoice;
-        p = await credit({ hash, amount, memo: id, ref: id, type: types.fund });
+        p = await credit({
+          hash,
+          amount,
+          memo: id,
+          ref: id,
+          type: PaymentType.fund,
+        });
       } else {
         await ln.xpay({
           invstring: pr.replace(/\s/g, "").toLowerCase(),
@@ -173,7 +180,7 @@ export default {
           confirmed: true,
           rate: rates.USD,
           currency: "USD",
-          type: types.fund,
+          type: PaymentType.fund,
           ref: id,
           created: Date.now(),
         };

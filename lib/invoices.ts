@@ -2,11 +2,12 @@ import config from "$config";
 import { db, g, s } from "$lib/db";
 import { request } from "$lib/ecash";
 import ln from "$lib/ln";
-import { types } from "$lib/payments";
 import { emit } from "$lib/sockets";
 import { SATS, bip21, fail, getUser } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import { v4 } from "uuid";
+
+import { PaymentType } from "$lib/types";
 
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
@@ -27,7 +28,7 @@ export const generate = async ({ invoice, user }) => {
     memo,
     memoPrompt,
     prompt,
-    type = types.lightning,
+    type = PaymentType.lightning,
     webhook,
     secret,
   } = invoice;
@@ -65,7 +66,7 @@ export const generate = async ({ invoice, user }) => {
     text = bip21(hash, invoice);
 
     ({ hdkeypath: path } = await node.getAddressInfo(hash));
-  } else if (type === types.lightning) {
+  } else if (type === PaymentType.lightning) {
     let r;
     if (bolt11) {
       const { id: nodeid } = await ln.getinfo();
@@ -87,7 +88,7 @@ export const generate = async ({ invoice, user }) => {
 
     hash = r.bolt11;
     text = r.bolt11;
-  } else if (type === types.bolt12) {
+  } else if (type === PaymentType.bolt12) {
     const r = await ln.offer({
       amount: amount ? `${amount + tip}sat` : "any",
       label: id,
@@ -100,17 +101,17 @@ export const generate = async ({ invoice, user }) => {
     text = r.bolt12;
 
     await s(`invoice:${r.offer_id}`, id);
-  } else if (type === types.bitcoin) {
+  } else if (type === PaymentType.bitcoin) {
     address_type ||= "bech32";
     hash = await bc.getNewAddress({ address_type });
     text = bip21(hash, invoice);
-  } else if (type === types.liquid) {
+  } else if (type === PaymentType.liquid) {
     address_type ||= "blech32";
     hash = await lq.getNewAddress({ address_type });
     text = bip21(hash, invoice);
-  } else if (type === types.internal) {
+  } else if (type === PaymentType.internal) {
     hash = id;
-  } else if (type === types.ecash) {
+  } else if (type === PaymentType.ecash) {
     hash = id;
     text = request(id, amount, memo);
   } else {

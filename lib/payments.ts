@@ -26,22 +26,13 @@ import { bech32 } from "bech32";
 import got from "got";
 import { v4 } from "uuid";
 
+import { PaymentType } from "$lib/types";
+
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
 const { URL } = process.env;
 
 const dust = 547;
-
-export const types = {
-  internal: "internal",
-  bitcoin: "bitcoin",
-  lightning: "lightning",
-  fund: "fund",
-  liquid: "liquid",
-  ecash: "ecash",
-  reconcile: "reconcile",
-  bolt12: "bolt12",
-};
 
 export const debit = async ({
   aid = undefined,
@@ -50,7 +41,7 @@ export const debit = async ({
   fee = 0,
   memo = undefined,
   user,
-  type = types.internal,
+  type = PaymentType.internal,
   rate = undefined,
 }) => {
   amount = parseInt(amount);
@@ -69,7 +60,7 @@ export const debit = async ({
   const userLimit = await g("limit");
   const frozen =
     (await g("hardfreeze")) ||
-    ((await g("freeze")) && type !== types.internal) ||
+    ((await g("freeze")) && type !== PaymentType.internal) ||
     blacklisted;
 
   if (frozen || (amount > userLimit && !whitelisted) || amount > serverLimit) {
@@ -97,7 +88,7 @@ export const debit = async ({
   let iid;
 
   if (invoice) {
-    if (invoice.received >= amount && invoice.type !== types.bolt12)
+    if (invoice.received >= amount && invoice.type !== PaymentType.bolt12)
       fail("Invoice already paid");
     ({ id: iid } = invoice);
 
@@ -119,8 +110,8 @@ export const debit = async ({
   if (!amount || amount < 0) fail("Amount must be greater than zero");
 
   let creditType = type;
-  if (creditType === types.bolt12) creditType = types.lightning;
-  let ourfee: any = [types.bitcoin, types.liquid, types.lightning].includes(
+  if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
+  let ourfee: any = [PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(
     type,
   )
     ? Math.round((amount + fee + tip) * config.fee)
@@ -170,7 +161,7 @@ export const debit = async ({
 
   l(user.username, "sent", type, amount);
   //emit(user.id, "payment", p);
-  if (![types.lightning, types.bolt12].includes(type)) nwcNotify(p, user);
+  if (![PaymentType.lightning, PaymentType.bolt12].includes(type)) nwcNotify(p, user);
 
   return p;
 };
@@ -180,13 +171,13 @@ export const credit = async ({
   amount,
   memo = "",
   ref = "",
-  type = types.internal,
+  type = PaymentType.internal,
   aid = undefined,
 }) => {
   amount = parseInt(amount) || 0;
 
   let inv;
-  if (type === types.bolt12) {
+  if (type === PaymentType.bolt12) {
     const { invoices } = await ln.listinvoices({ invstring: hash });
     const { local_offer_id } = invoices[0];
     inv = await getInvoice(local_offer_id);
@@ -205,7 +196,7 @@ export const credit = async ({
   if (!memo) ({ memo } = inv);
   if (memo && memo.length > 5000) fail("memo too long");
   if (amount < 0 || tip < 0) fail("Invalid amount");
-  if (type === types.internal) amount += tip;
+  if (type === PaymentType.internal) amount += tip;
 
   const user = await getUser(inv.uid);
   const { id: uid, currency } = user;
@@ -244,7 +235,7 @@ export const credit = async ({
     items: undefined,
   };
 
-  if ([types.bitcoin, types.liquid].includes(type)) inv.pending += amount;
+  if ([PaymentType.bitcoin, PaymentType.liquid].includes(type)) inv.pending += amount;
   else {
     inv.received += amount;
     inv.preimage = ref;
@@ -252,7 +243,7 @@ export const credit = async ({
   }
 
   let balanceKey = "balance";
-  if ([types.bitcoin, types.liquid].includes(type)) {
+  if ([PaymentType.bitcoin, PaymentType.liquid].includes(type)) {
     const [txid, vout] = ref.split(":").slice(-2);
     p.confirmed = false;
     balanceKey = "pending";
@@ -264,8 +255,8 @@ export const credit = async ({
   const m = await db.multi();
 
   let creditType = type;
-  if (creditType === types.bolt12) creditType = types.lightning;
-  if ([types.bitcoin, types.liquid, types.lightning].includes(creditType))
+  if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
+  if ([PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(creditType))
     m.incrBy(`credit:${creditType}:${uid}`, Math.round(amount * config.fee));
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
@@ -359,11 +350,11 @@ export const decode = async (hex) => {
   let tx;
   try {
     tx = await bc.decodeRawTransaction(hex);
-    type = types.bitcoin;
+    type = PaymentType.bitcoin;
   } catch (e) {
     try {
       tx = await lq.decodeRawTransaction(hex);
-      type = types.liquid;
+      type = PaymentType.liquid;
     } catch (e) {
       err("invalid hex", hex);
       fail("unrecognized tx");
@@ -393,7 +384,7 @@ export const sendOnchain = async (params) => {
         await node.walletPassphrase(config[type].walletpass, 300);
 
       ({ hex } = await node.signRawTransactionWithWallet(
-        type === types.liquid ? await node.blindRawTransaction(hex) : hex,
+        type === PaymentType.liquid ? await node.blindRawTransaction(hex) : hex,
       ));
     }
 
@@ -406,7 +397,7 @@ export const sendOnchain = async (params) => {
     let fee = 0;
     let change = 0;
 
-    if (type === types.liquid) {
+    if (type === PaymentType.liquid) {
       for (const {
         asset,
         scriptPubKey: { address, type },
@@ -493,7 +484,7 @@ export const sendKeysend = async ({
     fee,
     memo,
     user,
-    type: types.lightning,
+    type: PaymentType.lightning,
   });
 
   const r = await ln.keysend({
@@ -551,7 +542,7 @@ export const sendLightning = async ({
     fee,
     memo,
     user,
-    type: types.lightning,
+    type: PaymentType.lightning,
   });
 
   await db.sAdd("pending", pr);
@@ -612,11 +603,11 @@ export const sendInternal = async ({
 const getAddressType = async (a) => {
   try {
     await bc.getAddressInfo(a);
-    return types.bitcoin;
+    return PaymentType.bitcoin;
   } catch (e) {
     try {
       await lq.getAddressInfo(a);
-      return types.liquid;
+      return PaymentType.liquid;
     } catch (e) {
       fail("unrecognized address");
     }
@@ -640,14 +631,14 @@ export const build = async ({
   if (amount < 0) fail("invalid amount");
 
   const fees: any =
-    type === types.liquid
+    type === PaymentType.liquid
       ? { fastestFee: 0.1, halfHourFee: 0.1, hourFee: 0.1 }
       : await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
 
   fees.hourFee = fees.halfHourFee;
   fees.halfHourFee = fees.fastestFee;
 
-  if (type === types.bitcoin) {
+  if (type === PaymentType.bitcoin) {
     fees.fastestFee = Math.round(fees.fastestFee * 1.1);
     if (fees.fastestFee === fees.halfHourFee) fees.fastestFee++;
     if (fees.hourFee === fees.halfHourFee) fees.hourFee--;
@@ -663,7 +654,7 @@ export const build = async ({
 
   let outs = [{ [address]: btc(amount) }];
 
-  if (type === types.liquid)
+  if (type === PaymentType.liquid)
     outs = outs.map((o) => ({ ...o, asset: config.liquid.btc }));
 
   let raw = await node.createRawTransaction([], outs, 0, replaceable);
@@ -789,7 +780,7 @@ export const reconcile = async (account, initial = false) => {
     if (total > balance) {
       const inv = {
         memo,
-        type: types.reconcile,
+        type: PaymentType.reconcile,
         hash,
         amount,
         uid,
@@ -799,7 +790,7 @@ export const reconcile = async (account, initial = false) => {
       await credit({
         hash,
         amount,
-        type: types.reconcile,
+        type: PaymentType.reconcile,
         aid: id,
       });
     } else if (total < balance) {
@@ -809,7 +800,7 @@ export const reconcile = async (account, initial = false) => {
         hash: v4(),
         memo,
         user,
-        type: types.reconcile,
+        type: PaymentType.reconcile,
       });
     }
   } catch (e) {
@@ -883,7 +874,7 @@ const reverse = async (p) => {
   await db.reverse(
     `payment:${p.id}`,
     `balance:${p.uid}`,
-    `credit:${types.lightning}:${p.uid}`,
+    `credit:${PaymentType.lightning}:${p.uid}`,
     `payment:${p.hash}`,
     `${p.uid}:payments`,
     p.id,

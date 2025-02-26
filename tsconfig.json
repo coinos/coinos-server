@@ -18,6 +18,7 @@
     // Some stricter flags
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noAssignInExpressions": false,
 
     "baseUrl": ".",
     "paths": {

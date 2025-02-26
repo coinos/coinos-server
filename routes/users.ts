@@ -6,7 +6,7 @@ import { db, g, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey } from "$lib/nostr";
-import { reconcile, types } from "$lib/payments";
+import { reconcile } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
@@ -18,6 +18,8 @@ import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
+
+import type { Payment, PaymentType } from "$lib/types";
 
 export default {
   upload,
@@ -465,7 +467,7 @@ export default {
       await Promise.all(
         payments.reverse().map(async (id) => await g(`payment:${id}`)),
       )
-    ).filter((p) => p && p.type === types.internal && p.ref)) {
+    ).filter((p) => p && p.type === PaymentType.internal && p.ref)) {
       if (ref === id) continue;
       const i = contacts.findIndex((c) => c && c.id === ref);
       if (~i) contacts.splice(i, 1);
@@ -817,6 +819,16 @@ export default {
   async app(req, res) {
     const { pubkey } = req.params;
     const app = await g(`app:${pubkey}`);
+
+    let payments = (await db.lRange(`${pubkey}:payments`, 0, -1)) || [];
+    payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
+
+    await Promise.all(
+      payments.map(async (p: Payment) => (p.user = await g(`user:${p.uid}`))),
+    );
+
+    app.payments = payments.filter((p) => p);
+
     res.send(app);
   },
 

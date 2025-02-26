@@ -2,8 +2,9 @@ import { db, g, s } from "$lib/db";
 import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
-import { credit, types } from "$lib/payments";
+import { credit } from "$lib/payments";
 import { getPayment, getUser } from "$lib/utils";
+import { PaymentType } from "$lib/types";
 
 export async function listenForLightning() {
   const inv = await ln.waitanyinvoice((await g("pay_index")) || 0);
@@ -49,7 +50,7 @@ export async function listenForLightning() {
       amount: received,
       memo: invoice.memo,
       ref: preimage,
-      type: bolt12 ? types.bolt12 : types.lightning,
+      type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
     });
   } catch (e) {
     console.log(e);
@@ -97,7 +98,7 @@ export async function replay(index) {
       amount: received,
       memo: invoice.memo,
       ref: preimage,
-      type: bolt12 ? types.bolt12 : types.lightning,
+      type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
     });
   } catch (e) {
     console.log(e);
