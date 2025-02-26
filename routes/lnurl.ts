@@ -20,7 +20,7 @@ export default {
       query: { address },
     } = req;
     const [name, domain] = address.split("@");
-    const url = `https://${domain}/.well-known/lnurlp/${name}`;
+    const url = `https://${domain}/.well-known/lnurlp/${name.toLowerCase().replace(/\s/g,"")}`;
 
     try {
       const r = await got(url).json();
@@ -59,7 +59,7 @@ export default {
       const user = await getUser(
         username
           .replace("lightning:", "")
-          .replace(/\s/, "")
+          .replace(/\s/g, "")
           .replace("=", "")
           .toLowerCase(),
       );
