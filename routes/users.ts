@@ -820,11 +820,14 @@ export default {
     const { pubkey } = req.params;
     const app = await g(`app:${pubkey}`);
 
-    let payments = (await db.lRange(`${pubkey}:payments`, 0, -1)) || [];
-    payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
+    const pids = (await db.lRange(`${pubkey}:payments`, 0, -1)) || [];
 
-    await Promise.all(
-      payments.map(async (p: Payment) => (p.user = await g(`user:${p.uid}`))),
+    const payments = await Promise.all(
+      pids.map(async (pid) => {
+        const p = await g(`payment:${pid}`);
+        p.user = await g(`user:${p.uid}`);
+        return p;
+      }),
     );
 
     app.payments = payments.filter((p) => p);
