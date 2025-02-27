@@ -493,6 +493,7 @@ export default {
     contacts = contacts.slice(0, limit);
 
     const combined = [...pinned, ...contacts];
+
     res.send(combined);
   },
 
