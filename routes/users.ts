@@ -461,7 +461,8 @@ export default {
       (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
     await db.set(`${id}:lastlen`, len);
 
-    const contacts = (await g(`${id}:contacts`)) || [];
+    let contacts = (await g(`${id}:contacts`)) || [];
+    const pins = await db.sMembers(`${id}:pins`);
 
     for (const { ref } of (
       await Promise.all(
@@ -478,9 +479,21 @@ export default {
 
     await s(`${id}:contacts`, contacts);
 
+    const pinned = contacts
+      .filter((c) => pins.includes(c.id))
+      .sort((a, b) => a.username.localeCompare(b.username));
+
+    pinned.map((c) => {
+      c.pinned = true;
+    });
+
     let { limit } = params;
     limit ||= contacts.length;
-    res.send(contacts.slice(0, limit));
+    contacts = contacts.filter((c) => !pins.includes(c.id));
+    contacts = contacts.slice(0, limit);
+
+    const combined = [...pinned, ...contacts];
+    res.send(combined);
   },
 
   async del(req, res) {
@@ -914,5 +927,20 @@ export default {
       console.log(e);
       bail(res, e.message);
     }
+  },
+
+  async addPin(req, res) {
+    const { id: uid } = req.user;
+    const { id } = req.body;
+    await db.sAdd(`${uid}:pins`, id);
+    console.log("added", id);
+    res.send({});
+  },
+
+  async deletePin(req, res) {
+    const { id: uid } = req.user;
+    const { id } = req.body;
+    await db.sRem(`${uid}:pins`, id);
+    res.send({});
   },
 };
