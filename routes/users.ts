@@ -933,7 +933,6 @@ export default {
     const { id: uid } = req.user;
     const { id } = req.body;
     await db.sAdd(`${uid}:pins`, id);
-    console.log("added", id);
     res.send({});
   },
 

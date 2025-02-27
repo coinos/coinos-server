@@ -7,7 +7,8 @@ import mqtt from "$lib/mqtt";
 import { publish, serverSecret } from "$lib/nostr";
 import { emit } from "$lib/sockets";
 import { f, fiat, fmt, getUser, link, nada, t } from "$lib/utils";
-import { finalizeEvent } from "nostr-tools";
+import { hexToBytes } from "@noble/hashes/utils";
+import { finalizeEvent, nip04 } from "nostr-tools";
 import webpush from "web-push";
 
 if (config.vapid) {
@@ -98,10 +99,12 @@ export const nwcNotify = async (p) => {
           settled_at: p.created,
         };
 
-        const content = JSON.stringify({
+        const payload = JSON.stringify({
           notification_type: p.amount > 0 ? "payment_received" : "payment_sent",
           notification,
         });
+
+        const content = await nip04.encrypt(serverSecret, pubkey, payload);
 
         const unsigned = {
           content,
@@ -110,7 +113,7 @@ export const nwcNotify = async (p) => {
           created_at: Math.floor(Date.now() / 1000),
         };
 
-        const event = finalizeEvent(unsigned, serverSecret);
+        const event = finalizeEvent(unsigned, hexToBytes(serverSecret));
 
         publish(event).catch(nada);
       }
