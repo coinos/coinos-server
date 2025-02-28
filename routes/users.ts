@@ -20,6 +20,7 @@ import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
+import type { ProfilePointer } from "nostr-tools/nip19";
 
 export default {
   upload,
@@ -83,6 +84,12 @@ export default {
       if (key.startsWith("npub")) {
         try {
           key = nip19.decode(key).data;
+        } catch (e) {}
+      }
+
+      if (key.startsWith("nprofile")) {
+        try {
+          ({ pubkey: key } = nip19.decode(key).data as ProfilePointer);
         } catch (e) {}
       }
 
