@@ -1,3 +1,4 @@
+import config from "$config";
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
@@ -8,6 +9,7 @@ import { fail, getInvoice, sleep } from "$lib/utils";
 import { hexToBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04 } from "nostr-tools";
+import rpc from "@coinos/rpc";
 import type { UnsignedEvent } from "nostr-tools";
 
 const result = (result) => ({ result });
