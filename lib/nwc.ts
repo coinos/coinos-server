@@ -367,10 +367,13 @@ const handle = (method, params, ev, app, user) =>
         let payment_hash = p.payment_hash || pid;
         if (p.type === "lightning") {
           try {
-            ({ payment_hash } =
-              p.amount > 0
-                ? await ln.listinvoices({ invstring: p.hash })
-                : await ln.listpays({ bolt11: p.hash }));
+            if(p.amount > 0) {
+              const { invoices } = await ln.listinvoices({ invstring: p.hash });
+              payment_hash ||= invoices[0].payment_hash;
+            } else {
+              const { pays } = await ln.listpays({ bolt11: p.hash });
+              payment_hash ||= pays[0].payment_hash;
+            }
           } catch (e) {}
         }
 
