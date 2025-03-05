@@ -56,7 +56,7 @@ export default () => {
         await nip04.decrypt(serverSecret, pubkey, content),
       );
 
-      // db.sAdd("activeNwc", pubkey);
+      // console.log("nwc", method, params, pubkey);
 
       if (!methods.includes(method)) return;
 
@@ -118,7 +118,7 @@ const handle = (method, params, ev, app, user) =>
       const pids = await db.lRange(`${pubkey}:payments`, 0, -1);
       let payments = await Promise.all(pids.map((pid) => g(`payment:${pid}`)));
       payments = payments.filter(
-        (p) => p.created > Date.now() - periods[budget_renewal],
+        (p) => p?.created > Date.now() - periods[budget_renewal],
       );
 
       const spent = payments.reduce(
@@ -131,8 +131,15 @@ const handle = (method, params, ev, app, user) =>
         0,
       );
 
-      const whitelisted = await db.sIsMember("activeNwc", pubkey);
-      if ((amount > 1000 && !(whitelisted || created)) || (max_amount > 0 && (spent + amount > max_amount))) {
+      if (!created) {
+        warn("old nwc token", pubkey, user?.username, spent, amount, max_amount);
+        return error({
+          code: "UNAUTHORIZED",
+          message: `This NWC connection is no longer valid please create a new one at https://coinos.io/settings/nostr`,
+        });
+      }
+
+      if ((max_amount > 0 && (spent + amount > max_amount))) {
         warn("budget exceeded", pubkey, user?.username, spent, amount, max_amount);
         return error({
           code: "QUOTA_EXCEEDED",
@@ -294,6 +301,8 @@ const handle = (method, params, ev, app, user) =>
           created_at: expires_at - week,
           expires_at,
           settled_at: settled_at || Math.round(settled / 1000),
+          state: settled ? "settled" : "pending",
+          status: settled ? "paid" : "pending",
         });
       }
 
@@ -355,10 +364,11 @@ const handle = (method, params, ev, app, user) =>
           preimage: p.ref,
           payment_hash,
           amount: (Math.abs(p.amount) + p.tip) * 1000,
-          fees_paid: p.fee * 1000,
+          fees_paid: (p?.fee || 0) * 1000,
           created_at,
           expires_at: created_at + week,
           settled_at: p.amount > 0 ? created_at : undefined,
+          state: "settled",
           metadata: {},
         });
       }

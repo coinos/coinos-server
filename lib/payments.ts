@@ -173,6 +173,7 @@ export const credit = async ({
   ref = "",
   type = PaymentType.internal,
   aid = undefined,
+  payment_hash = undefined,
 }) => {
   amount = parseInt(amount) || 0;
 
@@ -227,6 +228,7 @@ export const credit = async ({
     rate,
     currency,
     memo,
+    payment_hash,
     ref,
     tip,
     type,

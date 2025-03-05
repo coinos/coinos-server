@@ -14,6 +14,7 @@ export async function listenForLightning() {
     bolt12,
     description,
     pay_index,
+    payment_hash,
     amount_received_msat,
     payment_preimage: preimage,
   } = inv;
@@ -51,6 +52,7 @@ export async function listenForLightning() {
       memo: invoice.memo,
       ref: preimage,
       type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
+      payment_hash,
     });
   } catch (e) {
     console.log(e);
