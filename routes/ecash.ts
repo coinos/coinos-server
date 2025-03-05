@@ -3,7 +3,7 @@ import { check, claim, get, mint } from "$lib/ecash";
 import { err, l } from "$lib/logging";
 import { credit, debit } from "$lib/payments";
 import { emit } from "$lib/sockets";
-import { bail, fail } from "$lib/utils";
+import { bail, fail, getInvoice } from "$lib/utils";
 import { getEncodedToken } from "@cashu/cashu-ts";
 import { v4 } from "uuid";
 
@@ -147,7 +147,7 @@ export default {
   async receive(req, res) {
     try {
       const { id, proofs, mint, memo } = req.body;
-      const { uid: ref } = await g(`invoice:${id}`);
+      const { uid: ref } = await getInvoice(id);
 
       const amount = await claim(
         getEncodedToken({

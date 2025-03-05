@@ -111,9 +111,11 @@ export const debit = async ({
 
   let creditType = type;
   if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
-  let ourfee: any = [PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(
-    type,
-  )
+  let ourfee: any = [
+    PaymentType.bitcoin,
+    PaymentType.liquid,
+    PaymentType.lightning,
+  ].includes(type)
     ? Math.round((amount + fee + tip) * config.fee)
     : 0;
 
@@ -161,7 +163,8 @@ export const debit = async ({
 
   l(user.username, "sent", type, amount);
   //emit(user.id, "payment", p);
-  if (![PaymentType.lightning, PaymentType.bolt12].includes(type)) nwcNotify(p, user);
+  if (![PaymentType.lightning, PaymentType.bolt12].includes(type))
+    nwcNotify(p, user);
 
   return p;
 };
@@ -237,7 +240,8 @@ export const credit = async ({
     items: undefined,
   };
 
-  if ([PaymentType.bitcoin, PaymentType.liquid].includes(type)) inv.pending += amount;
+  if ([PaymentType.bitcoin, PaymentType.liquid].includes(type))
+    inv.pending += amount;
   else {
     inv.received += amount;
     inv.preimage = ref;
@@ -258,7 +262,11 @@ export const credit = async ({
 
   let creditType = type;
   if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
-  if ([PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(creditType))
+  if (
+    [PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(
+      creditType,
+    )
+  )
     m.incrBy(`credit:${creditType}:${uid}`, Math.round(amount * config.fee));
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
@@ -430,7 +438,7 @@ export const sendOnchain = async (params) => {
         value,
       } of tx.vout) {
         total += sats(value);
-        const invoice = await g(`invoice:${address}`);
+        const invoice = await getInvoice(address);
         if (invoice?.aid === aid) fail("Cannot send to internal address");
 
         if ((await node.getAddressInfo(address)).ismine) {

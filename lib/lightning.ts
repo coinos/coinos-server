@@ -3,8 +3,8 @@ import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { credit } from "$lib/payments";
-import { getPayment, getUser } from "$lib/utils";
 import { PaymentType } from "$lib/types";
+import { getInvoice, getPayment, getUser } from "$lib/utils";
 
 export async function listenForLightning() {
   const inv = await ln.waitanyinvoice((await g("pay_index")) || 0);
@@ -27,8 +27,10 @@ export async function listenForLightning() {
   try {
     if (!preimage) return;
 
-    const id = bolt11 ? (await g(`invoice:${bolt11}`)) : (await g(`invoice:${local_offer_id}`));
-    const invoice = await g(`invoice:${id}`);
+    const id = bolt11
+      ? await getInvoice(bolt11)
+      : await getInvoice(local_offer_id);
+    const invoice = await getInvoice(id);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
     const p = await getPayment(bolt11 || bolt12);
@@ -76,8 +78,10 @@ export async function replay(index) {
   try {
     if (!preimage) return;
 
-    const id = bolt11 ? (await g(`invoice:${bolt11}`)) : (await g(`invoice:${local_offer_id}`));
-    const invoice = await g(`invoice:${id}`);
+    const id = bolt11
+      ? await getInvoice(bolt11)
+      : await getInvoice(local_offer_id);
+    const invoice = await getInvoice(id);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
     const p = await getPayment(bolt11 || bolt12);

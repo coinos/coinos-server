@@ -3,7 +3,7 @@ import { db, g, s } from "$lib/db";
 import { request } from "$lib/ecash";
 import ln from "$lib/ln";
 import { emit } from "$lib/sockets";
-import { SATS, bip21, fail, getUser } from "$lib/utils";
+import { SATS, bip21, fail, getInvoice, getUser } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import { v4 } from "uuid";
 
@@ -95,7 +95,7 @@ export const generate = async ({ invoice, user }) => {
       description: memo || id,
     });
 
-    if (await g(`invoice:${r.offer_id}`)) fail("Duplicate offer exists");
+    if (await getInvoice(r.offer_id)) fail("Duplicate offer exists");
 
     hash = r.bolt12;
     text = r.bolt12;

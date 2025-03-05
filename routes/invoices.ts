@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g } from "$lib/db";
+import { db } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
 import { bail, fields, getInvoice, getUser } from "$lib/utils";
@@ -10,8 +10,7 @@ export default {
     const {
       params: { id },
     } = req;
-    let invoice = await g(`invoice:${id}`);
-    if (typeof invoice === "string") invoice = await g(`invoice:${invoice}`);
+    const invoice = await getInvoice(id);
 
     if (invoice) {
       invoice.secret = undefined;
@@ -31,7 +30,12 @@ export default {
     try {
       res.send(await generate({ invoice, user }));
     } catch (e) {
-      err("problem generating invoice", req.user?.username, body.user?.username, e.message);
+      err(
+        "problem generating invoice",
+        req.user?.username,
+        body.user?.username,
+        e.message,
+      );
       bail(res, e.message);
     }
   },
