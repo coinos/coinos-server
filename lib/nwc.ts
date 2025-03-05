@@ -6,10 +6,10 @@ import { err, l, warn } from "$lib/logging";
 import { handleZap, serverPubkey, serverSecret } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
+import rpc from "@coinos/rpc";
 import { hexToBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04 } from "nostr-tools";
-import rpc from "@coinos/rpc";
 import type { UnsignedEvent } from "nostr-tools";
 
 const result = (result) => ({ result });
@@ -364,7 +364,7 @@ const handle = (method, params, ev, app, user) =>
         if (p.amount < 0 && type === "incoming") continue;
         if (p.amount > 0 && type === "outgoing") continue;
 
-        let payment_hash = p.id;
+        let payment_hash = p.payment_hash || pid;
         if (p.type === "lightning") {
           try {
             ({ payment_hash } =
