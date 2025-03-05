@@ -1,7 +1,7 @@
 import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
-import { err, warn, l } from "$lib/logging";
+import { err, l, warn } from "$lib/logging";
 import { handleZap, serverPubkey, serverSecret } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
@@ -12,6 +12,7 @@ import type { UnsignedEvent } from "nostr-tools";
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
+const bc = rpc(config.bitcoin);
 
 const methods = [
   "pay_keysend",
@@ -132,15 +133,29 @@ const handle = (method, params, ev, app, user) =>
       );
 
       if (!created) {
-        warn("old nwc token", pubkey, user?.username, spent, amount, max_amount);
+        warn(
+          "old nwc token",
+          pubkey,
+          user?.username,
+          spent,
+          amount,
+          max_amount,
+        );
         return error({
           code: "UNAUTHORIZED",
           message: `This NWC connection is no longer valid please create a new one at https://coinos.io/settings/nostr`,
         });
       }
 
-      if ((max_amount > 0 && (spent + amount > max_amount))) {
-        warn("budget exceeded", pubkey, user?.username, spent, amount, max_amount);
+      if (max_amount > 0 && spent + amount > max_amount) {
+        warn(
+          "budget exceeded",
+          pubkey,
+          user?.username,
+          spent,
+          amount,
+          max_amount,
+        );
         return error({
           code: "QUOTA_EXCEEDED",
           message: `Budget exceeded: ${spent + amount} of ${max_amount}`,
@@ -229,13 +244,15 @@ const handle = (method, params, ev, app, user) =>
     },
 
     async get_info() {
-      const { alias, blockheight, color } = await ln.getinfo();
+      const { alias, blockheight, color, id } = await ln.getinfo();
+
       return result({
         alias,
-        color,
-        pubkey: serverPubkey,
-        network: "mainnet",
+        block_hash: await bc.getBlockHash(blockheight),
         block_height: blockheight,
+        color,
+        pubkey: id,
+        network: "mainnet",
         methods,
       });
     },
