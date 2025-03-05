@@ -891,7 +891,7 @@ export default {
 
   async updateApp(req, res) {
     try {
-      let { secret, pubkey, max_amount, budget_renewal, name } = req.body;
+      let { secret, pubkey, max_amount, max_fee, budget_renewal, name } = req.body;
       const { user } = req;
       const uid = user.id;
       let app = await g(pubkey);
@@ -903,6 +903,7 @@ export default {
         ...app,
         pubkey,
         max_amount,
+        max_fee,
         budget_renewal,
         name,
         uid,
