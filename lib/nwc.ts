@@ -108,7 +108,7 @@ const handle = (method, params, ev, app, user) =>
       const { amount_msat, payee } = await ln.decode(pr);
       const { id } = await ln.getinfo();
       const amount = Math.round(amount_msat / 1000);
-      const { max_amount, budget_renewal, pubkey, created } = app;
+      const { max_amount, max_fee, budget_renewal, pubkey, created } = app;
 
       const periods = {
         daily: 60 * 60 * 24 * 1000,
@@ -197,6 +197,7 @@ const handle = (method, params, ev, app, user) =>
 
       const { id: pid } = await sendLightning({
         amount,
+        fee: max_fee || Math.round(amount * 0.01),
         user,
         pr,
       });
