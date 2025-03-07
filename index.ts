@@ -48,9 +48,7 @@ app.get("/invoices", auth, invoices.list);
 app.post("/invoice", optional, invoices.create);
 app.post("/sign", auth, invoices.sign);
 
-app.get("/assetlinks.json", (_,res) => {
-  res.sendFile('assetlinks.json'); 
-});
+app.get("/assetlinks.json", (_, res) => res.sendFile("assetlinks.json"));
 app.get("/nostr.json", nostr.identities);
 app.get("/profile/:profile", nostr.profile);
 app.get("/:pubkey/count", nostr.count);

@@ -361,14 +361,15 @@ const handle = (method, params, ev, app, user) =>
       let transactions = [];
       for (const pid of payments) {
         const p = await g(`payment:${pid}`);
-        if (p.created < from || p.created > until) continue;
+        const created_at = Math.floor(p.created / 1000);
+        if (created_at < from || created_at > until) continue;
         if (p.amount < 0 && type === "incoming") continue;
         if (p.amount > 0 && type === "outgoing") continue;
 
         let payment_hash = p.payment_hash || pid;
         if (p.type === "lightning") {
           try {
-            if(p.amount > 0) {
+            if (p.amount > 0) {
               const { invoices } = await ln.listinvoices({ invstring: p.hash });
               payment_hash ||= invoices[0].payment_hash;
             } else {
@@ -377,8 +378,6 @@ const handle = (method, params, ev, app, user) =>
             }
           } catch (e) {}
         }
-
-        const created_at = Math.floor(p.created / 1000);
 
         transactions.push({
           type: p.amount > 0 ? "incoming" : "outgoing",
