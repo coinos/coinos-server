@@ -27,10 +27,7 @@ export async function listenForLightning() {
   try {
     if (!preimage) return;
 
-    const id = bolt11
-      ? await getInvoice(bolt11)
-      : await getInvoice(local_offer_id);
-    const invoice = await getInvoice(id);
+    const invoice = await getInvoice(bolt11 ?? local_offer_id);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
     const p = await getPayment(bolt11 || bolt12);
@@ -78,10 +75,7 @@ export async function replay(index) {
   try {
     if (!preimage) return;
 
-    const id = bolt11
-      ? await getInvoice(bolt11)
-      : await getInvoice(local_offer_id);
-    const invoice = await getInvoice(id);
+    const invoice = await getInvoice(bolt11 ?? local_offer_id);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
     const p = await getPayment(bolt11 || bolt12);
