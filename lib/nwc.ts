@@ -85,7 +85,6 @@ export default () => {
         response = await finalizeEvent(response, hexToBytes(serverSecret));
         r.send(["EVENT", response]);
       } catch (e) {
-        console.log(e);
         err(
           "problem with nwc",
           pubkey,

@@ -315,7 +315,7 @@ export default {
       }
 
       if (username !== "coinos" && username !== "funk" && username !== "btcpos")
-        l("logged in", username, password);
+        l("logged in", username);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
