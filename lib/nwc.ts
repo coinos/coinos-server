@@ -24,7 +24,6 @@ const methods = [
   "make_invoice",
   "lookup_invoice",
   "list_transactions",
-  "notifications",
 ];
 
 const week = 7 * 24 * 60 * 60;
@@ -257,6 +256,7 @@ const handle = (method, params, ev, app, user) =>
         pubkey: id,
         network: "mainnet",
         methods,
+        notifications: ["payment_received", "payment_sent"],
       });
     },
 
