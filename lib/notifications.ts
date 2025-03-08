@@ -1,7 +1,7 @@
 import config from "$config";
 import { db } from "$lib/db";
 import ln from "$lib/ln";
-import { err, warn } from "$lib/logging";
+import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import mqtt from "$lib/mqtt";
 import { publish, serverSecret } from "$lib/nostr";
@@ -87,6 +87,7 @@ export const nwcNotify = async (p) => {
       let payment_hash = "";
       if (p.type === "lightning") ({ payment_hash } = await ln.decode(p.hash));
       for (const pubkey of pubkeys) {
+        l("notifying", pubkey, p.type, p.amount);
         const notification = {
           type: p.amount > 0 ? "incoming" : "outgoing",
           invoice: p.hash,
@@ -119,6 +120,7 @@ export const nwcNotify = async (p) => {
       }
     }
   } catch (e) {
+    console.log(e);
     warn("nwc notification failed", e.message);
   }
 };
