@@ -373,14 +373,6 @@ export default {
       const { username } = user;
       l("logging in", username, ip);
 
-      if (
-        user.twofa &&
-        (typeof twofa === "undefined" ||
-          !authenticator.check(twofa, user.otpsecret))
-      ) {
-        return res.code(401).send("2fa required");
-      }
-
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
       res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });

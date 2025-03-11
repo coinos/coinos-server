@@ -247,7 +247,6 @@ export default {
     const {
       params: { name },
     } = req;
-    fail("disabled");
     const balance = await g(`fund:${name}`);
     res.send({
       tag: "withdrawRequest",
@@ -265,7 +264,6 @@ export default {
       user,
     } = req;
     try {
-      fail("disabled");
       const { id: uid } = user;
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
