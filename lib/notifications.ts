@@ -1,5 +1,5 @@
 import config from "$config";
-import { db } from "$lib/db";
+import { db, g } from "$lib/db";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
@@ -87,6 +87,9 @@ export const nwcNotify = async (p) => {
       let payment_hash = "";
       if (p.type === "lightning") ({ payment_hash } = await ln.decode(p.hash));
       for (const pubkey of pubkeys) {
+        const { notify } = await g(`app:${pubkey}`);
+        if (!notify) continue;
+
         l("notifying", pubkey, p.type, p.amount);
         const notification = {
           type: p.amount > 0 ? "incoming" : "outgoing",
