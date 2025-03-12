@@ -96,8 +96,8 @@ export const nwcNotify = async (p) => {
           payment_hash: payment_hash,
           amount: Math.abs(p.amount) * 1000,
           fees_paid: (parseInt(p.fee) || 0) * 1000,
-          created_at: p.created,
-          settled_at: p.created,
+          created_at: Math.round(p.created / 1000),
+          settled_at: Math.round(p.created / 1000),
         };
 
         const payload = JSON.stringify({
