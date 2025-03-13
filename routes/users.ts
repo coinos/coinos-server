@@ -769,7 +769,11 @@ export default {
 
   async updateAccount(req, res) {
     const { id } = req.params;
+    const { id: uid } = req.user;
     const { name } = req.body;
+
+    const pos = await db.lPos(`${uid}:accounts`, id);
+    if (!pos) fail("account not found");
 
     const account = await g(`account:${id}`);
     account.name = name;
@@ -783,6 +787,10 @@ export default {
       const { id } = req.body;
       const { id: uid } = req.user;
       const { type } = await g(`account:${id}`);
+
+      const pos = await db.lPos(`${uid}:accounts`, id);
+      if (!(type && pos)) fail("account not found");
+
       try {
         const node = rpc({ ...config[type], wallet: id });
         await node.unloadWallet(id);

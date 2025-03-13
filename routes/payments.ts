@@ -268,6 +268,9 @@ export default {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
+      const managers = await db.sMembers(`fund:${id}:managers`);
+      if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
+
       const result: any = await db.debit(`fund:${id}`, "", amount, 0, 0, 0);
       if (result.err) fail(result.err);
 
