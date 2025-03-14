@@ -22,6 +22,9 @@ import { v4 } from "uuid";
 import { PaymentType } from "$lib/types";
 import type { ProfilePointer } from "nostr-tools/nip19";
 
+const { host } = new URL(process.env.URL);
+const relay = encodeURIComponent(config.publicRelay);
+
 export default {
   upload,
 
@@ -839,7 +842,11 @@ export default {
 
   async app(req, res) {
     const { pubkey } = req.params;
+    const { user } = req;
     const app = await g(`app:${pubkey}`);
+    if (app.uid !== user.id) fail("unauthorized");
+
+    const lud16 = `${user.username}@${host}`;
 
     const pids = (await db.lRange(`${pubkey}:payments`, 0, -1)) || [];
 
@@ -851,6 +858,7 @@ export default {
       }),
     );
 
+    app.nwc = `nostr+walletconnect://${serverPubkey}?relay=${relay}&secret=${app.secret}&lud16=${lud16}`;
     app.payments = payments.filter((p) => p);
 
     res.send(app);
@@ -861,9 +869,7 @@ export default {
     const pubkeys = await db.sMembers(`${user.id}:apps`);
     const apps = await Promise.all(pubkeys.map((p) => g(`app:${p}`)));
 
-    const { host } = new URL(process.env.URL);
     const lud16 = `${user.username}@${host}`;
-    const relay = encodeURIComponent(config.publicRelay);
 
     await Promise.all(
       apps.map(async (a) => {
