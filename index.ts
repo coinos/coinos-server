@@ -70,7 +70,9 @@ app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", payments.get);
 app.post("/parse", auth, payments.parse);
 app.get("/fund/:name", payments.fund);
-app.get("/fund/:name/withdraw", payments.withdraw);
+// app.get("/fund/:name/withdraw", auth, payments.withdraw);
+app.get("/fund/:name/managers", payments.managers);
+app.post("/fund/managers", auth, payments.addManager);
 app.post("/take", auth, payments.take);
 app.post("/print", auth, payments.print);
 app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
@@ -85,7 +87,7 @@ app.get("/decode", lnurl.decode);
 app.get("/lnurl/verify/:id", lnurl.verify);
 app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
-app.get("/lnurlw", lnurl.withdraw);
+// app.get("/lnurlw", lnurl.withdraw);
 
 app.post("/freeze", payments.freeze);
 

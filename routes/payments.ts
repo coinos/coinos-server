@@ -243,20 +243,23 @@ export default {
     res.send({ amount, payments });
   },
 
-  async withdraw(req, res) {
-    const {
-      params: { name },
-    } = req;
-    const balance = await g(`fund:${name}`);
-    res.send({
-      tag: "withdrawRequest",
-      callback: `${URL}/api/lnurlw`,
-      k1: name,
-      defaultDescription: `Withdraw from coinos fund ${name}`,
-      minWithdrawable: balance > 0 ? 1000 : 0,
-      maxWithdrawable: balance * 1000,
-    });
-  },
+  // async withdraw(req, res) {
+  //   const {
+  //     params: { name },
+  //   } = req;
+  //   const { user } = req;
+  //   const balance = await g(`fund:${name}`);
+  //   const managers = await db.sMembers(`fund:${name}:managers`);
+  //   if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
+  //   res.send({
+  //     tag: "withdrawRequest",
+  //     callback: `${URL}/api/lnurlw`,
+  //     k1: name,
+  //     defaultDescription: `Withdraw from coinos fund ${name}`,
+  //     minWithdrawable: balance > 0 ? 1000 : 0,
+  //     maxWithdrawable: balance * 1000,
+  //   });
+  // },
 
   async take(req, res) {
     let {
@@ -306,6 +309,44 @@ export default {
       warn("problem withdrawing from fund", user.username, e.message);
       bail(res, e.message);
     }
+  },
+
+  async managers(req, res) {
+    const { name } = req.params;
+
+    const ids = await db.sMembers(`fund:${name}:managers`);
+
+    const managers = await Promise.all(
+      ids.map(async (id) => await getUser(id)),
+    );
+
+    res.send(managers);
+  },
+
+  async addManager(req, res) {
+    const { id, username } = req.body;
+    const { user } = req;
+
+    const k = `fund:${id}:managers`;
+
+    let managers = await db.sMembers(k);
+    if (managers.length) {
+      if (!managers.includes(user.id)) fail("Unauthorized");
+    } else {
+      await db.sAdd(k, user.id);
+    }
+
+    const u = await getUser(username);
+    if (!u) fail("User not found");
+    const { id: uid } = u;
+
+    await db.sAdd(k, uid);
+
+    const ids = await db.sMembers(k);
+    if (!managers.length)
+      managers = await Promise.all(ids.map(async (id) => await getUser(id)));
+
+    res.send(managers);
   },
 
   async confirm(req, res) {
