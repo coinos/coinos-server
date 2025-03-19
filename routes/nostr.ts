@@ -53,7 +53,7 @@ export default {
         const { pubkey } = JSON.parse(description);
         let amount = 0;
         try {
-          const { amount_msat } = await ln.decode(bolt11);
+          const { amount_msat } = await ln.decode({ string: bolt11 });
           if (amount_msat) amount = Math.round(amount_msat / 1000);
         } catch (e) {}
 
@@ -183,7 +183,7 @@ export default {
         const { pubkey } = JSON.parse(description);
         let amount = 0;
         try {
-          const { amount_msat } = await ln.decode(bolt11);
+          const { amount_msat } = await ln.decode({ string: bolt11 });
           if (amount_msat) amount = Math.round(amount_msat / 1000);
         } catch (e) {}
 

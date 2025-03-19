@@ -198,7 +198,7 @@ export default {
         await s("nodes", nodes);
       }
 
-      const decoded = await ln.decode(payreq);
+      const decoded = await ln.decode({ string: payreq });
 
       let amount_msat;
       let payee;
@@ -209,7 +209,7 @@ export default {
       } else ({ amount_msat, payee } = decoded);
 
       const node = nodes.find((n) => n.nodeid === payee);
-      const alias = node ? node.alias : payee.substr(0, 12);
+      const alias = node?.alias || payee.substr(0, 12);
 
       const amount = Math.round(amount_msat / 1000);
       let ourfee = Math.round(amount * config.fee);
@@ -522,7 +522,7 @@ export default {
       if (r.reason) fail(r.reason);
       const { pr } = r;
 
-      const { payee } = await ln.decode(pr);
+      const { payee } = await ln.decode({ string: pr });
       const { id } = await ln.getinfo();
 
       let p;
@@ -610,11 +610,17 @@ export default {
 
   async decode(req, res) {
     const { bolt11 } = req.params;
-    res.send(await ln.decode(bolt11));
+    res.send(await ln.decode({ string: bolt11 }));
   },
 
   async fetchinvoice(req, res) {
     const { amount, offer } = req.body;
-    res.send(await ln.fetchinvoice(offer, amount ? amount * 1000 : null));
+
+    res.send(
+      await ln.fetchinvoice({
+        offer,
+        amount_msat: amount ? amount * 1000 : null,
+      }),
+    );
   },
 };

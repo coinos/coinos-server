@@ -70,7 +70,7 @@ export const generate = async ({ invoice, user }) => {
     let r;
     if (bolt11) {
       const { id: nodeid } = await ln.getinfo();
-      r = await ln.decode(bolt11);
+      r = await ln.decode({ string: bolt11 });
       if (r.payee !== nodeid) fail("invalid invoice");
       amount = Math.round(r.amount_msat / 1000);
       r.bolt11 = bolt11;
