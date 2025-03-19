@@ -526,7 +526,7 @@ export const sendLightning = async ({
   }
 
   let { type, invoice_amount_msat, amount_msat, invoice_node_id, payee } =
-    await ln.decode(pr);
+    await ln.decode({ string: pr });
   if (type.includes("bolt12")) {
     amount_msat = invoice_amount_msat;
     payee = invoice_node_id;
@@ -539,7 +539,7 @@ export const sendLightning = async ({
   fee = Math.max(parseInt(fee || 0), minfee);
   if (fee < 0) fail("Fee cannot be negative");
 
-  const { pays } = await ln.listpays(pr);
+  const { pays } = await ln.listpays({ bolt11: pr });
   if (pays.find((p) => p.status === "complete"))
     fail("Invoice has already been paid");
 
@@ -829,7 +829,7 @@ export const check = async () => {
     for (const pr of payments) {
       const p = await getPayment(pr);
       if (!p || Date.now() - p.created < 10000) continue;
-      const { pays } = await ln.listpays(pr);
+      const { pays } = await ln.listpays({ bolt11: pr });
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");
       const completed = pays.find((p) => p.status === "complete");
@@ -858,7 +858,7 @@ const finalize = async (r, p) => {
   nwcNotify(p);
 
   const maxfee = p.fee;
-  const { amount_msat } = await ln.decode(p.hash);
+  const { amount_msat } = await ln.decode({ string: p.hash });
   p.fee = Math.round((r.amount_sent_msat - amount_msat) / 1000);
   p.ref = preimage;
 

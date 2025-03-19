@@ -103,7 +103,7 @@ const handle = (method, params, ev, app, user) =>
   ({
     async pay_invoice() {
       const { invoice: pr } = params;
-      const { amount_msat, payee } = await ln.decode(pr);
+      const { amount_msat, payee } = await ln.decode({ bolt11: pr });
       const { id } = await ln.getinfo();
       const amount = Math.round(amount_msat / 1000);
       const { max_amount, max_fee, budget_renewal, pubkey, created } = app;
@@ -203,7 +203,7 @@ const handle = (method, params, ev, app, user) =>
       await db.lPush(`${pubkey}:payments`, pid);
 
       for (let i = 0; i < 10; i++) {
-        const { pays } = await ln.listpays(pr);
+        const { pays } = await ln.listpays({ bolt11: pr });
         const p = pays.find((p) => p.status === "complete");
         if (p) {
           const { preimage } = p;

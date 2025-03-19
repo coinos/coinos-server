@@ -85,7 +85,7 @@ export const nwcNotify = async (p) => {
     const pubkeys = await db.sMembers(`${user.id}:apps`);
     if (pubkeys.length) {
       let payment_hash = "";
-      if (p.type === "lightning") ({ payment_hash } = await ln.decode(p.hash));
+      if (p.type === "lightning") ({ payment_hash } = await ln.decode({ string: p.hash }));
       for (const pubkey of pubkeys) {
         const { notify } = await g(`app:${pubkey}`);
         if (!notify) continue;

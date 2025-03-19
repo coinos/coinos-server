@@ -7,7 +7,15 @@ import { PaymentType } from "$lib/types";
 import { getInvoice, getPayment, getUser } from "$lib/utils";
 
 export async function listenForLightning() {
-  const inv = await ln.waitanyinvoice((await g("pay_index")) || 0);
+  let inv;
+  try {
+    inv = await ln.waitanyinvoice({
+      lastpay_index: (await g("pay_index")) || 0,
+    });
+  } catch (e) {
+    return setTimeout(listenForLightning, 2000);
+  }
+
   const {
     local_offer_id,
     bolt11,
