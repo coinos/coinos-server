@@ -776,7 +776,7 @@ export default {
     const { name } = req.body;
 
     const pos = await db.lPos(`${uid}:accounts`, id);
-    if (!pos) fail("account not found");
+    if (pos == null) fail("account not found");
 
     const account = await g(`account:${id}`);
     account.name = name;
@@ -792,7 +792,7 @@ export default {
       const { type } = await g(`account:${id}`);
 
       const pos = await db.lPos(`${uid}:accounts`, id);
-      if (!(type && pos)) fail("account not found");
+      if (!(type && pos != null)) fail("account not found");
 
       try {
         const node = rpc({ ...config[type], wallet: id });
