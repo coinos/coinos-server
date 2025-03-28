@@ -7,13 +7,13 @@ export default {
   async balances(_, res) {
     let total = 0;
 
-    for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
-      total += parseInt(await db.get(k));
-    }
-
-    for await (const k of archive.scanIterator({ MATCH: "balance:*" })) {
-      total += parseInt(await archive.get(k));
-    }
+    // for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
+    //   total += parseInt(await db.get(k));
+    // }
+    //
+    // for await (const k of archive.scanIterator({ MATCH: "balance:*" })) {
+    //   total += parseInt(await archive.get(k));
+    // }
 
     const funds = await ln.listfunds();
     const lnchannel = parseInt(
@@ -30,7 +30,6 @@ export default {
       cash,
       lnchannel,
       lnwallet,
-      total,
     };
 
     res.send(info);

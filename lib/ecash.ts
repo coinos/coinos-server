@@ -13,6 +13,7 @@ import {
   getEncodedTokenV4,
 } from "@cashu/cashu-ts";
 
+
 const { URL } = process.env;
 const m = new CashuMint(config.mintUrl);
 const w = new CashuWallet(m);

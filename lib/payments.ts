@@ -521,8 +521,10 @@ export const sendLightning = async ({
 
   if (typeof amount !== "undefined") {
     amount = parseInt(amount);
-    if (amount < 0 || amount > SATS || Number.isNaN(amount))
+    if (amount < 0 || amount > SATS || Number.isNaN(amount)) {
+      warn("invalid amount", amount);
       fail("Invalid amount");
+    }
   }
 
   let { type, invoice_amount_msat, amount_msat, invoice_node_id, payee } =
