@@ -1,6 +1,6 @@
 import { g, s } from "$lib/db";
 import { err } from "$lib/logging";
-import { fields, pick } from "$lib/utils";
+import { fields, getUser } from "$lib/utils";
 import got from "got";
 
 const dedup = (array) =>
@@ -45,9 +45,8 @@ export const getLocations = async () => {
     for await (const l of locations) {
       const username = l.tags["payment:coinos"];
       if (username) {
-        const uid = await g(`user:${username}`);
-        const user = await g(`user:${uid}`);
-        if (user) l.osm_json.tags.user = pick(user, fields);
+        const user = await getUser(username, fields);
+        if (user) l.osm_json.tags.user = user;
       }
     }
 
