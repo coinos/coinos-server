@@ -103,6 +103,7 @@ app.post("/account/delete", auth, users.deleteAccount);
 
 app.get("/users", auth, users.list);
 app.get("/me", auth, users.me);
+app.get("/credits", auth, users.credits);
 app.get("/users/:key", users.get);
 app.post("/register", users.create);
 app.post("/disable2fa", auth, users.disable2fa);

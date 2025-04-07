@@ -968,4 +968,12 @@ export default {
     await db.sRem(`${uid}:pins`, id);
     res.send({});
   },
+
+  async credits(req, res) {
+    const { id } = req.user;
+    const bitcoin = await g(`credit:bitcoin:${id}`);
+    const lightning = await g(`credit:lightning:${id}`);
+    const liquid = await g(`credit:liquid:${id}`);
+    res.send({ bitcoin, lightning, liquid });
+  },
 };
