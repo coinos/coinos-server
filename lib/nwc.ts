@@ -102,7 +102,7 @@ export default () => {
 const handle = (method, params, ev, app, user) =>
   ({
     async pay_invoice() {
-      const { invoice: pr } = params;
+      const { invoice: pr, metadata } = params;
       const { amount_msat, payee } = await ln.decode(pr);
       const { id } = await ln.getinfo();
       const amount = Math.round(amount_msat / 1000);
@@ -198,6 +198,7 @@ const handle = (method, params, ev, app, user) =>
         fee: max_fee || Math.round(amount * 0.01),
         user,
         pr,
+        memo: JSON.stringify(metadata)
       });
 
       await db.lPush(`${pubkey}:payments`, pid);
