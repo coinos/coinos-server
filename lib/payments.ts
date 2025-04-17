@@ -116,7 +116,7 @@ export const debit = async ({
     PaymentType.liquid,
     PaymentType.lightning,
   ].includes(type)
-    ? Math.round((amount + fee + tip) * config.fee)
+    ? Math.round((amount + fee + tip) * config.fee[creditType])
     : 0;
 
   if (aid) ourfee = 0;
@@ -267,7 +267,10 @@ export const credit = async ({
       creditType,
     )
   )
-    m.incrBy(`credit:${creditType}:${uid}`, Math.round(amount * config.fee));
+    m.incrBy(
+      `credit:${creditType}:${uid}`,
+      Math.round(amount * config.fee[creditType]),
+    );
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
     .set(`payment:${p.id}`, JSON.stringify(p))
@@ -688,7 +691,7 @@ export const build = async ({
   }
 
   const balance = await g(`balance:${aid}`);
-  let ourfee = Math.round(amount * config.fee);
+  let ourfee = Math.round(amount * config.fee[type]);
   const credit = await g(`credit:${type}:${aid}`);
   const covered = Math.min(credit, ourfee);
   ourfee -= covered;
@@ -879,7 +882,7 @@ const reverse = async (p) => {
 
   const total = Math.abs(p.amount) + p.fee + p.ourfee;
   const ourfee = p.ourfee || 0;
-  const credit = Math.round(total * config.fee) - ourfee;
+  const credit = Math.round(total * config.fee[PaymentType.lightning]) - ourfee;
 
   l("reversing", p.id, p.amount, p.fee, total, ourfee, credit);
 

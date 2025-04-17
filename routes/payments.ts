@@ -28,11 +28,8 @@ import {
 import rpc from "@coinos/rpc";
 import got from "got";
 import { v4 } from "uuid";
-
 import { PaymentType } from "$lib/types";
-
 import ln from "$lib/ln";
-const { URL } = process.env;
 
 export default {
   async info(_, res) {
@@ -212,7 +209,7 @@ export default {
       const alias = node ? node.alias : payee.substr(0, 12);
 
       const amount = Math.round(amount_msat / 1000);
-      let ourfee = Math.round(amount * config.fee);
+      let ourfee = Math.round(amount * config.fee[PaymentType.lightning]);
       const credit = await g(`credit:lightning:${user.id}`);
       const covered = Math.min(credit, ourfee) || 0;
       ourfee -= covered;
