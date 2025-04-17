@@ -2,6 +2,7 @@ import config from "$config";
 import api from "$lib/api";
 import { requirePin } from "$lib/auth";
 import { db, g, s } from "$lib/db";
+import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
 import {
@@ -15,6 +16,7 @@ import {
   sendOnchain,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
+import { PaymentType } from "$lib/types";
 import {
   SATS,
   bail,
@@ -28,8 +30,6 @@ import {
 import rpc from "@coinos/rpc";
 import got from "got";
 import { v4 } from "uuid";
-import { PaymentType } from "$lib/types";
-import ln from "$lib/ln";
 
 export default {
   async info(_, res) {

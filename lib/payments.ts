@@ -119,7 +119,7 @@ export const debit = async ({
     ? Math.round((amount + fee + tip) * config.fee[creditType])
     : 0;
 
-  if (aid) ourfee = 0;
+  if (aid && aid !== uid) ourfee = 0;
 
   ourfee = await db.debit(
     `balance:${aid || uid}`,
@@ -696,7 +696,7 @@ export const build = async ({
   const covered = Math.min(credit, ourfee);
   ourfee -= covered;
 
-  if (aid) ourfee = 0;
+  if (aid && aid !== user.id) ourfee = 0;
   if (subtract || amount + fee + ourfee > balance) {
     if (amount <= fee + ourfee + dust)
       fail(
