@@ -357,7 +357,7 @@ export default {
         const k0 = await getProfile(key);
         let username = k0?.name?.replace(/[^a-zA-Z0-9 ]/g, "");
         const exists = await getUser(username);
-        if (exists) username = key.substr(0, 24);
+        if (!username || exists) username = key.substr(0, 24);
 
         user = {
           username,
