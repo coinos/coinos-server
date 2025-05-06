@@ -20,7 +20,9 @@ export default {
       query: { address },
     } = req;
     const [name, domain] = address.split("@");
-    const url = `https://${domain}/.well-known/lnurlp/${name.toLowerCase().replace(/\s/g,"")}`;
+    const url = `https://${domain}/.well-known/lnurlp/${name
+      .toLowerCase()
+      .replace(/\s/g, "")}`;
 
     try {
       const r = await got(url).json();
@@ -147,6 +149,44 @@ export default {
     const settled = received >= amount;
 
     res.send({ pr: hash, status: "OK", settled, preimage: preimage || null });
+  },
+
+  async pay(req, res) {
+    const { username } = req.params;
+    try {
+      const user = await getUser(username);
+      const iid = await db.lIndex(`${user.id}:invoices`, 0);
+      const invoice = await getInvoice(iid);
+      const fiveMinutes = 1000 * 60 * 5;
+      const paid = invoice.received >= invoice.amount;
+      const expired = Date.now() - invoice.created > fiveMinutes;
+      if (paid || expired) fail("No active invoice");
+
+      const { id: uid } = user;
+
+      const metadata = JSON.stringify([
+        ["text/plain", `Paying ${username}@${host}`],
+        ["text/identifier", `${username}@${host}`],
+      ]);
+
+      const id = v4();
+      await s(`lnurl:${id}`, uid);
+
+      res.send({
+        allowsNostr: true,
+        minSendable: invoice.amount * 1000,
+        maxSendable: invoice.amount * 1000,
+        metadata,
+        nostrPubkey: serverPubkey,
+        commentAllowed: 512,
+        callback: `${URL}/api/lnurl/${id}`,
+        tag: "payRequest",
+      });
+    } catch (e) {
+      if (!e.message.includes("found"))
+        warn("problem generating lnurlp request", username, e.message);
+      bail(res, e.message);
+    }
   },
 
   // async withdraw(req, res) {
