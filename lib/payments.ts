@@ -123,13 +123,13 @@ export const debit = async ({
 
   ourfee = await db.debit(
     `balance:${aid || uid}`,
-    `credit:${creditType}:${aid ? 0 : uid}`,
+    `credit:${creditType}:${aid !== uid ? 0 : uid}`,
     amount || 0,
     tip || 0,
     fee || 0,
     ourfee || 0,
   );
-
+  
   if (ourfee.err) fail(ourfee.err);
 
   const id = v4();
@@ -698,10 +698,12 @@ export const build = async ({
 
   if (aid && aid !== user.id) ourfee = 0;
   if (subtract || amount + fee + ourfee > balance) {
-    if (amount <= fee + ourfee + dust)
+    subtract = true;
+    if (amount <= fee + ourfee + dust) {
       fail(
         `insufficient funds ⚡️${balance} of ⚡️${amount + fee + ourfee + dust}`,
       );
+    }
 
     outs = [{ [address]: btc(amount - ourfee) }];
     raw = await node.createRawTransaction([], outs, 0, replaceable);
@@ -731,7 +733,7 @@ export const build = async ({
     inputs.push({ witnessUtxo, path });
   }
 
-  return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs };
+  return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs, subtract };
 };
 
 export const catchUp = async () => {
