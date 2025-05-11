@@ -1,6 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
-import { db, g, s } from "$lib/db";
+import { db, g, ga, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
@@ -120,6 +120,7 @@ export const debit = async ({
     : 0;
 
   if (aid && aid !== uid) ourfee = 0;
+  const frozenBalance = await ga(`balance:${uid}`);
 
   ourfee = await db.debit(
     `balance:${aid || uid}`,
@@ -128,8 +129,10 @@ export const debit = async ({
     tip || 0,
     fee || 0,
     ourfee || 0,
+    frozenBalance,
+    t(user).insufficientFunds,
   );
-  
+
   if (ourfee.err) fail(ourfee.err);
 
   const id = v4();
