@@ -3,5 +3,7 @@
 	"youReceived": "您收到了一笔付款",
 	"withdrawalTriggered": "这引发了撤回",
 	"problemWithdrawing": "发送至您的自动提款地址时出现问题",
-	"paymentReceived": "已收到付款"
+	"paymentReceived": "已收到付款",
+	"balanceAdjustment": "余额调整",
+	"insufficientFunds": "资金不足"
 }

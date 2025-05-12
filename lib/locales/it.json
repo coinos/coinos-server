@@ -1,0 +1,9 @@
+{
+	"balanceAdjustment": "Regolazione del saldo",
+	"paymentReceived": "Pagamento ricevuto",
+	"hello": "Ciao",
+	"youReceived": "Hai ricevuto un pagamento",
+	"withdrawalTriggered": "Questo ha innescato un ritiro",
+	"problemWithdrawing": "C'è stato un problema di inviare al tuo indirizzo di autoritiro",
+	"insufficientFunds": "Fondi insufficienti"
+}

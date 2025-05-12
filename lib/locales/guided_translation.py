@@ -4,7 +4,7 @@ import argparse, json, logging, sys, requests, os
 from pathlib import Path
 
 DEFAULT_FROM_LOCALE = 'en'
-LOCALE_DATA_FILEPATH = '../lib/translations/lang.json'
+LOCALE_DATA_FILEPATH = 'lang.json'
 
 def nested_dict_keys(d, _keyname_prefix=''):
     entry_list = []
@@ -33,13 +33,15 @@ def localize_string(string_id, from_data, to_data, to_locale):
     logging.debug("Translating string with id %s", string_id)
     id_parts = string_id.split('.')
 
+    if id_parts[0] == "lang": return
+
     # get original string
     to_translate = from_data
     for id_part in id_parts:
         to_translate = to_translate[id_part]
 
     # Google Translate API endpoint
-    url = "https://translation.googleapis.com/language/translate/v2"
+    url = "http://127.0.0.1:5000/translate"
 
     # Prepare data for POST request
     data = {
@@ -53,12 +55,12 @@ def localize_string(string_id, from_data, to_data, to_locale):
     headers = {"Content-Type": "application/json"}
 
     # Make the request
-    response = requests.post(url, headers=headers, params={'key': api_key}, json=data)
+    response = requests.post(url, headers=headers, json=data)
     
     # Check if the request was successful
     if response.status_code == 200:
         # Parse the response and extract translation
-        translated_text = response.json()['data']['translations'][0]['translatedText']
+        translated_text = response.json()['translatedText']
         print("Translated text:", translated_text)
     else:
         print("Error while translating:", response.json())

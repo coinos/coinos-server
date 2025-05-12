@@ -3,5 +3,7 @@
 	"youReceived": "Vous avez reçu un paiement de",
 	"withdrawalTriggered": "Cela a déclenché un retrait de",
 	"problemWithdrawing": "Un problème est survenu lors de l'envoi à votre adresse de retrait automatique",
-	"paymentReceived": "Paiement reçu"
+	"paymentReceived": "Paiement reçu",
+	"balanceAdjustment": "Ajustement du solde",
+	"insufficientFunds": "Insuffisance des fonds"
 }

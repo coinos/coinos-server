@@ -3,5 +3,7 @@
 	"youReceived": "Λάβατε μια πληρωμή του",
 	"withdrawalTriggered": "Αυτό προκάλεσε την απόσυρση του",
 	"problemWithdrawing": "Παρουσιάστηκε πρόβλημα κατά την αποστολή στη διεύθυνση αυτόματης απόσυρσής σας",
-	"paymentReceived": "Η πληρωμή ελήφθη"
+	"paymentReceived": "Η πληρωμή ελήφθη",
+	"balanceAdjustment": "Προσαρμογή υπολοίπου",
+	"insufficientFunds": "Ανεπαρκή κεφάλαια"
 }

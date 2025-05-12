@@ -1,0 +1,9 @@
+{
+	"balanceAdjustment": "संतुलन समायोजन",
+	"paymentReceived": "भुगतान प्राप्त",
+	"hello": "नमस्ते",
+	"youReceived": "आपको भुगतान प्राप्त हुआ",
+	"withdrawalTriggered": "यह ट्रिगर की वापसी",
+	"problemWithdrawing": "वहाँ एक समस्या अपने autowithdrawal पते पर भेज रहा था",
+	"insufficientFunds": "अपर्याप्त निधि"
+}

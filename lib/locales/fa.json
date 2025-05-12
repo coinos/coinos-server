@@ -3,5 +3,7 @@
 	"youReceived": "شما پرداختی دریافت کردید",
 	"withdrawalTriggered": "این باعث خروج از",
 	"problemWithdrawing": "مشکلی در ارسال به آدرس برداشت خودکار شما وجود داشت",
-	"paymentReceived": "پرداخت دریافت شد"
+	"paymentReceived": "پرداخت دریافت شد",
+	"balanceAdjustment": "تعدیل تعادل تعادل",
+	"insufficientFunds": "صندوق های بی کفایت"
 }
