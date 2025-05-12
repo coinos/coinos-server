@@ -105,10 +105,12 @@ export default {
       const ourfee = await db.debit(
         `balance:${uid}`,
         `credit:${type}:${uid}`,
+        "Insufficient funds",
         amount || 0,
         0,
         0,
         0,
+        0
       );
 
       const rates = await g("rates");

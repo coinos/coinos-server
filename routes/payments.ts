@@ -90,6 +90,7 @@ export default {
 
       res.send(p);
     } catch (e) {
+      console.log(e);
       warn(user.username, "payment failed", amount, balance, hash, payreq);
       err(e.message);
       bail(res, e.message);
@@ -271,7 +272,7 @@ export default {
       const managers = await db.sMembers(`fund:${id}:managers`);
       if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
 
-      const result: any = await db.debit(`fund:${id}`, "", amount, 0, 0, 0);
+      const result: any = await db.debit(`fund:${id}`, "", "Insufficient funds", amount, 0, 0, 0, 0);
       if (result.err) fail(result.err);
 
       const rates = await g("rates");

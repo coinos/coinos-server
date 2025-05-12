@@ -6,12 +6,12 @@ import { warn, err } from "$lib/logging";
 const DEBIT = `
 local balanceKey = KEYS[1]
 local creditKey = KEYS[2]
+local insufficientString = KEYS[3];
 local amount = tonumber(ARGV[1])
 local tip = tonumber(ARGV[2])
 local fee = tonumber(ARGV[3])
 local ourfee = tonumber(ARGV[4])
 local frozen = tonumber(ARGV[5])
-local insufficientString = ARGV[6];
 
 local balance = tonumber(redis.call('get', balanceKey) or '0')
 local credit = tonumber(redis.call('get', creditKey) or '0')
@@ -20,7 +20,7 @@ local covered = math.min(credit, ourfee)
 ourfee = ourfee - covered
 
 if balance - frozen < amount + tip + fee + ourfee then
-    return {err = insufficientString .. '⚡️' .. balance - frozen .. ' / ' .. amount + tip + fee + ourfee}
+    return {err = insufficientString .. ' ⚡️' .. balance - frozen .. ' / ' .. amount + tip + fee + ourfee}
 end
 
 redis.call('decrby', creditKey, tostring(math.floor(covered)))
@@ -55,7 +55,7 @@ end
 `;
 
 const debit = defineScript({
-  NUMBER_OF_KEYS: 2,
+  NUMBER_OF_KEYS: 3,
   SCRIPT: DEBIT,
   transformArguments: (...args) => args.map((a) => a.toString()),
 });
