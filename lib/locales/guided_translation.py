@@ -4,7 +4,6 @@ import argparse, json, logging, sys, requests, os
 from pathlib import Path
 
 DEFAULT_FROM_LOCALE = 'en'
-LOCALE_DATA_FILEPATH = 'lang.json'
 
 def nested_dict_keys(d, _keyname_prefix=''):
     entry_list = []
@@ -15,18 +14,6 @@ def nested_dict_keys(d, _keyname_prefix=''):
         else:
             entry_list += [_keyname_prefix + key]
     return entry_list
-
-def create_locale(locale_code):
-    logging.debug("Creating locale %s...", locale_code)
-    with open(LOCALE_DATA_FILEPATH, 'r', encoding='utf-8') as lang_file:
-        lang_data = json.load(lang_file)
-
-    lang_data[locale_code] = input("What is the name of the language " + locale_code + "? ")
-
-    with open(LOCALE_DATA_FILEPATH, 'w') as lang_file:
-        json.dump(lang_data, lang_file, ensure_ascii=False, indent='\t')
-        lang_file.write('\n')
-    logging.debug("Created locale %s.", locale_code)
 
 def localize_string(string_id, from_data, to_data, to_locale):
     api_key = os.environ.get('GOOGLE_API_KEY')
@@ -125,10 +112,6 @@ if __name__ == "__main__":
             to_json_text = to_file.read()
         logging.debug("Converting to data from JSON to object")
         to_data = json.loads(to_json_text)
-    else:
-        logging.info("No file found.  Creating new locale.")
-        create_locale(to_locale)
-        to_data = {}
     to_id_list = nested_dict_keys(to_data)
     logging.info("Successfully obtained %d strings from locale %s",
                  len(to_id_list), to_locale)

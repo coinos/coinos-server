@@ -21,6 +21,7 @@ export default [
   "keys",
   "language",
   "linked",
+  "locked",
   "locktime",
   "memoPrompt",
   "nip5",

@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { appendFile, unlink } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
-import { db, g, s } from "$lib/db";
+import { db, g, ga, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey } from "$lib/nostr";
@@ -32,6 +32,7 @@ export default {
     const { user } = req;
     try {
       user.balance = await g(`balance:${user.id}`);
+      user.locked = await ga(`balance:${user.id}`);
       user.prompt = !!user.prompt;
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
 
