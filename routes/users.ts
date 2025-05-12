@@ -33,6 +33,15 @@ export default {
     try {
       user.balance = await g(`balance:${user.id}`);
       user.locked = await ga(`balance:${user.id}`);
+
+      if (user.locked) {
+        const whitelisted = await db.sIsMember(
+          "whitelist",
+          user?.username?.toLowerCase().trim(),
+        );
+        if (whitelisted) user.locked = 0;
+      }
+
       user.prompt = !!user.prompt;
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
 
