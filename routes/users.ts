@@ -35,11 +35,17 @@ export default {
       user.locked = await ga(`balance:${user.id}`);
 
       if (user.locked) {
+        const blacklisted = await db.sIsMember(
+          "blacklist",
+          user?.username?.toLowerCase().trim(),
+        );
+        
         const whitelisted = await db.sIsMember(
           "whitelist",
           user?.username?.toLowerCase().trim(),
         );
-        if (whitelisted) user.locked = 0;
+
+        if (!blacklisted || whitelisted) user.locked = 0;
       }
 
       user.prompt = !!user.prompt;
