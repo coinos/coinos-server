@@ -60,8 +60,7 @@ export const debit = async ({
   const userLimit = await g("limit");
   const frozen =
     (await g("hardfreeze")) ||
-    ((await g("freeze")) && type !== PaymentType.internal) ||
-    blacklisted;
+    ((await g("freeze")) && type !== PaymentType.internal);
 
   if (frozen || (amount > userLimit && !whitelisted) || amount > serverLimit) {
     warn(
@@ -120,7 +119,8 @@ export const debit = async ({
     : 0;
 
   if (aid && aid !== uid) ourfee = 0;
-  const frozenBalance = (!blacklisted || whitelisted) ? 0 : await ga(`balance:${uid}`);
+  const frozenBalance =
+    !blacklisted || whitelisted ? 0 : await ga(`balance:${uid}`);
 
   ourfee = await db.debit(
     `balance:${aid || uid}`,
