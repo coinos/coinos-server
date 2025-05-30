@@ -48,6 +48,7 @@ if redis.call('exists', paymentKey) == 1 then
     redis.call('incrby', creditKey, credit)
     redis.call('del', hashKey)
     redis.call('lrem', paymentsKey, 0, pid)
+    redis.call('lrem', 'payments', 0, pid)
     return pid
 else
     error("Payment has already been reversed" .. paymentKey)

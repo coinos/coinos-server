@@ -81,7 +81,10 @@ app.register(fastifyStatic, {
   prefix: "/public/",
 });
 
-await app.register(cors, { origin: true });
+await app.register(cors, {
+  origin: true,
+  credentials: true,
+});
 
 app.setErrorHandler((error, _, reply) => {
   if (error instanceof fastify.errorCodes.FST_ERR_BAD_STATUS_CODE) {

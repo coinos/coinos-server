@@ -304,9 +304,6 @@ export default {
     try {
       let { username, password, token: twofa } = req.body;
 
-      if (username !== "coinos")
-        l("logging in", username, req.headers["cf-connecting-ip"]);
-
       username = username.toLowerCase().replace(/\s/g, "");
       let user = await getUser(username);
 
@@ -333,8 +330,8 @@ export default {
         }
       }
 
-      if (username !== "coinos" && username !== "funk" && username !== "btcpos")
-        l("logged in", username);
+      if (username !== "coinos")
+        l("logged in", username, req.headers['cf-connecting-ip']);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);

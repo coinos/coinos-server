@@ -160,6 +160,7 @@ export const debit = async ({
   await s(`payment:${id}`, p);
   await db
     .multi()
+    .lPush("payments", id)
     .lPush(`${aid || uid}:payments`, id)
     .set(`${aid || uid}:payments:last`, p.created)
     .exec();
