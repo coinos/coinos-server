@@ -233,7 +233,7 @@ export default {
     payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
 
     await Promise.all(
-      payments.map(async (p: any) => (p.user = await g(`user:${p.uid}`))),
+      payments.map(async (p: any) => (p.user = await getUser(p.uid, fields))),
     );
 
     payments = payments.filter((p) => p);
