@@ -76,7 +76,7 @@ export default async (user, ip) => {
     uid: id,
     secret,
     pubkey: getPublicKey(bytes),
-    max_amount: 10000,
+    max_amount: 1000000,
     budget_renewal: "weekly",
     name: username,
     created: Date.now(),
