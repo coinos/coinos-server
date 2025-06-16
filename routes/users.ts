@@ -192,16 +192,22 @@ export default {
         config.jwt,
       );
       l("updating user", user.username, tokid);
+      if (user.id !== tokid) fail("unauthorized");
 
-      const { confirm, password, pin, newpin, username } = body;
+      const { confirm, password, pin, newpin } = body;
+      let username = body?.username?.toLowerCase().replace(/\s/g,"");
+      const valid = /^[\p{L}\p{N}]{2,24}$/u;
+      if (!valid.test(username)) fail("Usernames can only have letters and numbers");
+
       let exists;
 
       let { pubkey } = body;
       if (pubkey) {
         pubkey = pubkey.trim();
         exists = await getUser(pubkey);
-        if (exists && ![username].includes(exists.username)) {
-          warn("key in use", pubkey, exists.username);
+        let existingUsername = exists.username.toLowerCase().replace(/\s/g,"");
+        if (exists && ![username].includes(existingUsername)) {
+          warn("key in use", pubkey, existingUsername);
           if (exists.anon) await db.del(`user:${pubkey}`);
           else fail("Key in use by another account");
         }
@@ -228,16 +234,17 @@ export default {
       if (user.pin === "delete") user.pin = undefined;
 
       if (username) {
-        exists = await getUser(username);
+        exists = await db.exists(`user:${username}`);
+        let currentUsername = user.username.replace(/\s/g,"").toLowerCase()
 
-        if (user.username.toLowerCase() !== username.toLowerCase() && exists) {
-          err("username taken", username, user.username, exists.username);
+        if (currentUsername !== username && exists) {
+          err("username taken", username, currentUsername);
           fail("Username taken");
         } else if (username) {
-          if (user.username.toLowerCase() !== username.toLowerCase())
-            l("changing username", user.username, username);
+          if (currentUsername !== username)
+            l("changing username", currentUsername, username);
 
-          await db.del(`user:${user.username}`);
+          await db.del(`user:${currentUsername}`);
           user.username = username;
         }
       }
@@ -387,7 +394,12 @@ export default {
       }
 
       const { username } = user;
-      l("logging in", username, ip);
+      if (await db.sIsMember("compromised", username.replace(/\s/g,"").toLowerCase())) {
+        warn("compromised nostr auth attempt");
+        fail("unauthorized");
+      }
+
+      l("nostr login", username, ip);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);

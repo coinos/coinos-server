@@ -23,7 +23,7 @@ export default async (user, ip) => {
   const id = v4();
   user.id = id;
 
-  const exists = await getUser(username);
+  const exists = await db.exists(`user:${username}`);
   if (exists) fail(`Username ${username} taken`);
 
   if (password) {

@@ -22,8 +22,23 @@ const app = fastify({
 const reqLogger = pino(pino.destination("req"));
 const resLogger = pino(pino.destination("res"));
 
-app.addHook("onRequest", async (req) => {
-  reqLogger.info({ url: req.raw.url, id: req.id });
+// app.addHook("onRequest", async (req) => {
+//   reqLogger.info({ url: req.raw.url, id: req.id });
+// });
+//
+
+app.addHook("preHandler", async (req) => {
+  const url = req.raw.url;
+  const ignore = ["/login","/ws","/me","/confirm","/public"];
+  if (req.method === "GET" || ignore.some(path => url.startsWith(path))) return;
+
+  reqLogger.info({
+    method: req.method,
+    url,
+    headers: req.headers,
+    body: req.body,
+    id: req.id
+  });
 });
 
 app.addHook("onResponse", async (req, reply) => {
