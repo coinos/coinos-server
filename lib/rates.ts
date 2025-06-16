@@ -12,7 +12,7 @@ const connect = async () => {
   if (ws && ws.readyState === 1 && Date.now() - last < 5000) return;
   if (ws) ws.terminate() && (await sleep(Math.round(Math.random() * 1000)));
 
-  ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@ticker");
+  ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@miniTicker");
 
   ws.onmessage = async (event) => {
     try {
@@ -25,9 +25,13 @@ const connect = async () => {
         rates[symbol] = msg.c * fx[symbol];
       });
 
-      rates.IRT = (
-        (await got("https://api.nobitex.ir/v2/orderbook/BTCIRT").json()) as any
-      ).lastTradePrice;
+      try {
+        rates.IRT = (
+          (await got(
+            "https://api.nobitex.ir/v2/orderbook/BTCIRT",
+          ).json()) as any
+        ).lastTradePrice;
+      } catch (e) {}
 
       rate = msg.c;
       s("rate", rate);
