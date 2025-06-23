@@ -206,10 +206,8 @@ export default {
       if (pubkey) {
         pubkey = pubkey.trim();
         exists = await getUser(pubkey);
-        const existingUsername = exists.username
-          .toLowerCase()
-          .replace(/\s/g, "");
-        if (exists && ![username].includes(existingUsername)) {
+        let existingUsername = exists?.username?.toLowerCase().replace(/\s/g,"");
+        if (exists && username !== existingUsername) {
           warn("key in use", pubkey, existingUsername);
           if (exists.anon) await db.del(`user:${pubkey}`);
           else fail("Key in use by another account");
