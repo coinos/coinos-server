@@ -24,11 +24,14 @@ export default {
 
   async create(req, res) {
     let { body, user } = req;
-    if (body.user) user = body.user;
     const { invoice } = body;
 
+    if (body.user) user = body.user;
+    if (req.user.username === user.username) invoice.own = true;
+
     try {
-      res.send(await generate({ invoice, user }));
+      const result = await generate({ invoice, user });
+      res.send(result);
     } catch (e) {
       err(
         "problem generating invoice",

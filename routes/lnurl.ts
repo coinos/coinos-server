@@ -46,7 +46,8 @@ export default {
         bech32.fromWords(bech32.decode(text, 20000).words),
       ).toString();
 
-      res.send(await got(url).json());
+      const r = await got(url).json();
+      res.send(r);
     } catch (e) {
       bail(res, e.message);
     }
@@ -156,11 +157,18 @@ export default {
     try {
       const user = await getUser(username);
       const iid = await db.lIndex(`${user.id}:invoices`, 0);
-      const invoice = await getInvoice(iid);
+      let invoice = await getInvoice(iid);
       const fiveMinutes = 1000 * 60 * 5;
       const paid = invoice.received >= invoice.amount;
       const expired = Date.now() - invoice.created > fiveMinutes;
-      if (paid || expired) fail("No active invoice");
+      if (paid || expired || !invoice.own) {
+        invoice = await generate({
+          invoice: {
+            type: PaymentType.lightning,
+          },
+          user,
+        });
+      }
 
       const { id: uid } = user;
 
@@ -175,7 +183,7 @@ export default {
       res.send({
         allowsNostr: true,
         minSendable: invoice.amount * 1000,
-        maxSendable: invoice.amount * 1000,
+        maxSendable: invoice.amount ? invoice.amount * 1000 : undefined,
         metadata,
         nostrPubkey: serverPubkey,
         commentAllowed: 512,

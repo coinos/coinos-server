@@ -23,6 +23,7 @@ export const generate = async ({ invoice, user }) => {
     tip,
     amount,
     items = [],
+    own,
     rate,
     request_id,
     memo,
@@ -38,6 +39,7 @@ export const generate = async ({ invoice, user }) => {
 
   if (user) user = await getUser(user.username);
   if (!user) fail("user not provided");
+  if (typeof prompt === "undefined") prompt = user.prompt;
 
   let account = await g(`account:${aid}`);
   if (!account) account = await g(`account:${user.id}`);
@@ -134,6 +136,7 @@ export const generate = async ({ invoice, user }) => {
     received: 0,
     request_id,
     memoPrompt,
+    own,
     path,
     prompt,
     secret,
