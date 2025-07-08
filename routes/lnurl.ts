@@ -187,11 +187,12 @@ export default {
 
       const id = v4();
       await s(`lnurl:${id}`, uid);
+      const total = (parseInt(invoice.amount) + parseInt(invoice.tip)) * 1000;
 
       res.send({
         allowsNostr: true,
-        minSendable: invoice.amount * 1000,
-        maxSendable: invoice.amount ? invoice.amount * 1000 : undefined,
+        minSendable: total,
+        maxSendable: invoice.amount ? total : undefined,
         metadata,
         nostrPubkey: serverPubkey,
         commentAllowed: 512,
