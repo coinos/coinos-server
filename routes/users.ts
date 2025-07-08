@@ -39,7 +39,7 @@ export default {
           "blacklist",
           user?.username?.toLowerCase().trim(),
         );
-        
+
         const whitelisted = await db.sIsMember(
           "whitelist",
           user?.username?.toLowerCase().trim(),
@@ -195,9 +195,10 @@ export default {
       if (user.id !== tokid) fail("unauthorized");
 
       const { confirm, password, pin, newpin } = body;
-      let username = body?.username?.toLowerCase().replace(/\s/g,"");
+      const username = body?.username?.toLowerCase().replace(/\s/g, "");
       const valid = /^[\p{L}\p{N}]{2,24}$/u;
-      if (!valid.test(username)) fail("Usernames can only have letters and numbers");
+      if (!valid.test(username))
+        fail("Usernames can only have letters and numbers");
 
       let exists;
 
@@ -205,7 +206,9 @@ export default {
       if (pubkey) {
         pubkey = pubkey.trim();
         exists = await getUser(pubkey);
-        let existingUsername = exists.username.toLowerCase().replace(/\s/g,"");
+        const existingUsername = exists.username
+          .toLowerCase()
+          .replace(/\s/g, "");
         if (exists && ![username].includes(existingUsername)) {
           warn("key in use", pubkey, existingUsername);
           if (exists.anon) await db.del(`user:${pubkey}`);
@@ -235,7 +238,7 @@ export default {
 
       if (username) {
         exists = await db.exists(`user:${username}`);
-        let currentUsername = user.username.replace(/\s/g,"").toLowerCase()
+        const currentUsername = user.username.replace(/\s/g, "").toLowerCase();
 
         if (currentUsername !== username && exists) {
           err("username taken", username, currentUsername);
@@ -273,6 +276,7 @@ export default {
         "shopifyStore",
         "shopifyToken",
         "threshold",
+        "tip",
         "tokens",
         "twofa",
       ];
@@ -280,6 +284,8 @@ export default {
       for (const a of attributes) {
         if (typeof body[a] !== "undefined") user[a] = body[a];
       }
+
+      user.tip = Math.max(0, Math.min(1000, parseInt(user.tip)));
 
       if (password && password === confirm) {
         user.password = await Bun.password.hash(password, {
@@ -338,7 +344,7 @@ export default {
       }
 
       if (username !== "coinos")
-        l("logged in", username, req.headers['cf-connecting-ip']);
+        l("logged in", username, req.headers["cf-connecting-ip"]);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
@@ -394,7 +400,12 @@ export default {
       }
 
       const { username } = user;
-      if (await db.sIsMember("compromised", username.replace(/\s/g,"").toLowerCase())) {
+      if (
+        await db.sIsMember(
+          "compromised",
+          username.replace(/\s/g, "").toLowerCase(),
+        )
+      ) {
         warn("compromised nostr auth attempt");
         fail("unauthorized");
       }
@@ -490,6 +501,7 @@ export default {
 
     let contacts = (await g(`${id}:contacts`)) || [];
     const pins = await db.sMembers(`${id}:pins`);
+    const trust = await db.sMembers(`${id}:trust`);
 
     for (const { ref } of (
       await Promise.all(
@@ -512,6 +524,14 @@ export default {
 
     pinned.map((c) => {
       c.pinned = true;
+    });
+
+    const trusted = contacts
+      .filter((c) => trust.includes(c.id))
+      .sort((a, b) => a.username.localeCompare(b.username));
+
+    trusted.map((c) => {
+      c.trusted = true;
     });
 
     let { limit } = params;
@@ -991,6 +1011,25 @@ export default {
     const { id: uid } = req.user;
     const { id } = req.body;
     await db.sRem(`${uid}:pins`, id);
+    res.send({});
+  },
+
+  async trust(req, res) {
+    const { id } = req.user;
+    res.send(await db.sMembers(`${id}:trust`));
+  },
+
+  async addTrust(req, res) {
+    const { id: uid } = req.user;
+    const { id } = req.body;
+    await db.sAdd(`${uid}:trust`, id);
+    res.send({});
+  },
+
+  async deleteTrust(req, res) {
+    const { id: uid } = req.user;
+    const { id } = req.body;
+    await db.sRem(`${uid}:trust`, id);
     res.send({});
   },
 

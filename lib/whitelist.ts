@@ -41,6 +41,7 @@ export default [
   "shopifyToken",
   "theme",
   "threshold",
+  "tip",
   "twofa",
   "username",
   "verified",

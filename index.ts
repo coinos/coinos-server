@@ -142,6 +142,10 @@ app.post("/apps/delete", auth, users.deleteApp);
 app.post("/pins", auth, users.addPin);
 app.post("/pins/delete", auth, users.deletePin);
 
+app.get("/trust", auth, users.trust);
+app.post("/trust", auth, users.addTrust);
+app.post("/trust/delete", auth, users.deleteTrust);
+
 app.get("/subscriptions", auth, users.subscriptions);
 app.post("/subscription", auth, users.subscription);
 app.post("/subscription/delete", auth, users.deleteSubscription);
