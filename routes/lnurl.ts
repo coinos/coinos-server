@@ -162,9 +162,9 @@ export default {
       let invoice;
       for (const iid of invoices) {
         const i = await getInvoice(iid);
-        const paid = invoice.amount > 0 && invoice.received >= invoice.amount;
-        const old = Date.now() - invoice.created > fiveMinutes;
-        if (invoice.own && !(paid || old)) {
+        const paid = i.amount > 0 && i.received >= i.amount;
+        const old = Date.now() - i.created > fiveMinutes;
+        if (i.own && !(paid || old)) {
           invoice = i;
           break;
         }
