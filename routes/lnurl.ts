@@ -187,7 +187,7 @@ export default {
 
       const id = v4();
       await s(`lnurl:${id}`, uid);
-      const total = (parseInt(invoice.amount) + parseInt(invoice.tip)) * 1000;
+      const total = (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
 
       res.send({
         allowsNostr: true,
