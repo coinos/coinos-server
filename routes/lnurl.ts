@@ -13,6 +13,7 @@ import { PaymentType } from "$lib/types";
 
 const { URL } = process.env;
 const host = URL.split("/").at(-1);
+const fiveMinutes = 1000 * 60 * 5;
 
 export default {
   async encode(req, res) {
@@ -156,19 +157,26 @@ export default {
     const { username } = req.params;
     try {
       const user = await getUser(username);
-      const iid = await db.lIndex(`${user.id}:invoices`, 0);
-      let invoice = await getInvoice(iid);
-      const fiveMinutes = 1000 * 60 * 5;
-      const paid = invoice.received >= invoice.amount;
-      const expired = Date.now() - invoice.created > fiveMinutes;
-      if (paid || expired || !invoice.own) {
+
+      const invoices = await db.lRange(`${user.id}:invoices`, 0, 10);
+      let invoice;
+      for (const iid of invoices) {
+        const i = await getInvoice(iid);
+        const paid = invoice.amount > 0 && invoice.received >= invoice.amount;
+        const old = Date.now() - invoice.created > fiveMinutes;
+        if (invoice.own && !(paid || old)) {
+          invoice = i;
+          break;
+        }
+      }
+
+      if (!invoice)
         invoice = await generate({
           invoice: {
             type: PaymentType.lightning,
           },
           user,
         });
-      }
 
       const { id: uid } = user;
 
