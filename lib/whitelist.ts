@@ -11,6 +11,7 @@ export default [
   "display",
   "email",
   "fiat",
+  "fresh",
   "followers",
   "follows",
   "haspin",

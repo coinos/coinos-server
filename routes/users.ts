@@ -126,8 +126,8 @@ export default {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
       let { user } = body;
-      const fields = ["pubkey", "password", "username", "picture"];
 
+      const fields = ["pubkey", "password", "username", "picture", "fresh"];
       user = await register(pick(user, fields), ip);
 
       const payload = { id: user.id };
@@ -206,7 +206,9 @@ export default {
       if (pubkey) {
         pubkey = pubkey.trim();
         exists = await getUser(pubkey);
-        let existingUsername = exists?.username?.toLowerCase().replace(/\s/g,"");
+        const existingUsername = exists?.username
+          ?.toLowerCase()
+          .replace(/\s/g, "");
         if (exists && username !== existingUsername) {
           warn("key in use", pubkey, existingUsername);
           if (exists.anon) await db.del(`user:${pubkey}`);
@@ -283,6 +285,7 @@ export default {
         if (typeof body[a] !== "undefined") user[a] = body[a];
       }
 
+      user.fresh = false;
       user.tip = Math.max(0, Math.min(1000, parseInt(user.tip)));
 
       if (password && password === confirm) {
