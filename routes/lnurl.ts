@@ -164,7 +164,8 @@ export default {
         const i = await getInvoice(iid);
         const paid = i.amount > 0 && i.received >= i.amount;
         const old = Date.now() - i.created > fiveMinutes;
-        if (i.own && !(paid || old)) {
+        if (paid) break;
+        if (i.own && !old) {
           invoice = i;
           break;
         }
