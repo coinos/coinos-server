@@ -299,7 +299,6 @@ export const completePayment = async (inv, p, user) => {
   if (p.confirmed) {
     if (autowithdraw) {
       try {
-        fail("autowithdrawals disabled");
         const to = destination.trim();
         const balance = await g(`balance:${id}`);
         const amount = balance - reserve;
