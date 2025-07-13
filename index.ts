@@ -82,6 +82,9 @@ app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
 
+app.get("/auth", payments.auth);
+app.post("/order", payments.order);
+
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
 app.get("/lnurl/verify/:id", lnurl.verify);

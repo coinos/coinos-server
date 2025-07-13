@@ -103,6 +103,9 @@ export default {
     } = req;
     if (!aid || aid === "undefined") aid = id;
 
+    const index = await db.lPos(`${id}:accounts`, aid);
+    if (index === null) fail("unauthorized");
+
     limit = parseInt(limit);
     offset = parseInt(offset) || 0;
 
@@ -271,7 +274,16 @@ export default {
       const managers = await db.sMembers(`fund:${id}:managers`);
       if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
 
-      const result: any = await db.debit(`fund:${id}`, "", "Insufficient funds", amount, 0, 0, 0, 0);
+      const result: any = await db.debit(
+        `fund:${id}`,
+        "",
+        "Insufficient funds",
+        amount,
+        0,
+        0,
+        0,
+        0,
+      );
       if (result.err) fail(result.err);
 
       const rates = await g("rates");
@@ -613,5 +625,15 @@ export default {
   async fetchinvoice(req, res) {
     const { amount, offer } = req.body;
     res.send(await ln.fetchinvoice(offer, amount ? amount * 1000 : null));
+  },
+
+  async auth(req, res) {
+    console.log(req.query);
+    res.send(req.query);
+  },
+
+  async order(req, res) {
+    console.log(req.body);
+    res.send(req.body);
   },
 };
