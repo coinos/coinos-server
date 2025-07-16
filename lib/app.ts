@@ -29,14 +29,16 @@ const resLogger = pino(pino.destination("res"));
 
 app.addHook("preHandler", async (req) => {
   const url = req.raw.url;
-  const ignore = ["/login","/ws","/me","/confirm","/public"];
-  if (req.method === "GET" || ignore.some(path => url.startsWith(path))) return;
+  const ignore = ["/login","/ws","/me","/confirm","/public","/rates","/challenge", "/rate", "/lnurlp", "/subscriptions", "/accounts", "/contacts", "/users"];
+  if (ignore.some(path => url.startsWith(path))) return;
 
   reqLogger.info({
     method: req.method,
     url,
     headers: req.headers,
+    query: req.query,
     body: req.body,
+    user: (req.user as any)?.username,
     id: req.id
   });
 });
