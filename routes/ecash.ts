@@ -88,6 +88,7 @@ export default {
   async mint(req, res) {
     const { body, user } = req;
     const amount = parseInt(body.amount);
+    fail("disabled");
     res.send(await sendCash({ amount, user }));
   },
 
