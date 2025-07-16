@@ -1,9 +1,7 @@
 import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
-import ln from "$lib/ln";
 import { err, warn } from "$lib/logging";
 import { serverPubkey } from "$lib/nostr";
-import { credit } from "$lib/payments";
 import { bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
 import got from "got";
@@ -102,6 +100,7 @@ export default {
       query: { amount, comment, nostr },
     } = req;
     try {
+      const iid = await g(`lnurl:${id}:invoice`);
       const uid = await g(`lnurl:${id}`);
       const user = await getUser(uid);
       if (!user) fail("user not found");
@@ -125,16 +124,22 @@ export default {
         }
       }
 
-      const { id: iid, text: pr } = await generate({
-        invoice: {
-          amount: Math.round(amount / 1000),
-          memo: metadata,
-          type: PaymentType.lightning,
-        },
-        user,
-      });
+      const invoice = iid
+        ? await g(`invoice:${iid}`)
+        : await generate({
+            invoice: {
+              amount: Math.round(amount / 1000),
+              memo: metadata,
+              type: PaymentType.lightning,
+            },
+            user,
+          });
 
-      res.send({ pr, routes: [], verify: `${URL}/api/lnurl/verify/${iid}` });
+      res.send({
+        pr: invoice.text,
+        routes: [],
+        verify: `${URL}/api/lnurl/verify/${invoice.id}`,
+      });
     } catch (e) {
       bail(res, e.message);
     }
@@ -188,7 +193,9 @@ export default {
 
       const id = v4();
       await s(`lnurl:${id}`, uid);
-      const total = (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
+      await s(`lnurl:${id}:invoice`, invoice.id);
+      const total =
+        (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
 
       res.send({
         allowsNostr: true,

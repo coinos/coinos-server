@@ -1,7 +1,7 @@
-import fastifyPassport from "@fastify/passport";
+import config from "$config";
 import { g } from "$lib/db";
 import { fail, getUser } from "$lib/utils";
-import config from "$config";
+import fastifyPassport from "@fastify/passport";
 import jwt from "passport-jwt";
 
 export const admin = {
