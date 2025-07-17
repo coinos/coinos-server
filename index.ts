@@ -19,6 +19,7 @@ import nostr from "$routes/nostr";
 import payments from "$routes/payments";
 import rates from "$routes/rates";
 import shopify from "$routes/shopify";
+import square from "$routes/square";
 import users from "$routes/users";
 
 try {
@@ -82,8 +83,9 @@ app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
 
-app.get("/auth", payments.auth);
-app.post("/order", payments.order);
+app.get("/square/connect", auth, square.connect);
+app.get("/square/auth", auth, square.auth);
+app.post("/square/payment", square.payment);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);

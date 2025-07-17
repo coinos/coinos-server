@@ -28,6 +28,7 @@ export default {
 
     if (body.user) user = body.user;
     if (req.user.username === user.username) invoice.own = true;
+    else invoice.own = false;
 
     try {
       const result = await generate({ invoice, user });
