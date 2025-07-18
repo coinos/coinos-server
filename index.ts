@@ -74,6 +74,7 @@ app.get("/fund/:name", payments.fund);
 // app.get("/fund/:name/withdraw", auth, payments.withdraw);
 app.get("/fund/:name/managers", payments.managers);
 app.post("/fund/managers", auth, payments.addManager);
+app.post("/fund/:name/managers/delete", auth, payments.deleteManager);
 app.post("/take", auth, payments.take);
 app.post("/print", auth, payments.print);
 app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);

@@ -326,7 +326,7 @@ export default {
     const ids = await db.sMembers(`fund:${name}:managers`);
 
     const managers = await Promise.all(
-      ids.map(async (id) => await getUser(id)),
+      ids.map(async (id) => await getUser(id, fields)),
     );
 
     res.send(managers);
@@ -345,7 +345,7 @@ export default {
       await db.sAdd(k, user.id);
     }
 
-    const u = await getUser(username);
+    const u = await getUser(username, fields);
     if (!u) fail("User not found");
     const { id: uid } = u;
 
@@ -353,9 +353,35 @@ export default {
 
     const ids = await db.sMembers(k);
     if (!managers.length)
-      managers = await Promise.all(ids.map(async (id) => await getUser(id)));
+      managers = await Promise.all(
+        ids.map(async (id) => await getUser(id, fields)),
+      );
 
     res.send(managers);
+  },
+
+  async deleteManager(req, res) {
+    try {
+      const { name } = req.params;
+      const { id: uid } = req.body;
+      const { user } = req;
+
+      const k = `fund:${name}:managers`;
+      let managers = await db.sMembers(k);
+
+      if (managers.length) {
+        if (!managers.includes(user.id)) fail("Unauthorized");
+      }
+
+      await db.sRem(k, uid);
+
+      const ids = await db.sMembers(k);
+      managers = await Promise.all(
+        ids.map(async (id) => await getUser(id, fields)),
+      );
+
+      res.send(managers);
+    } catch (e) {}
   },
 
   async confirm(req, res) {
