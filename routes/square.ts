@@ -64,7 +64,10 @@ export default {
       const { data, type, merchant_id } = body;
       const { payment } = data.object;
 
-      if (type === "payment.created" && payment.source_type === "CASH") {
+      if (
+        type === "payment.created" &&
+        (payment.source_type === "CASH" || payment.source_type === "EXTERNAL")
+      ) {
         const {
           amount_money: { amount, currency },
         } = payment;
