@@ -103,6 +103,7 @@ export default {
       const iid = await g(`lnurl:${id}:invoice`);
       const uid = await g(`lnurl:${id}`);
       const user = await getUser(uid);
+
       if (!user) fail("user not found");
       let { username } = user;
       username = username.replace(/\s/g, "").toLowerCase();
@@ -176,13 +177,15 @@ export default {
         }
       }
 
-      if (!invoice)
+      if (!invoice) {
         invoice = await generate({
           invoice: {
+            prompt: user.prompt,
             type: PaymentType.lightning,
           },
           user,
         });
+      }
 
       const { id: uid } = user;
 
@@ -213,52 +216,4 @@ export default {
       bail(res, e.message);
     }
   },
-
-  // async withdraw(req, res) {
-  //   try {
-  //     const { pr, k1: id } = req.query;
-  //     const invoice = await getInvoice(pr);
-  //     const { amount_msat } = await ln.decode(pr);
-  //     const amount = Math.ceil(amount_msat / 1000);
-  //     await db.debit(`fund:${id}`, "", amount, 0, 0, 0);
-  //     let p;
-  //     if (invoice) {
-  //       const { hash } = invoice;
-  //       p = await credit({
-  //         hash,
-  //         amount,
-  //         memo: id,
-  //         ref: id,
-  //         type: PaymentType.fund,
-  //       });
-  //     } else {
-  //       await ln.xpay({
-  //         invstring: pr.replace(/\s/g, "").toLowerCase(),
-  //         maxfee: 0,
-  //         retry_for: 10,
-  //       });
-  //       const rates = await g("rates");
-  //       p = {
-  //         id: v4(),
-  //         amount: -amount,
-  //         hash: pr,
-  //         confirmed: true,
-  //         rate: rates.USD,
-  //         currency: "USD",
-  //         type: PaymentType.fund,
-  //         ref: id,
-  //         created: Date.now(),
-  //       };
-  //       await s(`payment:${p.id}`, p);
-  //       await s(`payment:${pr}`, p);
-  //     }
-  //
-  //     await db.lPush(`fund:${id}:payments`, p.id);
-  //     res.send({ status: "OK" });
-  //   } catch (e) {
-  //     console.log(e);
-  //     warn("lnurlw failed", e.message);
-  //     res.send({ status: "ERROR", reason: "Withdrawal failed" });
-  //   }
-  // },
 };
