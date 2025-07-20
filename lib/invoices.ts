@@ -35,7 +35,7 @@ export const generate = async ({ invoice, user }) => {
   } = invoice;
 
   amount = parseInt(amount || 0);
-  tip = parseInt(tip) || null;
+  tip = tip == null ? null : parseInt(tip);
 
   if (user) user = await getUser(user.username);
   if (!user) fail("user not provided");

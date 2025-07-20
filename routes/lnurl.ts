@@ -160,12 +160,13 @@ export default {
   },
 
   async pay(req, res) {
-    const { username } = req.params;
+    const { amount, username } = req.params;
     try {
       const user = await getUser(username);
 
       const invoices = await db.lRange(`${user.id}:invoices`, 0, 10);
       let invoice;
+
       for (const iid of invoices) {
         const i = await getInvoice(iid);
         const paid = i.amount > 0 && i.received >= i.amount;
@@ -177,9 +178,21 @@ export default {
         }
       }
 
-      if (!invoice) {
+      if (invoice) {
+        if (amount?.startsWith("+")) {
+          const tip = invoice.amount * amount.split("+")[1];
+          invoice = await generate({
+            invoice: {
+              ...invoice,
+              tip,
+            },
+            user,
+          });
+        }
+      } else {
         invoice = await generate({
           invoice: {
+            amount,
             prompt: user.prompt,
             type: PaymentType.lightning,
           },
