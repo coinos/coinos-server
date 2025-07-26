@@ -60,6 +60,7 @@ export const generate = async ({ invoice, user }) => {
   let hash;
   let text;
   let path;
+  let paymentHash;
 
   if (account.seed) {
     type = "bitcoin";
@@ -90,6 +91,7 @@ export const generate = async ({ invoice, user }) => {
 
     hash = r.bolt11;
     text = r.bolt11;
+    paymentHash = r.payment_hash;
   } else if (type === PaymentType.bolt12) {
     const r = await ln.offer({
       amount: amount ? `${amount + tip}sat` : "any",
@@ -132,6 +134,7 @@ export const generate = async ({ invoice, user }) => {
     items,
     memo,
     rate,
+    paymentHash,
     pending: 0,
     received: 0,
     request_id,

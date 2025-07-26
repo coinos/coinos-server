@@ -198,7 +198,7 @@ const handle = (method, params, ev, app, user) =>
         fee: max_fee || Math.round(amount * 0.01),
         user,
         pr,
-        memo: JSON.stringify(metadata)
+        memo: JSON.stringify(metadata),
       });
 
       await db.lPush(`${pubkey}:payments`, pid);
@@ -277,7 +277,11 @@ const handle = (method, params, ev, app, user) =>
         expiry,
       };
 
-      const { hash, created: created_at } = await generate({ invoice, user });
+      const {
+        hash,
+        created: created_at,
+        paymentHash,
+      } = await generate({ invoice, user });
 
       return result({
         type: "incoming",
@@ -287,6 +291,8 @@ const handle = (method, params, ev, app, user) =>
         amount,
         created_at,
         expires_at: created_at + expiry,
+        fees_paid: 0,
+        payment_hash: paymentHash,
         metadata: {},
       });
     },
