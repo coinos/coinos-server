@@ -2,6 +2,7 @@ import config from "$config";
 import api from "$lib/api";
 import { requirePin } from "$lib/auth";
 import { db, g, s } from "$lib/db";
+import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
@@ -267,11 +268,18 @@ export default {
       user,
     } = req;
     try {
-      const { id: uid } = user;
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
       const rates = await g("rates");
+
+      if (!iid) {
+        const inv = await generate({
+          invoice: { amount, type: "lightning" },
+          user,
+        });
+        iid = inv.id;
+      }
 
       const authorization = await g(`authorization:${id}`);
       if (authorization) {
@@ -280,49 +288,52 @@ export default {
 
         const sender = await getUser(authorization.uid);
         await db.del(`authorization:${id}`);
-        res.send(await sendInternal({ amount, sender, recipient: user }));
-      } else {
-        const managers = await db.sMembers(`fund:${id}:managers`);
-        if (managers.length && !managers.includes(user.id))
-          fail("Unauthorized");
 
-        const result: any = await db.debit(
-          `fund:${id}`,
-          "",
-          "Insufficient funds",
-          amount,
-          0,
-          0,
-          0,
-          0,
-        );
-        if (result.err) fail(result.err);
+        const { hash } = await generate({
+          invoice: { amount, type: "lightning" },
+          user: sender,
+        });
 
-        if (!iid) {
-          iid = v4();
-          await s(`invoice:${iid}`, {
-            currency: user.currency,
-            id: iid,
-            hash: iid,
-            rate: rates[user.currency],
-            uid,
-            received: 0,
-          });
-        }
-
-        const payment = await credit({
-          aid: user.id,
-          hash: iid,
+        const { id: pid } = await debit({
+          hash,
           amount,
           memo: id,
-          ref: id,
+          user: sender,
           type: PaymentType.fund,
         });
 
-        await db.lPush(`fund:${id}:payments`, payment.id);
-
-        res.send({ payment });
+        await db.incrBy(`fund:${id}`, amount);
+        await db.lPush(`fund:${id}:payments`, pid);
+        l("funded fund", id);
       }
+
+      const managers = await db.sMembers(`fund:${id}:managers`);
+      if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
+
+      const result: any = await db.debit(
+        `fund:${id}`,
+        "",
+        "Insufficient funds",
+        amount,
+        0,
+        0,
+        0,
+        0,
+      );
+      if (result.err) fail(result.err);
+
+      const payment = await credit({
+        aid: user.id,
+        hash: iid,
+        amount,
+        memo: id,
+        ref: id,
+        type: PaymentType.fund,
+      });
+
+      await db.lPush(`fund:${id}:payments`, payment.id);
+
+      res.send(payment);
     } catch (e) {
       warn("problem withdrawing from fund", user.username, e.message);
       bail(res, e.message);
