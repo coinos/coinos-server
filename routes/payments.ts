@@ -271,49 +271,58 @@ export default {
       amount = parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
-      const managers = await db.sMembers(`fund:${id}:managers`);
-      if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
-
-      const result: any = await db.debit(
-        `fund:${id}`,
-        "",
-        "Insufficient funds",
-        amount,
-        0,
-        0,
-        0,
-        0,
-      );
-      if (result.err) fail(result.err);
-
       const rates = await g("rates");
-      const { currency } = user;
-      const rate = rates[currency];
 
-      if (!iid) {
-        iid = v4();
-        await s(`invoice:${iid}`, {
-          currency,
-          id: iid,
+      const authorization = await g(`authorization:${id}`);
+      if (authorization) {
+        const { currency, fiat } = authorization;
+        amount = sats(fiat / rates[currency]);
+
+        const sender = await getUser(authorization.uid);
+        await db.del(`authorization:${id}`);
+        res.send(await sendInternal({ amount, sender, recipient: user }));
+      } else {
+        const managers = await db.sMembers(`fund:${id}:managers`);
+        if (managers.length && !managers.includes(user.id))
+          fail("Unauthorized");
+
+        const result: any = await db.debit(
+          `fund:${id}`,
+          "",
+          "Insufficient funds",
+          amount,
+          0,
+          0,
+          0,
+          0,
+        );
+        if (result.err) fail(result.err);
+
+        if (!iid) {
+          iid = v4();
+          await s(`invoice:${iid}`, {
+            currency: user.currency,
+            id: iid,
+            hash: iid,
+            rate: rates[user.currency],
+            uid,
+            received: 0,
+          });
+        }
+
+        const payment = await credit({
+          aid: user.id,
           hash: iid,
-          rate,
-          uid,
-          received: 0,
+          amount,
+          memo: id,
+          ref: id,
+          type: PaymentType.fund,
         });
+
+        await db.lPush(`fund:${id}:payments`, payment.id);
+
+        res.send({ payment });
       }
-
-      const payment = await credit({
-        aid: user.id,
-        hash: iid,
-        amount,
-        memo: id,
-        ref: id,
-        type: PaymentType.fund,
-      });
-
-      await db.lPush(`fund:${id}:payments`, payment.id);
-
-      res.send({ payment });
     } catch (e) {
       warn("problem withdrawing from fund", user.username, e.message);
       bail(res, e.message);
