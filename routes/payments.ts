@@ -175,6 +175,7 @@ export default {
       const p = await getPayment(hash);
       if (p?.type === PaymentType.internal)
         p.with = await getUser(p.ref, fields);
+      if (p?.type === PaymentType.fund) p.with = await getUser(p.uid, fields);
       res.send(p);
     } catch (e) {
       console.log(e);
