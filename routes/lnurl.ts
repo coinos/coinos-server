@@ -215,7 +215,7 @@ export default {
 
       res.send({
         allowsNostr: true,
-        minSendable: total,
+        minSendable: invoice.amount ? total : undefined,
         maxSendable: invoice.amount ? total : undefined,
         metadata,
         nostrPubkey: serverPubkey,
