@@ -2,7 +2,7 @@ import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err, warn } from "$lib/logging";
 import { serverPubkey } from "$lib/nostr";
-import { bail, fail, getInvoice, getUser } from "$lib/utils";
+import { SATS, bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
 import got from "got";
 import { v4 } from "uuid";
@@ -215,8 +215,8 @@ export default {
 
       res.send({
         allowsNostr: true,
-        minSendable: invoice.amount ? total : undefined,
-        maxSendable: invoice.amount ? total : undefined,
+        minSendable: invoice.amount ? total : 1000,
+        maxSendable: invoice.amount ? total : 10 * 1000 * SATS,
         metadata,
         nostrPubkey: serverPubkey,
         commentAllowed: 512,
