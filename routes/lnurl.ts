@@ -208,10 +208,12 @@ export default {
       ]);
 
       const id = v4();
-      await s(`lnurl:${id}`, uid);
-      await s(`lnurl:${id}:invoice`, invoice.id);
+      
       const total =
         (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
+
+      await s(`lnurl:${id}`, uid);
+      if (total > 0) await s(`lnurl:${id}:invoice`, invoice.id);
 
       res.send({
         allowsNostr: true,
