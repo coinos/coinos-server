@@ -347,7 +347,7 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
       sender: user,
     });
 
-  const fee = Math.max(5, Math.round(amount * 0.005));
+  const fee = Math.max(5, Math.round(amount * 0.02));
   if (lnurl) {
     amount -= fee;
     const { callback } = (await got(lnurl).json()) as any;
