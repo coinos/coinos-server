@@ -196,9 +196,11 @@ export default {
 
       const { confirm, password, pin, newpin } = body;
       const username = body?.username?.toLowerCase().replace(/\s/g, "");
+      const reserved = ["ecash"];
       const valid = /^[\p{L}\p{N}]{2,24}$/u;
       if (!valid.test(username))
         fail("Usernames can only have letters and numbers");
+      if (reserved.includes(username)) fail("Invalid username");
 
       let exists;
 

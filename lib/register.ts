@@ -15,10 +15,12 @@ export default async (user, ip) => {
   let { password, pubkey, username } = user;
   l("registering", username);
 
+  const reserved = ["ecash"];
   if (!username) fail("Username required");
   username = username.toLowerCase().replace(/\s/g, "");
   if (!valid.test(username))
     fail("Usernames can only have letters and numbers");
+  if (reserved.includes(username)) fail("Invalid username");
 
   const id = v4();
   user.id = id;
