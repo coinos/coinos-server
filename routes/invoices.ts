@@ -2,24 +2,29 @@ import config from "$config";
 import { db } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
-import { bail, fields, getInvoice, getUser } from "$lib/utils";
+import { bail, fail, fields, getInvoice, getUser } from "$lib/utils";
 import rpc from "@coinos/rpc";
 
 export default {
   async get(req, res) {
-    const {
-      params: { id },
-    } = req;
-    const invoice = await getInvoice(id);
+    try {
+      const {
+        params: { id },
+      } = req;
+      if (id === "undefined") fail("invalid id");
+      const invoice = await getInvoice(id);
 
-    if (invoice) {
-      invoice.secret = undefined;
-      invoice.user = await getUser(invoice.uid, fields);
+      if (invoice) {
+        invoice.secret = undefined;
+        invoice.user = await getUser(invoice.uid, fields);
 
-      invoice.items ||= [];
+        invoice.items ||= [];
+      }
+      if (invoice) res.send(invoice);
+      else fail("invoice not found");
+    } catch (e) {
+      bail(res, e.message);
     }
-    if (invoice) res.send(invoice);
-    else res.code(500).send("invoice not found");
   },
 
   async create(req, res) {
