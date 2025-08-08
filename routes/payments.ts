@@ -283,12 +283,13 @@ export default {
       }
 
       const authorization = await g(`authorization:${id}`);
-      if (authorization) {
+      if (authorization && !authorization.claimed) {
         const { currency, fiat } = authorization;
         amount = sats(fiat / rates[currency]);
 
         const sender = await getUser(authorization.uid);
-        await db.del(`authorization:${id}`);
+        authorization.claimed = true;
+        await s(`authorization:${id}`, authorization);
 
         const { hash } = await generate({
           invoice: { amount, type: "lightning" },
