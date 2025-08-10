@@ -299,7 +299,7 @@ export default {
 
       user.haspin = !!user.pin;
       if (user.destination) user.destination = user.destination.trim();
-      await s(`user:${user.pubkey}`, user.id);
+      if (user.pubkey) await s(`user:${user.pubkey}`, user.id);
       await s(
         `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
         user.id,
@@ -311,6 +311,7 @@ export default {
       emit(user.id, "user", user);
       res.send({ user });
     } catch (e) {
+      console.log(e)
       warn("failed to update", user.username, e.message);
       bail(res, e.message);
     }
