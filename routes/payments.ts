@@ -229,12 +229,12 @@ export default {
 
   async fund(req, res) {
     const {
-      params: { name },
+      params: { id },
     } = req;
-    const amount = await g(`fund:${name}`);
+    const amount = await g(`fund:${id}`);
     if (typeof amount === "undefined" || amount === null)
       return bail(res, "fund not found");
-    let payments = (await db.lRange(`fund:${name}:payments`, 0, -1)) || [];
+    let payments = (await db.lRange(`fund:${id}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
 
     await Promise.all(
@@ -242,7 +242,9 @@ export default {
     );
 
     payments = payments.filter((p) => p);
-    res.send({ amount, payments });
+
+    const { amount: authorization } = await g(`authorization:${id}`);
+    res.send({ amount, authorization, payments });
   },
 
   // async withdraw(req, res) {
@@ -262,6 +264,24 @@ export default {
   //     maxWithdrawable: balance * 1000,
   //   });
   // },
+
+  async authorize(req, res) {
+    const { id: uid } = req.user;
+    const { id, fiat, currency, amount } = req.body;
+
+    const managers = await db.sMembers(`fund:${id}:managers`);
+    if (managers.length && !managers.includes(uid)) fail("Unauthorized");
+
+    const authorization = {
+      uid,
+      currency,
+      fiat,
+      amount,
+    };
+
+    await s(`authorization:${id}`, authorization);
+    res.send({});
+  },
 
   async take(req, res) {
     let {
@@ -285,7 +305,7 @@ export default {
       const authorization = await g(`authorization:${id}`);
       if (authorization && !authorization.claimed) {
         const { currency, fiat } = authorization;
-        amount = sats(fiat / rates[currency]);
+        amount = Math.min(amount, sats(fiat / rates[currency]));
 
         const sender = await getUser(authorization.uid);
         authorization.claimed = true;
