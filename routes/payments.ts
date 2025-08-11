@@ -243,8 +243,8 @@ export default {
 
     payments = payments.filter((p) => p);
 
-    const { amount: authorization } = await g(`authorization:${id}`);
-    res.send({ amount, authorization, payments });
+    const authorization = await g(`authorization:${id}`);
+    res.send({ amount, authorization: authorization?.amount, payments });
   },
 
   // async withdraw(req, res) {
