@@ -1,12 +1,12 @@
 import config from "$config";
-import fastify from "fastify";
-import fastifyMultipart from "@fastify/multipart";
-import fastifyStatic from "@fastify/static";
-import fastifyPassport from "@fastify/passport";
-import fastifySecureSession from "@fastify/secure-session";
-import fastifyProxy from "@fastify/http-proxy";
-import fastifyRateLimit from "@fastify/rate-limit";
 import cors from "@fastify/cors";
+import fastifyProxy from "@fastify/http-proxy";
+import fastifyMultipart from "@fastify/multipart";
+import fastifyPassport from "@fastify/passport";
+import fastifyRateLimit from "@fastify/rate-limit";
+import fastifySecureSession from "@fastify/secure-session";
+import fastifyStatic from "@fastify/static";
+import fastify from "fastify";
 import pino from "pino";
 
 import * as path from "path";
@@ -29,8 +29,22 @@ const resLogger = pino(pino.destination("res"));
 
 app.addHook("preHandler", async (req) => {
   const url = req.raw.url;
-  const ignore = ["/login","/ws","/me","/confirm","/public","/rates","/challenge", "/rate", "/lnurlp", "/subscriptions", "/accounts", "/contacts", "/users"];
-  if (ignore.some(path => url.startsWith(path))) return;
+  const ignore = [
+    "/login",
+    "/ws",
+    "/me",
+    "/confirm",
+    "/public",
+    "/rates",
+    "/challenge",
+    "/rate",
+    "/lnurlp",
+    "/subscriptions",
+    "/accounts",
+    "/contacts",
+    "/users",
+  ];
+  if (ignore.some((path) => url.startsWith(path))) return;
 
   reqLogger.info({
     method: req.method,
@@ -39,7 +53,7 @@ app.addHook("preHandler", async (req) => {
     query: req.query,
     body: req.body,
     user: (req.user as any)?.username,
-    id: req.id
+    id: req.id,
   });
 });
 
@@ -65,7 +79,11 @@ app.register(fastifyRateLimit, {
   allowList: (req) => req.raw.url?.includes("public"),
   max: 2000,
   timeWindow: 2000,
-  keyGenerator: (req) => req.headers["cf-connecting-ip"] as string,
+  keyGenerator: (req) => {
+    const ip = (req.headers["cf-connecting-ip"] as string) || req.ip;
+    const ua = req.headers["user-agent"] || "unknown-ua";
+    return req.headers["rate-limit-by"] === "ua" ? ua : ip;
+  },
   errorResponseBuilder: () => {
     return {
       statusCode: 429,
@@ -73,6 +91,22 @@ app.register(fastifyRateLimit, {
       message: "Rate limit exceeded, retry in 2 seconds",
     };
   },
+});
+
+app.register(fastifyRateLimit, {
+  allowList: (req) => {
+    const url = req.raw.url || "";
+    const matches = url.includes("/login") || url.includes("/send");
+    return !matches;
+  },
+  max: 10,
+  timeWindow: 10000,
+  keyGenerator: (req) => (req.headers["user-agent"] as string) || "unknown-ua",
+  errorResponseBuilder: () => ({
+    statusCode: 429,
+    error: "Too Many Requests",
+    message: "Rate limit exceeded",
+  }),
 });
 
 app.register(fastifyProxy, {
