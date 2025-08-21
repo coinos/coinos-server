@@ -1,5 +1,5 @@
 import config from "$config";
-import { db } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
 import { bail, fail, fields, getInvoice, getUser } from "$lib/utils";
@@ -45,6 +45,22 @@ export default {
         body.user?.username,
         e.message,
       );
+      bail(res, e.message);
+    }
+  },
+
+  async update(req, res) {
+    try {
+      const { id } = req.params;
+      const { body } = req;
+      if (!body.invoice?.tip || body.invoice.tip < 0) fail("Invalid tip");
+
+      const invoice = await g(`invoice:${id}`);
+      invoice.tip = body.invoice.tip;
+      await s(`invoice:${id}`, invoice);
+
+      res.send(invoice);
+    } catch (e) {
       bail(res, e.message);
     }
   },
