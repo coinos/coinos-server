@@ -57,6 +57,7 @@ export default {
 
       const invoice = await g(`invoice:${id}`);
       invoice.tip = body.invoice.tip;
+      invoice.amount += invoice.tip;
       await s(`invoice:${id}`, invoice);
 
       res.send(invoice);
