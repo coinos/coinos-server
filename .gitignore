@@ -1,6 +1,6 @@
 node_modules/
 .pnpm*
-data
+data/
 config.ts
 compose.yml
 .env

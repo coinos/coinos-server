@@ -34,4 +34,10 @@ export default {
   support: "support@coinos.io",
   nostrKey: "nsec13wekuqstlsyfrzm369yh6vjaphslq5pq9kze74acqqynjm8lvpms4qzsx9",
   mintUrl: "http://mint:3338",
+  square: {
+    environment: SquareEnvironment.Sandbox,
+    appId: "sandbox-sq0adb-9QbyDZeHTPc_RhFSEr_SaQ",
+    url: "https://connect.squareupsandbox.com/",
+    scopes: ["MERCHANT_PROFILE_READ", "ORDERS_READ", "PAYMENTS_READ"],
+  },
 };
