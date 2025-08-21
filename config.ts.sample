@@ -1,3 +1,5 @@
+import { SquareEnvironment } from "square";
+
 export default {
   archive: "redis://archive",
   db: "redis://db",
