@@ -20,6 +20,7 @@ export const generate = async ({ invoice, user }) => {
     currency,
     expiry,
     fiat,
+    id,
     tip,
     amount,
     items = [],
@@ -55,7 +56,7 @@ export const generate = async ({ invoice, user }) => {
   if (rate < 0) fail("invalid rate");
   if (memo && memo.length > 5000) fail("memo too long");
 
-  const id = v4();
+  if (!id) id = v4();
 
   let hash;
   let text;
@@ -81,7 +82,7 @@ export const generate = async ({ invoice, user }) => {
       expiry ||= 60 * 60 * 24 * 30;
       r = await ln.invoice({
         amount_msat: amount ? `${amount + tip}sat` : "any",
-        label: id,
+        label: `${id} ${user.username} ${new Date()}`,
         description: memo || "",
         expiry,
         deschashonly: true,
@@ -95,7 +96,7 @@ export const generate = async ({ invoice, user }) => {
   } else if (type === PaymentType.bolt12) {
     const r = await ln.offer({
       amount: amount ? `${amount + tip}sat` : "any",
-      label: id,
+      label: `${id} ${user.username} ${new Date()}`,
       description: memo || id,
     });
 

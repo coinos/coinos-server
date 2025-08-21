@@ -55,9 +55,10 @@ export default {
       const { body } = req;
       if (!body.invoice?.tip || body.invoice.tip < 0) fail("Invalid tip");
 
-      const invoice = await g(`invoice:${id}`);
+      let invoice = await g(`invoice:${id}`);
+      const user = await g(`user:${invoice.uid}`);
       invoice.tip = body.invoice.tip;
-      invoice.amount += invoice.tip;
+      invoice = await generate({ invoice, user });
       await s(`invoice:${id}`, invoice);
 
       res.send(invoice);
