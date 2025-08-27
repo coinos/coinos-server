@@ -53,7 +53,7 @@ export default {
     try {
       const { id } = req.params;
       const { body } = req;
-      if (!body.invoice?.tip || body.invoice.tip < 0) fail("Invalid tip");
+      if (body.invoice?.tip == null || body.invoice.tip < 0) fail("Invalid tip");
 
       let invoice = await g(`invoice:${id}`);
       const user = await g(`user:${invoice.uid}`);

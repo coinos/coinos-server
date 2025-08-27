@@ -80,9 +80,10 @@ export const generate = async ({ invoice, user }) => {
       r.bolt11 = bolt11;
     } else {
       expiry ||= 60 * 60 * 24 * 30;
+
       r = await ln.invoice({
         amount_msat: amount ? `${amount + tip}sat` : "any",
-        label: `${id} ${user.username} ${new Date()}`,
+        label: `${id} ${user.username} ${Date.now()}`,
         description: memo || "",
         expiry,
         deschashonly: true,
