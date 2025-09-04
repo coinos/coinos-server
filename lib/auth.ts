@@ -1,5 +1,4 @@
 import config from "$config";
-import { g } from "$lib/db";
 import { fail, getUser } from "$lib/utils";
 import fastifyPassport from "@fastify/passport";
 import jwt from "passport-jwt";
@@ -43,9 +42,18 @@ export const jwtStrategy = new jwt.Strategy(
       (req) => (req.cookies ? req.cookies.token : null),
     ]),
     secretOrKey: config.jwt,
+    passReqToCallback: true,
   },
-  async (payload, next) => {
-    const user = await getUser(payload.id);
+  async (req, payload, next) => {
+    const { originalUrl: u, method: m } = req;
+
+    let { id } = payload;
+    const wl = { GET: ["/invoice", "/payments"], POST: ["/invoice"] };
+
+    if (id.endsWith("-ro") && wl[m].some((p) => u.startsWith(p)))
+      id = id.slice(0, -3);
+
+    const user = await getUser(id);
     next(null, user);
   },
 );
