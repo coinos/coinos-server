@@ -311,7 +311,7 @@ export default {
       emit(user.id, "user", user);
       res.send({ user });
     } catch (e) {
-      console.log(e)
+      console.log(e);
       warn("failed to update", user.username, e.message);
       bail(res, e.message);
     }
@@ -1043,5 +1043,12 @@ export default {
     const lightning = await g(`credit:lightning:${id}`);
     const liquid = await g(`credit:liquid:${id}`);
     res.send({ bitcoin, lightning, liquid });
+  },
+
+  async ro(req, res) {
+    const { user } = req;
+    const payload = { id: `${user.id}-ro` };
+    const token = jwt.sign(payload, config.jwt);
+    res.send(token);
   },
 };

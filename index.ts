@@ -113,6 +113,7 @@ app.post("/account/delete", auth, users.deleteAccount);
 
 app.get("/users", auth, users.list);
 app.get("/me", auth, users.me);
+app.get("/ro", auth, users.ro);
 app.get("/credits", auth, users.credits);
 app.get("/users/:key", users.get);
 app.post("/register", users.create);
