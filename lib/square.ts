@@ -153,7 +153,6 @@ async function getOrCacheLocationId(uid: string, client: SquareClient): Promise<
   return firstActiveId;
 }
 
-// ----- Public entry: syncSquare -----
 export async function syncSquare(inv: CoinosInv, p: CoinosPayment, user: CoinosUser) {
   // 1) Load/refresh per-user OAuth creds
   const auth = await ensureFreshAccessToken(user.id);
