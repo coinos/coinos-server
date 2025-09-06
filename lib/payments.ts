@@ -6,6 +6,7 @@ import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { notify, nwcNotify } from "$lib/notifications";
+import { squarePayment } from "$lib/square";
 import {
   SATS,
   btc,
@@ -320,6 +321,9 @@ export const completePayment = async (inv, p, user) => {
 
   nwcNotify(p);
   notify(p, user, withdrawal);
+
+  if (user.square) squarePayment(user);
+
   l(username, "received", p.type, p.amount);
   callWebhook(inv, p);
 };
