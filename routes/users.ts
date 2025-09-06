@@ -207,6 +207,7 @@ export default {
       let { pubkey } = body;
       if (pubkey) {
         pubkey = pubkey.trim();
+        if (pubkey.startsWith("npub")) pubkey = nip19.decode(pubkey).data;
         exists = await getUser(pubkey);
         const existingUsername = exists?.username
           ?.toLowerCase()
@@ -226,7 +227,6 @@ export default {
           fail("Invalid signature or challenge mismatch.");
 
         pubkey = pubkey.replace(/\s*/g, "");
-        if (pubkey.startsWith("npub")) pubkey = nip19.decode(pubkey).data;
         if (pubkey.length !== 64) fail(`Invalid pubkey ${pubkey}`);
         await db.del(`user:${user.pubkey}`);
         user.pubkey = pubkey;
