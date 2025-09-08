@@ -8,7 +8,7 @@
     "format": "biome format *.js **/*.js --write"
   },
   "dependencies": {
-    "@asoltys/clightning-client": "^0.1.6",
+    "@asoltys/clightning-client": "^0.1.8",
     "@aws-sdk/client-ses": "^3.449.0",
     "@cashu/cashu-ts": "^2.0.0-rc3",
     "@coinos/rpc": "^0.0.6",
