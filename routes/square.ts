@@ -7,8 +7,9 @@ import { sha256 } from "@noble/hashes/sha256";
 import { utf8ToBytes } from "@noble/hashes/utils";
 import { base64urlnopad as base64 } from "@scure/base";
 import { SquareClient } from "square";
+import { v4 } from "uuid";
 
-const { scopes, url, appId, environment } = config.square;
+const { scopes, url, appId, clientSecret, environment } = config.square;
 
 export default {
   async connect(req, res) {
@@ -29,6 +30,62 @@ export default {
     res.send(
       `${url}oauth2/authorize?client_id=${appId}&session=false&scope=${scope}&state=${state}&code_challenge=${challenge}`,
     );
+  },
+
+  async sync(req, res) {
+    try {
+      const { user } = req;
+      let square = await g(`${user.id}:square`);
+
+      let client = new SquareClient({
+        environment,
+      });
+
+      const { refreshToken } = square;
+
+      square = await client.oAuth.obtainToken({
+        clientId: appId,
+        grantType: "refresh_token",
+        refreshToken,
+      });
+
+      await s(`${user.id}:square`, square);
+
+      const { accessToken } = square;
+
+      client = new SquareClient({
+        token: accessToken,
+        environment,
+      });
+
+      // const payments = await authedClient.payments.list({});
+      // console.log(payments);
+      const locs = await client.locations.list({});
+
+      const pay = await client.payments.create({
+        sourceId: "EXTERNAL",
+        idempotencyKey: v4(),
+        amountMoney: {
+          amount: BigInt(1000),
+          currency: "CAD",
+        },
+        // appFeeMoney: {
+        //   amount: BigInt(10),
+        //   currency: "CAD",
+        // },
+        autocomplete: true,
+        externalDetails: { type: "OTHER", source: `Coinos ${v4()}` },
+        locationId: locs.locations[0].id,
+        referenceId: v4(),
+        note: `Brief description ${v4()}`,
+      });
+
+      console.log(pay);
+
+      res.send({});
+    } catch (e) {
+      console.log(e);
+    }
   },
 
   async auth(req, res) {
