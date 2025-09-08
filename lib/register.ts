@@ -2,7 +2,7 @@ import config from "$config";
 import countries from "$lib/countries";
 import { db, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
-import { fail, getUser } from "$lib/utils";
+import { fail } from "$lib/utils";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { got } from "got";
 import { getPublicKey, nip19 } from "nostr-tools";

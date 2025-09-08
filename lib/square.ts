@@ -8,7 +8,7 @@ const { appId, environment } = config.square;
 
 export const squarePayment = async (p, user) => {
   let square = await g(`${user.id}:square`);
-  if (!square) return;
+  if (!(square && user.syncSquare)) return;
 
   let client = new SquareClient({
     environment,
