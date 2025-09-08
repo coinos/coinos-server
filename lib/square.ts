@@ -1,12 +1,14 @@
-import { g, s } from "$lib/db";
 import config from "$config";
+import { g, s } from "$lib/db";
+import { fiat } from "$lib/utils";
 import { SquareClient } from "square";
 import { v4 } from "uuid";
 
 const { appId, environment } = config.square;
 
-export const squarePayment = async (user) => {
+export const squarePayment = async (p, user) => {
   let square = await g(`${user.id}:square`);
+  if (!square) return;
 
   let client = new SquareClient({
     environment,
@@ -29,27 +31,25 @@ export const squarePayment = async (user) => {
     environment,
   });
 
-  // const payments = await authedClient.payments.list({});
-  // console.log(payments);
   const locs = await client.locations.list({});
 
-  const pay = await client.payments.create({
+  await client.payments.create({
     sourceId: "EXTERNAL",
     idempotencyKey: v4(),
     amountMoney: {
-      amount: BigInt(1000),
-      currency: "CAD",
+      amount: BigInt(parseFloat(fiat(p.amount, p.rate).toFixed(2)) * 100),
+      currency: p.currency,
     },
-    // appFeeMoney: {
-    //   amount: BigInt(10),
-    //   currency: "CAD",
-    // },
+    tipMoney: p.tip
+      ? {
+          amount: BigInt(parseFloat(fiat(p.tip, p.rate).toFixed(2)) * 100),
+          currency: p.currency,
+        }
+      : undefined,
     autocomplete: true,
-    externalDetails: { type: "OTHER", source: `Coinos ${v4()}` },
+    externalDetails: { type: "OTHER", source: `Coinos payment ${p.id}` },
     locationId: locs.locations[0].id,
     referenceId: v4(),
-    note: `Brief description ${v4()}`,
+    note: `Coinos payment ${p.id}`,
   });
-
-  console.log(pay);
 };

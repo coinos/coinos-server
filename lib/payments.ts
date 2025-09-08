@@ -322,7 +322,7 @@ export const completePayment = async (inv, p, user) => {
   nwcNotify(p);
   notify(p, user, withdrawal);
 
-  if (user.square) squarePayment(user);
+  squarePayment(p, user);
 
   l(username, "received", p.type, p.amount);
   callWebhook(inv, p);
