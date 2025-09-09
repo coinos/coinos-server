@@ -86,7 +86,6 @@ app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
 
-app.get("/square/sync", auth, square.sync);
 app.get("/square/connect", auth, square.connect);
 app.get("/square/auth", auth, square.auth);
 app.post("/square/payment", square.payment);
