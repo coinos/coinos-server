@@ -209,11 +209,12 @@ export default {
         pubkey = pubkey.trim();
         if (pubkey.startsWith("npub")) pubkey = nip19.decode(pubkey).data;
         exists = await getUser(pubkey);
+        const un = user.username.toLowerCase().replace(/\s/g, "");
         const existingUsername = exists?.username
           ?.toLowerCase()
           .replace(/\s/g, "");
-        if (exists && username !== existingUsername) {
-          warn("key in use", pubkey, existingUsername);
+        if (exists && un !== existingUsername) {
+          warn("key in use", pubkey, username, existingUsername);
           if (exists.anon) await db.del(`user:${pubkey}`);
           else fail("Key in use by another account");
         }

@@ -80,6 +80,7 @@ export const debit = async ({
 
   let ref;
   const { id: uid, currency } = user;
+  if (!aid) aid = uid;
 
   const rates = await g("rates");
   if (!rate) rate = rates[currency];
@@ -119,12 +120,12 @@ export const debit = async ({
     ? Math.round((amount + fee + tip) * config.fee[creditType])
     : 0;
 
-  if (aid && aid !== uid) ourfee = 0;
+  if (aid !== uid) ourfee = 0;
   const frozenBalance =
     !blacklisted || whitelisted ? 0 : await ga(`balance:${uid}`);
 
   ourfee = await db.debit(
-    `balance:${aid || uid}`,
+    `balance:${aid}`,
     `credit:${creditType}:${aid !== uid ? 0 : uid}`,
     t(user).insufficientFunds,
     amount || 0,
@@ -167,9 +168,7 @@ export const debit = async ({
     .exec();
 
   l(user.username, "sent", type, amount);
-  //emit(user.id, "payment", p);
-  if (![PaymentType.lightning, PaymentType.bolt12].includes(type))
-    nwcNotify(p, user);
+  if (![PaymentType.lightning, PaymentType.bolt12].includes(type)) nwcNotify(p);
 
   return p;
 };
