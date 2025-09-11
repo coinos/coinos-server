@@ -12,6 +12,7 @@ export default {
   },
 
   async index(_, res) {
-    res.send(await g("rates"));
+    const { date, fx, ...rates } = await g("rates");
+    res.send(rates);
   },
 };
