@@ -141,7 +141,7 @@ app.post(
   },
   users.login,
 );
-app.post("/printer", users.printer);
+app.post("/flash", users.flash);
 app.get("/challenge", users.challenge);
 app.post("/nostrAuth", users.nostrAuth);
 app.get("/app/:pubkey", auth, users.app);
@@ -194,7 +194,7 @@ app.post("/echo", (req, res) => {
 });
 
 const host: string = process.env["HOST"] || "0.0.0.0";
-const port: number = parseInt(process.env["PORT"]) || 3119;
+const port: number = Number.parseInt(process.env["PORT"]) || 3119;
 
 app.listen({ host, port });
 

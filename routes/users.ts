@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { appendFile, unlink } from "node:fs/promises";
+import { appendFile, unlink, writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
 import { db, g, ga, s } from "$lib/db";
@@ -289,7 +289,7 @@ export default {
       }
 
       user.fresh = false;
-      user.tip = Math.max(0, Math.min(1000, parseInt(user.tip)));
+      user.tip = Math.max(0, Math.min(1000, Number.parseInt(user.tip)));
 
       if (password && password === confirm) {
         user.password = await Bun.password.hash(password, {
@@ -866,28 +866,13 @@ export default {
     }
   },
 
-  async printer(req, res) {
-    const { ssid, key, username, password } = req.body;
-    const dir = "./printer";
-    const path = `${dir}/config.txt`;
-
-    try {
-      await unlink(path);
-      await appendFile(path, `${ssid}\n`, "utf8");
-      await appendFile(path, `${key}\n`, "utf8");
-      await appendFile(path, `${username}\n`, "utf8");
-      await appendFile(path, `${password}\n`, "utf8");
-
-      const output = "./littlefs.img";
-      await $`./mklittlefs -c ${dir} -p 256 -b 4096 -s 0x20000 ${output}`;
-
-      res.header("Content-Type", "application/octet-stream");
-      res.header("Content-Disposition", "attachment; filename=littlefs.img");
-      console.log("sending back");
-      return res.send(createReadStream(output));
-    } catch (error) {
-      res.code(500).send({ error: "Failed to generate LittleFS image" });
-    }
+  async flash(req, res) {
+    const { ssid, key, token } = req.body;
+    const cfg = `${ssid.trim()}\n${key.trim()}\n${token.trim()}\n`;
+    await writeFile("./printer/config.txt", cfg, "utf8");
+    await $`./mklittlefs -c ./printer -p 256 -b 4096 -s 0x20000 ./littlefs.img`;
+    res.header("Content-Type", "application/octet-stream");
+    return res.send(createReadStream("./littlefs.img"));
   },
 
   async app(req, res) {
@@ -934,9 +919,9 @@ export default {
         a.spent = payments.reduce(
           (a, b) =>
             a +
-            (Math.abs(parseInt(b.amount || 0)) +
-              parseInt(b.fee || 0) +
-              parseInt(b.ourfee || 0)),
+            (Math.abs(Number.parseInt(b.amount || 0)) +
+              Number.parseInt(b.fee || 0) +
+              Number.parseInt(b.ourfee || 0)),
           0,
         );
       }),
