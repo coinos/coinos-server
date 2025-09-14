@@ -30,7 +30,6 @@ import {
 } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import got from "got";
-import { v4 } from "uuid";
 
 export default {
   async info(_, res) {
@@ -45,7 +44,7 @@ export default {
 
     try {
       if (typeof amount !== "undefined") {
-        amount = parseInt(amount);
+        amount = Number.parseInt(amount);
         if (amount < 0 || amount > SATS || Number.isNaN(amount))
           fail("Invalid amount");
       }
@@ -100,17 +99,17 @@ export default {
   async list(req, res) {
     let {
       user: { id },
-      query: { aid, start, end, limit, offset },
+      query: { aid, start, end, limit, offset, received },
     } = req;
     if (!aid || aid === "undefined") aid = id;
 
     const index = await db.lPos(`${id}:accounts`, aid);
     if (index === null) fail("unauthorized");
 
-    limit = parseInt(limit);
-    offset = parseInt(offset) || 0;
+    limit = Number.parseInt(limit);
+    offset = Number.parseInt(offset) || 0;
 
-    const range = !limit || start || end ? -1 : limit - 1;
+    const range = !limit || received || start || end ? -1 : limit - 1;
     let payments = (await db.lRange(`${aid || id}:payments`, 0, range)) || [];
 
     payments = (
@@ -122,6 +121,7 @@ export default {
             await db.lRem(`${aid || id}:payments`, 0, pid);
             return p;
           }
+          if (received && p.amount < 0) return;
           if (p.created < start || p.created > end) return;
           if (p.type === PaymentType.internal)
             p.with = await getUser(p.ref, fields);
@@ -137,7 +137,7 @@ export default {
       [b.currency]: {
         tips: (a[b.currency] ? a[b.currency].tips : 0) + (b.tip || 0),
         fiatTips: (
-          parseFloat(a[b.currency] ? a[b.currency].fiatTips : 0) +
+          Number.parseFloat(a[b.currency] ? a[b.currency].fiatTips : 0) +
           ((b.tip || 0) * b.rate) / SATS
         ).toFixed(2),
         sats:
@@ -147,7 +147,7 @@ export default {
           (b.fee || 0) -
           (b.ourfee || 0),
         fiat: (
-          parseFloat(a[b.currency] ? a[b.currency].fiat : 0) +
+          Number.parseFloat(a[b.currency] ? a[b.currency].fiat : 0) +
           (((b.amount || 0) +
             ((b.amount > 0 ? b.tip : -b.tip) || 0) -
             (b.fee || 0) -
@@ -289,7 +289,7 @@ export default {
       user,
     } = req;
     try {
-      amount = parseInt(amount);
+      amount = Number.parseInt(amount);
       if (amount < 0) fail("Invalid amount");
 
       const rates = await g("rates");
@@ -481,7 +481,7 @@ export default {
           const { id: iid } = invoice;
 
           p.confirmed = true;
-          invoice.received += parseInt(invoice.pending);
+          invoice.received += Number.parseInt(invoice.pending);
           invoice.pending = 0;
 
           l("confirming", id, p.id, p.amount);
