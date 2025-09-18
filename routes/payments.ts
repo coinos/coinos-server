@@ -3,6 +3,7 @@ import api from "$lib/api";
 import { requirePin } from "$lib/auth";
 import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
+import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
@@ -30,6 +31,7 @@ import {
 } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import got from "got";
+import { v4 } from "uuid";
 
 export default {
   async info(_, res) {
@@ -703,5 +705,32 @@ export default {
   async order(req, res) {
     console.log(req.body);
     res.send(req.body);
+  },
+
+  async sendinvoice(req, res) {
+    try {
+      const { user } = req;
+      const { invreq } = req.body;
+      
+      const { amount_msat, bolt12, pay_index } = await ln.sendinvoice({
+        invreq,
+        label: v4(),
+      });
+
+      await generate({
+        invoice: {
+          amount: Math.round(amount_msat / 1000),
+          type: "bolt12",
+          bolt12,
+        },
+        user,
+      });
+
+      const p = await replay(pay_index);
+
+      res.send(p);
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 };

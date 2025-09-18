@@ -67,6 +67,7 @@ app.post("/zapRequest", auth, nostr.zapRequest);
 app.get("/thread/:id", nostr.thread);
 
 app.get("/info", payments.info);
+app.post("/sendinvoice", auth, payments.sendinvoice);
 app.post("/payments", auth, payments.create);
 app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", payments.get);

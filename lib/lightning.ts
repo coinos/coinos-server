@@ -27,7 +27,7 @@ export async function listenForLightning() {
   try {
     if (!preimage) return;
 
-    const invoice = await getInvoice(bolt11 ?? local_offer_id);
+    const invoice = await getInvoice(bolt11 ?? local_offer_id ?? bolt12);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
     const p = await getPayment(bolt11 || bolt12);
@@ -75,10 +75,10 @@ export async function replay(index) {
   try {
     if (!preimage) return;
 
-    const invoice = await getInvoice(bolt11 ?? local_offer_id);
+    const invoice = await getInvoice(bolt11 ?? local_offer_id ?? bolt12);
     if (!invoice) return warn("received lightning with no invoice", bolt11);
 
-    const p = await getPayment(bolt11 || bolt12);
+    let p = await getPayment(bolt11 || bolt12);
     if (p) return warn("already processed", bolt11 || bolt12);
 
     if (invoice?.memo) {
@@ -93,13 +93,15 @@ export async function replay(index) {
       }
     }
 
-    await credit({
+    p = await credit({
       hash: bolt11 || bolt12,
       amount: received,
       memo: invoice.memo,
       ref: preimage,
       type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
     });
+
+    return p;
   } catch (e) {
     console.log(e);
     err("problem receiving lightning payment", e.message);

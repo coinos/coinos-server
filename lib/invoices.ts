@@ -16,6 +16,7 @@ export const generate = async ({ invoice, user }) => {
   let {
     address_type,
     bolt11,
+    bolt12,
     aid,
     currency,
     expiry,
@@ -35,8 +36,8 @@ export const generate = async ({ invoice, user }) => {
     secret,
   } = invoice;
 
-  amount = parseInt(amount || 0);
-  tip = tip == null ? null : parseInt(tip);
+  amount = Number.parseInt(amount || 0);
+  tip = tip == null ? null : Number.parseInt(tip);
 
   if (user) user = await getUser(user.username);
   if (!user) fail("user not provided");
@@ -95,18 +96,26 @@ export const generate = async ({ invoice, user }) => {
     text = r.bolt11;
     paymentHash = r.payment_hash;
   } else if (type === PaymentType.bolt12) {
-    const r = await ln.offer({
-      amount: amount ? `${amount + tip}sat` : "any",
-      label: `${id} ${user.username} ${new Date()}`,
-      description: memo || id,
-    });
+    let r;
+    if (bolt12) {
+      const { id: nodeid } = await ln.getinfo();
+      r = await ln.decode(bolt12);
+      if (r.invoice_node_id !== nodeid) fail("invalid invoice");
+      amount = Math.round(r.invoice_amount_msat / 1000);
+      r.bolt12 = bolt12;
+    } else {
+      const r = await ln.offer({
+        amount: amount ? `${amount + tip}sat` : "any",
+        label: `${id} ${user.username} ${new Date()}`,
+        description: memo || id,
+      });
 
-    if (await getInvoice(r.offer_id)) fail("Duplicate offer exists");
+      if (await getInvoice(r.offer_id)) fail("Duplicate offer exists");
+      await s(`invoice:${r.offer_id}`, id);
+    }
 
     hash = r.bolt12;
     text = r.bolt12;
-
-    await s(`invoice:${r.offer_id}`, id);
   } else if (type === PaymentType.bitcoin) {
     address_type ||= "bech32";
     hash = await bc.getNewAddress({ address_type });
