@@ -53,13 +53,18 @@ export default {
     try {
       const { id } = req.params;
       const { body } = req;
-      if (body.invoice?.tip == null || body.invoice.tip < 0) fail("Invalid tip");
+      const { tip, webhook, secret } = body.invoice;
+      if (tip == null || tip < 0) fail("Invalid tip");
 
       let invoice = await g(`invoice:${id}`);
-      const user = await g(`user:${invoice.uid}`);
-      invoice.tip = body.invoice.tip;
-      invoice.webhook = body.invoice.webhook;
-      invoice.secret = body.invoice.secret;
+      const user = req.user || (await g(`user:${invoice.uid}`));
+
+      if (tip) invoice.tip = tip;
+      if (invoice.uid === user?.id) {
+        if (webhook) invoice.webhook = webhook;
+        if (secret) invoice.secret = secret;
+      }
+
       invoice = await generate({ invoice, user });
       await s(`invoice:${id}`, invoice);
 

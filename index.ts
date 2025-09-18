@@ -47,7 +47,7 @@ app.get("/locations", locations.list);
 app.get("/invoice/:id", invoices.get);
 app.get("/invoices", auth, invoices.list);
 app.post("/invoice", optional, invoices.create);
-app.post("/invoice/:id", invoices.update);
+app.post("/invoice/:id", optional, invoices.update);
 app.post("/sign", auth, invoices.sign);
 
 app.get("/assetlinks.json", (_, res) => res.sendFile("assetlinks.json"));
