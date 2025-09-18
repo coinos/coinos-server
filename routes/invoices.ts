@@ -54,15 +54,18 @@ export default {
       const { id } = req.params;
       const { body } = req;
       const { tip, webhook, secret } = body.invoice;
-      if (tip == null || tip < 0) fail("Invalid tip");
+
+      if (tip < 0) fail("Invalid tip");
 
       let invoice = await g(`invoice:${id}`);
       const user = req.user || (await g(`user:${invoice.uid}`));
 
-      if (tip) invoice.tip = tip;
-      if (invoice.uid === user?.id) {
-        if (webhook) invoice.webhook = webhook;
-        if (secret) invoice.secret = secret;
+      if (typeof tip !== "undefined") invoice.tip = tip;
+
+      if (webhook && secret) {
+        if (invoice.uid !== user?.id) fail("Unauthorized");
+        invoice.webhook = webhook;
+        invoice.secret = secret;
       }
 
       invoice = await generate({ invoice, user });
