@@ -58,6 +58,8 @@ export default {
       let invoice = await g(`invoice:${id}`);
       const user = await g(`user:${invoice.uid}`);
       invoice.tip = body.invoice.tip;
+      invoice.webhook = body.invoice.webhook;
+      invoice.secret = body.invoice.secret;
       invoice = await generate({ invoice, user });
       await s(`invoice:${id}`, invoice);
 
