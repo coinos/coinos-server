@@ -284,6 +284,11 @@ export default {
         "twofa",
       ];
 
+      if (body.email) {
+        user.verified = false;
+        user.notify = false;
+      }
+
       for (const a of attributes) {
         if (typeof body[a] !== "undefined") user[a] = body[a];
       }
