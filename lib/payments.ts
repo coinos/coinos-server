@@ -184,14 +184,12 @@ export const credit = async ({
 }) => {
   amount = parseInt(amount) || 0;
 
-  let inv;
-  if (type === PaymentType.bolt12 && !hash.startsWith("lni")) {
+  let inv = await getInvoice(hash);
+  if (!inv && type === PaymentType.bolt12) {
     const { invoices } = await ln.listinvoices({ invstring: hash });
     const { local_offer_id } = invoices[0];
     inv = await getInvoice(local_offer_id);
-  } else {
-    inv = await getInvoice(hash);
-  }
+  } 
 
   if (!inv) {
     await db.sAdd("missing", ref.split(":")[0]);
