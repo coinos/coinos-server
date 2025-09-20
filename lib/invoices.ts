@@ -104,7 +104,7 @@ export const generate = async ({ invoice, user }) => {
       amount = Math.round(r.invoice_amount_msat / 1000);
       r.bolt12 = bolt12;
     } else {
-      const r = await ln.offer({
+      r = await ln.offer({
         amount: amount ? `${amount + tip}sat` : "any",
         label: `${id} ${user.username} ${new Date()}`,
         description: memo || id,
