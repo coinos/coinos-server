@@ -58,12 +58,12 @@ export default {
       if (tip < 0) fail("Invalid tip");
 
       let invoice = await g(`invoice:${id}`);
-      const user = req.user || (await g(`user:${invoice.uid}`));
+      const user = await g(`user:${invoice.uid}`);
 
       if (typeof tip !== "undefined") invoice.tip = tip;
 
       if (webhook && secret) {
-        if (invoice.uid !== user?.id) fail("Unauthorized");
+        if (invoice.uid !== req.user?.id) fail("Unauthorized");
         invoice.webhook = webhook;
         invoice.secret = secret;
       }

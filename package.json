@@ -10,7 +10,7 @@
   "dependencies": {
     "@asoltys/clightning-client": "^0.1.10",
     "@aws-sdk/client-ses": "^3.886.0",
-    "@cashu/cashu-ts": "^2.7.1",
+    "@cashu/cashu-ts": "^2.7.2",
     "@coinos/rpc": "^0.0.6",
     "@fastify/cors": "^8.5.0",
     "@fastify/http-proxy": "^9.5.0",
