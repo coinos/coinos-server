@@ -240,8 +240,8 @@ export default {
       if (user.pin === "delete") user.pin = undefined;
 
       if (username) {
-        exists = await db.exists(`user:${username}`);
         const currentUsername = user.username.replace(/\s/g, "").toLowerCase();
+        exists = await db.exists(`user:${currentUsername}`);
 
         if (currentUsername !== username && exists) {
           err("username taken", username, currentUsername);
