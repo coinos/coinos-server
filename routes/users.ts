@@ -559,6 +559,7 @@ export default {
       params: { username },
       headers: { authorization },
     } = req;
+    fail("Unauthorized");
     username = username.toLowerCase();
     if (!authorization?.includes(config.admin))
       return res.code(401).send("unauthorized");
@@ -694,7 +695,7 @@ export default {
       await s(`user:${id}`, user);
       await s(`email:${email.toLowerCase()}`, id);
 
-      res.send(pick(user, whitelist));
+      res.send(pick(user, fields));
     } catch (e) {
       bail(res, e.message);
     }
