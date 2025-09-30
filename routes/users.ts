@@ -241,17 +241,17 @@ export default {
 
       if (username) {
         const currentUsername = user.username.replace(/\s/g, "").toLowerCase();
-        exists = await db.exists(`user:${currentUsername}`);
+        if (username !== currentUsername) {
+          exists = await db.exists(`user:${username}`);
 
-        if (currentUsername !== username && exists) {
-          err("username taken", username, currentUsername);
-          fail("Username taken");
-        } else if (username) {
-          if (currentUsername !== username)
+          if (exists) {
+            err("username taken", username, currentUsername);
+            fail("Username taken");
+          } else {
             l("changing username", currentUsername, username);
-
-          await db.del(`user:${currentUsername}`);
-          user.username = username;
+            await db.del(`user:${currentUsername}`);
+            user.username = username;
+          }
         }
       }
 
