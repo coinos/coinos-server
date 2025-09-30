@@ -81,7 +81,6 @@ export default () => {
       db.sAdd("handled", ev.id);
       let { content, pubkey } = ev;
       const pk = ev.tags.find((t) => t[0] === "p")[1];
-      console.log(pk);
       const sk = serverKeys[pk];
       const { params, method } = JSON.parse(
         await nip04.decrypt(sk, pubkey, content),
@@ -114,7 +113,6 @@ export default () => {
         response = await finalizeEvent(response, hexToBytes(sk));
         r.send(["EVENT", response]);
       } catch (e) {
-        console.log("BOOM", e);
         err(
           "problem with nwc",
           pubkey,
@@ -124,7 +122,6 @@ export default () => {
         );
       }
     } catch (e) {
-      console.log("BOOM2", e);
       err("problem with nwc", e.message);
     }
   });
