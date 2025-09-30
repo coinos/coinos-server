@@ -125,10 +125,10 @@ const handle = (method, params, ev, app, user) =>
       const spent = payments.reduce(
         (a, b) =>
           a +
-          (Math.abs(parseInt(b.amount || 0)) +
-            parseInt(b.tip || 0) +
-            parseInt(b.fee || 0) +
-            parseInt(b.ourfee || 0)),
+          (Math.abs(Number.parseInt(b.amount || 0)) +
+            Number.parseInt(b.tip || 0) +
+            Number.parseInt(b.fee || 0) +
+            Number.parseInt(b.ourfee || 0)),
         0,
       );
 
@@ -193,24 +193,28 @@ const handle = (method, params, ev, app, user) =>
         }
       }
 
-      const { id: pid } = await sendLightning({
-        amount,
-        fee: max_fee || Math.round(amount * 0.01),
-        user,
-        pr,
-        memo: JSON.stringify(metadata),
-      });
+      try {
+        const { id: pid } = await sendLightning({
+          amount,
+          fee: max_fee || Math.round(amount * 0.01),
+          user,
+          pr,
+          memo: JSON.stringify(metadata),
+        });
 
-      await db.lPush(`${pubkey}:payments`, pid);
+        await db.lPush(`${pubkey}:payments`, pid);
 
-      for (let i = 0; i < 10; i++) {
-        const { pays } = await ln.listpays(pr);
-        const p = pays.find((p) => p.status === "complete");
-        if (p) {
-          const { preimage } = p;
-          return result({ preimage });
+        for (let i = 0; i < 10; i++) {
+          const { pays } = await ln.listpays(pr);
+          const p = pays.find((p) => p.status === "complete");
+          if (p) {
+            const { preimage } = p;
+            return result({ preimage });
+          }
+          await sleep(2000);
         }
-        await sleep(2000);
+      } catch (e) {
+        return error({ code: "INTERNAL", message: e.message });
       }
 
       return error({ code: "INTERNAL", message: "Payment timed out" });

@@ -35,7 +35,7 @@ export default {
   fee: 0.001,
   adminpass: "pwa",
   support: "support@coinos.io",
-  nostrKey: "nsec13wekuqstlsyfrzm369yh6vjaphslq5pq9kze74acqqynjm8lvpms4qzsx9",
+  nostrKey: "nsec1msk3dqy2pzqy2murmm5s5gejfgkjkm2zesnh266gud2wcvhcunzqlu0h90",
   mintUrl: "http://mint:3338",
   square: {
     environment: SquareEnvironment.Sandbox,
