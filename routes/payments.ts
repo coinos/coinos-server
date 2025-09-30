@@ -466,6 +466,7 @@ export default {
         if (!p) {
           const invoice = await getInvoice(address);
           if (!hot && aid !== invoice?.aid) continue;
+          if (sats(amount) < 500) continue;
           await credit({
             hash: address,
             amount: sats(amount),
