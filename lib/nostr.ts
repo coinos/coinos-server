@@ -16,7 +16,12 @@ export const serverSecret = bytesToHex(
   nip19.decode(config.nostrKey).data as Uint8Array,
 );
 
+export const serverSecret2 = bytesToHex(
+  nip19.decode(config.nostrKey2).data as Uint8Array,
+);
+
 export const serverPubkey = getPublicKey(serverSecret);
+export const serverPubkey2 = getPublicKey(serverSecret2);
 
 const alwaysTrue: any = (t: Event) => {
   t[Symbol("verified")] = true;
@@ -42,7 +47,7 @@ export async function publish(ev, url = config.nostr) {
 
 export async function handleZap(invoice, sender = undefined) {
   try {
-    const pubkey = serverPubkey;
+    const pubkey = serverPubkey2;
     const zapreq = JSON.parse(invoice.description);
 
     if (!zapreq.tags || zapreq.tags.length === 0) {
@@ -95,7 +100,7 @@ export async function handleZap(invoice, sender = undefined) {
     tags.push(["preimage", invoice.payment_preimage]);
 
     const ev = { pubkey, kind, created_at, content, tags };
-    const signed = await finalizeEvent(ev, serverSecret);
+    const signed = await finalizeEvent(ev, serverSecret2);
 
     l("sending receipt");
 

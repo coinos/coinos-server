@@ -4,7 +4,7 @@ import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import mqtt from "$lib/mqtt";
-import { publish, serverSecret } from "$lib/nostr";
+import { publish, serverSecret2 } from "$lib/nostr";
 import { emit } from "$lib/sockets";
 import { f, fiat, fmt, getUser, link, nada, t } from "$lib/utils";
 import { hexToBytes } from "@noble/hashes/utils";
@@ -108,7 +108,7 @@ export const nwcNotify = async (p) => {
           notification,
         });
 
-        const content = await nip04.encrypt(serverSecret, pubkey, payload);
+        const content = await nip04.encrypt(serverSecret2, pubkey, payload);
 
         const unsigned = {
           content,
@@ -117,7 +117,7 @@ export const nwcNotify = async (p) => {
           created_at: Math.floor(Date.now() / 1000),
         };
 
-        const event = finalizeEvent(unsigned, hexToBytes(serverSecret));
+        const event = finalizeEvent(unsigned, hexToBytes(serverSecret2));
 
         publish(event).catch(nada);
       }

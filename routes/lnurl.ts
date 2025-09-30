@@ -1,7 +1,7 @@
 import { db, g, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err, warn } from "$lib/logging";
-import { serverPubkey } from "$lib/nostr";
+import { serverPubkey2 } from "$lib/nostr";
 import { SATS, bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
 import got from "got";
@@ -82,7 +82,7 @@ export default {
         minSendable,
         maxSendable,
         metadata,
-        nostrPubkey: serverPubkey,
+        nostrPubkey: serverPubkey2,
         commentAllowed: 512,
         callback: `${URL}/api/lnurl/${id}`,
         tag: "payRequest",
@@ -220,7 +220,7 @@ export default {
         minSendable: invoice.amount ? total : 1000,
         maxSendable: invoice.amount ? total : 10 * 1000 * SATS,
         metadata,
-        nostrPubkey: serverPubkey,
+        nostrPubkey: serverPubkey2,
         commentAllowed: 512,
         callback: `${URL}/api/lnurl/${id}`,
         tag: "payRequest",

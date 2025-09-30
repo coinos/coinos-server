@@ -5,7 +5,7 @@ import { requirePin } from "$lib/auth";
 import { db, g, ga, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
-import { getNostrUser, getProfile, serverPubkey } from "$lib/nostr";
+import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
 import { reconcile } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
@@ -899,7 +899,7 @@ export default {
       }),
     );
 
-    app.nwc = `nostr+walletconnect://${serverPubkey}?relay=${relay}&secret=${app.secret}&lud16=${lud16}`;
+    app.nwc = `nostr+walletconnect://${serverPubkey2}?relay=${relay}&secret=${app.secret}&lud16=${lud16}`;
     app.payments = payments.filter((p) => p);
 
     res.send(app);
@@ -915,7 +915,7 @@ export default {
     await Promise.all(
       apps.map(async (a) => {
         if (a.secret)
-          a.nwc = `nostr+walletconnect://${serverPubkey}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
+          a.nwc = `nostr+walletconnect://${serverPubkey2}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
 
         const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
         let payments = await Promise.all(

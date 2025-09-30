@@ -36,6 +36,7 @@ export default {
   adminpass: "pwa",
   support: "support@coinos.io",
   nostrKey: "nsec1msk3dqy2pzqy2murmm5s5gejfgkjkm2zesnh266gud2wcvhcunzqlu0h90",
+  nostrKey2: "nsec17ugnsk0qrnakf7xaxzckya4xvx58q063k6q4vq2l577k4uyv9r0qmdcgm5",
   mintUrl: "http://mint:3338",
   square: {
     environment: SquareEnvironment.Sandbox,

@@ -3,7 +3,13 @@ import { db, g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
-import { handleZap, serverPubkey, serverSecret } from "$lib/nostr";
+import {
+  handleZap,
+  serverPubkey,
+  serverPubkey2,
+  serverSecret,
+  serverSecret2,
+} from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
 import rpc from "@coinos/rpc";
@@ -11,6 +17,11 @@ import { hexToBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
+
+const serverKeys = {
+  [serverPubkey]: serverSecret,
+  [serverPubkey2]: serverSecret2,
+};
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
@@ -32,7 +43,7 @@ export default () => {
   const r = new Relay("ws://sf:7777");
 
   r.on("open", async (_) => {
-    r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey] });
+    r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2] });
     const info = await finalizeEvent(
       {
         created_at: Math.floor(Date.now() / 1000),
@@ -46,16 +57,34 @@ export default () => {
       hexToBytes(serverSecret),
     );
     r.send(["EVENT", info]);
+
+    const info2 = await finalizeEvent(
+      {
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 13194,
+        tags: [
+          ["p", serverPubkey2],
+          ["notifications", "payment_received payment_sent"],
+        ],
+        content: methods.join(" "),
+      },
+      hexToBytes(serverSecret2),
+    );
+    r.send(["EVENT", info2]);
   });
 
   r.on("event", async (sub, ev) => {
     try {
       if (sub !== "nwc") return;
       if (await db.sIsMember("handled", ev.id)) return;
+
       db.sAdd("handled", ev.id);
       let { content, pubkey } = ev;
+      const pk = ev.tags.find((t) => t[0] === "p")[1];
+      console.log(pk);
+      const sk = serverKeys[pk];
       const { params, method } = JSON.parse(
-        await nip04.decrypt(serverSecret, pubkey, content),
+        await nip04.decrypt(sk, pubkey, content),
       );
 
       // console.log("nwc", method, params, pubkey);
@@ -69,7 +98,7 @@ export default () => {
 
         const result = await handle(method, params, ev, app, user);
         const payload = JSON.stringify({ result_type: method, ...result });
-        content = await nip04.encrypt(serverSecret, pubkey, payload);
+        content = await nip04.encrypt(sk, pubkey, payload);
 
         let response: UnsignedEvent = {
           created_at: Math.floor(Date.now() / 1000),
@@ -82,9 +111,10 @@ export default () => {
           content,
         };
 
-        response = await finalizeEvent(response, hexToBytes(serverSecret));
+        response = await finalizeEvent(response, hexToBytes(sk));
         r.send(["EVENT", response]);
       } catch (e) {
+        console.log("BOOM", e);
         err(
           "problem with nwc",
           pubkey,
@@ -94,6 +124,7 @@ export default () => {
         );
       }
     } catch (e) {
+      console.log("BOOM2", e);
       err("problem with nwc", e.message);
     }
   });
