@@ -325,13 +325,16 @@ export default {
 
   async login(req, res) {
     try {
-      let { username, password, token: twofa } = req.body;
+      let { challenge, username, password, token: twofa } = req.body;
+
+      const verified = await db.exists(`challenge:${challenge}`);
 
       username = username.toLowerCase().replace(/\s/g, "");
       let user = await getUser(username);
 
       if (password !== config?.adminpass) {
         if (
+          !verified ||
           !user ||
           !user.password ||
           !(await Bun.password.verify(password, user.password))
@@ -371,17 +374,6 @@ export default {
     const id = v4();
     await db.set(`challenge:${id}`, id, { EX: 300 });
     res.send({ challenge: id });
-  },
-
-  async challengeVerify(req, res) {
-    try {
-      const { challenge: id } = req.body;
-      const verified = await db.exists(`challenge:${id}`);
-      if (!verified) fail("Challenge not found");
-      res.send(verified);
-    } catch (e) {
-      bail(res, e.message);
-    }
   },
 
   async nostrAuth(req, res) {
