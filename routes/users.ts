@@ -328,13 +328,13 @@ export default {
       let { challenge, username, password, token: twofa } = req.body;
 
       const verified = await db.exists(`challenge:${challenge}`);
+      if (!verified) return res.code(401).send({});
 
       username = username.toLowerCase().replace(/\s/g, "");
       let user = await getUser(username);
 
       if (password !== config?.adminpass) {
         if (
-          !verified ||
           !user ||
           !user.password ||
           !(await Bun.password.verify(password, user.password))
