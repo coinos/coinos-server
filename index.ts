@@ -144,6 +144,7 @@ app.post(
 );
 app.post("/flash", users.flash);
 app.get("/challenge", users.challenge);
+app.post("/challenge/verify", users.challengeVerify);
 app.post("/nostrAuth", users.nostrAuth);
 app.get("/app/:pubkey", auth, users.app);
 app.get("/apps", auth, users.apps);

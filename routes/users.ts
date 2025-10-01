@@ -373,6 +373,17 @@ export default {
     res.send({ challenge: id });
   },
 
+  async challengeVerify(req, res) {
+    try {
+      const { challenge: id } = req.body;
+      const verified = await db.exists(`challenge:${id}`);
+      if (!verified) fail("Challenge not found");
+      res.send(verified);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
   async nostrAuth(req, res) {
     try {
       const { event, challenge, twofa } = req.body;
