@@ -327,8 +327,13 @@ export default {
     try {
       let { challenge, username, password, token: twofa } = req.body;
 
-      const verified = await db.exists(`challenge:${challenge}`);
-      if (!verified) return res.code(401).send({});
+      const fk = `${username}:failures`;
+      const failures = await g(fk);
+
+      if (failures > 3) {
+        const verified = await db.exists(`challenge:${challenge}`);
+        if (!verified) return res.code(401).send({});
+      }
 
       username = username.toLowerCase().replace(/\s/g, "");
       let user = await getUser(username);
@@ -339,11 +344,8 @@ export default {
           !user.password ||
           !(await Bun.password.verify(password, user.password))
         ) {
-          // warn("invalid username or password attempt", username);
-          await appendFile(
-            "failedlogins.txt",
-            `${Date.now()} : ${username} : ${password}\n`,
-          );
+          await db.incrBy(fk, 1);
+          setTimeout(() => db.decrBy(fk, 1), 120000);
           return res.code(401).send({});
         }
 
