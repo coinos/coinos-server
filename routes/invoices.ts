@@ -80,7 +80,9 @@ export default {
   async list(req, res) {
     const { id } = req.user;
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
-    invoices = await Promise.all(invoices.map((i) => getInvoice(i)));
+    invoices = (await Promise.all(invoices.map((i) => getInvoice(i)))).filter(
+      Boolean,
+    );
     res.send(invoices);
   },
 
