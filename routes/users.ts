@@ -327,15 +327,18 @@ export default {
     try {
       let { challenge, username, password, token: twofa } = req.body;
 
+      username = username.toLowerCase().replace(/\s/g, "");
+
       const fk = `${username}:failures`;
       const failures = await g(fk);
 
       if (failures > 3) {
         const verified = await db.exists(`challenge:${challenge}`);
-        if (!verified) return res.code(401).send({});
+        if (!verified) {
+          return res.code(401).send({});
+        }
       }
 
-      username = username.toLowerCase().replace(/\s/g, "");
       let user = await getUser(username);
 
       if (password !== config?.adminpass) {
