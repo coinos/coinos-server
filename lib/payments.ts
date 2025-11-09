@@ -505,17 +505,18 @@ export const sendKeysend = async ({
     type: PaymentType.lightning,
   });
 
-  const r = await ln.keysend({
-    destination: pubkey,
-    amount_msat: amount * 1000,
-    maxfee: fee * 1000,
-    retry_for: 10,
-    extratlvs,
-  });
-
-  if (r.status !== "complete") reverse(p);
-
-  return r;
+  try {
+    return await ln.keysend({
+      destination: pubkey,
+      amount_msat: amount * 1000,
+      maxfee: fee * 1000,
+      retry_for: 10,
+      extratlvs,
+    });
+  } catch (e) {
+    reverse(p);
+    throw e;
+  }
 };
 
 export const sendLightning = async ({
