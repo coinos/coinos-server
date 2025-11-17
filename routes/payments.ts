@@ -581,10 +581,11 @@ export default {
 
   async lnaddress(req, res) {
     let {
-      params: { lnaddress, amount, fee },
+      params: { lnaddress, amount },
       body,
       user,
     } = req;
+    const { fee } = body;
     try {
       lnaddress = decodeURIComponent(lnaddress);
       await requirePin({ body, user });
