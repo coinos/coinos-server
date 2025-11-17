@@ -581,7 +581,7 @@ export default {
 
   async lnaddress(req, res) {
     let {
-      params: { lnaddress, amount, fee = 5000 },
+      params: { lnaddress, amount, fee },
       body,
       user,
     } = req;
@@ -712,7 +712,7 @@ export default {
     try {
       const { user } = req;
       const { invreq } = req.body;
-      
+
       const { amount_msat, bolt12, pay_index } = await ln.sendinvoice({
         invreq,
         label: v4(),
