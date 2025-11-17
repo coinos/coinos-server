@@ -993,8 +993,11 @@ export default {
       const { user } = req;
       const uid = user.id;
       const { pubkey } = req.body;
-      const app = await g(pubkey);
-      if (app && uid !== app.uid) fail("Unauthorized");
+      const app = await g(`app:${pubkey}`);
+      if (app && uid !== app.uid) {
+        warn(app.uid, uid);
+        fail("Unauthorized");
+      }
       await db.sRem(`${uid}:apps`, pubkey);
       await db.del(`app:${pubkey}`);
       res.send({});
