@@ -308,6 +308,7 @@ export default {
 
       const attributes = [
         "about",
+        "arkAddress",
         "autowithdraw",
         "banner",
         "currencies",
@@ -346,6 +347,8 @@ export default {
 
       user.fresh = false;
       user.tip = Math.max(0, Math.min(1000, Number.parseInt(user.tip)));
+
+      console.log("ARK ADDR", user.arkAddress);
 
       if (password && password === confirm) {
         user.password = await Bun.password.hash(password, {

@@ -2,6 +2,7 @@ export default [
   "about",
   "admin",
   "anon",
+  "arkAddress",
   "autowithdraw",
   "balance",
   "banner",
