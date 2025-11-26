@@ -1,7 +1,7 @@
 import config from "$config";
+import { err, warn } from "$lib/logging";
 import { fail, sleep } from "$lib/utils";
 import { createClient, defineScript } from "redis";
-import { warn, err } from "$lib/logging";
 
 const DEBIT = `
 local balanceKey = KEYS[1]

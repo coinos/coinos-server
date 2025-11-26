@@ -46,6 +46,7 @@ export interface User {
 }
 
 export enum PaymentType {
+  ark = "ark",
   internal = "internal",
   bitcoin = "bitcoin",
   lightning = "lightning",

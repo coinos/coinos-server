@@ -89,6 +89,7 @@ app.post("/gateway", payments.gateway);
 app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
+app.post("/ark/receive", auth, payments.arkReceive);
 
 app.get("/square/connect", auth, square.connect);
 app.get("/square/auth", auth, square.auth);
@@ -108,6 +109,7 @@ app.post("/freeze", payments.freeze);
 app.post("/confirm", payments.confirm);
 app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
+app.post("/ark/send", auth, payments.ark);
 
 app.get("/account/:id", auth, users.account);
 app.post("/account/:id", auth, users.updateAccount);

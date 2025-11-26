@@ -749,4 +749,71 @@ export default {
       bail(res, e.message);
     }
   },
+
+  async ark(req, res) {
+    const { user } = req;
+    const { amount, hash, aid } = req.body;
+
+    const { currency } = user;
+    const rates = await g("rates");
+    const rate = rates[currency];
+    const p = {
+      id: v4(),
+      aid,
+      amount: -amount,
+      hash,
+      confirmed: true,
+      rate,
+      currency,
+      type: PaymentType.ark,
+      created: Date.now(),
+    };
+
+    res.send(p);
+  },
+
+  async arkReceive(req, res) {
+    try {
+      const { body, user } = req;
+      const { iid, amount } = body;
+      const { id: uid } = user;
+
+      if (amount <= 0) fail("Invalid amount");
+
+      const invoice = await getInvoice(iid);
+      if (invoice.uid !== user?.id) fail("Unauthorized");
+      invoice.received += amount;
+
+      const { aid, type, currency } = invoice;
+      const rates = await g("rates");
+      const rate = rates[currency];
+
+      const p = {
+        id: v4(),
+        aid: aid,
+        iid,
+        amount,
+        hash,
+        confirmed: true,
+        rate,
+        currency,
+        type,
+        uid,
+        created: Date.now(),
+      };
+
+      const m = await db.multi();
+      m.set(`invoice:${invoice.id}`, JSON.stringify(invoice))
+        .set(`payment:${p.id}`, JSON.stringify(p))
+        .lPush(`${aid || uid}:payments`, p.id)
+        .set(`${aid || uid}:payments:last`, p.created)
+        .exec();
+
+      await completePayment(invoice, p, user);
+
+      res.send(p);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
 };

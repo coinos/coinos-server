@@ -22,6 +22,7 @@ export const generate = async ({ invoice, user }) => {
     expiry,
     fiat,
     id,
+    hash,
     tip,
     amount,
     items = [],
@@ -59,11 +60,21 @@ export const generate = async ({ invoice, user }) => {
 
   if (!id) id = v4();
 
-  let hash;
   let text;
   let paymentHash;
 
-  if (type === PaymentType.lightning) {
+  if (account.seed) {
+    if (type !== PaymentType.ark) {
+      type = PaymentType.bitcoin;
+      const node = rpc({ ...config[type], wallet: aid });
+      hash = await node.getNewAddress({ address_type });
+      text = bip21(hash, invoice);
+
+      ({ hdkeypath: path } = await node.getAddressInfo(hash));
+    } else {
+      text = hash;
+    }
+  } else if (type === PaymentType.lightning) {
     let r;
     if (bolt11) {
       const { id: nodeid } = await ln.getinfo();
