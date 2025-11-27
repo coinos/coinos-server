@@ -655,13 +655,10 @@ export const build = async ({
       ? { fastestFee: 0.1, halfHourFee: 0.1, hourFee: 0.1 }
       : await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
 
-  fees.hourFee = fees.halfHourFee;
-  fees.halfHourFee = fees.fastestFee;
-
   if (type === PaymentType.bitcoin) {
-    fees.fastestFee = Math.round(fees.fastestFee * 1.1);
-    if (fees.fastestFee === fees.halfHourFee) fees.fastestFee++;
-    if (fees.hourFee === fees.halfHourFee) fees.hourFee--;
+    fees.hourFee = fees.halfHourFee;
+    fees.halfHourFee = fees.fastestFee;
+    fees.fastestFee = Math.ceil(fees.fastestFee * 1.5);
   }
 
   if (!feeRate) {
