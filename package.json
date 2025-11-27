@@ -26,6 +26,7 @@
     "buffer-crc32": "^0.2.13",
     "clightning-client": "github:asoltys/lightning-client-js#master",
     "date-fns": "^2.30.0",
+    "eventsource": "^4.1.0",
     "fastify": "^4.29.1",
     "file-type": "^18.7.0",
     "fluent-ffmpeg": "^2.1.3",

@@ -47,6 +47,10 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
   return `${network}:${address}?${url.toString()}`;
 };
 
+export const getAccount = async (id) => {
+  return g(`account:${id}`);
+}
+
 export const getUser = async (username, fields = undefined) => {
   if (username === "undefined") fail("invalid user");
   const k = username?.replace(/\s/g, "").toLowerCase();

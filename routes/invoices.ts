@@ -2,9 +2,8 @@ import config from "$config";
 import { db, g, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
-import { bail, fail, fields, getInvoice, getUser } from "$lib/utils";
+import { bail, fail, fields, getAccount, getInvoice, getUser } from "$lib/utils";
 import rpc from "@coinos/rpc";
-import { v4 } from "uuid";
 
 export default {
   async get(req, res) {
@@ -18,6 +17,7 @@ export default {
       if (invoice) {
         invoice.secret = undefined;
         invoice.user = await getUser(invoice.uid, fields);
+        invoice.account = await getAccount(invoice.aid);
 
         invoice.items ||= [];
       }
@@ -40,6 +40,8 @@ export default {
       const result = await generate({ invoice, user });
       res.send(result);
     } catch (e) {
+      console.trace();
+      console.log(e);
       err(
         "problem generating invoice",
         req.user?.username,

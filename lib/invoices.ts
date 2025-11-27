@@ -63,17 +63,16 @@ export const generate = async ({ invoice, user }) => {
   let text;
   let paymentHash;
 
-  if (account.seed) {
-    if (type !== PaymentType.ark) {
-      type = PaymentType.bitcoin;
-      const node = rpc({ ...config[type], wallet: aid });
-      hash = await node.getNewAddress({ address_type });
-      text = bip21(hash, invoice);
+  if (account.type === "ark") {
+    type = PaymentType.ark;
+    text = account.arkAddress;
+  } else if (account.seed) {
+    type = PaymentType.bitcoin;
+    const node = rpc({ ...config[type], wallet: aid });
+    hash = await node.getNewAddress({ address_type });
+    text = bip21(hash, invoice);
 
-      ({ hdkeypath: path } = await node.getAddressInfo(hash));
-    } else {
-      text = hash;
-    }
+    ({ hdkeypath: path } = await node.getAddressInfo(hash));
   } else if (type === PaymentType.lightning) {
     let r;
     if (bolt11) {

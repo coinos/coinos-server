@@ -11,6 +11,8 @@ import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
+import rpc from "@coinos/rpc";
+import { bech32m } from "@scure/base";
 
 import { $ } from "bun";
 import got from "got";
@@ -835,6 +837,21 @@ export default {
           account.balance = await g(`balance:${id}`);
           accounts.push(account);
         }
+
+        if (account.type === PaymentType.ark) {
+          const decoded = bech32m.decode(account.arkAddress, 1023);
+          const data = new Uint8Array(bech32m.fromWords(decoded.words));
+
+          const vtxoTaprootKey = data.slice(33, 65);
+
+          const vtxoHex = Buffer.from(vtxoTaprootKey).toString("hex");
+          const r = await fetch(
+            `http://arkd:7070/v1/indexer/vtxos?scripts=5120${vtxoHex}`,
+            { "content-type": "application/json" },
+          );
+          const { vtxos } = await r.json();
+          account.balance = vtxos.reduce((a, b) => a + b.amount, 0);
+        }
       }
 
       res.send(accounts.reverse());
@@ -846,11 +863,68 @@ export default {
 
   async createAccount(req, res) {
     try {
-      const { name, type } = req.body;
+      const { fingerprint, pubkey, name, seed, type, arkAddress, accountIndex } =
+        req.body;
       const { user } = req;
+      const { id: uid } = user;
 
       const id = v4();
-      const account = { id, name, type, uid: user.id };
+      const account = {
+        id,
+        name,
+        seed,
+        type,
+        uid,
+        descriptors: [],
+        arkAddress,
+        accountIndex,
+      };
+
+      // ARK accounts don't need Bitcoin Core wallet setup
+      if (type === "ark") {
+        await db
+          .multi()
+          .set(`account:${id}`, JSON.stringify(account))
+          .set(`balance:${id}`, 0)
+          .set(`pending:${id}`, 0)
+          .lPush(`${user.id}:accounts`, id)
+          .exec();
+
+        res.send(account);
+        return;
+      }
+
+      // Bitcoin on-chain wallet setup
+      let node = rpc(config[type]);
+
+      await node.createWallet({
+        wallet_name: id,
+        descriptors: true,
+        disable_private_keys: true,
+        load_on_startup: true,
+      });
+
+      node = rpc({ ...config[type], wallet: id });
+
+      for (const i of [0, 1]) {
+        const desc = `wpkh([${fingerprint}]${pubkey}/${i}/*)`;
+        const { checksum } = await node.getDescriptorInfo(desc);
+        account.descriptors.push({
+          desc: `${desc}#${checksum}`,
+          range: [0, 100],
+          next_index: 0,
+          timestamp: "now",
+          internal: i === 1,
+          active: true,
+        });
+      }
+
+      await node.importDescriptors(account.descriptors);
+
+      if (typeof accountIndex !== "undefined") {
+        user.accountIndex = (Number.parseInt(accountIndex) || 0) + 1;
+        await s(`user:${uid}`, user);
+      }
 
       await db
         .multi()
@@ -889,6 +963,16 @@ export default {
 
       const pos = await db.lPos(`${uid}:accounts`, id);
       if (!(account && pos != null)) fail("account not found");
+
+      // Only unload Bitcoin Core wallet for non-ARK accounts
+      if (account.type !== "ark") {
+        try {
+          const node = rpc({ ...config[account.type], wallet: id });
+          await node.unloadWallet(id);
+        } catch (e) {
+          warn("failed to unload wallet", id);
+        }
+      }
 
       await db
         .multi()
