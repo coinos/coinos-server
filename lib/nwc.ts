@@ -249,8 +249,18 @@ const handle = (method, params, ev, app, user) =>
     },
 
     async pay_keysend() {
-      const { amount: amount_msat, pubkey, tlv_records: extratlvs } = params;
+      const { amount: amount_msat, pubkey, tlv_records } = params;
       const amount = Math.round(amount_msat / 1000);
+      const extratlvs = {};
+
+      // convert tlv_records to the extratlvs format
+      // tlv_records: [{ type: 1, value: "asdf" }]
+      // extratlvs: { "1": "asdf" }
+      if (tlv_records && tlv_records.length) {
+        for (const record of tlv_records) {
+          extratlvs[record.type.toString()] = record.value;
+        }
+      }
 
       try {
         const { payment_hash } = await sendKeysend({
