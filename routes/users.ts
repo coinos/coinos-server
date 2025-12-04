@@ -850,7 +850,10 @@ export default {
             { "content-type": "application/json" },
           );
           const { vtxos } = await r.json();
-          account.balance = vtxos.reduce((a, b) => a + b.amount, 0);
+          account.balance = vtxos.reduce(
+            (a, b) => a + Number.parseInt(b.amount),
+            0,
+          );
         }
       }
 
