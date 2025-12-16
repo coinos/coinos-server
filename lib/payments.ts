@@ -45,7 +45,7 @@ export const debit = async ({
   type = PaymentType.internal,
   rate = undefined,
 }) => {
-  amount = parseInt(amount);
+  amount = Number.parseInt(amount);
 
   const whitelisted = await db.sIsMember(
     "whitelist",
@@ -105,7 +105,7 @@ export const debit = async ({
     }
   }
 
-  const tip = parseInt(invoice?.tip) || null;
+  const tip = Number.parseInt(invoice?.tip) || null;
   if (tip < 0) fail("Invalid tip");
 
   if (!amount || amount < 0) fail("Amount must be greater than zero");
@@ -182,14 +182,14 @@ export const credit = async ({
   aid = undefined,
   payment_hash = undefined,
 }) => {
-  amount = parseInt(amount) || 0;
+  amount = Number.parseInt(amount) || 0;
 
   let inv = await getInvoice(hash);
   if (!inv && type === PaymentType.bolt12) {
     const { invoices } = await ln.listinvoices({ invstring: hash });
     const { local_offer_id } = invoices[0];
     inv = await getInvoice(local_offer_id);
-  } 
+  }
 
   if (!inv) {
     await db.sAdd("missing", ref.split(":")[0]);
@@ -197,7 +197,7 @@ export const credit = async ({
   }
 
   let { path, tip } = inv;
-  tip = parseInt(tip) || 0;
+  tip = Number.parseInt(tip) || 0;
 
   if (!memo) ({ memo } = inv);
   if (memo && memo.length > 5000) fail("memo too long");
@@ -327,7 +327,7 @@ export const completePayment = async (inv, p, user) => {
 
 const pay = async ({ aid = undefined, amount, to, user }) => {
   if (!aid) aid = user.id;
-  amount = parseInt(amount) || 0;
+  amount = Number.parseInt(amount) || 0;
   let lnurl;
   let pr;
   if (to.includes("@") && to.includes(".")) {
@@ -491,7 +491,7 @@ export const sendKeysend = async ({
   user,
   extratlvs = undefined,
 }) => {
-  fee = Math.max(parseInt(fee || amount * 0.005), 5);
+  fee = Math.max(Number.parseInt(fee || amount * 0.005), 5);
 
   let p = await g(`payment:${hash}`);
   if (p) fail("duplicate keysend");
@@ -529,7 +529,7 @@ export const sendLightning = async ({
   let p;
 
   if (typeof amount !== "undefined") {
-    amount = parseInt(amount);
+    amount = Number.parseInt(amount);
     if (amount < 0 || amount > SATS || Number.isNaN(amount)) {
       warn("invalid amount", amount);
       fail("Invalid amount");
@@ -547,7 +547,7 @@ export const sendLightning = async ({
   const { channels } = await ln.listpeerchannels();
   if (channels.some((c) => c.peer_id === payee)) minfee = 0;
 
-  fee = Math.max(parseInt(fee || 0), minfee);
+  fee = Math.max(Number.parseInt(fee || 0), minfee);
   if (fee < 0) fail("Fee cannot be negative");
 
   const { pays } = await ln.listpays(pr);
@@ -648,7 +648,7 @@ export const build = async ({
   const node =
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
 
-  amount = parseInt(amount);
+  amount = Number.parseInt(amount);
   if (amount < 0) fail("invalid amount");
 
   const fees: any =
