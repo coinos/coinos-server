@@ -122,7 +122,7 @@ export const debit = async ({
 
   if (aid !== uid) ourfee = 0;
   const frozenBalance =
-    !blacklisted || whitelisted ? 0 : await ga(`balance:${uid}`);
+    !blacklisted || whitelisted ? 0 : await g(`balance:${uid}`);
 
   ourfee = await db.debit(
     `balance:${aid}`,
