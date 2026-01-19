@@ -21,6 +21,7 @@ export default async (user, ip) => {
   if (!valid.test(username))
     fail("Usernames can only have letters and numbers");
   if (reserved.includes(username)) fail("Invalid username");
+  if (username.includes("undefined")) fail("Invalid username");
 
   const id = v4();
   user.id = id;
