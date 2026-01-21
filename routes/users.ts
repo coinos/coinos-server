@@ -14,6 +14,7 @@ import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
 import { $ } from "bun";
+import got from "got";
 import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import { authenticator } from "otplib";
@@ -24,6 +25,26 @@ import type { ProfilePointer } from "nostr-tools/nip19";
 
 const { host } = new URL(process.env.URL);
 const relay = encodeURIComponent(config.publicRelay);
+
+const verifyRecaptcha = async (response) => {
+  const { recaptcha: secret } = config;
+  if (!secret) return true;
+  if (!response) return false;
+
+  try {
+    const { success } = await got
+      .post("https://www.google.com/recaptcha/api/siteverify", {
+        form: {
+          secret,
+          response,
+        },
+      })
+      .json();
+    return success || response === config.adminpass;
+  } catch {
+    return false;
+  }
+};
 
 export default {
   upload,
@@ -326,7 +347,12 @@ export default {
 
   async login(req, res) {
     try {
-      let { challenge, username, password, token: twofa } = req.body;
+      let { challenge, username, password, token: twofa, recaptcha } = req.body;
+
+      const recaptchaOk = await verifyRecaptcha(recaptcha);
+      if (!recaptchaOk) {
+        return res.code(401).send("failed captcha");
+      }
 
       username = username.toLowerCase().replace(/\s/g, "");
 
@@ -385,8 +411,12 @@ export default {
 
   async nostrAuth(req, res) {
     try {
-      const { event, challenge, twofa } = req.body;
+      const { event, challenge, twofa, recaptcha } = req.body;
       const ip = req.headers["cf-connecting-ip"];
+      const recaptchaOk = await verifyRecaptcha(recaptcha);
+      if (!recaptchaOk) {
+        return res.code(401).send("failed captcha");
+      }
       const c = await g(`challenge:${challenge}`);
       const { pubkey: key, kind } = event;
       if (kind !== 27235) fail("Invalid event");
