@@ -19,3 +19,5 @@ nobal.sh
 littlefs.img
 printer
 failedlogins.txt
+.claude
+req*
