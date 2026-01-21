@@ -113,16 +113,16 @@ export default () => {
         response = await finalizeEvent(response, hexToBytes(sk));
         r.send(["EVENT", response]);
       } catch (e) {
-        err(
-          "problem with nwc",
-          pubkey,
-          method,
-          JSON.stringify(params),
-          e.message,
-        );
+        // err(
+        //   "problem with nwc",
+        //   pubkey,
+        //   method,
+        //   JSON.stringify(params),
+        //   e.message,
+        // );
       }
     } catch (e) {
-      err("problem with nwc", e.message);
+      // err("problem with nwc", e.message);
     }
   });
 };
