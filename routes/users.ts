@@ -789,6 +789,11 @@ export default {
 
   async account(req, res) {
     const { id } = req.params;
+    const { id: uid } = req.user;
+
+    const pos = await db.lPos(`${uid}:accounts`, id);
+    if (pos == null) fail("account not found");
+
     const account = await g(`account:${id}`);
     if (account) account.balance = await g(`balance:${id}`);
     res.send(account);
