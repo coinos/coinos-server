@@ -371,6 +371,7 @@ export default {
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
+      console.log(e);
       err("login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }
@@ -437,7 +438,8 @@ export default {
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
-      err("login error", e.message, req.socket.remoteAddress);
+      console.log(e);
+      err("nostr login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }
   },

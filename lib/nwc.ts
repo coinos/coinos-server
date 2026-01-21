@@ -176,14 +176,14 @@ const handle = (method, params, ev, app, user) =>
       }
 
       if (max_amount > 0 && spent + amount > max_amount) {
-        warn(
-          "budget exceeded",
-          pubkey,
-          user?.username,
-          spent,
-          amount,
-          max_amount,
-        );
+        // warn(
+        //   "budget exceeded",
+        //   pubkey,
+        //   user?.username,
+        //   spent,
+        //   amount,
+        //   max_amount,
+        // );
         return error({
           code: "QUOTA_EXCEEDED",
           message: `Budget exceeded: ${spent + amount} of ${max_amount}`,

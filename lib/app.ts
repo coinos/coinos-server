@@ -30,7 +30,6 @@ const resLogger = pino(pino.destination("res"));
 app.addHook("preHandler", async (req) => {
   const url = req.raw.url;
   const ignore = [
-    "/login",
     "/ws",
     "/me",
     "/confirm",
@@ -42,7 +41,6 @@ app.addHook("preHandler", async (req) => {
     "/subscriptions",
     "/accounts",
     "/contacts",
-    "/users",
   ];
   if (ignore.some((path) => url.startsWith(path))) return;
 
