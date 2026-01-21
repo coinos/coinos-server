@@ -26,7 +26,7 @@ import type { ProfilePointer } from "nostr-tools/nip19";
 const { host } = new URL(process.env.URL);
 const relay = encodeURIComponent(config.publicRelay);
 
-const verifyRecaptcha = async (response) => {
+const verifyRecaptcha = async (response, ip) => {
   const { recaptcha: secret } = config;
   if (!secret) return true;
   if (!response) return false;
@@ -37,6 +37,7 @@ const verifyRecaptcha = async (response) => {
         form: {
           secret,
           response,
+          remoteip: ip,
         },
       })
       .json();
@@ -347,9 +348,15 @@ export default {
 
   async login(req, res) {
     try {
-      let { challenge, username, password, token: twofa, recaptcha } = req.body;
+      let { username, password, token: twofa, recaptcha } = req.body;
+      const ip = req.headers["cf-connecting-ip"] || req.socket.remoteAddress;
 
-      const recaptchaOk = await verifyRecaptcha(recaptcha);
+      const ipKey = `ip:${ip}:login`;
+      const ipCount = await db.incr(ipKey);
+      if (ipCount === 1) await db.expire(ipKey, 10);
+      if (ipCount > 30) return res.code(429).send({});
+
+      const recaptchaOk = await verifyRecaptcha(recaptcha, ip);
       if (!recaptchaOk) {
         return res.code(401).send("failed captcha");
       }
@@ -358,13 +365,9 @@ export default {
 
       const fk = `${username}:failures`;
       const failures = await g(fk);
-
-      if (failures > 3) {
-        const verified = await db.exists(`challenge:${challenge}`);
-        if (!verified) {
-          return res.code(401).send({});
-        }
-      }
+      const ipFailKey = `ip:${ip}:login:fail`;
+      const ipFailures = await g(ipFailKey);
+      if (ipFailures > 20) return res.code(429).send({});
 
       let user = await getUser(username);
 
@@ -374,6 +377,8 @@ export default {
           !user.password ||
           !(await Bun.password.verify(password, user.password))
         ) {
+          await db.incrBy(ipFailKey, 1);
+          if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
           await db.incrBy(fk, 1);
           setTimeout(() => db.decrBy(fk, 1), 120000);
           return res.code(401).send({});
@@ -384,6 +389,8 @@ export default {
           (typeof twofa === "undefined" ||
             !authenticator.check(twofa, user.otpsecret))
         ) {
+          await db.incrBy(ipFailKey, 1);
+          if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
           return res.code(401).send("2fa required");
         }
       }
@@ -413,7 +420,7 @@ export default {
     try {
       const { event, challenge, twofa, recaptcha } = req.body;
       const ip = req.headers["cf-connecting-ip"];
-      const recaptchaOk = await verifyRecaptcha(recaptcha);
+      const recaptchaOk = await verifyRecaptcha(recaptcha, ip);
       if (!recaptchaOk) {
         return res.code(401).send("failed captcha");
       }
