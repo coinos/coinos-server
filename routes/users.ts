@@ -640,17 +640,14 @@ export default {
       body: { code, username, password },
       user: u,
     } = req;
+    try {
     const admin = u?.admin;
     let id;
     let user;
 
-    if (admin) {
+      if (u.username !== config.admin) fail("disabled");
       id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);
       user = await g(`user:${id}`);
-    } else {
-      id = await g(`reset:${code}`);
-      user = await g(`user:${id}`);
-    }
 
     if (!user) fail("user not found");
 
@@ -661,7 +658,6 @@ export default {
       req.headers["cf-connecting-ip"],
     );
 
-    try {
       user.pin = null;
       user.nsec = null;
 
@@ -675,7 +671,7 @@ export default {
 
       res.send(pick(user, whitelist));
     } catch (e) {
-      err("password reset failed", e.message);
+      err("password reset failed", e.message, req.headers["cf-connecting-ip"]);
       bail(res, e.message);
     }
   },
