@@ -26,12 +26,20 @@ import type { ProfilePointer } from "nostr-tools/nip19";
 const { host } = new URL(process.env.URL);
 const relay = encodeURIComponent(config.publicRelay);
 
-const verifyRecaptcha = async (response, ip) => {
+const verifyRecaptcha = async (response, req?) => {
   const { recaptcha: secret } = config;
   if (!secret) return true;
+
+  // Check for valid API key to bypass captcha
+  const apiKey = req?.headers?.["x-api-key"];
+  if (apiKey && (await db.sIsMember("apikeys", apiKey))) {
+    return true;
+  }
+
   if (!response) return false;
 
   try {
+    const ip = req?.headers?.["cf-connecting-ip"] || req?.socket?.remoteAddress;
     const { success } = await got
       .post("https://www.google.com/recaptcha/api/siteverify", {
         form: {
@@ -356,7 +364,7 @@ export default {
       if (ipCount === 1) await db.expire(ipKey, 10);
       if (ipCount > 30) return res.code(429).send({});
 
-      const recaptchaOk = await verifyRecaptcha(recaptcha, ip);
+      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
       if (!recaptchaOk) {
         return res.code(401).send("failed captcha");
       }
@@ -420,7 +428,7 @@ export default {
     try {
       const { event, challenge, twofa, recaptcha } = req.body;
       const ip = req.headers["cf-connecting-ip"];
-      const recaptchaOk = await verifyRecaptcha(recaptcha, ip);
+      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
       if (!recaptchaOk) {
         return res.code(401).send("failed captcha");
       }
