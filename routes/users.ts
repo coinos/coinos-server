@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { appendFile, unlink, writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
-import { db, g, ga, s } from "$lib/db";
+import { db, g, ga, gf, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
@@ -109,7 +109,7 @@ export default {
 
       let total = 0;
       for (const pid of payments) {
-        const p = await g(`payment:${pid}`);
+        const p = await gf(`payment:${pid}`);
         if (!p) continue;
         total += p.amount;
         if (p.amount < 0)
@@ -571,7 +571,7 @@ export default {
 
     for (const { ref } of (
       await Promise.all(
-        payments.reverse().map(async (id) => await g(`payment:${id}`)),
+        payments.reverse().map(async (id) => await gf(`payment:${id}`)),
       )
     ).filter((p) => p && p.type === PaymentType.internal && p.ref)) {
       if (ref === id) continue;
@@ -950,8 +950,8 @@ export default {
 
     const payments = await Promise.all(
       pids.map(async (pid) => {
-        const p = await g(`payment:${pid}`);
-        p.user = await g(`user:${p.uid}`);
+        const p = await gf(`payment:${pid}`);
+        if (p) p.user = await g(`user:${p.uid}`);
         return p;
       }),
     );
@@ -976,7 +976,7 @@ export default {
 
         const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
         let payments = await Promise.all(
-          pids.map((pid) => g(`payment:${pid}`)),
+          pids.map((pid) => gf(`payment:${pid}`)),
         );
         payments = payments.filter((p) => p);
         a.spent = payments.reduce(

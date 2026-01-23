@@ -1,5 +1,5 @@
 import config from "$config";
-import { g } from "$lib/db";
+import { g, gf } from "$lib/db";
 import locales from "$lib/locales/index";
 
 const { URL } = process.env;
@@ -57,15 +57,15 @@ export const getUser = async (username, fields = undefined) => {
 };
 
 export const getInvoice = async (hash) => {
-  let iid = await g(`invoice:${hash}`);
+  let iid = await gf(`invoice:${hash}`);
   if (iid?.id) iid = iid.id;
   else if (iid?.hash) iid = iid.hash;
-  return await g(`invoice:${iid}`);
+  return await gf(`invoice:${iid}`);
 };
 
 export const getPayment = async (id) => {
-  let p = await g(`payment:${id}`);
-  if (typeof p === "string") p = await g(`payment:${p}`);
+  let p = await gf(`payment:${id}`);
+  if (typeof p === "string") p = await gf(`payment:${p}`);
   return p;
 };
 

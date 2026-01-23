@@ -152,6 +152,43 @@ export const sa = (k, v) => {
   archive.set(k, JSON.stringify(v));
 };
 
+// Get with fallback to archive
+export const gf = async (k) => {
+  let v = await db.get(k);
+  if (v === null) v = await archive.get(k);
+  try {
+    return JSON.parse(v);
+  } catch (e) {
+    return v;
+  }
+};
+
+// lRange with fallback to archive for missing items
+export const lRangeWithArchive = async (k, start, end) => {
+  const items = await db.lRange(k, start, end);
+  return items || [];
+};
+
+// Get payment/invoice with archive fallback - for individual lookups
+export const getWithArchive = async (prefix, id) => {
+  let v = await db.get(`${prefix}:${id}`);
+  if (v === null) v = await archive.get(`${prefix}:${id}`);
+  if (v === null) return null;
+  try {
+    const parsed = JSON.parse(v);
+    // If it's a reference to another key, follow it
+    if (typeof parsed === "string") {
+      let ref = await db.get(`${prefix}:${parsed}`);
+      if (ref === null) ref = await archive.get(`${prefix}:${parsed}`);
+      if (ref === null) return null;
+      return JSON.parse(ref);
+    }
+    return parsed;
+  } catch (e) {
+    return v;
+  }
+};
+
 const retries = {};
 export const t = async (k, f) => {
   try {

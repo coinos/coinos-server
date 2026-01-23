@@ -1,7 +1,7 @@
 import config from "$config";
 import api from "$lib/api";
 import { requirePin } from "$lib/auth";
-import { db, g, s } from "$lib/db";
+import { archive, db, g, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
@@ -112,15 +112,28 @@ export default {
     offset = Number.parseInt(offset) || 0;
 
     const range = !limit || received || start || end ? -1 : limit - 1;
-    let payments = (await db.lRange(`${aid || id}:payments`, 0, range)) || [];
+    const listKey = `${aid || id}:payments`;
+    let payments = (await db.lRange(listKey, 0, range)) || [];
+
+    if (range === -1) {
+      const archived = (await archive.lRange(listKey, 0, -1)) || [];
+      payments = [...new Set([...payments, ...archived])];
+    } else if (limit) {
+      const needed = Math.max(0, limit + offset - payments.length);
+      if (needed > 0) {
+        const archived =
+          (await archive.lRange(listKey, 0, limit + offset - 1)) || [];
+        payments = [...new Set([...payments, ...archived])];
+      }
+    }
 
     payments = (
       await Promise.all(
         payments.map(async (pid) => {
-          const p = await g(`payment:${pid}`);
+          const p = await gf(`payment:${pid}`);
           if (!p) {
             warn("user", id, "missing payment", pid);
-            await db.lRem(`${aid || id}:payments`, 0, pid);
+            await db.lRem(listKey, 0, pid);
             return p;
           }
           if (received && p.amount < 0) return;
@@ -237,7 +250,7 @@ export default {
     if (typeof amount === "undefined" || amount === null)
       return bail(res, "fund not found");
     let payments = (await db.lRange(`fund:${id}:payments`, 0, -1)) || [];
-    payments = await Promise.all(payments.map((hash) => g(`payment:${hash}`)));
+    payments = await Promise.all(payments.map((hash) => gf(`payment:${hash}`)));
 
     await Promise.all(
       payments.map(async (p: any) => (p.user = await getUser(p.uid, fields))),
