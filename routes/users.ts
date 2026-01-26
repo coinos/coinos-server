@@ -36,6 +36,9 @@ const verifyRecaptcha = async (response, req?) => {
     return true;
   }
 
+  const { username } = req.body;
+  if (await db.sIsMember("nocaptcha", username)) return true;
+
   if (!response) return false;
 
   try {
@@ -641,22 +644,22 @@ export default {
       user: u,
     } = req;
     try {
-    const admin = u?.admin;
-    let id;
-    let user;
+      const admin = u?.admin;
+      let id;
+      let user;
 
       if (u.username !== config.admin) fail("disabled");
       id = await g(`user:${username.toLowerCase().replace(/\s/g, "")}`);
       user = await g(`user:${id}`);
 
-    if (!user) fail("user not found");
+      if (!user) fail("user not found");
 
-    warn(
-      "password reset",
-      user.username,
-      code,
-      req.headers["cf-connecting-ip"],
-    );
+      warn(
+        "password reset",
+        user.username,
+        code,
+        req.headers["cf-connecting-ip"],
+      );
 
       user.pin = null;
       user.nsec = null;
