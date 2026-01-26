@@ -43,6 +43,7 @@ app.addHook("preHandler", async (req) => {
     "/contacts",
   ];
   if (ignore.some((path) => url.startsWith(path))) return;
+  if (req.method === "GET" && url.startsWith("/users")) return;
 
   reqLogger.info({
     method: req.method,
