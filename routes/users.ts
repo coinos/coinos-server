@@ -37,7 +37,10 @@ const verifyRecaptcha = async (response, req?) => {
   }
 
   const { username } = req.body;
-  if (await db.sIsMember("nocaptcha", username)) return true;
+  if (
+    await db.sIsMember("nocaptcha", username.toLowerCase().replace(/\s/g, ""))
+  )
+    return true;
 
   if (!response) return false;
 
