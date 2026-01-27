@@ -30,6 +30,10 @@ const verifyRecaptcha = async (response, req?) => {
   const { recaptcha: secret } = config;
   if (!secret) return true;
 
+  // Skip captcha for Tor users accessing via .onion
+  const host = req?.headers?.["host"] || "";
+  if (host.endsWith(".onion")) return true;
+
   // Check for valid API key to bypass captcha
   const apiKey = req?.headers?.["x-api-key"];
   if (apiKey && (await db.sIsMember("apikeys", apiKey))) {
