@@ -38,6 +38,9 @@ const methods = [
 ];
 
 const week = 7 * 24 * 60 * 60;
+const nwcEventMaxAgeSeconds = 5 * 60;
+const handledKey = "handled:nwc";
+const handledMaxSize = 200000;
 
 export default () => {
   const r = new Relay("ws://sf:7777");
@@ -76,9 +79,16 @@ export default () => {
   r.on("event", async (sub, ev) => {
     try {
       if (sub !== "nwc") return;
-      if (await db.sIsMember("handled", ev.id)) return;
+      const now = Math.floor(Date.now() / 1000);
+      if (ev.created_at && now - ev.created_at > nwcEventMaxAgeSeconds) return;
+      if (await db.zScore(handledKey, ev.id)) return;
 
-      db.sAdd("handled", ev.id);
+      db.zAdd(handledKey, { score: now, value: ev.id });
+      db.zRemRangeByScore(handledKey, 0, now - nwcEventMaxAgeSeconds);
+      const size = await db.zCard(handledKey);
+      if (size > handledMaxSize) {
+        await db.zRemRangeByRank(handledKey, 0, size - handledMaxSize - 1);
+      }
       let { content, pubkey } = ev;
       const pk = ev.tags.find((t) => t[0] === "p")[1];
       const sk = serverKeys[pk];
