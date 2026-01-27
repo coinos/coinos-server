@@ -45,9 +45,14 @@ app.addHook("preHandler", async (req) => {
   if (ignore.some((path) => url.startsWith(path))) return;
   if (req.method === "GET" && url.startsWith("/users")) return;
 
+  const xff = req.headers["x-forwarded-for"];
+  const forwardedIp = Array.isArray(xff) ? xff[0] : xff?.split(",")[0]?.trim();
+  const ip = req.headers["cf-connecting-ip"] || forwardedIp || req.ip;
+
   reqLogger.info({
     method: req.method,
     url,
+    ip,
     headers: req.headers,
     query: req.query,
     body: req.body,
