@@ -41,7 +41,7 @@ const verifyRecaptcha = async (response, req?) => {
   }
 
   const { username } = req.body;
-  if (
+  if (username &&
     await db.sIsMember("nocaptcha", username.toLowerCase().replace(/\s/g, ""))
   )
     return true;
@@ -475,16 +475,6 @@ export default {
       }
 
       const { username } = user;
-      if (
-        await db.sIsMember(
-          "compromised",
-          username.replace(/\s/g, "").toLowerCase(),
-        )
-      ) {
-        warn("compromised nostr auth attempt");
-        fail("unauthorized");
-      }
-
       l("nostr login", username, ip);
 
       const payload = { id: user.id };
