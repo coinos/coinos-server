@@ -849,6 +849,9 @@ export const check = async () => {
         else if (failed) await reverse(p);
       } catch (e) {
         err("failed to finalize", p.id, e.message);
+        if (e.message?.includes("already been reversed")) {
+          await db.sRem("pending", p.hash);
+        }
       }
     }
   } catch (e) {

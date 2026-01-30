@@ -43,40 +43,51 @@ const handledKey = "handled:nwc";
 const handledMaxSize = 200000;
 
 export default () => {
-  const r = new Relay("ws://sf:7777");
+  let r: any;
 
-  r.on("open", async (_) => {
-    r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2] });
-    const info = await finalizeEvent(
-      {
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 13194,
-        tags: [
-          ["p", serverPubkey],
-          ["notifications", "payment_received payment_sent"],
-        ],
-        content: methods.join(" "),
-      },
-      hexToBytes(serverSecret),
-    );
-    r.send(["EVENT", info]);
+  function connect() {
+    r = new Relay("ws://sf:7777", { reconnect: false });
 
-    const info2 = await finalizeEvent(
-      {
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 13194,
-        tags: [
-          ["p", serverPubkey2],
-          ["notifications", "payment_received payment_sent"],
-        ],
-        content: methods.join(" "),
-      },
-      hexToBytes(serverSecret2),
-    );
-    r.send(["EVENT", info2]);
-  });
+    r.on("open", async (_) => {
+      l("nwc connected to strfry");
+      r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2] });
+      const info = await finalizeEvent(
+        {
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 13194,
+          tags: [
+            ["p", serverPubkey],
+            ["notifications", "payment_received payment_sent"],
+          ],
+          content: methods.join(" "),
+        },
+        hexToBytes(serverSecret),
+      );
+      r.send(["EVENT", info]);
 
-  r.on("event", async (sub, ev) => {
+      const info2 = await finalizeEvent(
+        {
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 13194,
+          tags: [
+            ["p", serverPubkey2],
+            ["notifications", "payment_received payment_sent"],
+          ],
+          content: methods.join(" "),
+        },
+        hexToBytes(serverSecret2),
+      );
+      r.send(["EVENT", info2]);
+    });
+
+    r.on("close", () => {
+      warn("nwc strfry connection lost, reconnecting in 5s");
+      setTimeout(connect, 5000);
+    });
+
+    r.on("error", () => {});
+
+    r.on("event", async (sub, ev) => {
     try {
       if (sub !== "nwc") return;
       const now = Math.floor(Date.now() / 1000);
@@ -135,6 +146,9 @@ export default () => {
       // err("problem with nwc", e.message);
     }
   });
+  }
+
+  connect();
 };
 
 const handle = (method, params, ev, app, user) =>
