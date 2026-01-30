@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g, s } from "$lib/db";
+import { db, g, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err } from "$lib/logging";
 import { bail, fail, fields, getInvoice, getUser } from "$lib/utils";
@@ -57,7 +57,7 @@ export default {
 
       if (tip < 0) fail("Invalid tip");
 
-      let invoice = await g(`invoice:${id}`);
+      let invoice = await gf(`invoice:${id}`);
       const user = await g(`user:${invoice.uid}`);
 
       if (typeof tip !== "undefined") invoice.tip = tip;

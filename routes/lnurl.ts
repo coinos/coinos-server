@@ -1,4 +1,4 @@
-import { db, g, s } from "$lib/db";
+import { db, g, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { err, warn } from "$lib/logging";
 import { serverPubkey2 } from "$lib/nostr";
@@ -126,7 +126,7 @@ export default {
       }
 
       const invoice = iid
-        ? await g(`invoice:${iid}`)
+        ? await gf(`invoice:${iid}`)
         : await generate({
             invoice: {
               amount: Math.round(amount / 1000),

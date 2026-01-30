@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g } from "$lib/db";
+import { archive, db, g, gf } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
@@ -428,11 +428,15 @@ const handle = (method, params, ev, app, user) =>
     async list_transactions() {
       const { from, until, limit = 10, offset = 0, type } = params;
 
-      const payments = await db.lRange(`${user.id}:payments`, 0, -1);
+      const listKey = `${user.id}:payments`;
+      const main = (await db.lRange(listKey, 0, -1)) || [];
+      const archived = (await archive.lRange(listKey, 0, -1)) || [];
+      const payments = [...new Set([...main, ...archived])];
 
       let transactions = [];
       for (const pid of payments) {
-        const p = await g(`payment:${pid}`);
+        const p = await gf(`payment:${pid}`);
+        if (!p) continue;
         const created_at = Math.floor(p.created / 1000);
         if (created_at < from || created_at > until) continue;
         if (p.amount < 0 && type === "incoming") continue;
@@ -457,7 +461,7 @@ const handle = (method, params, ev, app, user) =>
           description: p.memo,
           preimage: p.ref,
           payment_hash,
-          amount: (Math.abs(p.amount) + p.tip) * 1000,
+          amount: (Math.abs(p.amount) + (p.tip || 0)) * 1000,
           fees_paid: (p?.fee || 0) * 1000,
           created_at,
           expires_at: created_at + week,

@@ -1,6 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
-import { db, g, ga, s } from "$lib/db";
+import { db, g, ga, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
@@ -493,7 +493,7 @@ export const sendKeysend = async ({
 }) => {
   fee = Math.max(Number.parseInt(fee || amount * 0.005), 5);
 
-  let p = await g(`payment:${hash}`);
+  let p = await gf(`payment:${hash}`);
   if (p) fail("duplicate keysend");
 
   p = await debit({

@@ -575,7 +575,8 @@ export default {
       user,
     } = req;
     try {
-      const p = await g(`payment:${id}`);
+      const p = await gf(`payment:${id}`);
+      if (!p) fail("Payment not found");
       if (p.uid !== user.id) fail("unauthorized");
       emit(user.id, "payment", p);
 
@@ -647,7 +648,7 @@ export default {
       user,
     } = req;
     try {
-      const p = await g(`payment:${id}`);
+      const p = await gf(`payment:${id}`);
       if (!p) fail("Payment not found");
       if (p.uid !== user.id) fail("unauthorized");
 
