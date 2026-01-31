@@ -380,6 +380,7 @@ export default {
       }
 
       username = username.toLowerCase().replace(/\s/g, "");
+      username = username.split("@")[0];
 
       const fk = `${username}:failures`;
       const failures = await g(fk);
