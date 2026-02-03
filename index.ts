@@ -90,6 +90,7 @@ app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
 app.post("/ark/receive", auth, payments.arkReceive);
+app.post("/ark/sync", auth, payments.arkSync);
 
 app.get("/square/connect", auth, square.connect);
 app.get("/square/auth", auth, square.auth);

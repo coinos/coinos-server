@@ -769,13 +769,22 @@ export default {
       created: Date.now(),
     };
 
+    const { id: uid } = user;
+    await s(`payment:${hash}`, p.id);
+    await s(`payment:${p.id}`, p);
+    await db
+      .multi()
+      .lPush(`${aid || uid}:payments`, p.id)
+      .set(`${aid || uid}:payments:last`, p.created)
+      .exec();
+
     res.send(p);
   },
 
   async arkReceive(req, res) {
     try {
       const { body, user } = req;
-      const { iid, amount } = body;
+      const { iid, amount, hash } = body;
       const { id: uid } = user;
 
       if (amount <= 0) fail("Invalid amount");
@@ -812,6 +821,57 @@ export default {
       await completePayment(invoice, p, user);
 
       res.send(p);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
+  async arkSync(req, res) {
+    try {
+      const { user } = req;
+      const { transactions, aid } = req.body;
+      const { id: uid, currency } = user;
+
+      const rates = await g("rates");
+      const rate = rates[currency];
+
+      let synced = 0;
+      for (const tx of transactions) {
+        const existingId = await g(`payment:${tx.hash}`);
+        if (existingId) {
+          const existing = await g(`payment:${existingId}`);
+          if (existing && !existing.confirmed && tx.settled) {
+            existing.confirmed = true;
+            await s(`payment:${existingId}`, existing);
+          }
+          continue;
+        }
+
+        const p = {
+          id: v4(),
+          aid,
+          amount: tx.amount,
+          hash: tx.hash,
+          confirmed: tx.settled,
+          rate,
+          currency,
+          type: PaymentType.ark,
+          uid,
+          created: tx.createdAt,
+        };
+
+        await s(`payment:${tx.hash}`, p.id);
+        await s(`payment:${p.id}`, p);
+        await db
+          .multi()
+          .lPush(`${aid || uid}:payments`, p.id)
+          .set(`${aid || uid}:payments:last`, p.created)
+          .exec();
+
+        synced++;
+      }
+
+      res.send({ synced });
     } catch (e) {
       bail(res, e.message);
     }
