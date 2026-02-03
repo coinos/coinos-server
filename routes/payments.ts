@@ -1,5 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
+import { sendArk } from "$lib/ark";
 import { requirePin } from "$lib/auth";
 import { archive, db, g, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
@@ -751,34 +752,27 @@ export default {
   },
 
   async ark(req, res) {
-    const { user } = req;
-    const { amount, hash, aid } = req.body;
+    const { body, user } = req;
+    const { address, amount, aid } = body;
 
-    const { currency } = user;
-    const rates = await g("rates");
-    const rate = rates[currency];
-    const p = {
-      id: v4(),
-      aid,
-      amount: -amount,
-      hash,
-      confirmed: true,
-      rate,
-      currency,
-      type: PaymentType.ark,
-      created: Date.now(),
-    };
+    try {
+      await requirePin({ body, user });
+      const txid = await sendArk(address, amount);
+      const hash = txid;
 
-    const { id: uid } = user;
-    await s(`payment:${hash}`, p.id);
-    await s(`payment:${p.id}`, p);
-    await db
-      .multi()
-      .lPush(`${aid || uid}:payments`, p.id)
-      .set(`${aid || uid}:payments:last`, p.created)
-      .exec();
+      const p = await debit({
+        hash,
+        amount,
+        user,
+        type: PaymentType.ark,
+        aid,
+      });
 
-    res.send(p);
+      res.send(p);
+    } catch (e) {
+      warn(user.username, "ark payment failed", e.message);
+      res.code(500).send(e.message);
+    }
   },
 
   async arkReceive(req, res) {

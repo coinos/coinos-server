@@ -131,6 +131,8 @@ export const generate = async ({ invoice, user }) => {
   } else if (type === PaymentType.ecash) {
     hash = id;
     text = request(id, amount, memo);
+  } else if (type === PaymentType.ark) {
+    hash = id;
   } else {
     fail(`unrecognized type ${type}`);
   }

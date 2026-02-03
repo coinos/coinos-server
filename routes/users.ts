@@ -846,7 +846,7 @@ export default {
 
           const vtxoHex = Buffer.from(vtxoTaprootKey).toString("hex");
           const r = await fetch(
-            `http://arkd:7070/v1/indexer/vtxos?scripts=5120${vtxoHex}`,
+            `http://arkd:7070/v1/indexer/vtxos?scripts=5120${vtxoHex}&spendable_only=true`,
             { "content-type": "application/json" },
           );
           const { vtxos } = await r.json();
