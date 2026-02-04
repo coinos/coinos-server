@@ -21,7 +21,7 @@ import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
-import { reconcile } from "$lib/payments";
+import { importAccountHistory } from "$lib/payments";
 import type { ProfilePointer } from "nostr-tools/nip19";
 
 const { host } = new URL(process.env.URL);
@@ -834,6 +834,9 @@ export default {
       for (const id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
         const account = await g(`account:${id}`);
         if (account) {
+          if (account.seed && account.pubkey && !account.importedAt) {
+            await importAccountHistory(account);
+          }
           account.balance = await g(`balance:${id}`);
           accounts.push(account);
         }
@@ -884,6 +887,7 @@ export default {
         nextIndex: 0,
         arkAddress,
         accountIndex,
+        importedAt: seed ? Date.now() : undefined,
       };
 
       // ARK accounts don't need Bitcoin Core wallet setup
@@ -939,8 +943,6 @@ export default {
         .set(`pending:${id}`, 0)
         .lPush(`${user.id}:accounts`, id)
         .exec();
-
-      reconcile(account, true);
 
       res.send(account);
     } catch (e) {

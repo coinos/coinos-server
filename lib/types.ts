@@ -54,7 +54,6 @@ export enum PaymentType {
   fund = "fund",
   liquid = "liquid",
   ecash = "ecash",
-  reconcile = "reconcile",
   bolt12 = "bolt12",
 }
 

@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "Korekta salda",
-	"paymentReceived": "Otrzymane płatności",
-	"hello": "Halo",
-	"youReceived": "Otrzymałeś zapłatę",
-	"withdrawalTriggered": "Wywołało to wycofanie",
-	"problemWithdrawing": "Był problem z wysłaniem na twój adres autowycofania",
-	"insufficientFunds": "Niewystarczające fundusze"
+  "paymentReceived": "Otrzymane płatności",
+  "hello": "Halo",
+  "youReceived": "Otrzymałeś zapłatę",
+  "withdrawalTriggered": "Wywołało to wycofanie",
+  "problemWithdrawing": "Był problem z wysłaniem na twój adres autowycofania",
+  "insufficientFunds": "Niewystarczające fundusze"
 }

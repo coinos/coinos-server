@@ -1,9 +1,8 @@
 {
-	"hello": "Привет",
-	"youReceived": "Вы получили выплату в размере",
-	"withdrawalTriggered": "Это послужило толчком к выводу",
-	"problemWithdrawing": "Возникла проблема с отправкой на ваш адрес автоматического вывода средств.",
-	"paymentReceived": "Платеж получен",
-	"balanceAdjustment": "Корректировка баланса",
-	"insufficientFunds": "Недостаточно средств"
+  "hello": "Привет",
+  "youReceived": "Вы получили выплату в размере",
+  "withdrawalTriggered": "Это послужило толчком к выводу",
+  "problemWithdrawing": "Возникла проблема с отправкой на ваш адрес автоматического вывода средств.",
+  "paymentReceived": "Платеж получен",
+  "insufficientFunds": "Недостаточно средств"
 }

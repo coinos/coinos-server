@@ -11,6 +11,7 @@ import {
   getTxHex,
   getTxStatus,
   hdVersions,
+  findLastUsedIndex,
 } from "$lib/esplora";
 import { HDKey } from "@scure/bip32";
 import { generate } from "$lib/invoices";
@@ -1103,58 +1104,145 @@ export const catchUp = async () => {
   }
 };
 
-export const reconcile = async (account, initial = false) => {
+export const importAccountHistory = async (account) => {
   try {
-    const { id, uid, pubkey, fingerprint, nextIndex } = account;
+    const { id, uid, pubkey, fingerprint } = account;
     const user = await getUser(uid);
 
-    // Derive all addresses and sum confirmed UTXOs from esplora
-    const count = (nextIndex || 0) + 1;
+    let nextIndex = account.nextIndex || 0;
+    if (!account.importedAt) {
+      const lastUsed = await findLastUsedIndex(pubkey, fingerprint);
+      if (lastUsed > nextIndex) nextIndex = lastUsed;
+      account.nextIndex = nextIndex;
+    }
+
+    const count = nextIndex + 1;
     const externalAddrs = deriveAddresses(pubkey, fingerprint, count, false);
     const internalAddrs = deriveAddresses(pubkey, fingerprint, count, true);
     const allAddrs = [...externalAddrs, ...internalAddrs];
+    const addressSet = new Set(allAddrs);
 
     const utxos = await getAddressUtxos(allAddrs);
-    const total = utxos
-      .filter((u) => u.status.confirmed)
-      .reduce((sum, u) => sum + u.value, 0);
+    const confirmedUtxos = utxos.filter(
+      (u) => u.status.confirmed && u.value >= 300,
+    );
+    const total = confirmedUtxos.reduce((sum, u) => sum + u.value, 0);
 
-    const { balanceAdjustment: memo } = t(user);
+    const rates = await g("rates");
+    let rate = rates[user.currency];
+    if (!rate) await sleep(1000);
+    rate = rate || rates[user.currency];
 
-    const balance = await g(`balance:${id}`);
+    for (const u of confirmedUtxos) {
+      const existing = await getPayment(`${u.txid}:${u.vout}`);
+      if (existing) continue;
 
-    const amount = Math.abs(total - balance);
-    const hash = v4();
-
-    if (total > balance) {
-      const inv = {
-        memo,
-        type: PaymentType.reconcile,
-        hash,
-        amount,
+      const created = u.status?.block_time
+        ? u.status.block_time * 1000
+        : Date.now();
+      const p = {
+        id: v4(),
+        aid: id,
+        amount: u.value,
+        fee: 0,
+        hash: u.address,
+        confirmed: true,
+        rate,
+        currency: user.currency,
+        type: PaymentType.bitcoin,
         uid,
-        aid: id,
+        ref: `${u.txid}:${u.vout}`,
+        created,
       };
-      await s(`invoice:${hash}`, inv);
-      await credit({
-        hash,
-        amount,
-        type: PaymentType.reconcile,
-        aid: id,
-      });
-    } else if (total < balance) {
-      await debit({
-        aid: id,
-        amount,
-        hash: v4(),
-        memo,
-        user,
-        type: PaymentType.reconcile,
-      });
+
+      await db
+        .multi()
+        .set(`payment:${u.txid}:${u.vout}`, p.id)
+        .set(`payment:${p.id}`, JSON.stringify(p))
+        .lPush(`${id}:payments`, p.id)
+        .set(`${id}:payments:last`, p.created)
+        .exec();
     }
+
+    const txsById = new Map();
+    for (const address of allAddrs) {
+      const txs = await getAddressTxs(address);
+      for (const tx of txs) {
+        txsById.set(tx.txid, tx);
+      }
+    }
+
+    for (const tx of txsById.values()) {
+      if (!tx.status?.confirmed) continue;
+      const existing = await getPayment(tx.txid);
+      if (existing) continue;
+
+      let inputsFromUs = 0;
+      let outputsToUs = 0;
+      let totalIn = 0;
+      let totalOut = 0;
+
+      for (const vin of tx.vin || []) {
+        const prev = vin.prevout;
+        if (!prev) continue;
+        const value = Number.parseInt(prev.value) || 0;
+        totalIn += value;
+        if (addressSet.has(prev.scriptpubkey_address)) inputsFromUs += value;
+      }
+
+      for (const vout of tx.vout || []) {
+        const value = Number.parseInt(vout.value) || 0;
+        totalOut += value;
+        if (addressSet.has(vout.scriptpubkey_address)) outputsToUs += value;
+      }
+
+      if (!inputsFromUs) continue;
+
+      const net = outputsToUs - inputsFromUs;
+      if (net >= 0) continue;
+
+      const amount = totalOut - outputsToUs;
+      if (amount <= 0) continue;
+
+      const fee = Math.max(0, totalIn - totalOut);
+      const created = tx.status?.block_time
+        ? tx.status.block_time * 1000
+        : Date.now();
+
+      const p = {
+        id: v4(),
+        aid: id,
+        amount: -amount,
+        fee,
+        hash: tx.txid,
+        confirmed: true,
+        rate,
+        currency: user.currency,
+        type: PaymentType.bitcoin,
+        uid,
+        created,
+      };
+
+      await db
+        .multi()
+        .set(`payment:${tx.txid}`, p.id)
+        .set(`payment:${p.id}`, JSON.stringify(p))
+        .lPush(`${id}:payments`, p.id)
+        .set(`${id}:payments:last`, p.created)
+        .exec();
+    }
+
+    await db
+      .multi()
+      .set(`balance:${id}`, total)
+      .set(`pending:${id}`, 0)
+      .exec();
+
+    account.importedAt = account.importedAt || Date.now();
+    await s(`account:${id}`, account);
   } catch (e) {
     console.log(e);
-    warn("problem reconciling", e.message, account);
+    warn("problem importing account history", e.message, account);
   }
 };
 

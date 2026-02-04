@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "ปรับสมดุล",
-	"paymentReceived": "ได้รับค่าจ้าง",
-	"hello": "สวัสดี",
-	"youReceived": "คุณได้รับเงิน",
-	"withdrawalTriggered": "นี่กระตุ้นให้เกิดการถอน",
-	"problemWithdrawing": "เกิดปัญหาในการส่งที่อยู่โดยอัตโนมัติของคุณ",
-	"insufficientFunds": "เงินทุนไม่เพียงพอ"
+  "paymentReceived": "ได้รับค่าจ้าง",
+  "hello": "สวัสดี",
+  "youReceived": "คุณได้รับเงิน",
+  "withdrawalTriggered": "นี่กระตุ้นให้เกิดการถอน",
+  "problemWithdrawing": "เกิดปัญหาในการส่งที่อยู่โดยอัตโนมัติของคุณ",
+  "insufficientFunds": "เงินทุนไม่เพียงพอ"
 }

@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "균형 조정",
-	"paymentReceived": "지불받은",
-	"hello": "이름 *",
-	"youReceived": "당신은 지불을 받았습니다",
-	"withdrawalTriggered": "이 방아쇠 인출",
-	"problemWithdrawing": "Autowithdrawal 주소로 보내는 문제가 있었습니다",
-	"insufficientFunds": "충분한 자금"
+  "paymentReceived": "지불받은",
+  "hello": "이름 *",
+  "youReceived": "당신은 지불을 받았습니다",
+  "withdrawalTriggered": "이 방아쇠 인출",
+  "problemWithdrawing": "Autowithdrawal 주소로 보내는 문제가 있었습니다",
+  "insufficientFunds": "충분한 자금"
 }

@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "تسوية الرصيد",
-	"paymentReceived": "المدفوعات الواردة",
-	"hello": "مرحبا",
-	"youReceived": "لقد حصلت على دفعة",
-	"withdrawalTriggered": "هذا أدى إلى سحب",
-	"problemWithdrawing": "كان هناك مشكلة إرسال إلى عنوان سحب السيارة",
-	"insufficientFunds": "عدم كفاية الأموال"
+  "paymentReceived": "المدفوعات الواردة",
+  "hello": "مرحبا",
+  "youReceived": "لقد حصلت على دفعة",
+  "withdrawalTriggered": "هذا أدى إلى سحب",
+  "problemWithdrawing": "كان هناك مشكلة إرسال إلى عنوان سحب السيارة",
+  "insufficientFunds": "عدم كفاية الأموال"
 }

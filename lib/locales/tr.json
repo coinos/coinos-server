@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "Denge ayarı",
-	"paymentReceived": "Ödeme alındı",
-	"hello": "Merhaba",
-	"youReceived": "Bir ödeme aldın",
-	"withdrawalTriggered": "Bu, bir geri çekilmeyi tetikledi",
-	"problemWithdrawing": "AutoWithdrawal adresinize gönderilen bir sorun vardı",
-	"insufficientFunds": "Yetersiz fonlarda"
+  "paymentReceived": "Ödeme alındı",
+  "hello": "Merhaba",
+  "youReceived": "Bir ödeme aldın",
+  "withdrawalTriggered": "Bu, bir geri çekilmeyi tetikledi",
+  "problemWithdrawing": "AutoWithdrawal adresinize gönderilen bir sorun vardı",
+  "insufficientFunds": "Yetersiz fonlarda"
 }

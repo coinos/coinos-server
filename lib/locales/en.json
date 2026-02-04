@@ -1,9 +1,8 @@
 {
-  "balanceAdjustment": "Balance adjustment",
-	"paymentReceived": "Payment received",
-	"hello": "Hello",
-	"youReceived": "You received a payment of",
-	"withdrawalTriggered": "This triggered a withdrawal of",
-	"problemWithdrawing": "There was a problem sending to your autowithdrawal address",
+  "paymentReceived": "Payment received",
+  "hello": "Hello",
+  "youReceived": "You received a payment of",
+  "withdrawalTriggered": "This triggered a withdrawal of",
+  "problemWithdrawing": "There was a problem sending to your autowithdrawal address",
   "insufficientFunds": "Insufficient funds"
 }

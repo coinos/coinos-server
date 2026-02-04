@@ -1,9 +1,8 @@
 {
-	"hello": "こんにちは",
-	"youReceived": "の支払いを受けました",
-	"withdrawalTriggered": "これが撤退のきっかけとなった",
-	"problemWithdrawing": "自動引き出しアドレスへの送信中に問題が発生しました",
-	"paymentReceived": "お支払い頂いた",
-	"balanceAdjustment": "バランス調整",
-	"insufficientFunds": "十分な資金"
+  "hello": "こんにちは",
+  "youReceived": "の支払いを受けました",
+  "withdrawalTriggered": "これが撤退のきっかけとなった",
+  "problemWithdrawing": "自動引き出しアドレスへの送信中に問題が発生しました",
+  "paymentReceived": "お支払い頂いた",
+  "insufficientFunds": "十分な資金"
 }

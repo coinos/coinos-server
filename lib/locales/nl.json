@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "Balansaanpassing",
-	"paymentReceived": "Ontvangen betaling",
-	"hello": "Hallo",
-	"youReceived": "U ontving een betaling van",
-	"withdrawalTriggered": "Dit leidde tot een intrekking van",
-	"problemWithdrawing": "Er was een probleem met het verzenden naar uw automatisch intrekadres",
-	"insufficientFunds": "Onvoldoende middelen"
+  "paymentReceived": "Ontvangen betaling",
+  "hello": "Hallo",
+  "youReceived": "U ontving een betaling van",
+  "withdrawalTriggered": "Dit leidde tot een intrekking van",
+  "problemWithdrawing": "Er was een probleem met het verzenden naar uw automatisch intrekadres",
+  "insufficientFunds": "Onvoldoende middelen"
 }

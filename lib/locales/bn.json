@@ -1,9 +1,8 @@
 {
-	"balanceAdjustment": "মাপে পরিবর্তন",
-	"paymentReceived": "মূল্য প্রদান করা হয়েছে",
-	"hello": "হ্যালো",
-	"youReceived": "আপনি পেমেন্ট পেয়েছিলাম",
-	"withdrawalTriggered": "এটা প্রত্যাহারের সূত্রপাত ঘটিয়েছে",
-	"problemWithdrawing": "আপনার অটো-রান ঠিকানায় প্রেরিত হয়েছে",
-	"insufficientFunds": "অপর্যাপ্ত অর্থ"
+  "paymentReceived": "মূল্য প্রদান করা হয়েছে",
+  "hello": "হ্যালো",
+  "youReceived": "আপনি পেমেন্ট পেয়েছিলাম",
+  "withdrawalTriggered": "এটা প্রত্যাহারের সূত্রপাত ঘটিয়েছে",
+  "problemWithdrawing": "আপনার অটো-রান ঠিকানায় প্রেরিত হয়েছে",
+  "insufficientFunds": "অপর্যাপ্ত অর্থ"
 }

@@ -497,6 +497,12 @@ export default {
           const invoice = await getInvoice(address);
           if (!hot && aid !== invoice?.aid) continue;
           if (sats(amount) < 300) continue;
+
+          const lockKey = `lock:${txid}:${vout}`;
+          const locked = await db.setNX(lockKey, "1");
+          if (!locked) continue;
+          await db.expire(lockKey, 60);
+
           await credit({
             hash: address,
             amount: sats(amount),

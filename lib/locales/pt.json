@@ -1,9 +1,8 @@
 {
-	"hello": "Olá",
-	"youReceived": "Você recebeu um pagamento de",
-	"withdrawalTriggered": "Isto desencadeou uma retirada de",
-	"problemWithdrawing": "Ocorreu um problema ao enviar para seu endereço de retirada automática",
-	"paymentReceived": "Pagamento recebido",
-	"balanceAdjustment": "Ajustamento do saldo",
-	"insufficientFunds": "Fundos insuficientes"
+  "hello": "Olá",
+  "youReceived": "Você recebeu um pagamento de",
+  "withdrawalTriggered": "Isto desencadeou uma retirada de",
+  "problemWithdrawing": "Ocorreu um problema ao enviar para seu endereço de retirada automática",
+  "paymentReceived": "Pagamento recebido",
+  "insufficientFunds": "Fundos insuficientes"
 }
