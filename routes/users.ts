@@ -34,6 +34,17 @@ const verifyRecaptcha = async (response, req?) => {
   const host = req?.headers?.["host"] || "";
   if (host.endsWith(".onion")) return true;
 
+  // Skip captcha for allowlisted User-Agents (prefix match)
+  const uaRaw = req?.headers?.["user-agent"] || req?.headers?.["User-Agent"];
+  const ua = Array.isArray(uaRaw) ? uaRaw[0] : uaRaw;
+  if (typeof ua === "string") {
+    const prefixes = await db.sMembers("nocaptcha_ua");
+    const uaLower = ua.toLowerCase();
+    if (prefixes.some((p) => uaLower.startsWith(p.toLowerCase()))) {
+      return true;
+    }
+  }
+
   // Check for valid API key to bypass captcha
   const apiKey = req?.headers?.["x-api-key"];
   if (apiKey && (await db.sIsMember("apikeys", apiKey))) {
