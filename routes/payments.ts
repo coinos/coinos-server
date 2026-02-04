@@ -3,6 +3,7 @@ import api from "$lib/api";
 import { sendArk } from "$lib/ark";
 import { requirePin } from "$lib/auth";
 import { archive, db, g, gf, s } from "$lib/db";
+import { getTx } from "$lib/esplora";
 import { generate } from "$lib/invoices";
 import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
@@ -14,6 +15,7 @@ import {
   credit,
   debit,
   decode,
+  processWatchedTx,
   sendInternal,
   sendLightning,
   sendOnchain,
@@ -42,7 +44,7 @@ export default {
   async create(req, res) {
     const { body, user } = req;
 
-    let { amount, hash, fee, fund, memo, payreq } = body;
+    let { amount, hash, fee, fund, memo, payreq, aid } = body;
     const balance = await g(`balance:${user.id}`);
 
     try {
@@ -70,13 +72,27 @@ export default {
 
       if (!p) {
         if (hash) {
-          p = await sendInternal({
-            invoice,
-            amount,
-            memo,
-            recipient,
-            sender: user,
-          });
+          if (invoice?.type === PaymentType.ark) {
+            if (!amount) ({ amount } = invoice);
+            if (!invoice.text) fail("Missing ark address");
+            const txid = await sendArk(invoice.text, amount);
+            p = await debit({
+              hash: txid,
+              amount,
+              memo,
+              user,
+              type: PaymentType.ark,
+              aid,
+            });
+          } else {
+            p = await sendInternal({
+              invoice,
+              amount,
+              memo,
+              recipient,
+              sender: user,
+            });
+          }
         } else if (fund) {
           p = await debit({
             hash,
@@ -523,6 +539,26 @@ export default {
     }
   },
 
+  async txWebhook(req, res) {
+    const { txid, secret } = req.body || {};
+    const headerSecret = req.headers["x-hook-secret"];
+    const hookSecret = secret || headerSecret;
+
+    try {
+      if (config.txWebhookSecret && hookSecret !== config.txWebhookSecret)
+        fail("unauthorized");
+      if (!txid) fail("missing txid");
+
+      const tx = await getTx(txid);
+      await processWatchedTx(tx);
+
+      res.send({});
+    } catch (e) {
+      warn("problem processing tx webhook", e.message);
+      bail(res, e.message);
+    }
+  },
+
   async fee(req, res) {
     const { body, user } = req;
     try {
@@ -831,7 +867,7 @@ export default {
 
       let synced = 0;
       for (const tx of transactions) {
-        const existingId = await g(`payment:${tx.hash}`);
+        const existingId = await g(`payment:${aid}:${tx.hash}`);
         if (existingId) {
           const existing = await g(`payment:${existingId}`);
           if (existing && !existing.confirmed && tx.settled) {
@@ -854,7 +890,7 @@ export default {
           created: tx.createdAt,
         };
 
-        await s(`payment:${tx.hash}`, p.id);
+        await s(`payment:${aid}:${tx.hash}`, p.id);
         await s(`payment:${p.id}`, p);
         await db
           .multi()

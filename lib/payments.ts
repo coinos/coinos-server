@@ -1,11 +1,24 @@
 import config from "$config";
 import api from "$lib/api";
 import { db, g, ga, gf, s } from "$lib/db";
+import {
+  broadcastTx,
+  btcNetwork,
+  deriveAddress,
+  deriveAddresses,
+  getAddressTxs,
+  getAddressUtxos,
+  getTxHex,
+  getTxStatus,
+  hdVersions,
+} from "$lib/esplora";
+import { HDKey } from "@scure/bip32";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { notify, nwcNotify } from "$lib/notifications";
+import { emit } from "$lib/sockets";
 import { squarePayment } from "$lib/square";
 import {
   SATS,
@@ -23,6 +36,7 @@ import {
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
 import rpc from "@coinos/rpc";
+import { selectUTXO, p2wpkh } from "@scure/btc-signer";
 import { bech32 } from "bech32";
 import got from "got";
 import { v4 } from "uuid";
@@ -325,6 +339,60 @@ export const completePayment = async (inv, p, user) => {
   callWebhook(inv, p);
 };
 
+const confirmWatchedIncoming = async (address, existing) => {
+  existing.confirmed = true;
+  const inv = await getInvoice(address);
+  if (inv) {
+    inv.received += Number.parseInt(inv.pending);
+    inv.pending = 0;
+    await s(`invoice:${inv.id}`, inv);
+  }
+  await s(`payment:${existing.id}`, existing);
+  await db.decrBy(`pending:${existing.aid || existing.uid}`, existing.amount);
+  await db.incrBy(`balance:${existing.aid || existing.uid}`, existing.amount);
+  const user = await getUser(existing.uid);
+  if (inv) await completePayment(inv, existing, user);
+  await db.sRem("watching", address);
+};
+
+export const processWatchedTx = async (tx) => {
+  const txid = tx.txid;
+
+  for (let vout = 0; vout < tx.vout.length; vout++) {
+    const output = tx.vout[vout];
+    const address = output.scriptpubkey_address;
+    if (!address) continue;
+    if (!(await db.sIsMember("watching", address))) continue;
+
+    const invoice = await getInvoice(address);
+    if (!invoice) continue;
+
+    const existing = await getPayment(`${txid}:${vout}`);
+    if (existing) {
+      if (!existing.confirmed && tx.status?.confirmed) {
+        await confirmWatchedIncoming(address, existing);
+      }
+      continue;
+    }
+
+    if (output.value < 300) continue;
+    await credit({
+      hash: address,
+      amount: output.value,
+      ref: `${txid}:${vout}`,
+      type: PaymentType.bitcoin,
+      aid: invoice.aid,
+    });
+
+    if (tx.status?.confirmed) {
+      const created = await getPayment(`${txid}:${vout}`);
+      if (created && !created.confirmed) {
+        await confirmWatchedIncoming(address, created);
+      }
+    }
+  }
+};
+
 const pay = async ({ aid = undefined, amount, to, user }) => {
   if (!aid) aid = user.id;
   amount = Number.parseInt(amount) || 0;
@@ -383,14 +451,94 @@ export const decode = async (hex) => {
 };
 
 const inflight = {};
+
+const sendNonCustodial = async (params) => {
+  let { aid, hex, rate, user } = params;
+  if (!hex) ({ hex } = await build(params));
+
+  const { tx } = await decode(hex);
+  let { txid } = tx;
+
+  try {
+    if (inflight[txid]) fail("payment in flight");
+    inflight[txid] = true;
+
+    const account = await g(`account:${aid}`);
+    const nextIndex = account.nextIndex || 0;
+
+    // Build set of own addresses for change detection
+    const ownAddresses = new Set<string>();
+    for (let i = 0; i <= nextIndex; i++) {
+      ownAddresses.add(
+        deriveAddress(account.pubkey, account.fingerprint, i, false).address,
+      );
+      ownAddresses.add(
+        deriveAddress(account.pubkey, account.fingerprint, i, true).address,
+      );
+    }
+
+    let totalIn = 0;
+    for (const { txid: inputTxid, vout } of tx.vin) {
+      const inputHex = await getTxHex(inputTxid);
+      const inputTx = await bc.decodeRawTransaction(inputHex);
+      totalIn += sats(inputTx.vout[vout].value);
+    }
+
+    let total = 0;
+    let change = 0;
+    for (const {
+      scriptPubKey: { address },
+      value,
+    } of tx.vout) {
+      total += sats(value);
+      const invoice = await getInvoice(address);
+      if (invoice?.aid === aid) fail("Cannot send to internal address");
+
+      if (ownAddresses.has(address)) {
+        change += sats(value);
+      }
+    }
+
+    const fee = totalIn - total;
+    const amount = total - change;
+
+    const p = await debit({
+      aid,
+      hash: txid,
+      amount,
+      fee,
+      rate,
+      user,
+      type: PaymentType.bitcoin,
+    });
+
+    p.hex = hex;
+    await s(`payment:${p.id}`, p);
+
+    await broadcastTx(hex);
+    await db.sAdd(`inflight:${aid}`, p.id);
+
+    delete inflight[txid];
+    return p;
+  } catch (e) {
+    delete inflight[txid];
+    throw e;
+  }
+};
+
 export const sendOnchain = async (params) => {
   let { aid, hex, rate, user, signed } = params;
   if (!aid) aid = user.id;
+
+  // Non-custodial bitcoin account — use esplora
+  if (aid !== user.id) {
+    return sendNonCustodial(params);
+  }
+
   if (!hex) ({ hex } = await build(params));
 
   const { tx, type } = await decode(hex);
-  const node =
-    aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
+  const node = rpc(config[type]);
   let { txid } = tx;
 
   try {
@@ -635,6 +783,158 @@ const getAddressType = async (a) => {
   }
 };
 
+const buildNonCustodial = async ({
+  aid,
+  amount,
+  address,
+  feeRate,
+  subtract,
+  user,
+}) => {
+  const account = await g(`account:${aid}`);
+  if (!account?.pubkey) fail("account missing pubkey");
+
+  amount = Number.parseInt(amount);
+  if (amount < 0) fail("invalid amount");
+
+  const fees: any = await fetch(
+    `${api[PaymentType.bitcoin]}/fees/recommended`,
+  ).then((r) => r.json());
+
+  fees.hourFee = fees.halfHourFee;
+  fees.halfHourFee = fees.fastestFee;
+  fees.fastestFee = Math.ceil(fees.fastestFee * 1.5);
+
+  if (!feeRate) feeRate = fees.halfHourFee;
+  if (feeRate < fees.hourFee) fail("fee rate too low");
+
+  const nextIndex = account.nextIndex || 0;
+
+  // Derive all used external + internal addresses and fetch UTXOs
+  const externalAddrs = deriveAddresses(
+    account.pubkey,
+    account.fingerprint,
+    nextIndex + 1,
+    false,
+  );
+  const internalAddrs = deriveAddresses(
+    account.pubkey,
+    account.fingerprint,
+    nextIndex + 1,
+    true,
+  );
+  const allAddrs = [...externalAddrs, ...internalAddrs];
+
+  const rawUtxos = await getAddressUtxos(allAddrs);
+  if (!rawUtxos.length) fail("no UTXOs available");
+
+  // Build address-to-path lookup
+  const addrToPath = {};
+  for (let i = 0; i <= nextIndex; i++) {
+    const { address: extAddr } = deriveAddress(
+      account.pubkey,
+      account.fingerprint,
+      i,
+      false,
+    );
+    addrToPath[extAddr] = `m/0/${i}`;
+    const { address: intAddr } = deriveAddress(
+      account.pubkey,
+      account.fingerprint,
+      i,
+      true,
+    );
+    addrToPath[intAddr] = `m/1/${i}`;
+  }
+
+  // Convert esplora UTXOs to selectUTXO input format
+  const keyVersions = account.pubkey.startsWith("tpub")
+    ? hdVersions
+    : undefined;
+  const accountKey = HDKey.fromExtendedKey(account.pubkey, keyVersions);
+
+  const utxoInputs = rawUtxos.map((u) => {
+    const path = addrToPath[u.address];
+    const parts = path.split("/").slice(-2);
+    const child = accountKey
+      .deriveChild(Number.parseInt(parts[0]))
+      .deriveChild(Number.parseInt(parts[1]));
+    const payment = p2wpkh(child.publicKey, btcNetwork);
+
+    return {
+      txid: u.txid,
+      index: u.vout,
+      witnessUtxo: {
+        amount: BigInt(u.value),
+        script: payment.script,
+      },
+    };
+  });
+
+  const balance = await g(`balance:${aid}`);
+  let ourfee = 0; // Non-custodial accounts don't pay platform fee
+
+  const outputs = [{ address, amount: BigInt(amount) }];
+
+  // Derive a change address (next internal address)
+  const { address: changeAddress } = deriveAddress(
+    account.pubkey,
+    account.fingerprint,
+    nextIndex,
+    true,
+  );
+
+  let selected = selectUTXO(utxoInputs, outputs, "default", {
+    changeAddress,
+    feePerByte: BigInt(feeRate),
+    network: btcNetwork,
+    createTx: true,
+  });
+
+  if (!selected) {
+    subtract = true;
+    if (amount <= dust) {
+      fail(`insufficient funds ⚡️${balance} of ⚡️${amount + dust}`);
+    }
+
+    // Try with subtracted fee — send max
+    const maxOutputs = [{ address, amount: BigInt(amount) }];
+    selected = selectUTXO(utxoInputs, maxOutputs, "all", {
+      changeAddress,
+      feePerByte: BigInt(feeRate),
+      network: btcNetwork,
+      createTx: true,
+    });
+
+    if (!selected) fail("insufficient funds");
+  }
+
+  const fee = Number(selected.fee);
+
+  // Build input metadata for client signing
+  const inputs = selected.inputs.map((input) => {
+    const inputTxid =
+      typeof input.txid === "string"
+        ? input.txid
+        : Buffer.from(input.txid).toString("hex");
+    const utxo = rawUtxos.find(
+      (u) => u.txid === inputTxid && u.vout === input.index,
+    );
+    const path = utxo ? addrToPath[utxo.address] : undefined;
+    return {
+      witnessUtxo: {
+        amount: Number(input.witnessUtxo.amount),
+        script: Buffer.from(input.witnessUtxo.script).toString("hex"),
+      },
+      path,
+    };
+  });
+
+  const hex = Buffer.from(selected.tx.toPSBT()).toString("hex");
+
+  return { feeRate, ourfee, fee, fees, hex, inputs, subtract };
+};
+
 export const build = async ({
   aid,
   amount,
@@ -645,8 +945,13 @@ export const build = async ({
 }) => {
   const type = await getAddressType(address);
   if (!aid) aid = user.id;
-  const node =
-    aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
+
+  // Non-custodial bitcoin account — use esplora
+  if (aid !== user.id && type === PaymentType.bitcoin) {
+    return buildNonCustodial({ aid, amount, address, feeRate, subtract, user });
+  }
+
+  const node = rpc(config[type]);
 
   amount = Number.parseInt(amount);
   if (amount < 0) fail("invalid amount");
@@ -699,7 +1004,6 @@ export const build = async ({
   const covered = Math.min(credit, ourfee);
   ourfee -= covered;
 
-  if (aid && aid !== user.id) ourfee = 0;
   if (subtract || amount + fee + ourfee > balance) {
     subtract = true;
     if (amount <= fee + ourfee + dust) {
@@ -741,6 +1045,7 @@ export const build = async ({
 
 export const catchUp = async () => {
   try {
+    // Platform wallets (custodial bitcoin + liquid)
     const txns = [];
     for (const [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
       txns.push(
@@ -765,12 +1070,94 @@ export const catchUp = async () => {
         err("problem confirming", e.message);
       }
     }
+
+    // Non-custodial accounts: check pending outgoing payments
+    const inflightAccounts = await db.keys("inflight:*");
+    for (const key of inflightAccounts) {
+      const aid = key.replace("inflight:", "");
+      const keyType = await db.type(key);
+      if (keyType !== "set") continue;
+      const paymentIds = await db.sMembers(key);
+      for (const pid of paymentIds) {
+        try {
+          const p = await gf(`payment:${pid}`);
+          if (!p || p.confirmed) {
+            await db.sRem(key, pid);
+            continue;
+          }
+          const status = await getTxStatus(p.hash);
+          if (status.confirmed) {
+            p.confirmed = true;
+            await s(`payment:${p.id}`, p);
+            await db.sRem(key, pid);
+            emit(p.uid, "payment", p);
+          }
+        } catch (e) {
+          err("problem checking inflight payment", e.message);
+        }
+      }
+    }
+
   } catch (e) {
     err("problem syncing", e.message);
   }
-
-  setTimeout(catchUp, 10000);
 };
+
+export const reconcile = async (account, initial = false) => {
+  try {
+    const { id, uid, pubkey, fingerprint, nextIndex } = account;
+    const user = await getUser(uid);
+
+    // Derive all addresses and sum confirmed UTXOs from esplora
+    const count = (nextIndex || 0) + 1;
+    const externalAddrs = deriveAddresses(pubkey, fingerprint, count, false);
+    const internalAddrs = deriveAddresses(pubkey, fingerprint, count, true);
+    const allAddrs = [...externalAddrs, ...internalAddrs];
+
+    const utxos = await getAddressUtxos(allAddrs);
+    const total = utxos
+      .filter((u) => u.status.confirmed)
+      .reduce((sum, u) => sum + u.value, 0);
+
+    const { balanceAdjustment: memo } = t(user);
+
+    const balance = await g(`balance:${id}`);
+
+    const amount = Math.abs(total - balance);
+    const hash = v4();
+
+    if (total > balance) {
+      const inv = {
+        memo,
+        type: PaymentType.reconcile,
+        hash,
+        amount,
+        uid,
+        aid: id,
+      };
+      await s(`invoice:${hash}`, inv);
+      await credit({
+        hash,
+        amount,
+        type: PaymentType.reconcile,
+        aid: id,
+      });
+    } else if (total < balance) {
+      await debit({
+        aid: id,
+        amount,
+        hash: v4(),
+        memo,
+        user,
+        type: PaymentType.reconcile,
+      });
+    }
+  } catch (e) {
+    console.log(e);
+    warn("problem reconciling", e.message, account);
+  }
+};
+
 
 export const check = async () => {
   if (process.env.URL.includes("dev")) return;

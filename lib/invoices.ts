@@ -1,6 +1,7 @@
 import config from "$config";
 import { db, g, s } from "$lib/db";
 import { request } from "$lib/ecash";
+import { deriveAddress } from "$lib/esplora";
 import ln from "$lib/ln";
 import { emit } from "$lib/sockets";
 import { SATS, bip21, fail, getInvoice, getUser } from "$lib/utils";
@@ -68,11 +69,16 @@ export const generate = async ({ invoice, user }) => {
     text = account.arkAddress;
   } else if (account.seed) {
     type = PaymentType.bitcoin;
-    const node = rpc({ ...config[type], wallet: aid });
-    hash = await node.getNewAddress({ address_type });
+    const nextIndex = account.nextIndex || 0;
+    const { address, path: hdpath } = deriveAddress(account.pubkey, account.fingerprint, nextIndex);
+    hash = address;
+    path = hdpath;
     text = bip21(hash, invoice);
 
-    ({ hdkeypath: path } = await node.getAddressInfo(hash));
+    account.nextIndex = nextIndex + 1;
+    await s(`account:${aid}`, account);
+    await s(`invoice:${hash}`, id);
+    await db.sAdd("watching", hash);
   } else if (type === PaymentType.lightning) {
     let r;
     if (bolt11) {

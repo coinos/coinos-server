@@ -23,6 +23,8 @@
     "@fastify/websocket": "^10.0.1",
     "@noble/hashes": "^1.8.0",
     "@scure/base": "^1.2.6",
+    "@scure/bip32": "^1.5.0",
+    "@scure/btc-signer": "^2.0.1",
     "bech32": "^2.0.0",
     "buffer-crc32": "^0.2.13",
     "clightning-client": "github:asoltys/lightning-client-js#master",

@@ -11,7 +11,6 @@ import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
-import rpc from "@coinos/rpc";
 import { bech32m } from "@scure/base";
 
 import { $ } from "bun";
@@ -22,6 +21,7 @@ import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
+import { reconcile } from "$lib/payments";
 import type { ProfilePointer } from "nostr-tools/nip19";
 
 const { host } = new URL(process.env.URL);
@@ -879,7 +879,9 @@ export default {
         seed,
         type,
         uid,
-        descriptors: [],
+        pubkey,
+        fingerprint,
+        nextIndex: 0,
         arkAddress,
         accountIndex,
       };
@@ -937,6 +939,8 @@ export default {
         .set(`pending:${id}`, 0)
         .lPush(`${user.id}:accounts`, id)
         .exec();
+
+      reconcile(account, true);
 
       res.send(account);
     } catch (e) {

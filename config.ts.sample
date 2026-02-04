@@ -20,6 +20,10 @@ export default {
     password: "123",
     network: "regtest",
     port: 18443,
+    zmq: {
+      rawtx: 18507,
+      rawblock: 18506
+    }
   },
   liquid: {
     host: "lq",
@@ -34,6 +38,7 @@ export default {
   lightningb: "/home/bun/app/data/lightningb/regtest/lightning-rpc",
   fee: 0.001,
   adminpass: "pwa",
+  txWebhookSecret: process.env.TX_WEBHOOK_SECRET || "pwa",
   support: "support@coinos.io",
   nostrKey: "nsec1msk3dqy2pzqy2murmm5s5gejfgkjkm2zesnh266gud2wcvhcunzqlu0h90",
   nostrKey2: "nsec17ugnsk0qrnakf7xaxzckya4xvx58q063k6q4vq2l577k4uyv9r0qmdcgm5",
