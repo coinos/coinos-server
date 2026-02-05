@@ -22,6 +22,17 @@ import { notify, nwcNotify } from "$lib/notifications";
 import { emit } from "$lib/sockets";
 import { squarePayment } from "$lib/square";
 import {
+  getBalance,
+  getCredit,
+  tbConfirm,
+  tbCredit,
+  tbDebit,
+  tbRefund,
+  tbReverse,
+  tbSetBalance,
+  tbSetPending,
+} from "$lib/tb";
+import {
   SATS,
   btc,
   fail,
@@ -137,17 +148,18 @@ export const debit = async ({
 
   if (aid !== uid) ourfee = 0;
   const frozenBalance =
-    !blacklisted || whitelisted ? 0 : await g(`balance:${uid}`);
+    !blacklisted || whitelisted ? 0 : await getBalance(uid);
 
-  ourfee = await db.debit(
-    `balance:${aid}`,
-    `credit:${creditType}:${aid !== uid ? 0 : uid}`,
-    t(user).insufficientFunds,
+  ourfee = await tbDebit(
+    aid,
+    uid,
+    creditType,
     amount || 0,
     tip || 0,
     fee || 0,
     ourfee || 0,
     frozenBalance || 0,
+    t(user).insufficientFunds,
   );
 
   if (ourfee.err) fail(ourfee.err);
@@ -275,24 +287,17 @@ export const credit = async ({
     await s(`payment:${hash}`, id);
   }
 
-  const m = await db.multi();
-
   let creditType = type;
   if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
-  if (
-    [PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(
-      creditType,
-    )
-  )
-    m.incrBy(
-      `credit:${creditType}:${uid}`,
-      Math.round(amount * config.fee[creditType]),
-    );
+  const isPending = balanceKey === "pending";
 
-  m.set(`invoice:${inv.id}`, JSON.stringify(inv))
+  await tbCredit(aid || uid, uid, creditType, amount, isPending);
+
+  await db
+    .multi()
+    .set(`invoice:${inv.id}`, JSON.stringify(inv))
     .set(`payment:${p.id}`, JSON.stringify(p))
     .lPush(`${aid || uid}:payments`, p.id)
-    .incrBy(`${balanceKey}:${aid || uid}`, amount)
     .set(`${aid || uid}:payments:last`, p.created)
     .exec();
 
@@ -313,7 +318,7 @@ export const completePayment = async (inv, p, user) => {
     if (autowithdraw) {
       try {
         const to = destination.trim();
-        const balance = await g(`balance:${id}`);
+        const balance = await getBalance(id);
         const amount = balance - reserve;
         if (balance > threshold) {
           l("initiating autowithdrawal", amount, to, balance, threshold);
@@ -349,8 +354,7 @@ const confirmWatchedIncoming = async (address, existing) => {
     await s(`invoice:${inv.id}`, inv);
   }
   await s(`payment:${existing.id}`, existing);
-  await db.decrBy(`pending:${existing.aid || existing.uid}`, existing.amount);
-  await db.incrBy(`balance:${existing.aid || existing.uid}`, existing.amount);
+  await tbConfirm(existing.aid || existing.uid, existing.amount);
   const user = await getUser(existing.uid);
   if (inv) await completePayment(inv, existing, user);
   await db.sRem("watching", address);
@@ -872,7 +876,7 @@ const buildNonCustodial = async ({
     };
   });
 
-  const balance = await g(`balance:${aid}`);
+  const balance = await getBalance(aid);
   let ourfee = 0; // Non-custodial accounts don't pay platform fee
 
   const outputs = [{ address, amount: BigInt(amount) }];
@@ -999,10 +1003,10 @@ export const build = async ({
     else throw e;
   }
 
-  const balance = await g(`balance:${aid}`);
+  const balance = await getBalance(aid);
   let ourfee = Math.round(amount * config.fee[type]);
-  const credit = await g(`credit:${type}:${aid}`);
-  const covered = Math.min(credit, ourfee);
+  const creditBal = await getCredit(aid, type);
+  const covered = Math.min(creditBal, ourfee);
   ourfee -= covered;
 
   if (subtract || amount + fee + ourfee > balance) {
@@ -1232,11 +1236,8 @@ export const importAccountHistory = async (account) => {
         .exec();
     }
 
-    await db
-      .multi()
-      .set(`balance:${id}`, total)
-      .set(`pending:${id}`, 0)
-      .exec();
+    await tbSetBalance(id, total);
+    await tbSetPending(id, 0);
 
     account.importedAt = account.importedAt || Date.now();
     await s(`account:${id}`, account);
@@ -1295,7 +1296,7 @@ const finalize = async (r, p) => {
     await s(`payment:${p.id}`, p);
 
     l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
-    await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+    await tbRefund(p.uid, maxfee - p.fee);
   }
 
   return p;
@@ -1310,17 +1311,22 @@ const reverse = async (p) => {
 
   l("reversing", p.id, p.amount, p.fee, total, ourfee, credit);
 
-  await db.reverse(
-    `payment:${p.id}`,
-    `balance:${p.uid}`,
-    `credit:${PaymentType.lightning}:${p.uid}`,
-    `payment:${p.hash}`,
-    `${p.uid}:payments`,
-    p.id,
-    total,
-    credit,
-    p.hash,
-  );
+  // Check payment still exists before reversing
+  const exists = await db.exists(`payment:${p.id}`);
+  if (!exists) throw new Error("Payment has already been reversed");
+
+  // TB: restore balance + credits
+  await tbReverse(p.uid, total, credit);
+
+  // Redis: clean up payment records
+  await db
+    .multi()
+    .del(`payment:${p.id}`)
+    .sRem("pending", p.hash)
+    .del(`payment:${p.hash}`)
+    .lRem(`${p.uid}:payments`, 0, p.id)
+    .lRem("payments", 0, p.id)
+    .exec();
 
   warn("reversed", p.id);
 };

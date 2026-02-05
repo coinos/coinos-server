@@ -3,6 +3,7 @@ import { check, claim, get, mint } from "$lib/ecash";
 import { err, l } from "$lib/logging";
 import { credit, debit } from "$lib/payments";
 import { emit } from "$lib/sockets";
+import { tbDebit } from "$lib/tb";
 import { bail, fail, getInvoice } from "$lib/utils";
 import { getEncodedToken } from "@cashu/cashu-ts";
 import { v4 } from "uuid";
@@ -103,15 +104,16 @@ export default {
       const { lightning: type } = PaymentType;
       if (user.username !== "mint") fail("unauthorized");
       const { id: uid, currency } = user;
-      const ourfee = await db.debit(
-        `balance:${uid}`,
-        `credit:${type}:${uid}`,
-        "Insufficient funds",
+      const ourfee = await tbDebit(
+        uid,
+        uid,
+        type,
         amount || 0,
         0,
         0,
         0,
-        0
+        0,
+        "Insufficient funds",
       );
 
       const rates = await g("rates");

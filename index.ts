@@ -4,11 +4,12 @@ import { admin, auth, optional } from "$lib/auth";
 import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
 import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
-import { migrateAccounts } from "$lib/migrate";
+import { migrateAccounts, migrateBalancesToTB } from "$lib/migrate";
 import nwc from "$lib/nwc";
 import { check } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
+import { initTigerBeetle } from "$lib/tb";
 import { startZmq } from "$lib/zmq";
 
 import ecash from "$routes/ecash";
@@ -26,6 +27,7 @@ import square from "$routes/square";
 import users from "$routes/users";
 
 try {
+  await initTigerBeetle();
   getLocations();
   getFx();
   nwc();
@@ -33,6 +35,7 @@ try {
   startHealthCheck();
   startZmq();
   migrateAccounts().then((n) => n && console.log(`Migrated ${n} accounts`));
+  migrateBalancesToTB().then((n) => n && console.log(`Migrated ${n} balances to TB`));
 } catch (e) {
   console.log(e);
 }

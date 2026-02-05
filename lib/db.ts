@@ -1,75 +1,10 @@
 import config from "$config";
 import { err, warn } from "$lib/logging";
 import { fail, sleep } from "$lib/utils";
-import { createClient, defineScript } from "redis";
-
-const DEBIT = `
-local balanceKey = KEYS[1]
-local creditKey = KEYS[2]
-local insufficientString = KEYS[3];
-local amount = tonumber(ARGV[1])
-local tip = tonumber(ARGV[2])
-local fee = tonumber(ARGV[3])
-local ourfee = tonumber(ARGV[4])
-local frozen = tonumber(ARGV[5])
-
-local balance = tonumber(redis.call('get', balanceKey) or '0')
-local credit = tonumber(redis.call('get', creditKey) or '0')
-
-local covered = math.min(credit, ourfee)
-ourfee = ourfee - covered
-
-if balance - frozen < amount + tip + fee + ourfee then
-    return {err = insufficientString .. ' ⚡️' .. balance - frozen .. ' / ' .. amount + tip + fee + ourfee}
-end
-
-redis.call('decrby', creditKey, tostring(math.floor(covered)))
-redis.call('decrby', balanceKey, tostring(math.floor(amount + tip + fee + ourfee)))
-
-return ourfee
-`;
-
-const REVERSE = `
-local paymentKey = KEYS[1]
-local balanceKey = KEYS[2]
-local creditKey = KEYS[3]
-local hashKey = KEYS[4]
-local paymentsKey = KEYS[5]
-local pid = KEYS[6]
-
-local total = tonumber(ARGV[1])
-local credit = tonumber(ARGV[2])
-local hash = ARGV[3]
-
-if redis.call('exists', paymentKey) == 1 then
-    redis.call('del', paymentKey)
-    redis.call('srem', 'pending', hash)
-    redis.call('incrby', balanceKey, total)
-    redis.call('incrby', creditKey, credit)
-    redis.call('del', hashKey)
-    redis.call('lrem', paymentsKey, 0, pid)
-    redis.call('lrem', 'payments', 0, pid)
-    return pid
-else
-    error("Payment has already been reversed" .. paymentKey)
-end
-`;
-
-const debit = defineScript({
-  NUMBER_OF_KEYS: 3,
-  SCRIPT: DEBIT,
-  transformArguments: (...args) => args.map((a) => a.toString()),
-});
-
-const reverse = defineScript({
-  NUMBER_OF_KEYS: 6,
-  SCRIPT: REVERSE,
-  transformArguments: (...args) => args.map((a) => a.toString()),
-});
+import { createClient } from "redis";
 
 export const db = createClient({
   url: config.db,
-  scripts: { debit, reverse },
   socket: {
     reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
   },

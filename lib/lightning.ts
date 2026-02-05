@@ -3,6 +3,7 @@ import ln, { lnListen, LightningUnavailableError } from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { credit } from "$lib/payments";
+import { tbSetBalance, getBalance } from "$lib/tb";
 import { PaymentType } from "$lib/types";
 import { getInvoice, getPayment, getUser } from "$lib/utils";
 
@@ -181,7 +182,8 @@ export const fixBolt12 = async (_, res) => {
       if (op) {
         db.del(`payment:${oid}`);
         db.del(`payment:${local_offer_id}`);
-        db.decrBy(`balance:${op.uid}`, op.amount);
+        const bal = await getBalance(op.uid);
+        await tbSetBalance(op.uid, bal - op.amount);
       }
     }
   }

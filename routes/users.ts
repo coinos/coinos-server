@@ -21,6 +21,7 @@ import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
+import { createBalanceAccount, getBalance, getCredit } from "$lib/tb";
 import { importAccountHistory } from "$lib/payments";
 import type { ProfilePointer } from "nostr-tools/nip19";
 
@@ -83,7 +84,7 @@ export default {
   async me(req, res) {
     const { user } = req;
     try {
-      user.balance = await g(`balance:${user.id}`);
+      user.balance = await getBalance(user.id);
       user.locked = await ga(`balance:${user.id}`);
 
       if (user.locked) {
@@ -116,16 +117,13 @@ export default {
 
     const users = [];
 
-    for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
-      const uid = k.split(":")[1];
-      const user = await getUser(uid);
+    for await (const k of db.scanIterator({ MATCH: "user:*" })) {
+      const val = await g(k);
+      if (!val || typeof val !== "object" || !val.id || !val.username) continue;
+      const uid = val.id;
+      const u = val;
 
-      if (!user) {
-        await db.del(`balance:${uid}`);
-        continue;
-      }
-
-      user.balance = await g(k);
+      u.balance = await getBalance(uid);
 
       const payments = await db.lRange(`${uid}:payments`, 0, -1);
 
@@ -139,8 +137,8 @@ export default {
         else total += p.tip || 0;
       }
 
-      user.expected = total;
-      users.push(user);
+      u.expected = total;
+      users.push(u);
     }
 
     res.send(users);
@@ -822,7 +820,7 @@ export default {
     if (pos == null) fail("account not found");
 
     const account = await g(`account:${id}`);
-    if (account) account.balance = await g(`balance:${id}`);
+    if (account) account.balance = await getBalance(id);
     res.send(account);
   },
 
@@ -837,7 +835,7 @@ export default {
           if (account.seed && account.pubkey && !account.importedAt) {
             await importAccountHistory(account);
           }
-          account.balance = await g(`balance:${id}`);
+          account.balance = await getBalance(id);
           accounts.push(account);
         }
 
@@ -890,13 +888,13 @@ export default {
         importedAt: seed ? Date.now() : undefined,
       };
 
+      await createBalanceAccount(id);
+
       // ARK accounts don't need Bitcoin Core wallet setup
       if (type === "ark") {
         await db
           .multi()
           .set(`account:${id}`, JSON.stringify(account))
-          .set(`balance:${id}`, 0)
-          .set(`pending:${id}`, 0)
           .lPush(`${user.id}:accounts`, id)
           .exec();
 
@@ -939,8 +937,6 @@ export default {
       await db
         .multi()
         .set(`account:${id}`, JSON.stringify(account))
-        .set(`balance:${id}`, 0)
-        .set(`pending:${id}`, 0)
         .lPush(`${user.id}:accounts`, id)
         .exec();
 
@@ -988,7 +984,6 @@ export default {
         .multi()
         .lRem(`${uid}:accounts`, 1, id)
         .del(`account:${id}`)
-        .del(`balance:${id}`)
         .del(`${id}:payments`)
         .exec();
 
@@ -1161,9 +1156,9 @@ export default {
 
   async credits(req, res) {
     const { id } = req.user;
-    const bitcoin = await g(`credit:bitcoin:${id}`);
-    const lightning = await g(`credit:lightning:${id}`);
-    const liquid = await g(`credit:liquid:${id}`);
+    const bitcoin = await getCredit(id, "bitcoin");
+    const lightning = await getCredit(id, "lightning");
+    const liquid = await getCredit(id, "liquid");
     res.send({ bitcoin, lightning, liquid });
   },
 

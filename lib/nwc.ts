@@ -11,6 +11,7 @@ import {
   serverSecret2,
 } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
+import { getBalance } from "$lib/tb";
 import { fail, getInvoice, sleep } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import { hexToBytes } from "@noble/hashes/utils";
@@ -327,7 +328,7 @@ const handle = (method, params, ev, app, user) =>
     },
 
     async get_balance() {
-      let balance = await g(`balance:${user.id}`);
+      let balance = await getBalance(user.id);
       balance *= 1000;
       return result({ balance });
     },

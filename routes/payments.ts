@@ -21,6 +21,7 @@ import {
   sendOnchain,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
+import { fundDebit, getBalance, getCredit, tbConfirm } from "$lib/tb";
 import { PaymentType } from "$lib/types";
 import {
   SATS,
@@ -45,7 +46,7 @@ export default {
     const { body, user } = req;
 
     let { amount, hash, fee, fund, memo, payreq, aid } = body;
-    const balance = await g(`balance:${user.id}`);
+    const balance = await getBalance(user.id);
 
     try {
       if (typeof amount !== "undefined") {
@@ -247,8 +248,8 @@ export default {
 
       const amount = Math.round(amount_msat / 1000);
       let ourfee = Math.round(amount * config.fee[PaymentType.lightning]);
-      const credit = await g(`credit:lightning:${user.id}`);
-      const covered = Math.min(credit, ourfee) || 0;
+      const creditBal = await getCredit(user.id, "lightning");
+      const covered = Math.min(creditBal, ourfee) || 0;
       ourfee -= covered;
 
       res.send({ alias, amount, ourfee });
@@ -364,16 +365,7 @@ export default {
       const managers = await db.sMembers(`fund:${id}:managers`);
       if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
 
-      const result: any = await db.debit(
-        `fund:${id}`,
-        "",
-        "Insufficient funds",
-        amount,
-        0,
-        0,
-        0,
-        0,
-      );
+      const result: any = await fundDebit(`fund:${id}`, amount, "Insufficient funds");
       if (result.err) fail(result.err);
 
       const payment = await credit({
@@ -525,12 +517,12 @@ export default {
 
           l("confirming", id, p.id, p.amount);
 
+          await tbConfirm(p.aid || p.uid, p.amount);
+
           await db
             .multi()
             .set(`invoice:${iid}`, JSON.stringify(invoice))
             .set(`payment:${p.id}`, JSON.stringify(p))
-            .decrBy(`pending:${p.aid || p.uid}`, p.amount)
-            .incrBy(`balance:${p.aid || p.uid}`, p.amount)
             .exec();
 
           const user = await g(`user:${p.uid}`);
