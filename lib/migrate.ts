@@ -7,6 +7,7 @@ import {
   tbSetBalance,
   tbSetPending,
   tbSetCredit,
+  tbMultiplyForMicrosats,
 } from "$lib/tb";
 
 async function migrate(id) {
@@ -102,6 +103,36 @@ export const migrateBalancesToTB = async () => {
 
   await db.set("tb:migrated", Date.now().toString());
   l(`Migrated ${count} balances to TigerBeetle`);
+  return count;
+};
+
+export const migrateToMicrosats = async () => {
+  const migrated = await db.get("tb:microsats");
+  if (migrated) return 0;
+
+  let count = 0;
+
+  // Iterate through all users and multiply their TB balances
+  for await (const k of db.scanIterator({ MATCH: "user:*" })) {
+    try {
+      const raw = await db.get(k);
+      if (!raw) continue;
+
+      // Skip user alias keys (they just contain another key reference)
+      if (!raw.startsWith("{")) continue;
+
+      const user = JSON.parse(raw);
+      if (!user.id) continue;
+
+      const multiplied = await tbMultiplyForMicrosats(user.id);
+      if (multiplied > 0) count++;
+    } catch (e) {
+      warn("microsats migration error", k, e.message);
+    }
+  }
+
+  await db.set("tb:microsats", Date.now().toString());
+  l(`Migrated ${count} users to microsats`);
   return count;
 };
 

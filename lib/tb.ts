@@ -15,6 +15,10 @@ const LEDGER_CREDIT_BTC = 2;
 const LEDGER_CREDIT_LN = 3;
 const LEDGER_CREDIT_LQ = 4;
 
+// Microsatoshi precision: 1 sat = 1,000,000 microsats
+const MSATS = 1_000_000n; // BigInt for TB operations
+const MSATS_NUM = 1_000_000; // Number for JS math
+
 const creditLedger: Record<string, number> = {
   bitcoin: LEDGER_CREDIT_BTC,
   lightning: LEDGER_CREDIT_LN,
@@ -173,9 +177,16 @@ async function getAccount(id: bigint) {
   return accounts[0];
 }
 
+// Raw microsats balance for internal use
+function accountBalanceMicro(account: any): bigint {
+  if (!account) return 0n;
+  return account.credits_posted - account.debits_posted;
+}
+
 function accountBalance(account: any): number {
   if (!account) return 0;
-  return Number(account.credits_posted - account.debits_posted);
+  const micro = account.credits_posted - account.debits_posted;
+  return Number(micro / MSATS); // Floor division to sats
 }
 
 export async function getBalance(aid: string): Promise<number> {
@@ -210,32 +221,41 @@ export async function tbDebit(
   frozen: number,
   errMsg: string,
 ): Promise<number> {
-  // Look up credit balance
-  let covered = 0;
+  // Look up credit balance in microsats for precision
+  let coveredMicro = 0n;
   if (ourfee > 0 && creditType && creditLedger[creditType]) {
-    const creditBal = await getCredit(
-      uid === aid ? uid : "00000000-0000-0000-0000-000000000000",
-      creditType,
+    const creditAcct = await getAccount(
+      creditId(
+        uid === aid ? uid : "00000000-0000-0000-0000-000000000000",
+        creditType,
+      ),
     );
-    covered = Math.min(creditBal, ourfee);
-    ourfee -= covered;
+    const creditBalMicro = accountBalanceMicro(creditAcct);
+    const ourfeeMicro = BigInt(ourfee) * MSATS;
+    coveredMicro = creditBalMicro < ourfeeMicro ? creditBalMicro : ourfeeMicro;
+    ourfee = Number((ourfeeMicro - coveredMicro) / MSATS);
   }
 
-  const totalDebit = amount + tip + fee + ourfee;
+  // Total debit in microsats
+  const totalDebitMicro = BigInt(amount + tip + fee + ourfee) * MSATS;
 
-  // Check balance is sufficient (accounting for frozen funds)
-  const currentBalance = await getBalance(aid);
-  if (currentBalance - frozen < totalDebit) {
+  // Check balance is sufficient (accounting for frozen funds) in microsats
+  const balAcct = await getAccount(balanceId(aid));
+  const currentBalMicro = accountBalanceMicro(balAcct);
+  const frozenMicro = BigInt(frozen) * MSATS;
+  if (currentBalMicro - frozenMicro < totalDebitMicro) {
+    const availSats = Number((currentBalMicro - frozenMicro) / MSATS);
+    const needSats = Number(totalDebitMicro / MSATS);
     return {
-      err: `${errMsg} ⚡️${currentBalance - frozen} / ${totalDebit}`,
+      err: `${errMsg} ⚡️${availSats} / ${needSats}`,
     } as any;
   }
 
   // Build linked transfers
   const transfers: any[] = [];
 
-  // 1. Consume credits (user credit → house credit) if any
-  if (covered > 0) {
+  // 1. Consume credits (user credit → house credit) if any - in microsats
+  if (coveredMicro > 0n) {
     const creditUserAcctId = creditId(
       uid === aid ? uid : "00000000-0000-0000-0000-000000000000",
       creditType,
@@ -244,7 +264,7 @@ export async function tbDebit(
       id: nextTransferId(),
       debit_account_id: u128(creditUserAcctId),
       credit_account_id: u128(houseCreditAccount[creditType]),
-      amount: BigInt(covered),
+      amount: coveredMicro,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -257,12 +277,12 @@ export async function tbDebit(
     });
   }
 
-  // 2. Debit balance (user → house)
+  // 2. Debit balance (user → house) in microsats
   transfers.push({
     id: nextTransferId(),
     debit_account_id: u128(balanceId(aid)),
     credit_account_id: u128(HOUSE_SATS),
-    amount: BigInt(totalDebit),
+    amount: totalDebitMicro,
     pending_id: 0n,
     user_data_128: 0n,
     user_data_64: 0n,
@@ -283,8 +303,10 @@ export async function tbDebit(
 
   const results = await client.createTransfers(transfers);
   if (results.length > 0) {
+    const availSats = Number((currentBalMicro - frozenMicro) / MSATS);
+    const needSats = Number(totalDebitMicro / MSATS);
     return {
-      err: `${errMsg} ⚡️${currentBalance - frozen} / ${totalDebit}`,
+      err: `${errMsg} ⚡️${availSats} / ${needSats}`,
     } as any;
   }
 
@@ -300,13 +322,13 @@ export async function tbCredit(
 ) {
   const transfers: any[] = [];
 
-  // Transfer house → user balance (or house → pending)
+  // Transfer house → user balance (or house → pending) in microsats
   const targetAccount = isPending ? pendingId(aid) : balanceId(aid);
   transfers.push({
     id: nextTransferId(),
     debit_account_id: u128(HOUSE_SATS),
     credit_account_id: u128(targetAccount),
-    amount: BigInt(amount),
+    amount: BigInt(amount) * MSATS,
     pending_id: 0n,
     user_data_128: 0n,
     user_data_64: 0n,
@@ -318,15 +340,18 @@ export async function tbCredit(
     timestamp: 0n,
   });
 
-  // Add fee credit if applicable
+  // Add fee credit if applicable - MICROSATS for sub-satoshi precision!
+  // e.g., 2% of 10 sats = 0.2 sats = 200,000 microsats (accumulates over time)
   if (creditType && creditLedger[creditType] && config.fee[creditType]) {
-    const creditAmount = Math.round(amount * config.fee[creditType]);
-    if (creditAmount > 0) {
+    const creditAmountMicro = BigInt(
+      Math.round(amount * MSATS_NUM * config.fee[creditType]),
+    );
+    if (creditAmountMicro > 0n) {
       transfers.push({
         id: nextTransferId(),
         debit_account_id: u128(houseCreditAccount[creditType]),
         credit_account_id: u128(creditId(uid, creditType)),
-        amount: BigInt(creditAmount),
+        amount: creditAmountMicro,
         pending_id: 0n,
         user_data_128: 0n,
         user_data_64: 0n,
@@ -347,15 +372,16 @@ export async function tbCredit(
 }
 
 export async function tbConfirm(aid: string, amount: number) {
-  // Transfer pending → balance (via house as intermediary)
+  // Transfer pending → balance (via house as intermediary) in microsats
   const linked = TransferFlags.linked;
+  const amountMicro = BigInt(amount) * MSATS;
 
   const transfers = [
     {
       id: nextTransferId(),
       debit_account_id: u128(pendingId(aid)),
       credit_account_id: u128(HOUSE_SATS),
-      amount: BigInt(amount),
+      amount: amountMicro,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -370,7 +396,7 @@ export async function tbConfirm(aid: string, amount: number) {
       id: nextTransferId(),
       debit_account_id: u128(HOUSE_SATS),
       credit_account_id: u128(balanceId(aid)),
-      amount: BigInt(amount),
+      amount: amountMicro,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -397,12 +423,12 @@ export async function tbReverse(
   const transfers: any[] = [];
   const linked = TransferFlags.linked;
 
-  // House → user balance
+  // House → user balance in microsats
   transfers.push({
     id: nextTransferId(),
     debit_account_id: u128(HOUSE_SATS),
     credit_account_id: u128(balanceId(uid)),
-    amount: BigInt(total),
+    amount: BigInt(total) * MSATS,
     pending_id: 0n,
     user_data_128: 0n,
     user_data_64: 0n,
@@ -414,13 +440,13 @@ export async function tbReverse(
     timestamp: 0n,
   });
 
-  // House credit → user credit (lightning)
+  // House credit → user credit (lightning) in microsats
   if (creditAmount > 0) {
     transfers.push({
       id: nextTransferId(),
       debit_account_id: u128(HOUSE_LN),
       credit_account_id: u128(creditId(uid, "lightning")),
-      amount: BigInt(creditAmount),
+      amount: BigInt(creditAmount) * MSATS,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -447,7 +473,7 @@ export async function tbRefund(uid: string, amount: number) {
       id: nextTransferId(),
       debit_account_id: u128(HOUSE_SATS),
       credit_account_id: u128(balanceId(uid)),
-      amount: BigInt(amount),
+      amount: BigInt(amount) * MSATS,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -467,16 +493,19 @@ export async function tbRefund(uid: string, amount: number) {
 }
 
 export async function tbSetBalance(aid: string, target: number) {
-  const current = await getBalance(aid);
-  const diff = target - current;
-  if (diff === 0) return;
+  // Work entirely in microsats
+  const balAcct = await getAccount(balanceId(aid));
+  const currentMicro = accountBalanceMicro(balAcct);
+  const targetMicro = BigInt(target) * MSATS;
+  const diff = targetMicro - currentMicro;
+  if (diff === 0n) return;
 
   const transfers = [
     {
       id: nextTransferId(),
-      debit_account_id: diff > 0 ? u128(HOUSE_SATS) : u128(balanceId(aid)),
-      credit_account_id: diff > 0 ? u128(balanceId(aid)) : u128(HOUSE_SATS),
-      amount: BigInt(Math.abs(diff)),
+      debit_account_id: diff > 0n ? u128(HOUSE_SATS) : u128(balanceId(aid)),
+      credit_account_id: diff > 0n ? u128(balanceId(aid)) : u128(HOUSE_SATS),
+      amount: diff > 0n ? diff : -diff,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -496,16 +525,19 @@ export async function tbSetBalance(aid: string, target: number) {
 }
 
 export async function tbSetPending(aid: string, target: number) {
-  const current = await getPending(aid);
-  const diff = target - current;
-  if (diff === 0) return;
+  // Work entirely in microsats
+  const pendAcct = await getAccount(pendingId(aid));
+  const currentMicro = accountBalanceMicro(pendAcct);
+  const targetMicro = BigInt(target) * MSATS;
+  const diff = targetMicro - currentMicro;
+  if (diff === 0n) return;
 
   const transfers = [
     {
       id: nextTransferId(),
-      debit_account_id: diff > 0 ? u128(HOUSE_SATS) : u128(pendingId(aid)),
-      credit_account_id: diff > 0 ? u128(pendingId(aid)) : u128(HOUSE_SATS),
-      amount: BigInt(Math.abs(diff)),
+      debit_account_id: diff > 0n ? u128(HOUSE_SATS) : u128(pendingId(aid)),
+      credit_account_id: diff > 0n ? u128(pendingId(aid)) : u128(HOUSE_SATS),
+      amount: diff > 0n ? diff : -diff,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -525,19 +557,22 @@ export async function tbSetPending(aid: string, target: number) {
 }
 
 export async function tbSetCredit(uid: string, type: string, target: number) {
-  const current = await getCredit(uid, type);
-  const diff = target - current;
-  if (diff === 0) return;
-
+  // Work entirely in microsats
   const ledger = creditLedger[type];
   if (!ledger) return;
+
+  const creditAcct = await getAccount(creditId(uid, type));
+  const currentMicro = accountBalanceMicro(creditAcct);
+  const targetMicro = BigInt(target) * MSATS;
+  const diff = targetMicro - currentMicro;
+  if (diff === 0n) return;
 
   const transfers = [
     {
       id: nextTransferId(),
-      debit_account_id: diff > 0 ? u128(houseCreditAccount[type]) : u128(creditId(uid, type)),
-      credit_account_id: diff > 0 ? u128(creditId(uid, type)) : u128(houseCreditAccount[type]),
-      amount: BigInt(Math.abs(diff)),
+      debit_account_id: diff > 0n ? u128(houseCreditAccount[type]) : u128(creditId(uid, type)),
+      credit_account_id: diff > 0n ? u128(creditId(uid, type)) : u128(houseCreditAccount[type]),
+      amount: diff > 0n ? diff : -diff,
       pending_id: 0n,
       user_data_128: 0n,
       user_data_64: 0n,
@@ -569,4 +604,62 @@ export async function fundDebit(
   }
   await db.decrBy(fundKey, amount);
   return 0;
+}
+
+// Migration helper: multiply existing balance by MULTIPLIER to convert sats→microsats
+// Called by migrateToMicrosats() - adds (balance * 999999) to turn X into X*1000000
+// NOTE: This migration should only run ONCE - guarded by tb:microsats flag in migrate.ts
+export async function tbMultiplyForMicrosats(uid: string): Promise<number> {
+  // Ensure client is initialized (needed when called during startup)
+  if (!client) {
+    await initTigerBeetle();
+  }
+
+  const MULTIPLIER = 999999n; // Adding this turns X into X*1000000
+  let count = 0;
+
+  const multiplyAccount = async (
+    accountId: bigint,
+    ledger: number,
+    houseId: bigint,
+  ) => {
+    const acct = await client.lookupAccounts([u128(accountId)]);
+    if (!acct.length) return;
+    const current = acct[0].credits_posted - acct[0].debits_posted;
+    if (current <= 0n) return;
+
+    const results = await client.createTransfers([
+      {
+        id: nextTransferId(),
+        debit_account_id: u128(houseId),
+        credit_account_id: u128(accountId),
+        amount: current * MULTIPLIER,
+        pending_id: 0n,
+        user_data_128: 0n,
+        user_data_64: 0n,
+        user_data_32: 0,
+        timeout: 0,
+        ledger,
+        code: 1,
+        flags: 0,
+        timestamp: 0n,
+      },
+    ]);
+    if (results.length === 0) count++;
+  };
+
+  const balId = balanceId(uid);
+  const pendId = pendingId(uid);
+
+  await multiplyAccount(balId, LEDGER_SATS, HOUSE_SATS);
+  await multiplyAccount(pendId, LEDGER_SATS, HOUSE_SATS);
+  await multiplyAccount(creditId(uid, "bitcoin"), LEDGER_CREDIT_BTC, HOUSE_BTC);
+  await multiplyAccount(
+    creditId(uid, "lightning"),
+    LEDGER_CREDIT_LN,
+    HOUSE_LN,
+  );
+  await multiplyAccount(creditId(uid, "liquid"), LEDGER_CREDIT_LQ, HOUSE_LQ);
+
+  return count;
 }
