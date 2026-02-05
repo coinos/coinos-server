@@ -839,12 +839,15 @@ export default {
         created: Date.now(),
       };
 
-      const m = await db.multi();
+      const m = db.multi();
       m.set(`invoice:${invoice.id}`, JSON.stringify(invoice))
         .set(`payment:${p.id}`, JSON.stringify(p))
         .lPush(`${aid || uid}:payments`, p.id)
-        .set(`${aid || uid}:payments:last`, p.created)
-        .exec();
+        .set(`${aid || uid}:payments:last`, p.created);
+
+      if (hash) m.set(`payment:${aid || uid}:${hash}`, p.id);
+
+      await m.exec();
 
       await completePayment(invoice, p, user);
 
@@ -880,7 +883,7 @@ export default {
           aid,
           amount: tx.amount,
           hash: tx.hash,
-          confirmed: tx.settled,
+          confirmed: true,
           rate,
           currency,
           type: PaymentType.ark,
