@@ -1,6 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
-import { sendArk } from "$lib/ark";
+import { getArkAddress, sendArk } from "$lib/ark";
 import { requirePin } from "$lib/auth";
 import { archive, db, g, gf, s } from "$lib/db";
 import { getTx } from "$lib/esplora";
@@ -21,7 +21,7 @@ import {
   sendOnchain,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
-import { fundDebit, getBalance, getCredit, tbConfirm } from "$lib/tb";
+import { fundDebit, getBalance, getCredit, tbConfirm, tbCredit } from "$lib/tb";
 import { PaymentType } from "$lib/types";
 import {
   SATS,
@@ -63,7 +63,7 @@ export default {
       const recipient = invoice ? await getUser(invoice.uid) : undefined;
       if (payreq) {
         if (invoice && recipient.username !== "mint") {
-          if (invoice.aid === user.id) fail("Cannot send to self");
+          if (invoice.aid === (aid || user.id)) fail("Cannot send to self");
           hash = payreq;
           if (!amount) ({ amount } = invoice);
         } else {
@@ -809,6 +809,10 @@ export default {
     }
   },
 
+  async arkAddress(_, res) {
+    res.send(await getArkAddress());
+  },
+
   async arkReceive(req, res) {
     try {
       const { body, user } = req;
@@ -821,13 +825,16 @@ export default {
       if (invoice.uid !== user?.id) fail("Unauthorized");
       invoice.received += amount;
 
-      const { aid, type, currency } = invoice;
+      let { aid, type, currency } = invoice;
       const rates = await g("rates");
       const rate = rates[currency];
 
+      // Always credit custodial balance (Ark funds received by server)
+      await tbCredit(uid, uid, type, amount, false);
+
       const p = {
         id: v4(),
-        aid: aid,
+        aid: uid,
         iid,
         amount,
         hash,
@@ -842,10 +849,10 @@ export default {
       const m = db.multi();
       m.set(`invoice:${invoice.id}`, JSON.stringify(invoice))
         .set(`payment:${p.id}`, JSON.stringify(p))
-        .lPush(`${aid || uid}:payments`, p.id)
-        .set(`${aid || uid}:payments:last`, p.created);
+        .lPush(`${uid}:payments`, p.id)
+        .set(`${uid}:payments:last`, p.created);
 
-      if (hash) m.set(`payment:${aid || uid}:${hash}`, p.id);
+      if (hash) m.set(`payment:${aid}:${hash}`, p.id);
 
       await m.exec();
 
@@ -877,6 +884,9 @@ export default {
           }
           continue;
         }
+
+        // Skip received/change VTXOs — handled by arkReceive
+        if (tx.amount > 0) continue;
 
         const p = {
           id: v4(),

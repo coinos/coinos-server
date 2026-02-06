@@ -36,6 +36,7 @@ export const generate = async ({ invoice, user }) => {
     type = PaymentType.lightning,
     webhook,
     secret,
+    forward,
   } = invoice;
 
   amount = Number.parseInt(amount || 0);
@@ -168,6 +169,7 @@ export const generate = async ({ invoice, user }) => {
     type,
     uid: user.id,
     webhook,
+    forward,
   };
 
   if (type === "liquid") {

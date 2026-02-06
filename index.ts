@@ -96,6 +96,7 @@ app.post("/gateway", payments.gateway);
 app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
+app.get("/ark/address", payments.arkAddress);
 app.post("/ark/receive", auth, payments.arkReceive);
 app.post("/ark/sync", auth, payments.arkSync);
 

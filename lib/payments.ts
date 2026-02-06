@@ -315,7 +315,28 @@ export const completePayment = async (inv, p, user) => {
   const { id, autowithdraw, threshold, reserve, destination, username } = user;
   let withdrawal;
   if (p.confirmed) {
-    if (autowithdraw) {
+    if (inv.forward && !inv.forwarded) {
+      try {
+        // Skip forward if destination is the same user's own invoice
+        try {
+          const destInv = await getInvoice(inv.forward);
+          if (destInv?.uid === id) {
+            inv.forwarded = true;
+            await s(`invoice:${inv.id}`, inv);
+            callWebhook(inv, p);
+            return;
+          }
+        } catch {}
+
+        inv.forwarded = true;
+        await s(`invoice:${inv.id}`, inv);
+        const w = await pay({ amount: p.amount, to: inv.forward, user });
+        callWebhook(inv, p);
+        return w;
+      } catch (e) {
+        warn(username, "forward failed", inv.forward, e.message);
+      }
+    } else if (autowithdraw && p.type !== "ark") {
       try {
         const to = destination.trim();
         const balance = await getBalance(id);
