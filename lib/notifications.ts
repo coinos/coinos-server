@@ -7,7 +7,7 @@ import mqtt from "$lib/mqtt";
 import { publish, serverSecret2 } from "$lib/nostr";
 import { emit } from "$lib/sockets";
 import { f, fiat, fmt, getUser, link, nada, t } from "$lib/utils";
-import { hexToBytes } from "@noble/hashes/utils";
+import { hexToBytes } from "@noble/hashes/utils.js";
 import { finalizeEvent, nip04 } from "nostr-tools";
 import webpush from "web-push";
 

@@ -3,7 +3,7 @@ import { db, g, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { scan } from "$lib/strfry";
 import { fail, fields, getUser, pick } from "$lib/utils";
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { finalizeEvent, getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
@@ -20,8 +20,8 @@ export const serverSecret2 = bytesToHex(
   nip19.decode(config.nostrKey2).data as Uint8Array,
 );
 
-export const serverPubkey = getPublicKey(serverSecret);
-export const serverPubkey2 = getPublicKey(serverSecret2);
+export const serverPubkey = getPublicKey(hexToBytes(serverSecret));
+export const serverPubkey2 = getPublicKey(hexToBytes(serverSecret2));
 
 const alwaysTrue: any = (t: Event) => {
   t[Symbol("verified")] = true;
@@ -100,7 +100,7 @@ export async function handleZap(invoice, sender = undefined) {
     tags.push(["preimage", invoice.payment_preimage]);
 
     const ev = { pubkey, kind, created_at, content, tags };
-    const signed = await finalizeEvent(ev, serverSecret2);
+    const signed = await finalizeEvent(ev, hexToBytes(serverSecret2));
 
     l("sending receipt");
 

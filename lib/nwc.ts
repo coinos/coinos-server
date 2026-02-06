@@ -14,7 +14,7 @@ import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { getBalance } from "$lib/tb";
 import { fail, getInvoice, sleep } from "$lib/utils";
 import rpc from "@coinos/rpc";
-import { hexToBytes } from "@noble/hashes/utils";
+import { hexToBytes } from "@noble/hashes/utils.js";
 import { Relay } from "nostr";
 import { finalizeEvent, nip04 } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";

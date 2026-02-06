@@ -17,6 +17,7 @@ import { $ } from "bun";
 import got from "got";
 import jwt from "jsonwebtoken";
 import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
+import { hexToBytes } from "@noble/hashes/utils.js";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
@@ -1075,7 +1076,7 @@ export default {
       let app = await g(pubkey);
 
       if (app && uid !== app.uid) fail("Unauthorized");
-      if (secret) pubkey = getPublicKey(secret);
+      if (secret) pubkey = getPublicKey(hexToBytes(secret));
       notify = String(notify) === "true";
 
       app = {

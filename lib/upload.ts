@@ -3,8 +3,7 @@ import { writeFileSync } from "fs";
 import { err } from "$lib/logging";
 import { bail, fail } from "$lib/utils";
 import { fileTypeFromBuffer } from "file-type";
-
-const sharp = require("sharp");
+import sharp from "sharp";
 
 export default async (req, res) => {
   try {

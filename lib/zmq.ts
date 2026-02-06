@@ -5,7 +5,7 @@ import { err, l, warn } from "$lib/logging";
 import { processWatchedTx } from "$lib/payments";
 import { Transaction } from "@scure/btc-signer";
 import { concatBytes, sha256x2 } from "@scure/btc-signer/utils.js";
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex } from "@noble/hashes/utils.js";
 
 const zmqHost = config.bitcoin.host || "127.0.0.1";
 const zmqRawTxPort = config.bitcoin.zmq?.rawtx || 18507;
