@@ -30,7 +30,7 @@ const verifyRecaptcha = async (response, req?) => {
   if (!secret) return true;
 
   // Skip captcha for Tor users accessing via .onion
-  const host = req?.headers?.["host"] || "";
+  const host = req?.headers?.["x-forwarded-host"] || req?.headers?.["host"] || "";
   if (host.endsWith(".onion")) return true;
 
   // Skip captcha for allowlisted User-Agents (prefix match)
