@@ -1,5 +1,6 @@
 export default [
   "about",
+  "accountIndex",
   "admin",
   "anon",
   "arkAddress",

@@ -1,5 +1,6 @@
 export interface User {
   about: string;
+  accountIndex: string;
   admin: string;
   anon: string;
   arkAddress: string;
