@@ -46,6 +46,7 @@ import {
   sleep,
   t,
 } from "$lib/utils";
+import { sendArk } from "$lib/ark";
 import { callWebhook } from "$lib/webhooks";
 import rpc from "@coinos/rpc";
 import { selectUTXO, p2wpkh } from "@scure/btc-signer";
@@ -316,25 +317,24 @@ export const completePayment = async (inv, p, user) => {
   let withdrawal;
   if (p.confirmed) {
     if (inv.forward && !inv.forwarded) {
-      try {
-        // Skip forward if destination is the same user's own invoice
+      const lockKey = `forward:${inv.id}`;
+      const locked = await db.setNX(lockKey, "1");
+      if (locked) {
+        await db.expire(lockKey, 300);
         try {
-          const destInv = await getInvoice(inv.forward);
-          if (destInv?.uid === id) {
-            inv.forwarded = true;
-            await s(`invoice:${inv.id}`, inv);
-            callWebhook(inv, p);
-            return;
-          }
-        } catch {}
+          inv.forwarded = true;
+          await s(`invoice:${inv.id}`, inv);
 
-        inv.forwarded = true;
-        await s(`invoice:${inv.id}`, inv);
-        const w = await pay({ amount: p.amount, to: inv.forward, user });
-        callWebhook(inv, p);
-        return w;
-      } catch (e) {
-        warn(username, "forward failed", inv.forward, e.message);
+          // Skip forward if destination is the same user's own Lightning invoice
+          if (inv.forward.startsWith("ln")) {
+            const destInv = await getInvoice(inv.forward).catch(() => null);
+            if (destInv?.uid === id) return;
+          }
+
+          await pay({ amount: p.amount, to: inv.forward, user });
+        } catch (e) {
+          warn(username, "forward failed", inv.forward, e.message);
+        }
       }
     } else if (autowithdraw && p.type !== "ark") {
       try {
@@ -441,6 +441,19 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
       recipient,
       sender: user,
     });
+
+  if (to.startsWith("ark") || to.startsWith("tark")) {
+    const fee = Math.max(5, Math.round(amount * 0.02));
+    amount -= fee;
+    const txid = await sendArk(to, amount);
+    return debit({
+      hash: txid,
+      amount: amount + fee,
+      fee,
+      user,
+      type: PaymentType.ark,
+    });
+  }
 
   const fee = Math.max(5, Math.round(amount * 0.02));
   if (lnurl) {
@@ -974,7 +987,10 @@ export const build = async ({
 
   // Non-custodial bitcoin account — use esplora
   if (aid !== user.id && type === PaymentType.bitcoin) {
-    return buildNonCustodial({ aid, amount, address, feeRate, subtract, user });
+    const account = await g(`account:${aid}`);
+    if (account?.pubkey) {
+      return buildNonCustodial({ aid, amount, address, feeRate, subtract, user });
+    }
   }
 
   const node = rpc(config[type]);
@@ -1160,7 +1176,17 @@ export const importAccountHistory = async (account) => {
 
     for (const u of confirmedUtxos) {
       const existing = await getPayment(`${u.txid}:${u.vout}`);
-      if (existing) continue;
+      if (existing?.aid === id) continue;
+
+      if (existing) {
+        existing.aid = id;
+        await db
+          .multi()
+          .set(`payment:${existing.id}`, JSON.stringify(existing))
+          .lPush(`${id}:payments`, existing.id)
+          .exec();
+        continue;
+      }
 
       const created = u.status?.block_time
         ? u.status.block_time * 1000
@@ -1200,7 +1226,16 @@ export const importAccountHistory = async (account) => {
     for (const tx of txsById.values()) {
       if (!tx.status?.confirmed) continue;
       const existing = await getPayment(tx.txid);
-      if (existing) continue;
+      if (existing?.aid === id) continue;
+      if (existing) {
+        existing.aid = id;
+        await db
+          .multi()
+          .set(`payment:${existing.id}`, JSON.stringify(existing))
+          .lPush(`${id}:payments`, existing.id)
+          .exec();
+        continue;
+      }
 
       let inputsFromUs = 0;
       let outputsToUs = 0;

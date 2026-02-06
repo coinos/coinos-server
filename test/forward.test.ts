@@ -117,15 +117,9 @@ describe("completePayment", () => {
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11 });
     const p = { amount: 1000, confirmed: true, type: "ark", uid: custodialUid, created: Date.now() };
 
-    const w: any = await completePayment(inv, p, user);
+    await completePayment(inv, p, user);
 
-    expect(w).toBeTruthy();
-    expect(w.amount).toBeLessThan(0);
-    expect(w.type).toBe("lightning");
-
-    // Debit stays in custodial list
-    expect(store().listStore[`${custodialUid}:payments`] ?? []).toContain(w.id);
-
+    expect(mockLnXpay).toHaveBeenCalled();
     expect(inv.forwarded).toBe(true);
     expect(mockCallWebhook).toHaveBeenCalled();
   });
@@ -135,11 +129,9 @@ describe("completePayment", () => {
     const inv = makeInvoice({ aid: custodialUid, forward: bolt11 });
     const p = { amount: 1000, confirmed: true, type: "ark", uid: custodialUid, created: Date.now() };
 
-    const w: any = await completePayment(inv, p, user);
+    await completePayment(inv, p, user);
 
-    expect(w).toBeTruthy();
-    expect(w.amount).toBeLessThan(0);
-    expect(store().listStore[`${custodialUid}:payments`] ?? []).toContain(w.id);
+    expect(mockLnXpay).toHaveBeenCalled();
     expect(inv.forwarded).toBe(true);
   });
 

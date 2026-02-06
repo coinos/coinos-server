@@ -885,7 +885,7 @@ export default {
         nextIndex: 0,
         arkAddress,
         accountIndex,
-        importedAt: seed ? Date.now() : undefined,
+        importedAt: undefined,
       };
 
       await createBalanceAccount(id);

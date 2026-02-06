@@ -129,6 +129,7 @@ export const generate = async ({ invoice, user }) => {
     address_type ||= "bech32";
     hash = await bc.getNewAddress({ address_type });
     text = bip21(hash, invoice);
+    await db.sAdd("watching", hash);
   } else if (type === PaymentType.liquid) {
     address_type ||= "blech32";
     hash = await lq.getNewAddress({ address_type });
