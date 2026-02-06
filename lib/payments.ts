@@ -772,65 +772,6 @@ export const catchUp = async () => {
   setTimeout(catchUp, 10000);
 };
 
-export const reconcile = async (account, initial = false) => {
-  try {
-    const { descriptors, id, uid, type } = account;
-    const user = await getUser(uid);
-    const node = rpc({ ...config[type], wallet: id });
-
-    let total;
-
-    if (initial) {
-      const progress = await node.scanTxOutSet("status");
-      if (progress) return setTimeout(() => reconcile(account, initial), 1000);
-
-      const { total_amount } = await node.scanTxOutSet("start", descriptors);
-      total = Math.round(total_amount * SATS);
-    } else {
-      total = Math.round((await node.getBalance({ minconf: 1 })) * SATS);
-    }
-
-    const { balanceAdjustment: memo } = t(user);
-
-    const balance = await g(`balance:${id}`);
-
-    const amount = Math.abs(total - balance);
-    const hash = v4();
-
-    if (total > balance) {
-      const inv = {
-        memo,
-        type: PaymentType.reconcile,
-        hash,
-        amount,
-        uid,
-        aid: id,
-      };
-      await s(`invoice:${hash}`, inv);
-      await credit({
-        hash,
-        amount,
-        type: PaymentType.reconcile,
-        aid: id,
-      });
-    } else if (total < balance) {
-      await debit({
-        aid: id,
-        amount,
-        hash: v4(),
-        memo,
-        user,
-        type: PaymentType.reconcile,
-      });
-    }
-  } catch (e) {
-    console.log(e);
-    warn("problem reconciling", e.message, account);
-    if (e.message.includes("progress"))
-      return setTimeout(() => reconcile(account, initial), 1000);
-  }
-};
-
 export const check = async () => {
   if (process.env.URL.includes("dev")) return;
   try {

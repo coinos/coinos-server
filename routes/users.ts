@@ -1,18 +1,17 @@
 import { createReadStream } from "node:fs";
-import { appendFile, unlink, writeFile } from "node:fs/promises";
+import { unlink, writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
 import { db, g, ga, gf, s } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
-import { reconcile } from "$lib/payments";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
-import rpc from "@coinos/rpc";
+
 import { $ } from "bun";
 import got from "got";
 import jwt from "jsonwebtoken";
@@ -844,38 +843,11 @@ export default {
 
   async createAccount(req, res) {
     try {
-      const { fingerprint, pubkey, name, seed, type } = req.body;
+      const { name, type } = req.body;
       const { user } = req;
-      const { id: uid } = user;
 
       const id = v4();
-      const account = { id, name, seed, type, uid, descriptors: [] };
-
-      let node = rpc(config[type]);
-
-      await node.createWallet({
-        wallet_name: id,
-        descriptors: true,
-        disable_private_keys: true,
-        load_on_startup: true,
-      });
-
-      node = rpc({ ...config[type], wallet: id });
-
-      for (const i of [0, 1]) {
-        const desc = `wpkh([${fingerprint}]${pubkey}/${i}/*)`;
-        const { checksum } = await node.getDescriptorInfo(desc);
-        account.descriptors.push({
-          desc: `${desc}#${checksum}`,
-          range: [0, 100],
-          next_index: 0,
-          timestamp: "now",
-          internal: i === 1,
-          active: true,
-        });
-      }
-
-      await node.importDescriptors(account.descriptors);
+      const account = { id, name, type, uid: user.id };
 
       await db
         .multi()
@@ -884,10 +856,6 @@ export default {
         .set(`pending:${id}`, 0)
         .lPush(`${user.id}:accounts`, id)
         .exec();
-
-      reconcile(account, true);
-
-      await appendFile("/bitcoin.conf", `wallet=${id}\n`);
 
       res.send(account);
     } catch (e) {
@@ -914,17 +882,10 @@ export default {
     try {
       const { id } = req.body;
       const { id: uid } = req.user;
-      const { type } = await g(`account:${id}`);
+      const account = await g(`account:${id}`);
 
       const pos = await db.lPos(`${uid}:accounts`, id);
-      if (!(type && pos != null)) fail("account not found");
-
-      try {
-        const node = rpc({ ...config[type], wallet: id });
-        await node.unloadWallet(id);
-      } catch (e) {
-        warn("failed to unload wallet", id);
-      }
+      if (!(account && pos != null)) fail("account not found");
 
       await db
         .multi()

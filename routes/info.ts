@@ -1,9 +1,16 @@
 import { archive } from "$lib/db";
 import { db, g } from "$lib/db";
+import { getHealthStatus } from "$lib/health";
 import ln from "$lib/ln";
 import { getDecodedToken } from "@cashu/cashu-ts";
 
 export default {
+  async health(_, res) {
+    const status = getHealthStatus();
+    const httpStatus = status.healthy ? 200 : 503;
+    res.status(httpStatus).send(status);
+  },
+
   async balances(_, res) {
     let total = 0;
 

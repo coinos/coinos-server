@@ -2,6 +2,7 @@ import app from "$lib/app";
 import { admin, auth, optional } from "$lib/auth";
 
 import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
+import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
 import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
@@ -28,6 +29,7 @@ try {
   catchUp();
   nwc();
   check();
+  startHealthCheck();
 } catch (e) {
   console.log(e);
 }
@@ -36,6 +38,7 @@ setTimeout(listenForLightning, 2000);
 setInterval(sendHeartbeat, 2000);
 
 app.get("/balances", info.balances);
+app.get("/health", info.health);
 app.post("/email", email.send);
 
 app.get("/fx", rates.fx);

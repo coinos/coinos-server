@@ -79,9 +79,13 @@ function lightningProxy(rpcPath: string) {
   );
 }
 
-// exports preserved
+// Main proxy for short-lived RPC calls (getinfo, invoice, decode, etc.)
 const ln = lightningProxy(config.lightning);
 export default ln;
+
+// Dedicated proxy for long-polling (waitanyinvoice) — uses its own socket
+// so it doesn't block the main connection
+export const lnListen = lightningProxy(config.lightning);
 
 export const lnb = lightningProxy(config.lightningb);
 export { LightningUnavailableError };

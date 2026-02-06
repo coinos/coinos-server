@@ -61,17 +61,9 @@ export const generate = async ({ invoice, user }) => {
 
   let hash;
   let text;
-  let path;
   let paymentHash;
 
-  if (account.seed) {
-    type = "bitcoin";
-    const node = rpc({ ...config[type], wallet: aid });
-    hash = await node.getNewAddress({ address_type });
-    text = bip21(hash, invoice);
-
-    ({ hdkeypath: path } = await node.getAddressInfo(hash));
-  } else if (type === PaymentType.lightning) {
+  if (type === PaymentType.lightning) {
     let r;
     if (bolt11) {
       const { id: nodeid } = await ln.getinfo();
@@ -151,7 +143,6 @@ export const generate = async ({ invoice, user }) => {
     request_id,
     memoPrompt,
     own,
-    path,
     prompt,
     secret,
     text,
