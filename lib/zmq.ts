@@ -81,16 +81,21 @@ const decodeTx = (raw: Uint8Array, confirmed: boolean) => {
   const vout = [];
   for (let i = 0; i < tx.outputsLength; i++) {
     const { amount } = tx.getOutput(i);
-    vout.push({
-      scriptpubkey_address: tx.getOutputAddress(i, btcNetwork),
-      value: Number(amount),
-    });
+    let scriptpubkey_address: string | undefined;
+    try {
+      scriptpubkey_address = tx.getOutputAddress(i, btcNetwork);
+    } catch {}
+    if (scriptpubkey_address) {
+      vout.push({ scriptpubkey_address, value: Number(amount) });
+    }
   }
   return { txid: tx.id, vout, status: { confirmed } };
 };
 
 const handleRawTx = async (raw: Uint8Array) => {
-  await processWatchedTx(decodeTx(raw, false));
+  try {
+    await processWatchedTx(decodeTx(raw, false));
+  } catch {}
 };
 
 const handleRawBlock = async (raw: Uint8Array) => {
