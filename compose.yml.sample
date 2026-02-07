@@ -60,7 +60,6 @@ services:
       - ./data/bitcoin/bitcoin.conf:/bitcoin.conf
       - ./data/sockets:/sockets
       - ./mklittlefs:/usr/bin/mklittlefs
-      - /home/adam/lightning-client-js:/home/bun/lightning-client-js
     restart: always
   bc:
     image: asoltys/bitcoin:28.0
