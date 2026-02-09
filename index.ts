@@ -120,6 +120,8 @@ app.post("/bitcoin/tx", payments.txWebhook);
 app.post("/bitcoin/fee", auth, payments.fee);
 app.post("/bitcoin/send", auth, payments.send);
 app.post("/ark/send", auth, payments.ark);
+app.post("/ark/vault-send", auth, payments.arkVaultSend);
+app.post("/ark/vault-receive", auth, payments.arkVaultReceive);
 
 app.get("/account/:id", auth, users.account);
 app.post("/account/:id", auth, users.updateAccount);

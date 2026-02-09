@@ -1,6 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
-import { getArkAddress, sendArk } from "$lib/ark";
+import { getArkAddress, sendArk, verifyArkVtxo } from "$lib/ark";
 import { requirePin } from "$lib/auth";
 import { archive, db, g, gf, s } from "$lib/db";
 import { getTx } from "$lib/esplora";
@@ -809,6 +809,82 @@ export default {
     }
   },
 
+  async arkVaultSend(req, res) {
+    try {
+      const { body, user } = req;
+      const { hash, amount, aid } = body;
+      const { id: uid } = user;
+
+      const rates = await g("rates");
+      const { currency } = user;
+      const rate = rates[currency];
+
+      const p = {
+        id: v4(),
+        aid,
+        amount: -amount,
+        hash,
+        confirmed: true,
+        rate,
+        currency,
+        type: PaymentType.ark,
+        uid,
+        created: Date.now(),
+      };
+
+      const m = db.multi();
+      m.set(`payment:${p.id}`, JSON.stringify(p))
+        .set(`payment:${aid}:${hash}`, JSON.stringify(p.id))
+        .lPush(`${aid}:payments`, p.id)
+        .set(`${aid}:payments:last`, p.created);
+      await m.exec();
+
+      res.send(p);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
+  async arkVaultReceive(req, res) {
+    try {
+      const { body, user } = req;
+      const { amount, hash, aid } = body;
+      const { id: uid } = user;
+
+      if (amount <= 0) fail("Invalid amount");
+
+      const locked = await db.set(`arklock:${hash}`, "1", { NX: true, EX: 60 });
+      if (!locked) fail("Already processed");
+
+      const rates = await g("rates");
+      const { currency } = user;
+      const rate = rates[currency];
+
+      const p = {
+        id: v4(),
+        aid,
+        amount,
+        hash,
+        confirmed: true,
+        rate,
+        currency,
+        type: PaymentType.ark,
+        uid,
+        created: Date.now(),
+      };
+
+      const m = db.multi();
+      m.set(`payment:${p.id}`, JSON.stringify(p))
+        .lPush(`${aid}:payments`, p.id)
+        .set(`${aid}:payments:last`, p.created);
+      await m.exec();
+
+      res.send(p);
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
   async arkAddress(_, res) {
     res.send(await getArkAddress());
   },
@@ -823,9 +899,19 @@ export default {
 
       const invoice = await getInvoice(iid);
       if (invoice.uid !== user?.id) fail("Unauthorized");
-      invoice.received += amount;
 
       let { aid, type, currency } = invoice;
+
+      // Verify VTXO belongs to the server's Ark wallet
+      if (hash) {
+        const locked = await db.set(`arklock:${hash}`, "1", { NX: true, EX: 60 });
+        if (!locked) fail("Already processed");
+
+        if (!(await verifyArkVtxo(hash)))
+          fail("VTXO not found in server wallet");
+      }
+
+      invoice.received += amount;
       const rates = await g("rates");
       const rate = rates[currency];
 
@@ -854,6 +940,26 @@ export default {
 
       if (hash) m.set(`payment:${aid}:${hash}`, p.id);
 
+      // Record debit on the vault account if it differs from custodial
+      if (aid && aid !== uid) {
+        const d = {
+          id: v4(),
+          aid,
+          amount: -amount,
+          hash,
+          confirmed: true,
+          rate,
+          currency,
+          type,
+          uid,
+          created: p.created,
+        };
+
+        m.set(`payment:${d.id}`, JSON.stringify(d))
+          .lPush(`${aid}:payments`, d.id)
+          .set(`${aid}:payments:last`, d.created);
+      }
+
       await m.exec();
 
       await completePayment(invoice, p, user);
@@ -870,49 +976,74 @@ export default {
       const { transactions, aid } = req.body;
       const { id: uid, currency } = user;
 
-      const rates = await g("rates");
-      const rate = rates[currency];
+      // Per-account lock prevents concurrent syncs from racing
+      const lockKey = `arksynclock:${aid}`;
+      const gotLock = await db.set(lockKey, "1", { NX: true, EX: 30 });
+      if (!gotLock) return res.send({ synced: 0, received: 0, payments: [] });
 
-      let synced = 0;
-      for (const tx of transactions) {
-        const existingId = await g(`payment:${aid}:${tx.hash}`);
-        if (existingId) {
-          const existing = await g(`payment:${existingId}`);
-          if (existing && !existing.confirmed && tx.settled) {
-            existing.confirmed = true;
-            await s(`payment:${existingId}`, existing);
+      try {
+        const rates = await g("rates");
+        const rate = rates[currency];
+
+        let synced = 0;
+        let received = 0;
+        const payments = [];
+
+        for (const tx of transactions) {
+          const hashes = [tx.arkTxid, tx.commitmentTxid, tx.hash].filter(Boolean);
+          if (!hashes.length) continue;
+
+          // Check if any hash is already known
+          let found = false;
+          for (const h of hashes) {
+            const existingId = await g(`payment:${aid}:${h}`);
+            if (existingId) {
+              const existing = await g(`payment:${existingId}`);
+              if (existing && !existing.confirmed && tx.settled) {
+                existing.confirmed = true;
+                await s(`payment:${existingId}`, existing);
+              }
+              found = true;
+              break;
+            }
           }
-          continue;
+          if (found) continue;
+
+          const primaryHash = hashes[0];
+
+          const p = {
+            id: v4(),
+            aid,
+            amount: tx.amount,
+            hash: primaryHash,
+            confirmed: true,
+            rate,
+            currency,
+            type: PaymentType.ark,
+            uid,
+            created: tx.createdAt,
+          };
+
+          const m = db.multi();
+          m.set(`payment:${p.id}`, JSON.stringify(p))
+            .lPush(`${aid || uid}:payments`, p.id)
+            .set(`${aid || uid}:payments:last`, p.created);
+
+          for (const h of hashes) {
+            m.set(`payment:${aid}:${h}`, JSON.stringify(p.id));
+          }
+
+          await m.exec();
+
+          payments.push(p);
+          synced++;
+          if (tx.amount > 0) received += tx.amount;
         }
 
-        // Skip received/change VTXOs — handled by arkReceive
-        if (tx.amount > 0) continue;
-
-        const p = {
-          id: v4(),
-          aid,
-          amount: tx.amount,
-          hash: tx.hash,
-          confirmed: true,
-          rate,
-          currency,
-          type: PaymentType.ark,
-          uid,
-          created: tx.createdAt,
-        };
-
-        await s(`payment:${aid}:${tx.hash}`, p.id);
-        await s(`payment:${p.id}`, p);
-        await db
-          .multi()
-          .lPush(`${aid || uid}:payments`, p.id)
-          .set(`${aid || uid}:payments:last`, p.created)
-          .exec();
-
-        synced++;
+        res.send({ synced, received, payments });
+      } finally {
+        await db.del(lockKey);
       }
-
-      res.send({ synced });
     } catch (e) {
       bail(res, e.message);
     }

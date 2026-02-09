@@ -71,7 +71,11 @@ mock.module("$lib/db", () => {
   return {
     db: {
       get: async (k: string) => kv()[k] ?? null,
-      set: async (k: string, v: string) => { kv()[k] = v; return "OK"; },
+      set: async (k: string, v: string, opts?: any) => {
+        if (opts?.NX && kv()[k] !== undefined) return null;
+        kv()[k] = v;
+        return "OK";
+      },
       del: async (k: string) => { delete kv()[k]; return 1; },
       exists: async (k: string) => (kv()[k] !== undefined ? 1 : 0),
       lPush: async (k: string, v: string) => {
@@ -185,7 +189,7 @@ mock.module("$lib/nostr", () => ({
 }));
 mock.module("$lib/mqtt", () => ({ default: { publish: () => {} } }));
 mock.module("$lib/ark", () => ({
-  getArkAddress: async () => "ark-addr", sendArk: async () => "ark-txid", getArkBalance: async () => 0,
+  getArkAddress: async () => "ark-addr", sendArk: async () => "ark-txid", getArkBalance: async () => 0, verifyArkVtxo: async () => true,
 }));
 mock.module("$lib/ecash", () => ({ request: async () => ({}) }));
 mock.module("$lib/lightning", () => ({

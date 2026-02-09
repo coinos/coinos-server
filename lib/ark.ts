@@ -30,3 +30,16 @@ export const getArkBalance = async () => {
   const w = await getWallet();
   return w.getBalance();
 };
+
+export const verifyArkVtxo = async (hash: string) => {
+  const { bech32m } = await import("@scure/base");
+  const serverAddr = await getArkAddress();
+  const decoded = bech32m.decode(serverAddr, 1023);
+  const words = new Uint8Array(bech32m.fromWords(decoded.words));
+  const vtxoHex = Buffer.from(words.slice(33, 65)).toString("hex");
+  const r = await fetch(
+    `http://arkd:7070/v1/indexer/vtxos?scripts=5120${vtxoHex}&spendable_only=true`,
+  );
+  const { vtxos } = await r.json();
+  return vtxos?.some((v: any) => v.outpoint?.txid === hash) ?? false;
+};

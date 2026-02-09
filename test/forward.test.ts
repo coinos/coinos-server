@@ -296,12 +296,12 @@ describe("arkReceive", () => {
 describe("arkSync", () => {
   beforeEach(resetAll);
 
-  test("skips received/change VTXOs (positive amounts)", async () => {
+  test("records received VTXOs (positive amounts)", async () => {
     const req = {
       body: {
         aid: arkAccountId,
         transactions: [
-          { hash: "change-vtxo-hash", amount: 9000, settled: true, createdAt: Date.now() },
+          { hash: "recv-vtxo-hash", amount: 9000, settled: true, createdAt: Date.now() },
         ],
       },
       user: makeUser(),
@@ -311,8 +311,9 @@ describe("arkSync", () => {
     await routes.arkSync(req as any, res as any);
     const sent = (res as any).getSent();
 
-    expect(sent.synced).toBe(0);
-    expect(store().listStore[`${arkAccountId}:payments`] ?? []).toHaveLength(0);
+    expect(sent.synced).toBe(1);
+    expect(sent.received).toBe(9000);
+    expect(store().listStore[`${arkAccountId}:payments`] ?? []).toHaveLength(1);
   });
 
   test("records sent transactions (negative amounts)", async () => {
@@ -335,7 +336,8 @@ describe("arkSync", () => {
   });
 
   test("deduplicates known transactions", async () => {
-    // Pre-store a known tx hash
+    // Pre-store a known tx hash and its sync lock
+    store().kvStore[`arksync:${arkAccountId}:known-hash`] = "1";
     store().kvStore[`payment:${arkAccountId}:known-hash`] = JSON.stringify("existing-id");
     store().kvStore["payment:existing-id"] = JSON.stringify({ id: "existing-id", confirmed: false });
 
