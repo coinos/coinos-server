@@ -394,9 +394,9 @@ export default {
 
     const ids = await db.sMembers(`fund:${name}:managers`);
 
-    const managers = await Promise.all(
+    const managers = (await Promise.all(
       ids.map(async (id) => await getUser(id, fields)),
-    );
+    )).filter(Boolean);
 
     res.send(managers);
   },
