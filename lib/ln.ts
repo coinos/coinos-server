@@ -1,4 +1,30 @@
 import config from "$config";
+import { existsSync } from "fs";
+import net from "net";
+
+// Patch net.Socket.prototype.connect to prevent Bun from crashing when
+// connecting to a non-existent unix socket. Bun's net.createConnection
+// throws ENOENT in a way that bypasses all JS error handlers.
+// Instead, we check if the socket file exists and emit a proper error event.
+const origConnect = net.Socket.prototype.connect;
+net.Socket.prototype.connect = function (...args: any[]) {
+  const sockPath = typeof args[0] === "string" ? args[0] : args[0]?.path;
+  if (typeof sockPath === "string" && sockPath.startsWith("/") && !existsSync(sockPath)) {
+    process.nextTick(() => {
+      this.emit(
+        "error",
+        Object.assign(new Error(`connect ENOENT ${sockPath}`), {
+          code: "ENOENT",
+          errno: -2,
+          syscall: "connect",
+          address: sockPath,
+        }),
+      );
+    });
+    return this;
+  }
+  return origConnect.apply(this, args);
+};
 
 const mod = (await import("@asoltys/clightning-client")).default;
 const { LightningClient } = mod as { LightningClient: any };
@@ -36,8 +62,20 @@ function lightningProxy(rpcPath: string) {
       throw new LightningUnavailableError(`Lightning not ready at ${rpcPath}`);
     }
 
+    if (!existsSync(rpcPath)) {
+      nextTryAt = Date.now() + backoff;
+      backoff = Math.min(maxBackoff, Math.floor(backoff * 1.8));
+      throw new LightningUnavailableError(
+        `Lightning RPC socket not found at ${rpcPath}`
+      );
+    }
+
     try {
       client = new LightningClient(rpcPath);
+      // Prevent unhandled 'error' events from crashing the process
+      client.on("error", (e: any) => {
+        if (isSocketDied(e)) client = null;
+      });
       backoff = 250;
       nextTryAt = 0;
       return client;

@@ -851,26 +851,30 @@ const reverse = async (p) => {
 };
 
 const freezeCheck = async () => {
-  const funds = await ln.listfunds();
-  const lnbalance = Math.round(
-    funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
-  );
+  try {
+    const funds = await ln.listfunds();
+    const lnbalance = Math.round(
+      funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
+    );
 
-  const bcbalance = Math.round((await bc.getBalance()) * SATS);
-  const { bitcoin } = await lq.getBalance();
-  const lqbalance = Math.round(bitcoin * SATS);
+    const bcbalance = Math.round((await bc.getBalance()) * SATS);
+    const { bitcoin } = await lq.getBalance();
+    const lqbalance = Math.round(bitcoin * SATS);
 
-  const lnthreshold = await g("lightning:threshold");
-  const bcthreshold = await g("bitcoin:threshold");
-  const lqthreshold = await g("liquid:threshold");
+    const lnthreshold = await g("lightning:threshold");
+    const bcthreshold = await g("bitcoin:threshold");
+    const lqthreshold = await g("liquid:threshold");
 
-  await s("lightning:limit", Math.max(lnbalance - lnthreshold, 0));
-  await s("bitcoin:limit", Math.max(bcbalance - bcthreshold, 0));
-  await s("liquid:limit", Math.max(lqbalance - lqthreshold, 0));
+    await s("lightning:limit", Math.max(lnbalance - lnthreshold, 0));
+    await s("bitcoin:limit", Math.max(bcbalance - bcthreshold, 0));
+    await s("liquid:limit", Math.max(lqbalance - lqthreshold, 0));
 
-  await s("fund:limit", Math.max(lnbalance - lnthreshold, 0));
-  await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));
-  await s("bolt12:limit", Math.max(lnbalance - lnthreshold, 0));
+    await s("fund:limit", Math.max(lnbalance - lnthreshold, 0));
+    await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));
+    await s("bolt12:limit", Math.max(lnbalance - lnthreshold, 0));
+  } catch (e: any) {
+    warn("freezeCheck failed:", e.message);
+  }
 
   setTimeout(freezeCheck, 10000);
 };
