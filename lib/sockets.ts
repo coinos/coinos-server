@@ -1,7 +1,7 @@
 import store from "$lib/store";
 import jwt from "jsonwebtoken";
 import { v4 } from "uuid";
-import { err, warn } from "$lib/logging";
+import { err, l, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
 
 const code = 1000;
@@ -10,21 +10,39 @@ const subscriptions = [];
 const users = {};
 
 export const emit = (uid, type, data) => {
+  let sent = 0;
+
   if (type === "payment" && data.amount > 0) {
     for (let i = subscriptions.length - 1; i >= 0; i--) {
       const s = subscriptions[i];
 
       if (s.invoice && s.invoice.id === data.iid) {
-        s.ws.send(JSON.stringify({ type, data }));
+        try {
+          s.ws.send(JSON.stringify({ type, data }));
+          sent++;
+        } catch (e) {
+          warn("emit subscription send failed", e.message);
+        }
       }
     }
   }
 
-  if (!store.sockets[uid]) return;
+  if (!store.sockets[uid]) {
+    if (type === "payment") l(`emit: no sockets for ${uid}, subscriptions sent: ${sent}`);
+    return;
+  }
+
   for (const id in store.sockets[uid]) {
     const ws = store.sockets[uid][id];
-    ws.send(JSON.stringify({ type, data }));
+    try {
+      ws.send(JSON.stringify({ type, data }));
+      sent++;
+    } catch (e) {
+      warn("emit socket send failed", e.message);
+    }
   }
+
+  if (type === "payment") l(`emit: payment sent to ${sent} clients for ${uid}`);
 };
 
 export const broadcast = (type, data) => {
