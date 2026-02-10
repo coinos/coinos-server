@@ -62,6 +62,66 @@ const { URL } = process.env;
 
 const dust = 547;
 
+export const getUserRate = async (user) => {
+  const rates = await g("rates");
+  const { currency } = user;
+  const rate = rates[currency];
+  return { rates, rate, currency };
+};
+
+export const acquireArkLock = async (hash) => {
+  const locked = await db.set(`arklock:${hash}`, "1", { NX: true, EX: 60 });
+  if (!locked) fail("Already processed");
+};
+
+export const createArkPayment = async ({
+  aid,
+  uid,
+  amount,
+  hash,
+  rate,
+  currency,
+  type = PaymentType.ark,
+  iid = undefined,
+  created = Date.now(),
+  mapHashToId = false,
+  extraHashMappings = [] as string[],
+  extraMultiOps = undefined as ((m: any, p: any) => void) | undefined,
+}) => {
+  const p = {
+    id: v4(),
+    aid,
+    amount,
+    hash,
+    confirmed: true,
+    rate,
+    currency,
+    type,
+    uid,
+    iid,
+    created,
+  };
+
+  const m = db.multi();
+  m.set(`payment:${p.id}`, JSON.stringify(p))
+    .lPush(`${aid}:payments`, p.id)
+    .set(`${aid}:payments:last`, p.created);
+
+  if (mapHashToId) {
+    m.set(`payment:${aid}:${hash}`, JSON.stringify(p.id));
+  }
+
+  for (const h of extraHashMappings) {
+    m.set(`payment:${aid}:${h}`, JSON.stringify(p.id));
+  }
+
+  if (extraMultiOps) extraMultiOps(m, p);
+
+  await m.exec();
+
+  return p;
+};
+
 export const debit = async ({
   aid = undefined,
   hash,

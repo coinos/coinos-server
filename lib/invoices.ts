@@ -63,6 +63,7 @@ export const generate = async ({ invoice, user }) => {
   if (!id) id = v4();
 
   let text;
+  let path;
   let paymentHash;
 
   if (account.type === "ark") {
@@ -156,6 +157,7 @@ export const generate = async ({ invoice, user }) => {
     id,
     items,
     memo,
+    path,
     rate,
     paymentHash,
     pending: 0,

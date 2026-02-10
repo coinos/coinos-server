@@ -10,11 +10,14 @@ import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
 import {
+  acquireArkLock,
   build,
   completePayment,
+  createArkPayment,
   credit,
   debit,
   decode,
+  getUserRate,
   processWatchedTx,
   sendInternal,
   sendLightning,
@@ -813,31 +816,17 @@ export default {
     try {
       const { body, user } = req;
       const { hash, amount, aid } = body;
-      const { id: uid } = user;
+      const { rate, currency } = await getUserRate(user);
 
-      const rates = await g("rates");
-      const { currency } = user;
-      const rate = rates[currency];
-
-      const p = {
-        id: v4(),
+      const p = await createArkPayment({
         aid,
+        uid: user.id,
         amount: -amount,
         hash,
-        confirmed: true,
         rate,
         currency,
-        type: PaymentType.ark,
-        uid,
-        created: Date.now(),
-      };
-
-      const m = db.multi();
-      m.set(`payment:${p.id}`, JSON.stringify(p))
-        .set(`payment:${aid}:${hash}`, JSON.stringify(p.id))
-        .lPush(`${aid}:payments`, p.id)
-        .set(`${aid}:payments:last`, p.created);
-      await m.exec();
+        mapHashToId: true,
+      });
 
       res.send(p);
     } catch (e) {
@@ -849,35 +838,19 @@ export default {
     try {
       const { body, user } = req;
       const { amount, hash, aid } = body;
-      const { id: uid } = user;
 
       if (amount <= 0) fail("Invalid amount");
+      await acquireArkLock(hash);
+      const { rate, currency } = await getUserRate(user);
 
-      const locked = await db.set(`arklock:${hash}`, "1", { NX: true, EX: 60 });
-      if (!locked) fail("Already processed");
-
-      const rates = await g("rates");
-      const { currency } = user;
-      const rate = rates[currency];
-
-      const p = {
-        id: v4(),
+      const p = await createArkPayment({
         aid,
+        uid: user.id,
         amount,
         hash,
-        confirmed: true,
         rate,
         currency,
-        type: PaymentType.ark,
-        uid,
-        created: Date.now(),
-      };
-
-      const m = db.multi();
-      m.set(`payment:${p.id}`, JSON.stringify(p))
-        .lPush(`${aid}:payments`, p.id)
-        .set(`${aid}:payments:last`, p.created);
-      await m.exec();
+      });
 
       res.send(p);
     } catch (e) {
@@ -902,65 +875,37 @@ export default {
 
       let { aid, type, currency } = invoice;
 
-      // Verify VTXO belongs to the server's Ark wallet
       if (hash) {
-        const locked = await db.set(`arklock:${hash}`, "1", { NX: true, EX: 60 });
-        if (!locked) fail("Already processed");
+        await acquireArkLock(hash);
 
-        if (!(await verifyArkVtxo(hash)))
-          fail("VTXO not found in server wallet");
+        // Skip VTXO verification for vault→custodial (same user, debit handled by arkVaultSend)
+        if (!(aid && aid !== uid)) {
+          if (!(await verifyArkVtxo(hash)))
+            fail("VTXO not found in server wallet");
+        }
       }
 
       invoice.received += amount;
-      const rates = await g("rates");
+      const { rates } = await getUserRate(user);
       const rate = rates[currency];
 
       // Always credit custodial balance (Ark funds received by server)
       await tbCredit(uid, uid, type, amount, false);
 
-      const p = {
-        id: v4(),
+      const p = await createArkPayment({
         aid: uid,
-        iid,
+        uid,
         amount,
         hash,
-        confirmed: true,
         rate,
         currency,
         type,
-        uid,
-        created: Date.now(),
-      };
-
-      const m = db.multi();
-      m.set(`invoice:${invoice.id}`, JSON.stringify(invoice))
-        .set(`payment:${p.id}`, JSON.stringify(p))
-        .lPush(`${uid}:payments`, p.id)
-        .set(`${uid}:payments:last`, p.created);
-
-      if (hash) m.set(`payment:${aid}:${hash}`, p.id);
-
-      // Record debit on the vault account if it differs from custodial
-      if (aid && aid !== uid) {
-        const d = {
-          id: v4(),
-          aid,
-          amount: -amount,
-          hash,
-          confirmed: true,
-          rate,
-          currency,
-          type,
-          uid,
-          created: p.created,
-        };
-
-        m.set(`payment:${d.id}`, JSON.stringify(d))
-          .lPush(`${aid}:payments`, d.id)
-          .set(`${aid}:payments:last`, d.created);
-      }
-
-      await m.exec();
+        iid,
+        extraMultiOps: (m, p) => {
+          m.set(`invoice:${invoice.id}`, JSON.stringify(invoice));
+          if (hash) m.set(`payment:${aid}:${hash}`, p.id);
+        },
+      });
 
       await completePayment(invoice, p, user);
 
@@ -974,7 +919,7 @@ export default {
     try {
       const { user } = req;
       const { transactions, aid } = req.body;
-      const { id: uid, currency } = user;
+      const { id: uid } = user;
 
       // Per-account lock prevents concurrent syncs from racing
       const lockKey = `arksynclock:${aid}`;
@@ -982,8 +927,7 @@ export default {
       if (!gotLock) return res.send({ synced: 0, received: 0, payments: [] });
 
       try {
-        const rates = await g("rates");
-        const rate = rates[currency];
+        const { rate, currency } = await getUserRate(user);
 
         let synced = 0;
         let received = 0;
@@ -1011,29 +955,16 @@ export default {
 
           const primaryHash = hashes[0];
 
-          const p = {
-            id: v4(),
+          const p = await createArkPayment({
             aid,
+            uid,
             amount: tx.amount,
             hash: primaryHash,
-            confirmed: true,
             rate,
             currency,
-            type: PaymentType.ark,
-            uid,
             created: tx.createdAt,
-          };
-
-          const m = db.multi();
-          m.set(`payment:${p.id}`, JSON.stringify(p))
-            .lPush(`${aid || uid}:payments`, p.id)
-            .set(`${aid || uid}:payments:last`, p.created);
-
-          for (const h of hashes) {
-            m.set(`payment:${aid}:${h}`, JSON.stringify(p.id));
-          }
-
-          await m.exec();
+            extraHashMappings: hashes,
+          });
 
           payments.push(p);
           synced++;
