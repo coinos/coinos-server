@@ -409,12 +409,11 @@ export default {
     await db.sAdd(k, uid);
 
     const ids = await db.sMembers(k);
-    if (!managers.length)
-      managers = await Promise.all(
-        ids.map(async (id) => await getUser(id, fields)),
-      );
+    const resolved = (await Promise.all(
+      ids.map(async (id) => await getUser(id, fields)),
+    )).filter(Boolean);
 
-    res.send(managers);
+    res.send(resolved);
   },
 
   async deleteManager(req, res) {
