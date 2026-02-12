@@ -11,6 +11,7 @@ import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
+import rpc from "@coinos/rpc";
 import { bech32m } from "@scure/base";
 
 import { $ } from "bun";
@@ -884,6 +885,7 @@ export default {
         uid,
         pubkey,
         fingerprint,
+        descriptors: [] as any[],
         nextIndex: 0,
         arkAddress,
         accountIndex,
