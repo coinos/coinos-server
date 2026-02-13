@@ -23,7 +23,7 @@ import { authenticator } from "otplib";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
-import { createBalanceAccount, getBalance, getCredit } from "$lib/tb";
+import { createBalanceAccount, getBalance, getCredit, getPending } from "$lib/tb";
 import { importAccountHistory } from "$lib/payments";
 import type { ProfilePointer } from "nostr-tools/nip19";
 
@@ -839,6 +839,7 @@ export default {
             await importAccountHistory(account);
           }
           account.balance = await getBalance(id);
+          account.pending = await getPending(id);
           accounts.push(account);
         }
 

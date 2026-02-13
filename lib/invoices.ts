@@ -69,7 +69,7 @@ export const generate = async ({ invoice, user }) => {
   if (account.type === "ark") {
     type = PaymentType.ark;
     text = account.arkAddress;
-  } else if (account.seed) {
+  } else if (account.seed || (account.pubkey && account.fingerprint)) {
     type = PaymentType.bitcoin;
     const nextIndex = account.nextIndex || 0;
     const { address, path: hdpath } = deriveAddress(account.pubkey, account.fingerprint, nextIndex);
