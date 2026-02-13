@@ -6,7 +6,7 @@
       "name": "coinos",
       "dependencies": {
         "@arkade-os/sdk": "^0.3.12",
-        "@asoltys/clightning-client": "^0.1.10",
+        "@asoltys/clightning-client": "^0.2.0",
         "@aws-sdk/client-ses": "^3.984.0",
         "@cashu/cashu-ts": "^2.9.0",
         "@coinos/rpc": "^0.0.6",
@@ -84,7 +84,7 @@
 
     "@arkade-os/sdk": ["@arkade-os/sdk@0.3.12", "", { "dependencies": { "@marcbachmann/cel-js": "7.0.0", "@noble/curves": "2.0.0", "@noble/secp256k1": "3.0.0", "@scure/base": "2.0.0", "@scure/btc-signer": "2.0.1", "bip68": "1.0.4" } }, "sha512-/zE8XiDo6yOCaspMcO3Gua/gLGYmYLRFbqaD1ORkaGI7hH/Gq+m0tkIwArVlwtK50loHK4jvS8clovcaV9CARg=="],
 
-    "@asoltys/clightning-client": ["@asoltys/clightning-client@0.1.10", "", { "dependencies": { "debug": "^4.1.1" } }, "sha512-Qg0VEvJN1wW4XeW4XnsQH+Vp63JHcVb2YccQEg+wy33BViu2AWFhZzvHhlbucriIOVLmIf7Wc1Me54ivs1sLHA=="],
+    "@asoltys/clightning-client": ["@asoltys/clightning-client@0.2.0", "", { "dependencies": { "debug": "^4.1.1" } }, "sha512-CYbkyGoS0X1ha/YcFk3sTiI7aRHpPMnib/26WODucfJNrTbWl/9FJ4bpod9a6t9Jbv5OXCa0dYspcPK3kZ71pg=="],
 
     "@aws-crypto/sha256-browser": ["@aws-crypto/sha256-browser@5.2.0", "", { "dependencies": { "@aws-crypto/sha256-js": "^5.2.0", "@aws-crypto/supports-web-crypto": "^5.2.0", "@aws-crypto/util": "^5.2.0", "@aws-sdk/types": "^3.222.0", "@aws-sdk/util-locate-window": "^3.0.0", "@smithy/util-utf8": "^2.0.0", "tslib": "^2.6.2" } }, "sha512-AXfN/lGotSQwu6HNcEsIASo7kWXZ5HYWvfOmSNKDsEqC4OashTp8alTmaz+F7TC2L083SFv5RdB+qU3Vs1kZqw=="],
 

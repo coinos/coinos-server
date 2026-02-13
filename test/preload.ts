@@ -3,6 +3,11 @@ import { mock } from "bun:test";
 // This file is loaded before test files via bunfig.toml [test].preload
 // Mocks must be set up here to intercept transitive imports
 
+if (process.env.INTEGRATION) {
+  // Skip all mocking — use real services
+  globalThis.__testStore = { kvStore: {}, listStore: {}, setStore: {} };
+} else {
+
 let kvStore: Record<string, string> = {};
 let listStore: Record<string, string[]> = {};
 let setStore: Record<string, Set<string>> = {};
@@ -183,6 +188,7 @@ mock.module("$lib/ln", () => ({
     listfunds: mock(async () => ({ channels: [] })),
     keysend: mock(async () => ({})),
     fetchinvoice: mock(async () => ({})),
+    getroutes: mock(async () => ({ routes: [] })),
     sendinvoice: mock(async () => ({})),
   },
 }));
@@ -303,3 +309,5 @@ mock.module("$lib/utils", () => {
     time: () => ({ start: () => {}, end: () => {} }),
   };
 });
+
+} // end INTEGRATION skip
