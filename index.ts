@@ -6,7 +6,7 @@ import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
 import { migrateAccounts, migrateBalancesToTB, migrateToMicrosats } from "$lib/migrate";
 import nwc from "$lib/nwc";
-import { check } from "$lib/payments";
+import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
 import { sendHeartbeat } from "$lib/sockets";
 import { initTigerBeetle } from "$lib/tb";
@@ -34,6 +34,7 @@ try {
   check();
   startHealthCheck();
   startZmq();
+  catchUp();
   migrateAccounts().then((n) => n && console.log(`Migrated ${n} accounts`));
   migrateBalancesToTB().then((n) => n && console.log(`Migrated ${n} balances to TB`));
   migrateToMicrosats().then((n) => n && console.log(`Migrated ${n} users to microsats`));

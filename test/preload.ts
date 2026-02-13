@@ -124,8 +124,17 @@ mock.module("$lib/db", () => {
       zAdd: async () => 1,
       zCard: async () => 0,
       zRemRangeByRank: async () => 0,
-      keys: async () => [],
-      type: async () => "none",
+      keys: async (pattern: string) => {
+        const ss = globalThis.__testStore.setStore;
+        const prefix = pattern.replace("*", "");
+        return Object.keys(ss).filter((k) => k.startsWith(prefix));
+      },
+      type: async (k: string) => {
+        if (globalThis.__testStore.setStore[k]) return "set";
+        if (globalThis.__testStore.listStore[k]) return "list";
+        if (globalThis.__testStore.kvStore[k] !== undefined) return "string";
+        return "none";
+      },
     },
     g, s, gf,
     ga: async () => null,
@@ -181,7 +190,29 @@ mock.module("$lib/ln", () => ({
 mock.module("$lib/logging", () => ({ l: () => {}, warn: mock(() => {}), err: () => {} }));
 mock.module("$lib/notifications", () => ({ notify: () => {}, nwcNotify: () => {} }));
 mock.module("$lib/webhooks", () => ({ callWebhook: mock(() => {}) }));
-mock.module("$lib/sockets", () => ({ emit: () => {}, sendHeartbeat: () => {} }));
+mock.module("$lib/sockets", () => ({ emit: mock(() => {}), sendHeartbeat: () => {} }));
+mock.module("$lib/esplora", () => ({
+  btcNetwork: { bech32: "bcrt", pubKeyHash: 0x6f, scriptHash: 0xc4, wif: 0xef },
+  hdVersions: { private: 0x04358394, public: 0x043587cf },
+  getAddressTxs: mock(async (address: string) => {
+    const txs = globalThis.__testStore.esploraOverride?.addressTxs?.[address];
+    return txs || [];
+  }),
+  getTxStatus: mock(async (txid: string) => {
+    const status = globalThis.__testStore.esploraOverride?.txStatus?.[txid];
+    return status || { confirmed: false };
+  }),
+  getAddressUtxos: mock(async () => []),
+  getUtxos: mock(async () => []),
+  getTxHex: mock(async () => ""),
+  getTx: mock(async () => ({})),
+  broadcastTx: mock(async () => ({})),
+  getFeeEstimates: mock(async () => ({})),
+  deriveAddress: mock(() => ({ address: "bcrt1qmock" })),
+  deriveAddresses: mock(() => []),
+  parseDescriptor: mock(() => ({})),
+  findLastUsedIndex: mock(async () => -1),
+}));
 mock.module("$lib/square", () => ({ squarePayment: () => {} }));
 mock.module("$lib/nostr", () => ({
   handleZap: async () => {}, publish: async () => {},
@@ -207,7 +238,15 @@ mock.module("$lib/invoices", () => ({
 mock.module("$lib/api", () => ({ default: { bitcoin: "http://localhost", liquid: "http://localhost" } }));
 mock.module("$lib/store", () => ({ default: { rates: { USD: 50000 } } }));
 mock.module("@coinos/rpc", () => ({
-  default: () => new Proxy({}, { get: () => async () => ({}) }),
+  default: () => new Proxy({}, {
+    get: (_target, prop) => async (...args: any[]) => {
+      const override = globalThis.__testStore.rpcOverride;
+      if (override && typeof override[prop] === "function") {
+        return override[prop](...args);
+      }
+      return {};
+    },
+  }),
 }));
 
 mock.module("$lib/utils", () => {

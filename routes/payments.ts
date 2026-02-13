@@ -458,39 +458,22 @@ export default {
       body: { txid, wallet, type },
     } = req;
 
+    if (type !== PaymentType.liquid) return res.send({});
+
     try {
       const node = rpc({ ...config[type], wallet });
       const { confirmations, details } = await node.getTransaction(txid);
-      const hot = wallet === config[type].wallet;
-      let aid;
-      if (!hot) aid = wallet;
 
       for (const { address, amount, asset, category, vout } of details) {
         if (!address) continue;
-        if (type === PaymentType.liquid && asset !== config.liquid.btc)
-          continue;
+        if (asset !== config.liquid.btc) continue;
 
-        if (category === "send") {
-          const p = await getPayment(txid);
-          if (!p) continue;
-
-          if (confirmations) {
-            p.confirmed = true;
-            await s(`payment:${p.id}`, p);
-            if (aid) await db.sRem(`inflight:${aid}`, p.id);
-          } else {
-            if (aid) await db.sAdd(`inflight:${aid}`, p.id);
-          }
-
-          emit(p.uid, "payment", p);
-          continue;
-        }
+        if (category === "send") continue;
 
         const p = await getPayment(`${txid}:${vout}`);
 
         if (!p) {
           const invoice = await getInvoice(address);
-          if (!hot && aid !== invoice?.aid) continue;
           if (sats(amount) < 300) continue;
 
           const lockKey = `lock:${txid}:${vout}`;
@@ -503,28 +486,24 @@ export default {
             amount: sats(amount),
             ref: `${txid}:${vout}`,
             type,
-            aid,
           });
         } else if (confirmations >= 1) {
-          const id = `payment:${txid}:${vout}`;
-          const p = await getPayment(`${txid}:${vout}`);
-          if (!p) return db.sAdd("missed", id);
-          if (p.confirmed) return;
+          if (p.confirmed) continue;
 
           const invoice = await getInvoice(address);
-          const { id: iid } = invoice;
+          if (!invoice) continue;
 
           p.confirmed = true;
           invoice.received += Number.parseInt(invoice.pending);
           invoice.pending = 0;
 
-          l("confirming", id, p.id, p.amount);
+          l("confirming", p.id, p.amount);
 
           await tbConfirm(p.aid || p.uid, p.amount);
 
           await db
             .multi()
-            .set(`invoice:${iid}`, JSON.stringify(invoice))
+            .set(`invoice:${invoice.id}`, JSON.stringify(invoice))
             .set(`payment:${p.id}`, JSON.stringify(p))
             .exec();
 

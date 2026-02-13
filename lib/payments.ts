@@ -462,6 +462,12 @@ export const processWatchedTx = async (tx) => {
     }
 
     if (output.value < 300) continue;
+
+    const lockKey = `lock:${txid}:${vout}`;
+    const locked = await db.setNX(lockKey, "1");
+    if (!locked) continue;
+    await db.expire(lockKey, 60);
+
     await credit({
       hash: address,
       amount: output.value,
@@ -1147,29 +1153,16 @@ export const build = async ({
 
 export const catchUp = async () => {
   try {
-    // Platform wallets (custodial bitcoin + liquid)
-    const txns = [];
-    for (const [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
-      txns.push(
-        ...(await n.listTransactions("*", 10)).filter((tx) => {
-          tx.type = type;
-          return tx.category === "receive" && tx.confirmations > 0;
-        }),
-      );
-    }
-
-    for (const { txid, type } of txns) {
+    // Check watched addresses for any missed bitcoin transactions
+    const watched = await db.sMembers("watching");
+    for (const address of watched) {
       try {
-        if (await db.zScore("seen", txid)) continue;
-        await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
-          json: { txid, wallet: config[type].wallet, type },
-        });
-
-        await db.zAdd("seen", { score: Date.now(), value: txid });
-        if ((await db.zCard("seen")) > 10000)
-          await db.zRemRangeByRank("seen", 0, 0);
+        const txs = await getAddressTxs(address);
+        for (const tx of txs) {
+          await processWatchedTx(tx);
+        }
       } catch (e) {
-        err("problem confirming", e.message);
+        err("catchUp address check failed", address, e.message);
       }
     }
 
@@ -1199,9 +1192,8 @@ export const catchUp = async () => {
         }
       }
     }
-
   } catch (e) {
-    err("problem syncing", e.message);
+    err("problem catching up", e.message);
   }
 };
 
