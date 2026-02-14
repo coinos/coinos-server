@@ -1,4 +1,4 @@
-import { db, g, s } from "$lib/db";
+import { db, g, s, scan } from "$lib/db";
 import ln, { lnListen, LightningUnavailableError } from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
@@ -171,7 +171,7 @@ export async function replay(index) {
 }
 
 export const fixBolt12 = async (_, res) => {
-  for await (const k of db.scanIterator({ MATCH: "payment:*" })) {
+  for await (const k of scan("payment:*")) {
     const p = await g(k);
     if (p.type === "bolt12") {
       console.log(k);

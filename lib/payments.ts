@@ -520,6 +520,14 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     });
 
   if (to.startsWith("ark") || to.startsWith("tark")) {
+    // Check for local vault - do internal transfer
+    const vault = await g(`arkaddr:${to}`);
+    if (vault) {
+      const recipient = await getUser(vault.uid);
+      if (recipient)
+        return sendInternal({ amount, recipient, sender: user });
+    }
+
     const txid = await sendArk(to, amount);
     const p = await debit({
       hash: txid,
@@ -527,20 +535,6 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
       user,
       type: PaymentType.ark,
     });
-
-    const vault = await g(`arkaddr:${to}`);
-    if (vault) {
-      const { rate, currency } = await getUserRate(user);
-      await createArkPayment({
-        aid: vault.aid,
-        uid: vault.uid,
-        amount,
-        hash: txid,
-        rate,
-        currency,
-        extraHashMappings: [txid],
-      });
-    }
 
     return p;
   }

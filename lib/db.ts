@@ -67,8 +67,14 @@ export const g = async (k) => {
 
 export const s = (k, v) => {
   if (k === "user:null" || k === "user:undefined") fail("null user");
-  db.set(k, JSON.stringify(v));
+  return db.set(k, JSON.stringify(v));
 };
+
+export async function* scan(pattern: string) {
+  for await (const keys of db.scanIterator({ MATCH: pattern })) {
+    for (const k of keys) yield k;
+  }
+}
 
 export const ga = async (k) => {
   const v = await archive.get(k);

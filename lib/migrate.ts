@@ -1,4 +1,4 @@
-import { db, g, s } from "$lib/db";
+import { db, g, s, scan } from "$lib/db";
 import { findLastUsedIndex, parseDescriptor } from "$lib/esplora";
 import { l, warn } from "$lib/logging";
 import {
@@ -64,7 +64,7 @@ export const migrateBalancesToTB = async () => {
   let count = 0;
 
   // Migrate balance:* keys
-  for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
+  for await (const k of scan("balance:*")) {
     try {
       const id = k.split(":")[1];
       const balance = Number.parseInt((await db.get(k)) || "0");
@@ -77,7 +77,7 @@ export const migrateBalancesToTB = async () => {
   }
 
   // Migrate pending:* keys
-  for await (const k of db.scanIterator({ MATCH: "pending:*" })) {
+  for await (const k of scan("pending:*")) {
     try {
       const id = k.split(":")[1];
       const pending = Number.parseInt((await db.get(k)) || "0");
@@ -88,7 +88,7 @@ export const migrateBalancesToTB = async () => {
   }
 
   // Migrate credit:*:* keys
-  for await (const k of db.scanIterator({ MATCH: "credit:*:*" })) {
+  for await (const k of scan("credit:*:*")) {
     try {
       const parts = k.split(":");
       const type = parts[1];
@@ -113,7 +113,7 @@ export const migrateToMicrosats = async () => {
   let count = 0;
 
   // Iterate through all users and multiply their TB balances
-  for await (const k of db.scanIterator({ MATCH: "user:*" })) {
+  for await (const k of scan("user:*")) {
     try {
       const raw = await db.get(k);
       if (!raw) continue;
@@ -142,7 +142,7 @@ export const migrateAutowithdraw = async () => {
 
   let count = 0;
 
-  for await (const k of db.scanIterator({ MATCH: "user:*" })) {
+  for await (const k of scan("user:*")) {
     try {
       const raw = await db.get(k);
       if (!raw || !raw.startsWith("{")) continue;

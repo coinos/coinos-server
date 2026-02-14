@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
-import { db, g, ga, gf, s } from "$lib/db";
+import { db, g, ga, gf, s, scan } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
@@ -119,7 +119,7 @@ export default {
 
     const users = [];
 
-    for await (const k of db.scanIterator({ MATCH: "user:*" })) {
+    for await (const k of scan("user:*")) {
       const val = await g(k);
       if (!val || typeof val !== "object" || !val.id || !val.username) continue;
       const uid = val.id;

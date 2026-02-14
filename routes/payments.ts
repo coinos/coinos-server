@@ -774,7 +774,31 @@ export default {
     try {
       await requirePin({ body, user });
 
+      // Check for local vault - do internal transfer
+      const vault = await g(`arkaddr:${address}`);
+      if (vault) {
+        const recipient = await getUser(vault.uid);
+        if (recipient) {
+          // Find recipient's pending ark invoice via custodial mapping
+          let invoice;
+          const account = await g(`account:${vault.aid}`);
+          if (account?.arkAddress) {
+            const iid = await g(`custodial-ark-invoice:${account.arkAddress}`);
+            if (iid) {
+              invoice = await getInvoice(iid);
+              if (invoice && !invoice.hash) invoice.hash = invoice.id;
+            }
+          }
+
+          l("ark local send", user.username, recipient.username, amount, "invoice:", invoice?.id, "received:", invoice?.received, "hash:", invoice?.hash);
+          const p = await sendInternal({ amount, invoice, recipient, sender: user });
+          return res.send(p);
+        }
+      }
+
+      l("ark send", user.username, address, amount);
       const txid = await sendArk(address, amount);
+      l("ark send complete", txid);
       const hash = txid;
 
       const p = await debit({
@@ -784,20 +808,6 @@ export default {
         type: PaymentType.ark,
         aid,
       });
-
-      const vault = await g(`arkaddr:${address}`);
-      if (vault) {
-        const { rate, currency } = await getUserRate(user);
-        await createArkPayment({
-          aid: vault.aid,
-          uid: vault.uid,
-          amount,
-          hash,
-          rate,
-          currency,
-          extraHashMappings: [hash],
-        });
-      }
 
       res.send(p);
     } catch (e) {
@@ -903,6 +913,9 @@ export default {
 
       await completePayment(invoice, p, user);
 
+      // Clean up custodial ark invoice index
+      if (invoice.text) await db.del(`custodial-ark-invoice:${invoice.text}`);
+
       res.send(p);
     } catch (e) {
       bail(res, e.message);
@@ -982,7 +995,30 @@ export default {
           }
         }
 
-        res.send({ synced, received, payments });
+        // Check for pending custodial ark invoice to forward
+        let forward;
+        if (received > 0) {
+          const account = await g(`account:${aid}`);
+          l("arkSync forward check", aid, account?.arkAddress, received);
+          if (account?.arkAddress) {
+            const iid = await g(`custodial-ark-invoice:${account.arkAddress}`);
+            l("arkSync custodial invoice lookup", account.arkAddress, iid);
+            if (iid) {
+              const inv = await getInvoice(iid);
+              if (inv && (inv.received < inv.amount || inv.amount === 0)) {
+                const serverArkAddress = await getArkAddress();
+                forward = {
+                  iid,
+                  amount: inv.amount || received,
+                  serverArkAddress,
+                };
+                l("arkSync returning forward", forward);
+              }
+            }
+          }
+        }
+
+        res.send({ synced, received, payments, forward });
       } finally {
         await db.del(lockKey);
       }

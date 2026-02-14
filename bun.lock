@@ -5,7 +5,7 @@
     "": {
       "name": "coinos",
       "dependencies": {
-        "@arkade-os/sdk": "^0.3.12",
+        "@arkade-os/sdk": "0.3.13",
         "@asoltys/clightning-client": "^0.2.0",
         "@aws-sdk/client-ses": "^3.984.0",
         "@cashu/cashu-ts": "^2.9.0",
@@ -82,7 +82,7 @@
 
     "@apimatic/schema": ["@apimatic/schema@0.7.21", "", { "dependencies": { "tslib": "^2.8.1" } }, "sha512-RCke4toXjA7fBRxQVa1GR+Lj9utVOEJ3voDI26dhk+bZuAac4UXPzkTEaIO3AIe/o8pcKCOkpNIzhzm57Cv2Qg=="],
 
-    "@arkade-os/sdk": ["@arkade-os/sdk@0.3.12", "", { "dependencies": { "@marcbachmann/cel-js": "7.0.0", "@noble/curves": "2.0.0", "@noble/secp256k1": "3.0.0", "@scure/base": "2.0.0", "@scure/btc-signer": "2.0.1", "bip68": "1.0.4" } }, "sha512-/zE8XiDo6yOCaspMcO3Gua/gLGYmYLRFbqaD1ORkaGI7hH/Gq+m0tkIwArVlwtK50loHK4jvS8clovcaV9CARg=="],
+    "@arkade-os/sdk": ["@arkade-os/sdk@0.3.13", "", { "dependencies": { "@marcbachmann/cel-js": "7.3.1", "@noble/curves": "2.0.0", "@noble/secp256k1": "3.0.0", "@scure/base": "2.0.0", "@scure/btc-signer": "2.0.1", "bip68": "1.0.4" } }, "sha512-eC6XGifqVf2Xu+sf/3T2duUgLiXlgh/IQXHD+v09wsu8ik/CZedH4gvQpetTjRMKti3DdY/QVLC1OQTKKWgvqQ=="],
 
     "@asoltys/clightning-client": ["@asoltys/clightning-client@0.2.0", "", { "dependencies": { "debug": "^4.1.1" } }, "sha512-CYbkyGoS0X1ha/YcFk3sTiI7aRHpPMnib/26WODucfJNrTbWl/9FJ4bpod9a6t9Jbv5OXCa0dYspcPK3kZ71pg=="],
 
@@ -262,7 +262,7 @@
 
     "@lukeed/ms": ["@lukeed/ms@2.0.2", "", {}, "sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA=="],
 
-    "@marcbachmann/cel-js": ["@marcbachmann/cel-js@7.0.0", "", {}, "sha512-sbtR8pvTAsDPiyigebwLyqweLnocmBS9MG5tTnVUL2PZ9Hc2Dj2e4tnvTcZ1s463Og9NKD59TaPvTK9CEZQhiQ=="],
+    "@marcbachmann/cel-js": ["@marcbachmann/cel-js@7.3.1", "", { "bin": { "cel-evaluate": "bin/cel-evaluate.js" } }, "sha512-P6o26TvjStT8V8+8EF+yq9Pp7ZFV00bpiUMbssr76XbIZGxaB+NNWeBp6WNxOrR9gp0JPzvJueCKHpOs5LE9PQ=="],
 
     "@noble/ciphers": ["@noble/ciphers@2.1.1", "", {}, "sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw=="],
 

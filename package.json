@@ -8,7 +8,7 @@
     "format": "biome format *.js **/*.js --write"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.3.12",
+    "@arkade-os/sdk": "0.3.13",
     "@asoltys/clightning-client": "^0.2.0",
     "@aws-sdk/client-ses": "^3.984.0",
     "@cashu/cashu-ts": "^2.9.0",

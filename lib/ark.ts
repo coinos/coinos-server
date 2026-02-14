@@ -9,16 +9,22 @@ let wallet: any;
 const getWallet = async () => {
   if (wallet) return wallet;
 
-  const { arkPrivateKey, arkServerUrl } = config.ark;
+  const { arkPrivateKey, arkServerUrl, esploraUrl } = config.ark;
   const identity = SingleKey.fromHex(arkPrivateKey);
 
-  wallet = await Wallet.create({ identity, arkServerUrl });
+  wallet = await Wallet.create({ identity, arkServerUrl, esploraUrl });
   return wallet;
 };
 
 export const sendArk = async (address: string, amount: number) => {
-  const w = await getWallet();
-  return w.sendBitcoin({ address, amount });
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Ark send timed out")), 45000),
+  );
+  const send = async () => {
+    const w = await getWallet();
+    return w.sendBitcoin({ address, amount });
+  };
+  return Promise.race([send(), timeout]);
 };
 
 export const getArkAddress = async () => {
