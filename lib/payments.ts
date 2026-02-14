@@ -520,16 +520,29 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     });
 
   if (to.startsWith("ark") || to.startsWith("tark")) {
-    const fee = Math.max(5, Math.round(amount * 0.02));
-    amount -= fee;
     const txid = await sendArk(to, amount);
-    return debit({
+    const p = await debit({
       hash: txid,
-      amount: amount + fee,
-      fee,
+      amount,
       user,
       type: PaymentType.ark,
     });
+
+    const vault = await g(`arkaddr:${to}`);
+    if (vault) {
+      const { rate, currency } = await getUserRate(user);
+      await createArkPayment({
+        aid: vault.aid,
+        uid: vault.uid,
+        amount,
+        hash: txid,
+        rate,
+        currency,
+        extraHashMappings: [txid],
+      });
+    }
+
+    return p;
   }
 
   let fee;

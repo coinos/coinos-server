@@ -897,11 +897,11 @@ export default {
 
       // ARK accounts don't need Bitcoin Core wallet setup
       if (type === "ark") {
-        await db
-          .multi()
+        const m = db.multi()
           .set(`account:${id}`, JSON.stringify(account))
-          .lPush(`${user.id}:accounts`, id)
-          .exec();
+          .lPush(`${user.id}:accounts`, id);
+        if (arkAddress) m.set(`arkaddr:${arkAddress}`, JSON.stringify({ aid: id, uid }));
+        await m.exec();
 
         res.send(account);
         return;

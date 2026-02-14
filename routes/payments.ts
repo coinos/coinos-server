@@ -773,6 +773,7 @@ export default {
 
     try {
       await requirePin({ body, user });
+
       const txid = await sendArk(address, amount);
       const hash = txid;
 
@@ -783,6 +784,20 @@ export default {
         type: PaymentType.ark,
         aid,
       });
+
+      const vault = await g(`arkaddr:${address}`);
+      if (vault) {
+        const { rate, currency } = await getUserRate(user);
+        await createArkPayment({
+          aid: vault.aid,
+          uid: vault.uid,
+          amount,
+          hash,
+          rate,
+          currency,
+          extraHashMappings: [hash],
+        });
+      }
 
       res.send(p);
     } catch (e) {
@@ -947,7 +962,24 @@ export default {
 
           payments.push(p);
           synced++;
-          if (tx.amount > 0) received += tx.amount;
+          if (tx.amount > 0) {
+            received += tx.amount;
+
+            // Find an unpaid ark invoice for this account and mark it received
+            const invoiceIds = await db.lRange(`${aid}:invoices`, 0, 20);
+            for (const iid of invoiceIds) {
+              const inv = await getInvoice(iid);
+              if (!inv || inv.type !== "ark") continue;
+              if (inv.received >= inv.amount && inv.amount > 0) continue;
+              if (inv.amount > 0 && tx.amount < inv.amount) continue;
+              inv.received += tx.amount;
+              p.iid = iid;
+              await s(`invoice:${iid}`, inv);
+              await s(`payment:${p.id}`, p);
+              emit(uid, "payment", p);
+              break;
+            }
+          }
         }
 
         res.send({ synced, received, payments });
