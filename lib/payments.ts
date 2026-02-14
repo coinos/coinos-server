@@ -545,6 +545,16 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     return p;
   }
 
+  // Check for local invoice before applying external fees
+  if (to.startsWith("ln") && !to.startsWith("lnurl") && !to.startsWith("lno")) {
+    const localInv = await getInvoice(to).catch(() => null);
+    if (localInv) {
+      const recipient = await getUser(localInv.uid);
+      if (recipient)
+        return sendInternal({ amount, invoice: localInv, recipient, sender: user });
+    }
+  }
+
   let fee;
   const ourfee = Math.round(amount * (config.fee.lightning || 0));
   if (lnurl) {
@@ -572,9 +582,9 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     pr = to;
   }
 
-  return pr
-    ? await sendLightning({ user, pr, amount, fee })
-    : await sendOnchain({ aid, amount, address: to, user, subtract: true });
+  if (pr) return sendLightning({ user, pr, amount, fee });
+
+  return sendOnchain({ aid, amount, address: to, user, subtract: true });
 };
 
 export const decode = async (hex) => {
