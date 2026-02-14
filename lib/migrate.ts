@@ -136,4 +136,44 @@ export const migrateToMicrosats = async () => {
   return count;
 };
 
+export const migrateAutowithdraw = async () => {
+  const migrated = await db.get("autowithdraw:migrated");
+  if (migrated) return 0;
+
+  let count = 0;
+
+  for await (const k of db.scanIterator({ MATCH: "user:*" })) {
+    try {
+      const raw = await db.get(k);
+      if (!raw || !raw.startsWith("{")) continue;
+
+      const user = JSON.parse(raw);
+      if (!user.id || !user.autowithdraw) continue;
+
+      const accountIds = await db.lRange(`${user.id}:accounts`, 0, -1);
+
+      for (const aid of accountIds) {
+        const account = await g(`account:${aid}`);
+        if (!account) continue;
+        if (account.seed || account.type === "ark") continue;
+        if (account.autowithdraw) continue;
+
+        account.autowithdraw = true;
+        account.threshold = account.threshold ?? user.threshold;
+        account.reserve = account.reserve ?? user.reserve;
+        account.destination = account.destination ?? user.destination;
+
+        await s(`account:${aid}`, account);
+        count++;
+      }
+    } catch (e) {
+      warn("autowithdraw migration error", k, e.message);
+    }
+  }
+
+  await db.set("autowithdraw:migrated", Date.now().toString());
+  l(`Migrated autowithdraw to ${count} accounts`);
+  return count;
+};
+
 export default migrate;

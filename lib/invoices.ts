@@ -52,7 +52,10 @@ export const generate = async ({ invoice, user }) => {
   aid = account.id;
 
   const rates = await g("rates");
-  if (!currency) currency = user.currency;
+  if (!currency) {
+    const acct = aid ? await g(`account:${aid}`) : null;
+    currency = acct?.currency || user.currency;
+  }
   if (!rate) rate = rates[currency];
   if (fiat) amount = Math.round((SATS * fiat) / rate);
   if (amount < 0) fail("invalid amount");

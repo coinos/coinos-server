@@ -166,8 +166,10 @@ export const debit = async ({
   }
 
   let ref;
-  const { id: uid, currency } = user;
+  const { id: uid } = user;
   if (!aid) aid = uid;
+  const debitAccount = aid && aid !== uid ? await g(`account:${aid}`) : null;
+  const currency = debitAccount?.currency || user.currency;
 
   const rates = await g("rates");
   if (!rate) rate = rates[currency];
@@ -293,7 +295,9 @@ export const credit = async ({
   if (type === PaymentType.internal) amount += tip;
 
   const user = await getUser(inv.uid);
-  const { id: uid, currency } = user;
+  const { id: uid } = user;
+  const creditAccount = aid && aid !== uid ? await g(`account:${aid}`) : null;
+  const currency = creditAccount?.currency || user.currency;
 
   const rates = await g("rates");
   let rate = rates[currency];
@@ -373,7 +377,14 @@ export const credit = async ({
 };
 
 export const completePayment = async (inv, p, user) => {
-  const { id, autowithdraw, threshold, reserve, destination, username } = user;
+  const { id, username } = user;
+  const aid = p.aid || id;
+  const account = aid !== id ? await g(`account:${aid}`) : null;
+  const autowithdraw = account?.autowithdraw;
+  const threshold = account?.threshold ?? user.threshold;
+  const reserve = account?.reserve ?? user.reserve;
+  const destination = account?.destination ?? user.destination;
+
   let withdrawal;
   if (p.confirmed) {
     if (inv.forward && !inv.forwarded) {
@@ -399,11 +410,11 @@ export const completePayment = async (inv, p, user) => {
     } else if (autowithdraw && p.type !== "ark") {
       try {
         const to = destination.trim();
-        const balance = await getBalance(id);
+        const balance = await getBalance(aid);
         const amount = balance - reserve;
         if (balance > threshold) {
           l("initiating autowithdrawal", amount, to, balance, threshold);
-          const w = await pay({ amount, to, user });
+          const w = await pay({ aid, amount, to, user });
           withdrawal = {
             amount: fmt(-w.amount),
             link: link(w.id),
@@ -1239,9 +1250,10 @@ export const importAccountHistory = async (account) => {
     const total = confirmedUtxos.reduce((sum, u) => sum + u.value, 0);
 
     const rates = await g("rates");
-    let rate = rates[user.currency];
+    const currency = account.currency || user.currency;
+    let rate = rates[currency];
     if (!rate) await sleep(1000);
-    rate = rate || rates[user.currency];
+    rate = rate || rates[currency];
 
     for (const u of confirmedUtxos) {
       const existing = await getPayment(`${u.txid}:${u.vout}`);

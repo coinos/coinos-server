@@ -954,13 +954,19 @@ export default {
   async updateAccount(req, res) {
     const { id } = req.params;
     const { id: uid } = req.user;
-    const { name } = req.body;
+    const { name, autowithdraw, threshold, reserve, destination, currency } =
+      req.body;
 
     const pos = await db.lPos(`${uid}:accounts`, id);
     if (pos == null) fail("account not found");
 
     const account = await g(`account:${id}`);
-    account.name = name;
+    if (name !== undefined) account.name = name;
+    if (autowithdraw !== undefined) account.autowithdraw = autowithdraw;
+    if (threshold !== undefined) account.threshold = threshold;
+    if (reserve !== undefined) account.reserve = reserve;
+    if (destination !== undefined) account.destination = destination.trim();
+    if (currency !== undefined) account.currency = currency;
     await s(`account:${id}`, account);
 
     res.send(account);
