@@ -787,6 +787,7 @@ export default {
             if (recipient && invoice) {
               l("ark local send", user.username, recipient.username, amount);
               const p = await sendInternal({ amount, invoice, recipient, sender: user });
+              await db.del(`custodial-ark-invoice:${account.arkAddress}`);
               return res.send(p);
             }
           }

@@ -88,6 +88,7 @@ export const generate = async ({ invoice, user }) => {
     type = PaymentType.ark;
     text = account.arkAddress;
     hash = id;
+    await db.del(`custodial-ark-invoice:${account.arkAddress}`);
   } else if (account.seed || (account.pubkey && account.fingerprint)) {
     type = PaymentType.bitcoin;
     const nextIndex = account.nextIndex || 0;
