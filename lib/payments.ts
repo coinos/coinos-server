@@ -520,12 +520,20 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     });
 
   if (to.startsWith("ark") || to.startsWith("tark")) {
-    // Check for local vault - do internal transfer
+    // Check for local custodial receive - do internal transfer
     const vault = await g(`arkaddr:${to}`);
     if (vault) {
-      const recipient = await getUser(vault.uid);
-      if (recipient)
-        return sendInternal({ amount, recipient, sender: user });
+      const vaultAccount = await g(`account:${vault.aid}`);
+      if (vaultAccount?.arkAddress) {
+        const iid = await g(`custodial-ark-invoice:${vaultAccount.arkAddress}`);
+        if (iid) {
+          const invoice = await getInvoice(iid);
+          if (invoice && !invoice.hash) invoice.hash = invoice.id;
+          const recipient = await getUser(vault.uid);
+          if (recipient && invoice)
+            return sendInternal({ amount, invoice, recipient, sender: user });
+        }
+      }
     }
 
     const txid = await sendArk(to, amount);

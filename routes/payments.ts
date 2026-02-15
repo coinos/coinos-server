@@ -774,25 +774,22 @@ export default {
     try {
       await requirePin({ body, user });
 
-      // Check for local vault - do internal transfer
+      // Check for local custodial receive - do internal transfer
       const vault = await g(`arkaddr:${address}`);
       if (vault) {
-        const recipient = await getUser(vault.uid);
-        if (recipient) {
-          // Find recipient's pending ark invoice via custodial mapping
-          let invoice;
-          const account = await g(`account:${vault.aid}`);
-          if (account?.arkAddress) {
-            const iid = await g(`custodial-ark-invoice:${account.arkAddress}`);
-            if (iid) {
-              invoice = await getInvoice(iid);
-              if (invoice && !invoice.hash) invoice.hash = invoice.id;
+        const account = await g(`account:${vault.aid}`);
+        if (account?.arkAddress) {
+          const iid = await g(`custodial-ark-invoice:${account.arkAddress}`);
+          if (iid) {
+            const invoice = await getInvoice(iid);
+            if (invoice && !invoice.hash) invoice.hash = invoice.id;
+            const recipient = await getUser(vault.uid);
+            if (recipient && invoice) {
+              l("ark local send", user.username, recipient.username, amount);
+              const p = await sendInternal({ amount, invoice, recipient, sender: user });
+              return res.send(p);
             }
           }
-
-          l("ark local send", user.username, recipient.username, amount, "invoice:", invoice?.id, "received:", invoice?.received, "hash:", invoice?.hash);
-          const p = await sendInternal({ amount, invoice, recipient, sender: user });
-          return res.send(p);
         }
       }
 
