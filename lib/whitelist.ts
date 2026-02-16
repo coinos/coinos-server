@@ -32,6 +32,7 @@ export default [
   "npub",
   "nsec",
   "nwc",
+  "passkeys",
   "payments",
   "picture",
   "profile",

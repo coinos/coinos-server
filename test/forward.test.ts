@@ -377,6 +377,168 @@ describe("arkSync", () => {
 });
 
 // =====================================================================
+// Tests: arkSync expired VTXO reconciliation
+// =====================================================================
+
+describe("arkSync reconciliation", () => {
+  beforeEach(resetAll);
+
+  test("creates expired debit when payment sum exceeds wallet balance", async () => {
+    // Pre-seed two received payments totaling 7128
+    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() - 2000 };
+    const pay2 = { id: "pay-2", aid: arkAccountId, amount: 2128, hash: "h2", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() - 1000 };
+    store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
+    store().kvStore[`payment:pay-2`] = JSON.stringify(pay2);
+    store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
+    store().kvStore[`payment:${arkAccountId}:h2`] = JSON.stringify("pay-2");
+    store().listStore[`${arkAccountId}:payments`] = ["pay-2", "pay-1"];
+
+    // Sync with no new transactions but balance=0 (VTXOs expired)
+    const req = {
+      body: {
+        aid: arkAccountId,
+        transactions: [],
+        balance: 0,
+      },
+      user: makeUser(),
+    };
+    const res = makeRes();
+
+    await routes.arkSync(req as any, res as any);
+    const sent = (res as any).getSent();
+
+    expect(sent.synced).toBe(1);
+    expect(sent.payments).toHaveLength(1);
+
+    const reconPayment = sent.payments[0];
+    expect(reconPayment.amount).toBe(-7128);
+    expect(reconPayment.memo).toBe("expired");
+    expect(reconPayment.type).toBe("ark");
+
+    // Payment list should now have 3 entries
+    expect(store().listStore[`${arkAccountId}:payments`]).toHaveLength(3);
+  });
+
+  test("does not reconcile when sum matches balance", async () => {
+    // Pre-seed a payment of 5000
+    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
+    store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
+    store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
+
+    const req = {
+      body: {
+        aid: arkAccountId,
+        transactions: [],
+        balance: 5000,
+      },
+      user: makeUser(),
+    };
+    const res = makeRes();
+
+    await routes.arkSync(req as any, res as any);
+    const sent = (res as any).getSent();
+
+    expect(sent.synced).toBe(0);
+    expect(sent.payments).toHaveLength(0);
+    expect(store().listStore[`${arkAccountId}:payments`]).toHaveLength(1);
+  });
+
+  test("does not reconcile when balance is not provided (backward compat)", async () => {
+    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
+    store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
+    store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
+
+    const req = {
+      body: {
+        aid: arkAccountId,
+        transactions: [],
+      },
+      user: makeUser(),
+    };
+    const res = makeRes();
+
+    await routes.arkSync(req as any, res as any);
+    const sent = (res as any).getSent();
+
+    expect(sent.synced).toBe(0);
+    expect(sent.payments).toHaveLength(0);
+  });
+
+  test("is idempotent — second sync does not create duplicate", async () => {
+    // Seed payment sum = 5000, balance = 0
+    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
+    store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
+    store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
+
+    const req = {
+      body: { aid: arkAccountId, transactions: [], balance: 0 },
+      user: makeUser(),
+    };
+
+    // First sync — should create reconciliation
+    const res1 = makeRes();
+    await routes.arkSync(req as any, res1 as any);
+    const sent1 = (res1 as any).getSent();
+    expect(sent1.synced).toBe(1);
+    expect(sent1.payments[0].amount).toBe(-5000);
+
+    // Second sync — sum is now 0, matches balance, no new reconciliation
+    const res2 = makeRes();
+    await routes.arkSync(req as any, res2 as any);
+    const sent2 = (res2 as any).getSent();
+    expect(sent2.synced).toBe(0);
+    expect(sent2.payments).toHaveLength(0);
+  });
+
+  test("reconciles partial expiry", async () => {
+    // 10000 received, 3000 sent, sum = 7000. Actual balance = 2000 (5000 expired)
+    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 10000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    const pay2 = { id: "pay-2", aid: arkAccountId, amount: -3000, hash: "h2", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
+    store().kvStore[`payment:pay-2`] = JSON.stringify(pay2);
+    store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
+    store().kvStore[`payment:${arkAccountId}:h2`] = JSON.stringify("pay-2");
+    store().listStore[`${arkAccountId}:payments`] = ["pay-2", "pay-1"];
+
+    const req = {
+      body: { aid: arkAccountId, transactions: [], balance: 2000 },
+      user: makeUser(),
+    };
+    const res = makeRes();
+
+    await routes.arkSync(req as any, res as any);
+    const sent = (res as any).getSent();
+
+    expect(sent.synced).toBe(1);
+    expect(sent.payments[0].amount).toBe(-5000);
+    expect(sent.payments[0].memo).toBe("expired");
+  });
+
+  test("does not reconcile when sum is less than balance", async () => {
+    // Sum = 3000, balance = 5000 (e.g., recovered VTXOs already synced)
+    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 3000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
+    store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
+    store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
+
+    const req = {
+      body: { aid: arkAccountId, transactions: [], balance: 5000 },
+      user: makeUser(),
+    };
+    const res = makeRes();
+
+    await routes.arkSync(req as any, res as any);
+    const sent = (res as any).getSent();
+
+    expect(sent.synced).toBe(0);
+    expect(sent.payments).toHaveLength(0);
+  });
+});
+
+// =====================================================================
 // Tests: BOLT12 offer autowithdraw
 // =====================================================================
 

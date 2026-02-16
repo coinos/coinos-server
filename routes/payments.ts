@@ -933,8 +933,9 @@ export default {
   async arkSync(req, res) {
     try {
       const { user } = req;
-      const { transactions, aid } = req.body;
+      const { transactions = [], aid } = req.body;
       const { id: uid } = user;
+      l("arkSync", user.username, aid, "txs:", transactions.length, "bal:", req.body.balance);
 
       // Per-account lock prevents concurrent syncs from racing
       const lockKey = `arksynclock:${aid}`;
@@ -1000,6 +1001,34 @@ export default {
               emit(uid, "payment", p);
               break;
             }
+          }
+        }
+
+        // Reconcile expired VTXOs
+        const { balance } = req.body;
+        if (typeof balance === "number" && balance >= 0) {
+          const paymentIds = await db.lRange(`${aid}:payments`, 0, -1);
+          let expectedBalance = 0;
+          for (const pid of paymentIds) {
+            const pay = await g(`payment:${pid}`);
+            if (pay) expectedBalance += pay.amount;
+          }
+
+          if (expectedBalance > balance) {
+            const p = await createArkPayment({
+              aid,
+              uid,
+              amount: balance - expectedBalance,
+              hash: `expired-${Date.now()}`,
+              rate,
+              currency,
+              created: Date.now(),
+              extraHashMappings: [],
+            });
+            p.memo = "expired";
+            await s(`payment:${p.id}`, p);
+            payments.push(p);
+            synced++;
           }
         }
 

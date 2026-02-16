@@ -164,6 +164,10 @@ app.post(
 app.post("/flash", users.flash);
 app.get("/challenge", users.challenge);
 app.post("/nostrAuth", users.nostrAuth);
+app.post("/passkey/register/options", auth, users.passkeyRegisterOptions);
+app.post("/passkey/register/verify", auth, users.passkeyRegisterVerify);
+app.post("/passkey/login/options", users.passkeyLoginOptions);
+app.post("/passkey/login/verify", users.passkeyLoginVerify);
 app.get("/app/:pubkey", auth, users.app);
 app.get("/apps", auth, users.apps);
 app.post("/app", auth, users.updateApp);

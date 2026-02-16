@@ -6,6 +6,12 @@ import { db, g, ga, gf, s, scan } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
+import {
+  generatePasskeyRegistration,
+  verifyPasskeyRegistration,
+  generatePasskeyLogin,
+  verifyPasskeyLogin,
+} from "$lib/passkey";
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
@@ -1162,6 +1168,58 @@ export default {
     const { id } = req.body;
     await db.sRem(`${uid}:trust`, id);
     res.send({});
+  },
+
+  async passkeyRegisterOptions(req, res) {
+    try {
+      const { user } = req;
+      const origin = req.body.origin || `https://${config.hostname}`;
+      const options = await generatePasskeyRegistration(user, origin);
+      res.send(options);
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
+  },
+
+  async passkeyRegisterVerify(req, res) {
+    try {
+      const { user } = req;
+      const origin = req.body.origin || `https://${config.hostname}`;
+      const credential = await verifyPasskeyRegistration(user, req.body, origin);
+      if (!user.passkeys) user.passkeys = [];
+      user.passkeys.push(credential);
+      await s(`user:${user.id}`, user);
+      res.send({ ok: true });
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
+  },
+
+  async passkeyLoginOptions(req, res) {
+    try {
+      const origin = req.body.origin || `https://${config.hostname}`;
+      const options = await generatePasskeyLogin(origin);
+      res.send(options);
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
+  },
+
+  async passkeyLoginVerify(req, res) {
+    try {
+      const { credential, challengeId, origin: reqOrigin } = req.body;
+      const origin = reqOrigin || `https://${config.hostname}`;
+      const user = await verifyPasskeyLogin(credential, challengeId, origin);
+      const payload = { id: user.id };
+      const token = jwt.sign(payload, config.jwt);
+      res.send({ user: pick(user, whitelist), token });
+    } catch (e) {
+      console.log(e);
+      bail(res, e.message);
+    }
   },
 
   async credits(req, res) {

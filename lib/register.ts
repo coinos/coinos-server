@@ -58,12 +58,14 @@ export default async (user, ip) => {
   user.migrated = true;
   user.locktime = 300;
 
+  user.passkeys = [];
+
   let sk;
   if (!pubkey) {
     sk = randomBytes(32);
     pubkey = getPublicKey(sk);
     user.pubkey = pubkey;
-    user.nsec = nip49encrypt(sk, password);
+    if (password) user.nsec = nip49encrypt(sk, password);
   }
 
   user.npub = nip19.npubEncode(pubkey);

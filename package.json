@@ -25,6 +25,7 @@
     "@scure/base": "^2.0.0",
     "@scure/bip32": "^2.0.1",
     "@scure/btc-signer": "^2.0.1",
+    "@simplewebauthn/server": "^13.2.2",
     "bech32": "^2.0.0",
     "clightning-client": "github:asoltys/lightning-client-js#master",
     "eventsource": "^4.1.0",
