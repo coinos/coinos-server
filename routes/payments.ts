@@ -89,13 +89,23 @@ export default {
               aid,
             });
           } else {
-            p = await sendInternal({
-              invoice,
-              amount,
-              memo,
-              recipient,
-              sender: user,
-            });
+            // Check if recipient account is non-custodial (vault)
+            const recipientAccount = invoice?.aid ? await g(`account:${invoice.aid}`) : null;
+            if (recipientAccount?.pubkey || recipientAccount?.seed) {
+              p = await sendOnchain({
+                amount: amount || invoice.amount,
+                address: invoice.hash,
+                user,
+              });
+            } else {
+              p = await sendInternal({
+                invoice,
+                amount,
+                memo,
+                recipient,
+                sender: user,
+              });
+            }
           }
         } else if (fund) {
           p = await debit({

@@ -24,6 +24,7 @@ const getWallet = async () => {
 };
 
 let refreshing = false;
+const failedBoardingOutpoints = new Set<string>();
 
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string) =>
   Promise.race([
@@ -89,11 +90,14 @@ export const refreshArkWallet = async () => {
       const info = await provider.getInfo();
       const ramps = new Ramps(w);
 
-      // Try each boarding UTXO, freshest first
-      const sorted = [...confirmed].sort(
-        (a: any, b: any) =>
-          (b.status?.block_height || 0) - (a.status?.block_height || 0),
-      );
+      // Try each boarding UTXO, freshest first, skipping known failures
+      const outpointKey = (u: any) => `${u.txid}:${u.vout}`;
+      const sorted = [...confirmed]
+        .filter((u: any) => !failedBoardingOutpoints.has(outpointKey(u)))
+        .sort(
+          (a: any, b: any) =>
+            (b.status?.block_height || 0) - (a.status?.block_height || 0),
+        );
 
       for (const utxo of sorted) {
         try {
@@ -103,8 +107,10 @@ export const refreshArkWallet = async () => {
             "ark onboard",
           );
           l("ark onboarded boarding utxo:", utxo.value, "sats, txid:", txid);
+          failedBoardingOutpoints.clear();
           break;
         } catch (e: any) {
+          failedBoardingOutpoints.add(outpointKey(utxo));
           warn("ark onboard failed:", utxo.value, "sats:", e.message);
         }
       }
