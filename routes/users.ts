@@ -844,22 +844,13 @@ export default {
         }
 
         if (account.type === PaymentType.ark) {
-          const decoded = bech32m.decode(account.arkAddress, 1023);
-          const data = new Uint8Array(bech32m.fromWords(decoded.words));
-
-          const vtxoTaprootKey = data.slice(33, 65);
-
-          const vtxoHex = Buffer.from(vtxoTaprootKey).toString("hex");
-          const r = await fetch(
-            `http://arkd:7070/v1/indexer/vtxos?scripts=5120${vtxoHex}&spendable_only=true`,
-            { "content-type": "application/json" },
-          );
-          const { vtxos } = await r.json();
-          if (!vtxos?.length) continue;
-          account.balance = vtxos.reduce(
-            (a, b) => a + Number.parseInt(b.amount),
-            0,
-          );
+          const paymentIds = await db.lRange(`${id}:payments`, 0, -1);
+          let sum = 0;
+          for (const pid of paymentIds) {
+            const pay = await g(`payment:${pid}`);
+            if (pay) sum += pay.amount;
+          }
+          account.balance = Math.max(sum, 0);
         }
       }
 
@@ -897,6 +888,14 @@ export default {
 
       // ARK accounts don't need Bitcoin Core wallet setup
       if (type === "ark") {
+        const accountIds = await db.lRange(`${user.id}:accounts`, 0, -1);
+        for (const accId of accountIds) {
+          const acc = await g(`account:${accId}`);
+          if (acc?.type === "ark") {
+            bail(res, "You already have an Ark vault");
+            return;
+          }
+        }
         const m = db.multi()
           .set(`account:${id}`, JSON.stringify(account))
           .lPush(`${user.id}:accounts`, id);
