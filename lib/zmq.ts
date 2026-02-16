@@ -1,6 +1,7 @@
 import net from "node:net";
 import config from "$config";
 import { btcNetwork } from "$lib/esplora";
+import { refreshArkWallet } from "$lib/ark";
 import { err, l, warn } from "$lib/logging";
 import { processWatchedTx } from "$lib/payments";
 import { Transaction } from "@scure/btc-signer";
@@ -116,6 +117,8 @@ const handleRawBlock = async (raw: Uint8Array) => {
       warn("zmq block tx decode failed", i, e.message);
     }
   }
+
+  refreshArkWallet().catch(() => {});
 };
 
 // ZMTP 3.0 NULL protocol

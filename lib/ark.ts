@@ -24,6 +24,8 @@ const getWallet = async () => {
 };
 
 let refreshing = false;
+let lastRefresh = 0;
+const REFRESH_COOLDOWN = 30_000;
 const failedBoardingOutpoints = new Set<string>();
 
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string) =>
@@ -34,10 +36,12 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string) =>
     ),
   ]);
 
-export const refreshArkWallet = async () => {
-  if (refreshing) return;
+export const refreshArkWallet = async (force = false) => {
+  const now = Date.now();
+  if (refreshing || (!force && now - lastRefresh < REFRESH_COOLDOWN)) return;
   try {
     refreshing = true;
+    lastRefresh = now;
     const w = await getWallet();
     const balance = await w.getBalance();
     l(
@@ -122,18 +126,25 @@ export const refreshArkWallet = async () => {
   }
 };
 
-// Check every 2 minutes
-setInterval(refreshArkWallet, 2 * 60 * 1000);
-// Initial check after 30s startup delay
+// Initial check after 30s startup delay; ongoing checks triggered by ZMQ blocks
 setTimeout(refreshArkWallet, 30_000);
 
 export const sendArk = async (address: string, amount: number) => {
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("Ark send timed out")), 45000),
+    setTimeout(() => reject(new Error("Ark send timed out")), 60000),
   );
   const send = async () => {
     const w = await getWallet();
-    return w.sendBitcoin({ address, amount });
+    try {
+      return await w.sendBitcoin({ address, amount });
+    } catch (e: any) {
+      if (/insufficient funds/i.test(e.message)) {
+        l("ark send got insufficient funds, refreshing wallet and retrying");
+        await refreshArkWallet(true);
+        return w.sendBitcoin({ address, amount });
+      }
+      throw e;
+    }
   };
   return Promise.race([send(), timeout]);
 };
