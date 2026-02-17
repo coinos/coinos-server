@@ -959,7 +959,7 @@ export default {
   async updateAccount(req, res) {
     const { id } = req.params;
     const { id: uid } = req.user;
-    const { name, autowithdraw, threshold, reserve, destination, currency } =
+    const { name, autowithdraw, threshold, reserve, destination, currency, fingerprint, pubkey } =
       req.body;
 
     const pos = await db.lPos(`${uid}:accounts`, id);
@@ -972,7 +972,24 @@ export default {
     if (reserve !== undefined) account.reserve = reserve;
     if (destination !== undefined) account.destination = destination.trim();
     if (currency !== undefined) account.currency = currency;
+
+    let needsImport = false;
+    if (fingerprint !== undefined && pubkey !== undefined) {
+      account.fingerprint = fingerprint;
+      account.pubkey = pubkey;
+      account.importedAt = null;
+      needsImport = true;
+    }
+
     await s(`account:${id}`, account);
+
+    if (needsImport) {
+      importAccountHistory(account).then(() => {
+        emit(uid, "payment", { aid: id, type: "import" });
+      }).catch((e) =>
+        console.error("importAccountHistory failed:", e.message),
+      );
+    }
 
     res.send(account);
   },
