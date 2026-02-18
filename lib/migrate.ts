@@ -4,6 +4,8 @@ import { l, warn } from "$lib/logging";
 import {
   createBalanceAccount,
   createCreditAccounts,
+  createFundAccount,
+  tbFundCredit,
   tbSetBalance,
   tbSetPending,
   tbSetCredit,
@@ -173,6 +175,37 @@ export const migrateAutowithdraw = async () => {
 
   await db.set("autowithdraw:migrated", Date.now().toString());
   l(`Migrated autowithdraw to ${count} accounts`);
+  return count;
+};
+
+export const migrateFundsToTB = async () => {
+  const migrated = await db.get("tb:funds-migrated");
+  if (migrated) return 0;
+
+  let count = 0;
+
+  for await (const k of scan("fund:*")) {
+    try {
+      // Skip sub-keys like fund:name:payments, fund:name:managers, fund:limit
+      const parts = k.split(":");
+      if (parts.length !== 2) continue;
+      const name = parts[1];
+      if (name === "limit") continue;
+
+      const keyType = await db.type(k);
+      if (keyType !== "string") continue;
+
+      const balance = Number.parseInt((await db.get(k)) || "0");
+      await createFundAccount(name);
+      if (balance > 0) await tbFundCredit(name, balance);
+      count++;
+    } catch (e) {
+      warn("failed to migrate fund", k, e.message);
+    }
+  }
+
+  await db.set("tb:funds-migrated", Date.now().toString());
+  l(`Migrated ${count} funds to TigerBeetle`);
   return count;
 };
 

@@ -6,6 +6,7 @@ import {
   AccountFlags,
   TransferFlags,
 } from "tigerbeetle-node";
+import { createHash } from "crypto";
 
 let client: any;
 
@@ -55,6 +56,11 @@ function pendingId(aid: string): bigint {
 function creditId(uid: string, type: string): bigint {
   const ledger = BigInt(creditLedger[type] || 0);
   return uuidToBigInt(uid) ^ (ledger << 64n);
+}
+
+function fundAccountId(name: string): bigint {
+  const hash = createHash("sha256").update(`fund:${name}`).digest("hex");
+  return BigInt(`0x${hash.slice(0, 32)}`) ^ (6n << 64n);
 }
 
 function u128(n: bigint): bigint {
@@ -591,19 +597,95 @@ export async function tbSetCredit(uid: string, type: string, target: number) {
   }
 }
 
-// Debit from a fund:* key (Redis only, no credits)
-export async function fundDebit(
-  fundKey: string,
+export async function createFundAccount(name: string) {
+  const accounts = [
+    {
+      id: u128(fundAccountId(name)),
+      ledger: LEDGER_SATS,
+      code: 1,
+      flags: AccountFlags.debits_must_not_exceed_credits,
+      debits_pending: 0n,
+      debits_posted: 0n,
+      credits_pending: 0n,
+      credits_posted: 0n,
+      user_data_128: 0n,
+      user_data_64: 0n,
+      user_data_32: 0,
+      reserved: 0,
+      timestamp: 0n,
+    },
+  ];
+
+  const results = await client.createAccounts(accounts);
+  for (const r of results) {
+    if (r.result !== CreateAccountError.exists) {
+      warn("TB fund account creation:", r.index, r.result);
+    }
+  }
+}
+
+export async function tbFundCredit(name: string, amount: number) {
+  await createFundAccount(name);
+  const transfers = [
+    {
+      id: nextTransferId(),
+      debit_account_id: u128(HOUSE_SATS),
+      credit_account_id: u128(fundAccountId(name)),
+      amount: BigInt(amount) * MSATS,
+      pending_id: 0n,
+      user_data_128: 0n,
+      user_data_64: 0n,
+      user_data_32: 0,
+      timeout: 0,
+      ledger: LEDGER_SATS,
+      code: 1,
+      flags: 0,
+      timestamp: 0n,
+    },
+  ];
+
+  const results = await client.createTransfers(transfers);
+  for (const r of results) {
+    warn("TB fund credit transfer error:", r.index, r.result);
+  }
+}
+
+export async function tbFundDebit(
+  name: string,
   amount: number,
   errMsg: string,
 ): Promise<any> {
-  const { db } = await import("$lib/db");
-  const bal = Number.parseInt((await db.get(fundKey)) || "0");
-  if (bal < amount) {
+  const transfers = [
+    {
+      id: nextTransferId(),
+      debit_account_id: u128(fundAccountId(name)),
+      credit_account_id: u128(HOUSE_SATS),
+      amount: BigInt(amount) * MSATS,
+      pending_id: 0n,
+      user_data_128: 0n,
+      user_data_64: 0n,
+      user_data_32: 0,
+      timeout: 0,
+      ledger: LEDGER_SATS,
+      code: 1,
+      flags: 0,
+      timestamp: 0n,
+    },
+  ];
+
+  const results = await client.createTransfers(transfers);
+  if (results.length > 0) {
+    const account = await getAccount(fundAccountId(name));
+    const bal = accountBalance(account);
     return { err: `${errMsg} ⚡️${bal} / ${amount}` };
   }
-  await db.decrBy(fundKey, amount);
   return 0;
+}
+
+export async function getFundBalance(name: string): Promise<number | null> {
+  const account = await getAccount(fundAccountId(name));
+  if (!account) return null;
+  return accountBalance(account);
 }
 
 // Migration helper: multiply existing balance by MULTIPLIER to convert sats→microsats

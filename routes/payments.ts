@@ -24,7 +24,7 @@ import {
   sendOnchain,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
-import { fundDebit, getBalance, getCredit, tbConfirm, tbCredit } from "$lib/tb";
+import { getBalance, getCredit, getFundBalance, tbConfirm, tbCredit, tbFundCredit, tbFundDebit } from "$lib/tb";
 import { PaymentType } from "$lib/types";
 import {
   SATS,
@@ -109,13 +109,13 @@ export default {
           }
         } else if (fund) {
           p = await debit({
-            hash,
+            hash: v4(),
             amount,
             memo: fund,
             user,
             type: PaymentType.fund,
           });
-          await db.incrBy(`fund:${fund}`, amount);
+          await tbFundCredit(fund, amount);
           await db.lPush(`fund:${fund}:payments`, p.id);
           l("funded fund", fund);
         }
@@ -277,8 +277,8 @@ export default {
     const {
       params: { id },
     } = req;
-    const amount = await g(`fund:${id}`);
-    if (typeof amount === "undefined" || amount === null)
+    const amount = await getFundBalance(id);
+    if (amount === null)
       return bail(res, "fund not found");
     let payments = (await db.lRange(`fund:${id}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map((hash) => gf(`payment:${hash}`)));
@@ -336,7 +336,7 @@ export default {
     } = req;
     try {
       amount = Number.parseInt(amount);
-      if (amount < 0) fail("Invalid amount");
+      if (amount <= 0) fail("Invalid amount");
 
       const rates = await g("rates");
 
@@ -370,7 +370,7 @@ export default {
           type: PaymentType.fund,
         });
 
-        await db.incrBy(`fund:${id}`, amount);
+        await tbFundCredit(id, amount);
         await db.lPush(`fund:${id}:payments`, pid);
         l("funded fund", id);
       }
@@ -378,7 +378,7 @@ export default {
       const managers = await db.sMembers(`fund:${id}:managers`);
       if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
 
-      const result: any = await fundDebit(`fund:${id}`, amount, "Insufficient funds");
+      const result: any = await tbFundDebit(id, amount, "Insufficient funds");
       if (result.err) fail(result.err);
 
       const payment = await credit({
