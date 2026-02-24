@@ -1,7 +1,14 @@
 import { SquareEnvironment } from "square";
 
 export default {
-  archive: "redis://archive",
+  ark: {
+    network: "regtest",
+    esploraUrl: "http://cs:3000",
+    arkServerUrl: "http://arkd:7070",
+    arkServerPublicKey: "",
+    arkPrivateKey: "",
+  },
+  archive: "redis://arc",
   db: "redis://db",
   nostr: "ws://nostr:8080",
   relays: [
@@ -20,10 +27,11 @@ export default {
     password: "123",
     network: "regtest",
     port: 18443,
+    esploraUrl: "http://cs:3000",
     zmq: {
       rawtx: 18507,
-      rawblock: 18506
-    }
+      rawblock: 18506,
+    },
   },
   liquid: {
     host: "lq",
@@ -49,4 +57,5 @@ export default {
     url: "https://connect.squareupsandbox.com/",
     scopes: ["MERCHANT_PROFILE_READ", "ORDERS_READ", "PAYMENTS_READ"],
   },
+  tigerbeetle: { cluster_id: 0n, replica_addresses: ["tb:3000"] },
 };
