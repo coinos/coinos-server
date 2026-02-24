@@ -166,7 +166,7 @@ export const verifyArkVtxo = async (hash: string) => {
   const words = new Uint8Array(bech32m.fromWords(decoded.words));
   const vtxoHex = Buffer.from(words.slice(33, 65)).toString("hex");
   const r = await fetch(
-    `http://arkd:7070/v1/indexer/vtxos?scripts=5120${vtxoHex}&spendable_only=true`,
+    `${config.ark.arkServerUrl}/v1/indexer/vtxos?scripts=5120${vtxoHex}&spendable_only=true`,
   );
   const { vtxos } = await r.json();
   return vtxos?.some((v: any) => v.outpoint?.txid === hash) ?? false;
