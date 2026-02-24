@@ -120,12 +120,8 @@ Bun.serve({
 
             await track(ws, data);
           } catch (e) {
-            if (e.message.includes("not found"))
-              ws.send(JSON.stringify({ type: "logout" }));
-            setTimeout(
-              () => ws?.close(code, `closing due to error ${e.message}`),
-              1000,
-            );
+            if (e.message.includes("not found")) ws.send(JSON.stringify({ type: "logout" }));
+            setTimeout(() => ws?.close(code, `closing due to error ${e.message}`), 1000);
           }
           break;
         case "token":
@@ -139,7 +135,7 @@ Bun.serve({
           subscriptions.push({ invoice: data, ws });
           break;
         default:
-          // warn("received socket message of unknown type", type, data);
+        // warn("received socket message of unknown type", type, data);
       }
     },
     open(ws: any) {
@@ -158,8 +154,7 @@ Bun.serve({
         }
 
         let i;
-        ~(i = subscriptions.findIndex((s) => s.ws.id === id)) &&
-          subscriptions.splice(i, 1);
+        ~(i = subscriptions.findIndex((s) => s.ws.id === id)) && subscriptions.splice(i, 1);
 
         if (all[id]) delete all[id];
       } catch (e) {

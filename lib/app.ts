@@ -149,8 +149,6 @@ app.setErrorHandler((error, _, reply) => {
   }
 });
 
-app.setNotFoundHandler((_, reply) =>
-  reply.code(404).type("text/html").send("Not Found"),
-);
+app.setNotFoundHandler((_, reply) => reply.code(404).type("text/html").send("Not Found"));
 
 export default app;

@@ -24,9 +24,7 @@ const exec = async (cmd: string): Promise<string> => {
 
 const clExec = async (container: string, ...args: string[]): Promise<any> => {
   const escaped = args.map((a) => `'${a.replace(/'/g, "'\\''")}'`).join(" ");
-  const result = await exec(
-    `docker exec ${container} lightning-cli ${escaped}`,
-  );
+  const result = await exec(`docker exec ${container} lightning-cli ${escaped}`);
   try {
     return JSON.parse(result);
   } catch {
@@ -35,18 +33,11 @@ const clExec = async (container: string, ...args: string[]): Promise<any> => {
 };
 
 const mine = async (n: number) => {
-  const addr = await exec(
-    "docker exec bc bitcoin-cli -regtest -rpcwallet=coinos getnewaddress",
-  );
-  await exec(
-    `docker exec bc bitcoin-cli -regtest generatetoaddress ${n} ${addr}`,
-  );
+  const addr = await exec("docker exec bc bitcoin-cli -regtest -rpcwallet=coinos getnewaddress");
+  await exec(`docker exec bc bitcoin-cli -regtest generatetoaddress ${n} ${addr}`);
 };
 
-const waitFor = async <T>(
-  fn: () => Promise<T>,
-  timeout = 30000,
-): Promise<T> => {
+const waitFor = async <T>(fn: () => Promise<T>, timeout = 30000): Promise<T> => {
   const start = Date.now();
   let lastError: any;
   while (Date.now() - start < timeout) {
@@ -185,11 +176,7 @@ describe("BOLT12 autowithdraw", () => {
 
     // Send 100k sats from funder to withdrawer (triggers autowithdraw)
     const sendAmount = 100_000;
-    const sendResult = await sendInternal(
-      funderToken,
-      withdrawerName,
-      sendAmount,
-    );
+    const sendResult = await sendInternal(funderToken, withdrawerName, sendAmount);
     expect(sendResult.amount).toBe(-sendAmount);
 
     // Wait for autowithdraw to complete — withdrawer balance should drop near 0
@@ -210,9 +197,7 @@ describe("BOLT12 autowithdraw", () => {
 
     // Check payment records on withdrawer
     const payments = await getPayments(withdrawerToken);
-    const withdrawal = payments.payments?.find(
-      (p: any) => p.amount < 0 && p.type === "lightning",
-    );
+    const withdrawal = payments.payments?.find((p: any) => p.amount < 0 && p.type === "lightning");
     expect(withdrawal).toBeTruthy();
     expect(withdrawal.fee).toBeGreaterThanOrEqual(0);
   }, 30000);
@@ -259,9 +244,7 @@ describe("BOLT12 autowithdraw", () => {
 
     // Check payment record has routing fee
     const payments = await getPayments(withdrawerToken);
-    const withdrawal = payments.payments?.find(
-      (p: any) => p.amount < 0 && p.type === "lightning",
-    );
+    const withdrawal = payments.payments?.find((p: any) => p.amount < 0 && p.type === "lightning");
     expect(withdrawal).toBeTruthy();
     // Multi-hop should have non-zero routing fee
     expect(withdrawal.fee).toBeGreaterThan(0);
@@ -290,9 +273,7 @@ describe("BOLT12 autowithdraw", () => {
 
     // Get the withdrawal payment record
     const payments = await getPayments(withdrawerToken);
-    const withdrawal = payments.payments?.find(
-      (p: any) => p.amount < 0 && p.type === "lightning",
-    );
+    const withdrawal = payments.payments?.find((p: any) => p.amount < 0 && p.type === "lightning");
     expect(withdrawal).toBeTruthy();
 
     // For a direct peer, actual routing fee should be 0 or very small

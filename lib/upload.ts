@@ -16,15 +16,10 @@ export default async (req, res) => {
 
     const [format, ext] = (await fileTypeFromBuffer(buf)).mime.split("/");
 
-    if (format !== "image" && !["jpg", "jpeg", "png"].includes(ext))
-      fail("unsupported file type");
+    if (format !== "image" && !["jpg", "jpeg", "png"].includes(ext)) fail("unsupported file type");
 
     const w = type === "banner" ? 1920 : 240;
-    buf = await sharp(buf, { failOnError: false })
-      .rotate()
-      .resize(w)
-      .webp()
-      .toBuffer();
+    buf = await sharp(buf, { failOnError: false }).rotate().resize(w).webp().toBuffer();
 
     const hash = createHash("sha256").update(buf).digest("hex");
 

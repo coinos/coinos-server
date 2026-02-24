@@ -23,17 +23,14 @@ const TX_OPTS = {
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
-const reverseHex = (buf: Uint8Array) =>
-  bytesToHex(Uint8Array.from(buf).reverse());
+const reverseHex = (buf: Uint8Array) => bytesToHex(Uint8Array.from(buf).reverse());
 
 const readVarInt = (data: Uint8Array, offset: number) => {
   const first = data[offset];
   if (first < 0xfd) return { value: first, size: 1 };
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  if (first === 0xfd)
-    return { value: view.getUint16(offset + 1, true), size: 3 };
-  if (first === 0xfe)
-    return { value: view.getUint32(offset + 1, true), size: 5 };
+  if (first === 0xfd) return { value: view.getUint16(offset + 1, true), size: 3 };
+  if (first === 0xfe) return { value: view.getUint32(offset + 1, true), size: 5 };
   return { value: Number(view.getBigUint64(offset + 1, true)), size: 9 };
 };
 
@@ -150,10 +147,7 @@ const frame = (flags: number, body: Uint8Array) => {
 };
 
 const command = (name: string, props: Record<string, string> = {}) => {
-  const parts: Uint8Array[] = [
-    Uint8Array.of(name.length),
-    enc.encode(name),
-  ];
+  const parts: Uint8Array[] = [Uint8Array.of(name.length), enc.encode(name)];
   for (const [k, v] of Object.entries(props)) {
     const kb = enc.encode(k);
     const vb = enc.encode(v);
@@ -169,23 +163,14 @@ const subscribeCommand = (topic: string) => {
   const t = enc.encode(topic);
   return frame(
     0x04,
-    concatBytes(
-      Uint8Array.of(9),
-      enc.encode("SUBSCRIBE"),
-      Uint8Array.of(t.length),
-      t,
-    ),
+    concatBytes(Uint8Array.of(9), enc.encode("SUBSCRIBE"), Uint8Array.of(t.length), t),
   );
 };
 
 const legacySubscribe = (topic: string) =>
   frame(0x00, concatBytes(Uint8Array.of(1), enc.encode(topic)));
 
-const startSub = (
-  url: string,
-  topic: string,
-  onMessage: (b: Uint8Array) => void,
-) =>
+const startSub = (url: string, topic: string, onMessage: (b: Uint8Array) => void) =>
   new Promise<void>((resolve) => {
     const [host, port] = url.replace("tcp://", "").split(":");
     const socket = net.connect({ host, port: Number(port) });
@@ -212,11 +197,7 @@ const startSub = (
         let header: number;
         if (flags & 0x02) {
           if (buffer.length < 9) return;
-          const view = new DataView(
-            buffer.buffer,
-            buffer.byteOffset,
-            buffer.byteLength,
-          );
+          const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
           size = Number(view.getBigUint64(1));
           header = 9;
         } else {
@@ -262,11 +243,7 @@ export const startZmq = async () => {
   if (process.env.DISABLE_ZMQ === "1") return;
   l("zmq connecting", RAWTX_URL, RAWBLOCK_URL);
 
-  const retry = async (
-    url: string,
-    topic: string,
-    handler: (b: Uint8Array) => Promise<void>,
-  ) => {
+  const retry = async (url: string, topic: string, handler: (b: Uint8Array) => Promise<void>) => {
     let delay = 1000;
     const maxDelay = 30000;
     while (true) {

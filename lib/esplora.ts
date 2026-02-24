@@ -91,8 +91,7 @@ export const getTxHex = async (txid: string) => {
 // Address derivation
 
 const hdVersionsForKey = (pubkey: string) => {
-  if (pubkey.startsWith("tpub") || pubkey.startsWith("tprv"))
-    return REGTEST_VERSIONS;
+  if (pubkey.startsWith("tpub") || pubkey.startsWith("tprv")) return REGTEST_VERSIONS;
   // xpub/xprv use default BITCOIN_VERSIONS (mainnet) — pass undefined
   return undefined;
 };
@@ -136,11 +135,7 @@ export const parseDescriptor = (desc: string) => {
   return { fingerprint: match[1], pubkey: match[2] };
 };
 
-export const findLastUsedIndex = async (
-  pubkey: string,
-  fingerprint: string,
-  maxScan = 100,
-) => {
+export const findLastUsedIndex = async (pubkey: string, fingerprint: string, maxScan = 100) => {
   let lastUsed = -1;
   for (let i = 0; i < maxScan; i++) {
     const { address } = deriveAddress(pubkey, fingerprint, i, false);

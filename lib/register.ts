@@ -19,8 +19,7 @@ export default async (user, ip) => {
   const reserved = ["ecash"];
   if (!username) fail("Username required");
   username = username.toLowerCase().replace(/\s/g, "");
-  if (!valid.test(username))
-    fail("Usernames can only have letters and numbers");
+  if (!valid.test(username)) fail("Usernames can only have letters and numbers");
   if (reserved.includes(username)) fail("Invalid username");
   if (username.includes("undefined")) fail("Invalid username");
 
@@ -41,7 +40,9 @@ export default async (user, ip) => {
   if (config.ipregistry) {
     try {
       const {
-        location: { country: { code } },
+        location: {
+          country: { code },
+        },
       }: any = await got(
         `https://api.ipregistry.co/${ip}?key=${config.ipregistry}&fields=location.country.code`,
       ).json();

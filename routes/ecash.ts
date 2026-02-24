@@ -104,17 +104,7 @@ export default {
       const { lightning: type } = PaymentType;
       if (user.username !== "mint") fail("unauthorized");
       const { id: uid, currency } = user;
-      const ourfee = await tbDebit(
-        uid,
-        uid,
-        type,
-        amount || 0,
-        0,
-        0,
-        0,
-        0,
-        "Insufficient funds",
-      );
+      const ourfee = await tbDebit(uid, uid, type, amount || 0, 0, 0, 0, 0, "Insufficient funds");
 
       const rates = await g("rates");
       const rate = rates[currency];

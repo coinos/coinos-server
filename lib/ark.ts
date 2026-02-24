@@ -2,13 +2,7 @@ import { EventSource } from "eventsource";
 if (!globalThis.EventSource) globalThis.EventSource = EventSource;
 
 import config from "$config";
-import {
-  SingleKey,
-  Wallet,
-  Ramps,
-  RestArkProvider,
-  VtxoManager,
-} from "@arkade-os/sdk";
+import { SingleKey, Wallet, Ramps, RestArkProvider, VtxoManager } from "@arkade-os/sdk";
 import { l, warn } from "$lib/logging";
 
 let wallet: any;
@@ -31,9 +25,7 @@ const failedBoardingOutpoints = new Set<string>();
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string) =>
   Promise.race([
     promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out`)), ms),
-    ),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms)),
   ]);
 
 export const refreshArkWallet = async (force = false) => {
@@ -58,11 +50,7 @@ export const refreshArkWallet = async (force = false) => {
     // Recover swept/expired VTXOs
     if (balance.recoverable > 0) {
       try {
-        const txid = await withTimeout(
-          manager.recoverVtxos(),
-          60_000,
-          "ark recovery",
-        );
+        const txid = await withTimeout(manager.recoverVtxos(), 60_000, "ark recovery");
         l("ark recovered swept vtxos, txid:", txid);
       } catch (e: any) {
         warn("ark vtxo recovery failed:", e.message);
@@ -74,11 +62,7 @@ export const refreshArkWallet = async (force = false) => {
       const expiring = await manager.getExpiringVtxos();
       if (expiring.length > 0) {
         l("ark renewing", expiring.length, "expiring vtxos");
-        const txid = await withTimeout(
-          manager.renewVtxos(),
-          60_000,
-          "ark renewal",
-        );
+        const txid = await withTimeout(manager.renewVtxos(), 60_000, "ark renewal");
         l("ark renewed vtxos, txid:", txid);
       }
     } catch (e: any) {
@@ -98,10 +82,7 @@ export const refreshArkWallet = async (force = false) => {
       const outpointKey = (u: any) => `${u.txid}:${u.vout}`;
       const sorted = [...confirmed]
         .filter((u: any) => !failedBoardingOutpoints.has(outpointKey(u)))
-        .sort(
-          (a: any, b: any) =>
-            (b.status?.block_height || 0) - (a.status?.block_height || 0),
-        );
+        .sort((a: any, b: any) => (b.status?.block_height || 0) - (a.status?.block_height || 0));
 
       for (const utxo of sorted) {
         try {

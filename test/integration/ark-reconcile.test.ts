@@ -126,9 +126,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [
-          { arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() },
-        ],
+        transactions: [{ arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() }],
         balance: 13000,
       }),
     });
@@ -138,9 +136,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [
-          { arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() },
-        ],
+        transactions: [{ arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() }],
         balance: 13000,
       }),
     });
@@ -192,9 +188,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [
-          { arkTxid: hash, amount: 5000, settled: true, createdAt: Date.now() },
-        ],
+        transactions: [{ arkTxid: hash, amount: 5000, settled: true, createdAt: Date.now() }],
         balance: 5000,
       }),
     });
@@ -204,9 +198,7 @@ describe("ark sync reconciliation", () => {
 
     // Sum is now 5000 (13000 - 13000 + 5000), matches balance=5000
     // No reconciliation needed
-    expect(
-      result.payments.filter((p: any) => p.memo === "expired"),
-    ).toHaveLength(0);
+    expect(result.payments.filter((p: any) => p.memo === "expired")).toHaveLength(0);
   });
 
   test("partial expiry creates correct debit", async () => {
@@ -240,9 +232,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [
-          { arkTxid: hash, amount: 2000, settled: true, createdAt: Date.now() },
-        ],
+        transactions: [{ arkTxid: hash, amount: 2000, settled: true, createdAt: Date.now() }],
         balance: 4000, // previous 2000 + new 2000
       }),
     });

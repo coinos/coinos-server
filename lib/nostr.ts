@@ -12,13 +12,9 @@ import { Relay } from "nostr-tools/relay";
 export const EX = 60 * 60 * 24;
 const coinos = await Relay.connect(config.nostr);
 
-export const serverSecret = bytesToHex(
-  nip19.decode(config.nostrKey).data as Uint8Array,
-);
+export const serverSecret = bytesToHex(nip19.decode(config.nostrKey).data as Uint8Array);
 
-export const serverSecret2 = bytesToHex(
-  nip19.decode(config.nostrKey2).data as Uint8Array,
-);
+export const serverSecret2 = bytesToHex(nip19.decode(config.nostrKey2).data as Uint8Array);
 
 export const serverPubkey = getPublicKey(hexToBytes(serverSecret));
 export const serverPubkey2 = getPublicKey(hexToBytes(serverSecret2));
@@ -54,29 +50,21 @@ export async function handleZap(invoice, sender = undefined) {
       fail("No tags found");
     }
 
-    const ptags = zapreq.tags.filter(
-      (t) => t?.length && t.length >= 2 && t[0] === "p",
-    );
+    const ptags = zapreq.tags.filter((t) => t?.length && t.length >= 2 && t[0] === "p");
 
     if (ptags.length !== 1) {
       fail("None or multiple p tags found");
     }
 
-    const etags = zapreq.tags.filter(
-      (t) => t?.length && t.length >= 2 && t[0] === "e",
-    );
+    const etags = zapreq.tags.filter((t) => t?.length && t.length >= 2 && t[0] === "e");
 
     if (!(etags.length === 0 || etags.length === 1)) {
       fail("Expected none or 1 e tags");
     }
 
-    const atags = zapreq.tags.filter(
-      (t) => t?.length && t.length >= 2 && t[0] === "a",
-    );
+    const atags = zapreq.tags.filter((t) => t?.length && t.length >= 2 && t[0] === "a");
 
-    const relays_tag = zapreq.tags.find(
-      (t) => t?.length && t.length >= 2 && t[0] === "relays",
-    );
+    const relays_tag = zapreq.tags.find((t) => t?.length && t.length >= 2 && t[0] === "relays");
 
     if (!relays_tag) {
       fail("No relays tag found");
@@ -168,8 +156,7 @@ export const getCount = async (pubkey) => {
     if (follows === null) {
       const result = await get({ authors: [pubkey], kinds: [3] });
       follows = result ? result.tags.filter((t) => t[0] === "p").length : 0;
-      if (follows?.length)
-        await db.set(`${pubkey}:follows:n`, JSON.stringify(follows), { EX });
+      if (follows?.length) await db.set(`${pubkey}:follows:n`, JSON.stringify(follows), { EX });
     }
 
     const k = `${pubkey}:followers:n`;

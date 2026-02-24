@@ -9,11 +9,11 @@
 <html>
   <body>
     {{#if payment.items}}
-      <div style="margin-bottom: 10px">
-        {{#each payment.items}}
-          <div>{{this.quantity}} {{this.name}} {{this.totalFiat}}</div>
-        {{/each}}
-      </div>
+    <div style="margin-bottom: 10px">
+      {{#each payment.items}}
+      <div>{{this.quantity}} {{this.name}} {{this.totalFiat}}</div>
+      {{/each}}
+    </div>
     {{/if}}
 
     <div style="margin-bottom: 10px">
@@ -25,31 +25,25 @@
     </div>
 
     {{#if payment.memo}}
-      <div style="margin-bottom: 10px">
-        Memo: {{payment.memo}}
-      </div>
-      {{/if}}
+    <div style="margin-bottom: 10px">Memo: {{payment.memo}}</div>
+    {{/if}}
 
     <div style="margin-bottom: 10px">
       <a href="{{payment.link}}">{{payment.link}}</a>
     </div>
 
     {{#if withdrawal.amount}}
-      <div style="margin-bottom: 10px">
-        {{withdrawalTriggered}} {{withdrawal.amount}}
-      </div>
+    <div style="margin-bottom: 10px">{{withdrawalTriggered}} {{withdrawal.amount}}</div>
 
-      <div style="margin-bottom: 10px">
-        <a href="{{withdrawal.link}}">{{withdrawal.link}}</a>
-      </div>
+    <div style="margin-bottom: 10px">
+      <a href="{{withdrawal.link}}">{{withdrawal.link}}</a>
+    </div>
     {{else if withdrawal.failed}}
-      <div style="margin-bottom: 10px">
-        {{problemWithdrawing}}
-      </div>
+    <div style="margin-bottom: 10px">{{problemWithdrawing}}</div>
     {{/if}}
 
     <a href="{{payment.link}}">
-      <img src="https://coinos.io/images/logo.webp" style="width: 200px; margin-top: 20px;"/>
+      <img src="https://coinos.io/images/logo.webp" style="width: 200px; margin-top: 20px" />
     </a>
   </body>
 </html>

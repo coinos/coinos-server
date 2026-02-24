@@ -22,13 +22,16 @@ export function getHealthStatus() {
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`${label} timed out after ${ms}ms`)),
-      ms,
-    );
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
     promise.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (e) => { clearTimeout(timer); reject(e); },
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
     );
   });
 }
@@ -79,11 +82,7 @@ async function checkLightningHealth(): Promise<boolean> {
     const errorCode = e?.code ?? e?.errno ?? "unknown";
     const errorMsg = e?.message ?? String(e);
 
-    err(
-      `health check: FAILED after ${duration}ms`,
-      `code=${errorCode}`,
-      `error=${errorMsg}`,
-    );
+    err(`health check: FAILED after ${duration}ms`, `code=${errorCode}`, `error=${errorMsg}`);
 
     if (e instanceof LightningUnavailableError) {
       err("health check: lightning RPC socket unavailable");
@@ -102,18 +101,14 @@ export async function runHealthCheck() {
 
     if (healthy) {
       if (consecutiveFailures > 0) {
-        l(
-          `health check: recovered after ${consecutiveFailures} consecutive failures`,
-        );
+        l(`health check: recovered after ${consecutiveFailures} consecutive failures`);
       }
       consecutiveFailures = 0;
       lastSuccessTime = Date.now();
       lastFailureReason = "";
     } else {
       consecutiveFailures++;
-      warn(
-        `health check: failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`,
-      );
+      warn(`health check: failure ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}`);
 
       if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
         err(

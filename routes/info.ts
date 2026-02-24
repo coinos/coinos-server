@@ -23,15 +23,10 @@ export default {
     // }
 
     const funds = await ln.listfunds();
-    const lnchannel = parseInt(
-      funds.channels.reduce((a, b) => a + b.channel_sat, 0),
-    );
+    const lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
     const lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
 
-    const cash = getDecodedToken(await g("cash")).proofs.reduce(
-      (a, b) => a + b.amount,
-      0,
-    );
+    const cash = getDecodedToken(await g("cash")).proofs.reduce((a, b) => a + b.amount, 0);
 
     const info = {
       cash,

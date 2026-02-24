@@ -27,9 +27,7 @@ const connect = async () => {
 
       try {
         rates.IRT = (
-          (await got(
-            "https://api.nobitex.ir/v2/orderbook/BTCIRT",
-          ).json()) as any
+          (await got("https://api.nobitex.ir/v2/orderbook/BTCIRT").json()) as any
         ).lastTradePrice;
       } catch (e) {}
 

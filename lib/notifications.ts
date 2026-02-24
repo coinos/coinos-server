@@ -12,11 +12,7 @@ import { finalizeEvent, nip04 } from "nostr-tools";
 import webpush from "web-push";
 
 if (config.vapid) {
-  webpush.setVapidDetails(
-    `mailto:${config.support}`,
-    config.vapid.pk,
-    config.vapid.sk,
-  );
+  webpush.setVapidDetails(`mailto:${config.support}`, config.vapid.pk, config.vapid.sk);
 }
 
 export const notify = async (p, user, withdrawal) => {
@@ -62,12 +58,10 @@ export const notify = async (p, user, withdrawal) => {
   };
 
   for (const s of subscriptions) {
-    webpush
-      .sendNotification(JSON.parse(s), JSON.stringify(payload))
-      .catch((e) => {
-        warn("sub failed", e.message);
-        db.sRem(`${user.id}:subscriptions`, s);
-      });
+    webpush.sendNotification(JSON.parse(s), JSON.stringify(payload)).catch((e) => {
+      warn("sub failed", e.message);
+      db.sRem(`${user.id}:subscriptions`, s);
+    });
   }
 
   if (config.mqtt) {

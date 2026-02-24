@@ -19,9 +19,7 @@ export default {
       query: { address },
     } = req;
     const [name, domain] = address.split("@");
-    const url = `https://${domain}/.well-known/lnurlp/${name
-      .toLowerCase()
-      .replace(/\s/g, "")}`;
+    const url = `https://${domain}/.well-known/lnurlp/${name.toLowerCase().replace(/\s/g, "")}`;
 
     try {
       const r = await got(url).json();
@@ -41,9 +39,7 @@ export default {
       query: { text },
     } = req;
     try {
-      const url = Buffer.from(
-        bech32.fromWords(bech32.decode(text, 20000).words),
-      ).toString();
+      const url = Buffer.from(bech32.fromWords(bech32.decode(text, 20000).words)).toString();
 
       const r = await got(url).json();
       res.send(r);
@@ -59,11 +55,7 @@ export default {
     } = req;
     try {
       const user = await getUser(
-        username
-          .replace("lightning:", "")
-          .replace(/\s/g, "")
-          .replace("=", "")
-          .toLowerCase(),
+        username.replace("lightning:", "").replace(/\s/g, "").replace("=", "").toLowerCase(),
       );
 
       if (!user) fail(`User ${username} not found`);
@@ -208,9 +200,8 @@ export default {
       ]);
 
       const id = v4();
-      
-      const total =
-        (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
+
+      const total = (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
 
       await s(`lnurl:${id}`, uid);
       if (total > 0) await s(`lnurl:${id}:invoice`, invoice.id);

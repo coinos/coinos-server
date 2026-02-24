@@ -42,12 +42,7 @@ export default {
     } catch (e) {
       console.trace();
       console.log(e);
-      err(
-        "problem generating invoice",
-        req.user?.username,
-        body.user?.username,
-        e.message,
-      );
+      err("problem generating invoice", req.user?.username, body.user?.username, e.message);
       bail(res, e.message);
     }
   },
@@ -84,9 +79,7 @@ export default {
   async list(req, res) {
     const { id } = req.user;
     let invoices = await db.lRange(`${id}:invoices`, 0, -1);
-    invoices = (await Promise.all(invoices.map((i) => getInvoice(i)))).filter(
-      Boolean,
-    );
+    invoices = (await Promise.all(invoices.map((i) => getInvoice(i)))).filter(Boolean);
     res.send(invoices);
   },
 
@@ -95,8 +88,7 @@ export default {
       const { address, message, type = "bitcoin" } = req.body;
       const node = rpc(config[type]);
 
-      if (config[type].walletpass)
-        await node.walletPassphrase(config[type].walletpass, 300);
+      if (config[type].walletpass) await node.walletPassphrase(config[type].walletpass, 300);
 
       const signature = await node.signMessage({ address, message });
       res.send({ signature });

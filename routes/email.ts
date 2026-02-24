@@ -40,9 +40,7 @@ export default {
               },
               Subject: {
                 Charset,
-                Data:
-                  body.subject ||
-                  `Support Request${username ? ` From ${username}` : ""}`,
+                Data: body.subject || `Support Request${username ? ` From ${username}` : ""}`,
               },
             },
             ReplyToAddresses: [email],

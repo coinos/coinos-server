@@ -24,18 +24,17 @@ import {
   sendOnchain,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
-import { getBalance, getCredit, getFundBalance, tbConfirm, tbCredit, tbFundCredit, tbFundDebit } from "$lib/tb";
-import { PaymentType } from "$lib/types";
 import {
-  SATS,
-  bail,
-  fail,
-  fields,
-  getInvoice,
-  getPayment,
-  getUser,
-  sats,
-} from "$lib/utils";
+  getBalance,
+  getCredit,
+  getFundBalance,
+  tbConfirm,
+  tbCredit,
+  tbFundCredit,
+  tbFundDebit,
+} from "$lib/tb";
+import { PaymentType } from "$lib/types";
+import { SATS, bail, fail, fields, getInvoice, getPayment, getUser, sats } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import got from "got";
 import { v4 } from "uuid";
@@ -54,8 +53,7 @@ export default {
     try {
       if (typeof amount !== "undefined") {
         amount = Number.parseInt(amount);
-        if (amount < 0 || amount > SATS || Number.isNaN(amount))
-          fail("Invalid amount");
+        if (amount < 0 || amount > SATS || Number.isNaN(amount)) fail("Invalid amount");
       }
 
       await requirePin({ body, user });
@@ -152,8 +150,7 @@ export default {
     } else if (limit) {
       const needed = Math.max(0, limit + offset - payments.length);
       if (needed > 0) {
-        const archived =
-          (await archive.lRange(listKey, 0, limit + offset - 1)) || [];
+        const archived = (await archive.lRange(listKey, 0, limit + offset - 1)) || [];
         payments = [...new Set([...payments, ...archived])];
       }
     }
@@ -169,8 +166,7 @@ export default {
           }
           if (received && p.amount < 0) return;
           if (p.created < start || p.created > end) return;
-          if (p.type === PaymentType.internal)
-            p.with = await getUser(p.ref, fields);
+          if (p.type === PaymentType.internal) p.with = await getUser(p.ref, fields);
           return p;
         }),
       )
@@ -219,8 +215,7 @@ export default {
         params: { hash },
       } = req;
       const p = await getPayment(hash);
-      if (p?.type === PaymentType.internal)
-        p.with = await getUser(p.ref, fields);
+      if (p?.type === PaymentType.internal) p.with = await getUser(p.ref, fields);
       if (p?.type === PaymentType.fund) p.with = await getUser(p.uid, fields);
       res.send(p);
     } catch (e) {
@@ -252,8 +247,7 @@ export default {
       let payee;
 
       if (decoded.type.includes("bolt12")) {
-        ({ invoice_amount_msat: amount_msat, invoice_node_id: payee } =
-          decoded);
+        ({ invoice_amount_msat: amount_msat, invoice_node_id: payee } = decoded);
       } else ({ amount_msat, payee } = decoded);
 
       const node = nodes.find((n) => n.nodeid === payee);
@@ -278,14 +272,11 @@ export default {
       params: { id },
     } = req;
     const amount = await getFundBalance(id);
-    if (amount === null)
-      return bail(res, "fund not found");
+    if (amount === null) return bail(res, "fund not found");
     let payments = (await db.lRange(`fund:${id}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map((hash) => gf(`payment:${hash}`)));
 
-    await Promise.all(
-      payments.map(async (p: any) => (p.user = await getUser(p.uid, fields))),
-    );
+    await Promise.all(payments.map(async (p: any) => (p.user = await getUser(p.uid, fields))));
 
     payments = payments.filter((p) => p);
 
@@ -404,9 +395,9 @@ export default {
 
     const ids = await db.sMembers(`fund:${name}:managers`);
 
-    const managers = (await Promise.all(
-      ids.map(async (id) => await getUser(id, fields)),
-    )).filter(Boolean);
+    const managers = (await Promise.all(ids.map(async (id) => await getUser(id, fields)))).filter(
+      Boolean,
+    );
 
     res.send(managers);
   },
@@ -432,9 +423,7 @@ export default {
 
     const ids = await db.sMembers(k);
     if (!managers.length)
-      managers = await Promise.all(
-        ids.map(async (id) => await getUser(id, fields)),
-      );
+      managers = await Promise.all(ids.map(async (id) => await getUser(id, fields)));
 
     res.send(managers);
   },
@@ -455,9 +444,7 @@ export default {
       await db.sRem(k, uid);
 
       const ids = await db.sMembers(k);
-      managers = await Promise.all(
-        ids.map(async (id) => await getUser(id, fields)),
-      );
+      managers = await Promise.all(ids.map(async (id) => await getUser(id, fields)));
 
       res.send(managers);
     } catch (e) {}
@@ -535,8 +522,7 @@ export default {
     const hookSecret = secret || headerSecret;
 
     try {
-      if (config.txWebhookSecret && hookSecret !== config.txWebhookSecret)
-        fail("unauthorized");
+      if (config.txWebhookSecret && hookSecret !== config.txWebhookSecret) fail("unauthorized");
       if (!txid) fail("missing txid");
 
       const tx = await getTx(txid);
@@ -554,13 +540,7 @@ export default {
     try {
       res.send(await build({ ...body, user }));
     } catch (e) {
-      warn(
-        "problem estimating fee",
-        e.message,
-        user.username,
-        body.amount,
-        body.address,
-      );
+      warn("problem estimating fee", e.message, user.username, body.amount, body.address);
       let msg = e.message;
       if (msg.includes("500")) msg = "";
       bail(res, `Failed to prepare transaction ${msg}`);
@@ -609,10 +589,7 @@ export default {
 
       const { username } = user;
 
-      mqtt.publish(
-        username,
-        `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`,
-      );
+      mqtt.publish(username, `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`);
 
       res.send({ ok: true });
     } catch (e) {
@@ -637,8 +614,7 @@ export default {
       ).json()) as any;
 
       const memo = metadata["text/plain"] || "";
-      if (amount * 1000 < minSendable || amount * 1000 > maxSendable)
-        fail("amount out of range");
+      if (amount * 1000 < minSendable || amount * 1000 > maxSendable) fail("amount out of range");
 
       const r: any = await got(`${callback}?amount=${amount * 1000}`).json();
       if (r.reason) fail(r.reason);
@@ -682,9 +658,7 @@ export default {
       const { tx, type } = await decode(p.hex);
       const node = rpc(config[type]);
 
-      const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) =>
-        r.json(),
-      );
+      const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
 
       const outputs = [];
       for (const {
@@ -706,8 +680,7 @@ export default {
       const diff = sats(newTx.fee) - p.fee;
       if (diff < 0) fail("fee must increase");
 
-      if (config[type].walletpass)
-        await node.walletPassphrase(config[type].walletpass, 300);
+      if (config[type].walletpass) await node.walletPassphrase(config[type].walletpass, 300);
       p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
       const r = await node.testMempoolAccept([p.hex]);
       if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
@@ -892,8 +865,7 @@ export default {
 
         // Skip VTXO verification for vault→custodial (same user, debit handled by arkVaultSend)
         if (!(aid && aid !== uid)) {
-          if (!(await verifyArkVtxo(hash)))
-            fail("VTXO not found in server wallet");
+          if (!(await verifyArkVtxo(hash))) fail("VTXO not found in server wallet");
         }
       }
 

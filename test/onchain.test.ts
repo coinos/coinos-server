@@ -102,9 +102,13 @@ const resetAll = () => {
 const makeRes = () => {
   let sent: any;
   return {
-    send: (data: any) => { sent = data; },
+    send: (data: any) => {
+      sent = data;
+    },
     code: (code: number) => ({
-      send: (data: any) => { sent = data; },
+      send: (data: any) => {
+        sent = data;
+      },
     }),
     getSent: () => sent,
   };
@@ -339,13 +343,15 @@ describe("confirm (liquid)", () => {
     store().rpcOverride = {
       getTransaction: async () => ({
         confirmations: 0,
-        details: [{
-          address: lqAddress,
-          amount: 0.0005,
-          asset: "test-asset",
-          category: "receive",
-          vout: 0,
-        }],
+        details: [
+          {
+            address: lqAddress,
+            amount: 0.0005,
+            asset: "test-asset",
+            category: "receive",
+            vout: 0,
+          },
+        ],
       }),
     };
 
@@ -384,13 +390,15 @@ describe("confirm (liquid)", () => {
     store().rpcOverride = {
       getTransaction: async () => ({
         confirmations: 2,
-        details: [{
-          address: lqAddress,
-          amount: 0.0005,
-          asset: "test-asset",
-          category: "receive",
-          vout: 0,
-        }],
+        details: [
+          {
+            address: lqAddress,
+            amount: 0.0005,
+            asset: "test-asset",
+            category: "receive",
+            vout: 0,
+          },
+        ],
       }),
     };
 
@@ -418,13 +426,15 @@ describe("confirm (liquid)", () => {
     store().rpcOverride = {
       getTransaction: async () => ({
         confirmations: 1,
-        details: [{
-          address: lqAddress,
-          amount: 0.0005,
-          asset: "test-asset",
-          category: "send",
-          vout: 0,
-        }],
+        details: [
+          {
+            address: lqAddress,
+            amount: 0.0005,
+            asset: "test-asset",
+            category: "send",
+            vout: 0,
+          },
+        ],
       }),
     };
 
@@ -442,13 +452,15 @@ describe("confirm (liquid)", () => {
     store().rpcOverride = {
       getTransaction: async () => ({
         confirmations: 0,
-        details: [{
-          address: lqAddress,
-          amount: 0.001,
-          asset: "wrong-asset-id",
-          category: "receive",
-          vout: 0,
-        }],
+        details: [
+          {
+            address: lqAddress,
+            amount: 0.001,
+            asset: "wrong-asset-id",
+            category: "receive",
+            vout: 0,
+          },
+        ],
       }),
     };
 
@@ -471,13 +483,15 @@ describe("confirm (liquid)", () => {
     store().rpcOverride = {
       getTransaction: async () => ({
         confirmations: 0,
-        details: [{
-          address: lqAddress,
-          amount: 0.0005,
-          asset: "test-asset",
-          category: "receive",
-          vout: 0,
-        }],
+        details: [
+          {
+            address: lqAddress,
+            amount: 0.0005,
+            asset: "test-asset",
+            category: "receive",
+            vout: 0,
+          },
+        ],
       }),
     };
 
@@ -508,13 +522,15 @@ describe("confirm (liquid)", () => {
     store().rpcOverride = {
       getTransaction: async () => ({
         confirmations: 3,
-        details: [{
-          address: lqAddress,
-          amount: 0.0005,
-          asset: "test-asset",
-          category: "receive",
-          vout: 0,
-        }],
+        details: [
+          {
+            address: lqAddress,
+            amount: 0.0005,
+            asset: "test-asset",
+            category: "receive",
+            vout: 0,
+          },
+        ],
       }),
     };
 
@@ -542,11 +558,13 @@ describe("catchUp", () => {
 
     store().esploraOverride = {
       addressTxs: {
-        [address]: [{
-          txid: "missed-tx-001",
-          vout: [{ scriptpubkey_address: address, value: 40000 }],
-          status: { confirmed: false },
-        }],
+        [address]: [
+          {
+            txid: "missed-tx-001",
+            vout: [{ scriptpubkey_address: address, value: 40000 }],
+            status: { confirmed: false },
+          },
+        ],
       },
     };
 
@@ -569,11 +587,13 @@ describe("catchUp", () => {
 
     store().esploraOverride = {
       addressTxs: {
-        [address]: [{
-          txid: "missed-tx-002",
-          vout: [{ scriptpubkey_address: address, value: 60000 }],
-          status: { confirmed: true },
-        }],
+        [address]: [
+          {
+            txid: "missed-tx-002",
+            vout: [{ scriptpubkey_address: address, value: 60000 }],
+            status: { confirmed: true },
+          },
+        ],
       },
     };
 

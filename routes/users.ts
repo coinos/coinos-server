@@ -62,9 +62,7 @@ const verifyRecaptcha = async (response, req?) => {
   }
 
   const { username } = req.body;
-  if (username &&
-    await db.sIsMember("nocaptcha", username.toLowerCase().replace(/\s/g, ""))
-  )
+  if (username && (await db.sIsMember("nocaptcha", username.toLowerCase().replace(/\s/g, ""))))
     return true;
 
   if (!response) return false;
@@ -96,15 +94,9 @@ export default {
       user.locked = await ga(`balance:${user.id}`);
 
       if (user.locked) {
-        const blacklisted = await db.sIsMember(
-          "blacklist",
-          user?.username?.toLowerCase().trim(),
-        );
+        const blacklisted = await db.sIsMember("blacklist", user?.username?.toLowerCase().trim());
 
-        const whitelisted = await db.sIsMember(
-          "whitelist",
-          user?.username?.toLowerCase().trim(),
-        );
+        const whitelisted = await db.sIsMember("whitelist", user?.username?.toLowerCase().trim());
 
         if (!blacklisted || whitelisted) user.locked = 0;
       }
@@ -140,8 +132,7 @@ export default {
         const p = await gf(`payment:${pid}`);
         if (!p) continue;
         total += p.amount;
-        if (p.amount < 0)
-          total -= (p.fee || 0) + (p.ourfee || 0) + (p.tip || 0);
+        if (p.amount < 0) total -= (p.fee || 0) + (p.ourfee || 0) + (p.tip || 0);
         else total += p.tip || 0;
       }
 
@@ -245,10 +236,7 @@ export default {
   async update(req, res) {
     const { user, body } = req;
     try {
-      const { id: tokid } = jwt.verify(
-        req.headers.authorization.split(" ")[1],
-        config.jwt,
-      );
+      const { id: tokid } = jwt.verify(req.headers.authorization.split(" ")[1], config.jwt);
       l("updating user", user.username, tokid);
       if (user.id !== tokid) fail("unauthorized");
 
@@ -256,8 +244,7 @@ export default {
       const username = body?.username?.toLowerCase().replace(/\s/g, "");
       const reserved = ["ecash"];
       const valid = /^[\p{L}\p{N}]{2,24}$/u;
-      if (!valid.test(username))
-        fail("Usernames can only have letters and numbers");
+      if (!valid.test(username)) fail("Usernames can only have letters and numbers");
       if (reserved.includes(username)) fail("Invalid username");
       if (username?.includes("undefined")) fail("Invalid username");
 
@@ -269,9 +256,7 @@ export default {
         if (pubkey.startsWith("npub")) pubkey = nip19.decode(pubkey).data;
         exists = await getUser(pubkey);
         const un = user.username.toLowerCase().replace(/\s/g, "");
-        const existingUsername = exists?.username
-          ?.toLowerCase()
-          .replace(/\s/g, "");
+        const existingUsername = exists?.username?.toLowerCase().replace(/\s/g, "");
         if (exists && un !== existingUsername) {
           warn("key in use", pubkey, username, existingUsername);
           if (exists.anon) await db.del(`user:${pubkey}`);
@@ -294,8 +279,7 @@ export default {
       }
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
-      if (typeof newpin !== "undefined" && newpin.length === 6)
-        user.pin = newpin;
+      if (typeof newpin !== "undefined" && newpin.length === 6) user.pin = newpin;
       if (user.pin === "delete") user.pin = undefined;
 
       if (username) {
@@ -369,10 +353,7 @@ export default {
       user.haspin = !!user.pin;
       if (user.destination) user.destination = user.destination.trim();
       if (user.pubkey) await s(`user:${user.pubkey}`, user.id);
-      await s(
-        `user:${user.username.toLowerCase().replace(/\s/g, "")}`,
-        user.id,
-      );
+      await s(`user:${user.username.toLowerCase().replace(/\s/g, "")}`, user.id);
 
       await s(`user:${user.id}`, user);
       if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
@@ -413,11 +394,7 @@ export default {
       let user = await getUser(username);
 
       if (password !== config?.adminpass) {
-        if (
-          !user ||
-          !user.password ||
-          !(await Bun.password.verify(password, user.password))
-        ) {
+        if (!user || !user.password || !(await Bun.password.verify(password, user.password))) {
           await db.incrBy(ipFailKey, 1);
           if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
           await db.incrBy(fk, 1);
@@ -427,8 +404,7 @@ export default {
 
         if (
           user.twofa &&
-          (typeof twofa === "undefined" ||
-            !authenticator.check(twofa, user.otpsecret))
+          (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret))
         ) {
           await db.incrBy(ipFailKey, 1);
           if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
@@ -436,8 +412,7 @@ export default {
         }
       }
 
-      if (username !== "coinos")
-        l("logged in", username, req.headers["cf-connecting-ip"]);
+      if (username !== "coinos") l("logged in", username, req.headers["cf-connecting-ip"]);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
@@ -470,10 +445,7 @@ export default {
       if (kind !== 27235) fail("Invalid event");
       if (!c) fail("Invalid or expired login challenge");
 
-      if (
-        !verifyEvent(event) ||
-        event.tags.find((t) => t[0] === "challenge")?.[1] !== challenge
-      )
+      if (!verifyEvent(event) || event.tags.find((t) => t[0] === "challenge")?.[1] !== challenge)
         fail("Invalid signature or challenge mismatch.");
 
       let user = await getUser(key);
@@ -584,8 +556,7 @@ export default {
     const { id } = user;
     const lastlen = (await g(`${id}:lastlen`)) || 0;
     const len = await db.lLen(`${id}:payments`);
-    const payments =
-      (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
+    const payments = (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
     await db.set(`${id}:lastlen`, len);
 
     let contacts = (await g(`${id}:contacts`)) || [];
@@ -593,9 +564,7 @@ export default {
     const trust = await db.sMembers(`${id}:trust`);
 
     for (const { ref } of (
-      await Promise.all(
-        payments.reverse().map(async (id) => await gf(`payment:${id}`)),
-      )
+      await Promise.all(payments.reverse().map(async (id) => await gf(`payment:${id}`)))
     ).filter((p) => p && p.type === PaymentType.internal && p.ref)) {
       if (ref === id) continue;
       const i = contacts.findIndex((c) => c && c.id === ref);
@@ -640,8 +609,7 @@ export default {
     } = req;
     fail("Unauthorized");
     username = username.toLowerCase();
-    if (!authorization?.includes(config.admin))
-      return res.code(401).send("unauthorized");
+    if (!authorization?.includes(config.admin)) return res.code(401).send("unauthorized");
 
     const { id, pubkey } = await g(
       `user:${await g(`user:${username.replace(/\s/g, "").toLowerCase()}`)}`,
@@ -674,12 +642,7 @@ export default {
 
       if (!user) fail("user not found");
 
-      warn(
-        "password reset",
-        user.username,
-        code,
-        req.headers["cf-connecting-ip"],
-      );
+      warn("password reset", user.username, code, req.headers["cf-connecting-ip"]);
 
       user.pin = null;
       user.nsec = null;
@@ -869,8 +832,7 @@ export default {
 
   async createAccount(req, res) {
     try {
-      const { fingerprint, pubkey, name, seed, type, arkAddress, accountIndex } =
-        req.body;
+      const { fingerprint, pubkey, name, seed, type, arkAddress, accountIndex } = req.body;
       const { user } = req;
       const { id: uid } = user;
 
@@ -902,7 +864,8 @@ export default {
             return;
           }
         }
-        const m = db.multi()
+        const m = db
+          .multi()
           .set(`account:${id}`, JSON.stringify(account))
           .lPush(`${user.id}:accounts`, id);
         if (arkAddress) m.set(`arkaddr:${arkAddress}`, JSON.stringify({ aid: id, uid }));
@@ -984,11 +947,11 @@ export default {
     await s(`account:${id}`, account);
 
     if (needsImport) {
-      importAccountHistory(account).then(() => {
-        emit(uid, "payment", { aid: id, type: "import" });
-      }).catch((e) =>
-        console.error("importAccountHistory failed:", e.message),
-      );
+      importAccountHistory(account)
+        .then(() => {
+          emit(uid, "payment", { aid: id, type: "import" });
+        })
+        .catch((e) => console.error("importAccountHistory failed:", e.message));
     }
 
     res.send(account);
@@ -1073,9 +1036,7 @@ export default {
           a.nwc = `nostr+walletconnect://${serverPubkey2}?relay=${relay}&secret=${a.secret}&lud16=${lud16}`;
 
         const pids = await db.lRange(`${a.pubkey}:payments`, 0, -1);
-        let payments = await Promise.all(
-          pids.map((pid) => gf(`payment:${pid}`)),
-        );
+        let payments = await Promise.all(pids.map((pid) => gf(`payment:${pid}`)));
         payments = payments.filter((p) => p);
         a.spent = payments.reduce(
           (a, b) =>
@@ -1093,15 +1054,7 @@ export default {
 
   async updateApp(req, res) {
     try {
-      let {
-        secret,
-        pubkey,
-        max_amount,
-        max_fee,
-        budget_renewal,
-        name,
-        notify,
-      } = req.body;
+      let { secret, pubkey, max_amount, max_fee, budget_renewal, name, notify } = req.body;
 
       const { user } = req;
       const uid = user.id;

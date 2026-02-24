@@ -1,11 +1,6 @@
 import config from "$config";
 import { createClient } from "redis";
-import {
-  CashuMint,
-  CashuWallet,
-  getEncodedTokenV4,
-  MintQuoteState,
-} from "@cashu/cashu-ts";
+import { CashuMint, CashuWallet, getEncodedTokenV4, MintQuoteState } from "@cashu/cashu-ts";
 
 const mintUrl = "http://mint:3338"; // the mint URL
 const mint = new CashuMint(mintUrl);

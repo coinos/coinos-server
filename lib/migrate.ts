@@ -40,10 +40,7 @@ export const migrateAccounts = async () => {
       account.pubkey = parsed.pubkey;
       account.fingerprint = parsed.fingerprint;
       try {
-        account.nextIndex = await findLastUsedIndex(
-          parsed.pubkey,
-          parsed.fingerprint,
-        );
+        account.nextIndex = await findLastUsedIndex(parsed.pubkey, parsed.fingerprint);
       } catch (e) {
         warn("account migration index scan skipped", key, e.message);
         account.nextIndex = account.nextIndex || 0;

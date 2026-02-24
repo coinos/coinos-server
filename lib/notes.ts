@@ -20,8 +20,7 @@ const first = (list: any) => (list ? list[0] : undefined);
 export const fromNostrURI = (s: string) => s.replace(/^[\w+]+:\/?\/?/, "");
 
 export const urlIsMedia = (url: string) =>
-  !url.match(/\.(apk|docx|xlsx|csv|dmg)/) &&
-  last(url.split("://"))?.includes("/");
+  !url.match(/\.(apk|docx|xlsx|csv|dmg)/) && last(url.split("://"))?.includes("/");
 
 type ContentArgs = {
   content: string;
@@ -35,13 +34,10 @@ export type ParsedPart = {
   value: any;
 };
 
-export const isEmbeddableMedia = (url: string) =>
-  isImage(url) || isVideo(url) || isAudio(url);
+export const isEmbeddableMedia = (url: string) => isImage(url) || isVideo(url) || isAudio(url);
 
-export const isImage = (url: string) =>
-  url?.match(/^.*\.(jpg|jpeg|png|webp|gif|avif|svg)/gi);
-export const isVideo = (url: string) =>
-  url?.match(/^.*\.(mov|mkv|mp4|avi|m4v|webm)/gi);
+export const isImage = (url: string) => url?.match(/^.*\.(jpg|jpeg|png|webp|gif|avif|svg)/gi);
+export const isVideo = (url: string) => url?.match(/^.*\.(mov|mkv|mp4|avi|m4v|webm)/gi);
 export const isAudio = (url: string) => url?.match(/^.*\.(ogg|mp3|wav)/gi);
 
 /**
@@ -70,9 +66,7 @@ export function groupContent(parts: ParsedPart[]): ParsedPart[] {
   parts.forEach((part, index) => {
     if (
       part.type === LINK &&
-      (isImage(part.value.url) ||
-        isVideo(part.value.url) ||
-        isAudio(part.value.url))
+      (isImage(part.value.url) || isVideo(part.value.url) || isAudio(part.value.url))
     ) {
       if (!buffer) {
         buffer = {
@@ -87,8 +81,7 @@ export function groupContent(parts: ParsedPart[]): ParsedPart[] {
 
       for (const nextPart of parts.slice(index + 1)) {
         const isNewline = nextPart.type === NEWLINE;
-        const isBlankText =
-          nextPart.type === TEXT && nextPart.value.trim() === "";
+        const isBlankText = nextPart.type === TEXT && nextPart.value.trim() === "";
         const isLink = nextPart.type === LINK;
 
         // This is a noop, keep checking the next part
@@ -114,11 +107,7 @@ export function groupContent(parts: ParsedPart[]): ParsedPart[] {
   return result;
 }
 
-export const parseContent = ({
-  content,
-  tags = [],
-  html = false,
-}: ContentArgs): ParsedPart[] => {
+export const parseContent = ({ content, tags = [], html = false }: ContentArgs): ParsedPart[] => {
   const result: ParsedPart[] = [];
   let text = content.trim();
   let buffer = "";
@@ -174,9 +163,7 @@ export const parseContent = ({
 
   const parseBech32 = () => {
     const bech32 = first(
-      text.match(
-        /^(web\+)?(nostr:)?\/?\/?n(event|ote|profile|pub|addr)1[\d\w]+/i,
-      ),
+      text.match(/^(web\+)?(nostr:)?\/?\/?n(event|ote|profile|pub|addr)1[\d\w]+/i),
     );
 
     if (bech32) {
@@ -211,9 +198,7 @@ export const parseContent = ({
   };
 
   const parseUrl = () => {
-    const raw = first(
-      text.match(/^([a-z+:]{2,30}:\/\/)?[^\s]+\.[a-z]{2,6}[^\s]*[^.!?,:\s]/gi),
-    );
+    const raw = first(text.match(/^([a-z+:]{2,30}:\/\/)?[^\s]+\.[a-z]{2,6}[^\s]*[^.!?,:\s]/gi));
 
     // Skip url if it's just the end of a filepath
     if (raw) {
@@ -290,10 +275,7 @@ export const parseContent = ({
   return result;
 };
 
-export const truncateContent = (
-  content,
-  { showEntire, maxLength, showMedia = false },
-) => {
+export const truncateContent = (content, { showEntire, maxLength, showMedia = false }) => {
   if (showEntire) {
     return content;
   }
@@ -303,13 +285,8 @@ export const truncateContent = (
   const truncateAt = maxLength * 0.6;
 
   content.every((part, i) => {
-    const isText =
-      [TOPIC, TEXT].includes(part.type) ||
-      (part.type === LINK && !part.value.isMedia);
-    const isMedia =
-      part.type === INVOICE ||
-      part.type.startsWith("nostr:") ||
-      part.value.isMedia;
+    const isText = [TOPIC, TEXT].includes(part.type) || (part.type === LINK && !part.value.isMedia);
+    const isMedia = part.type === INVOICE || part.type.startsWith("nostr:") || part.value.isMedia;
 
     if (isText) {
       length += part.value.length;

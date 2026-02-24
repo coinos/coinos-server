@@ -13,6 +13,7 @@ This repository contains the code for the API server. The frontend code is at <a
 1. Start the Docker application.
 
 2. Run the start up script:
+
 ```bash
 chmod +x setup.sh
 ./setup.sh
@@ -23,6 +24,7 @@ The above script will setup docker containers for the different components that 
 ## Understanding Coinos:
 
 Coinos comprises of the folowing components:
+
 - **The Coinos Server:** This is the main server implementation that setups and handles the API requests. Depends on the Bitcoin node, the Lightning node and the KeyDB database.
 - **[Bitcoin node](https://github.com/bitcoin/bitcoin):** This is the Bitcoin Core implementation that upholds the chains consensus rules.
 - **[Liquid Implementation](https://liquid.net/):** This is a Bitcoin layer-2 network that uses Bitcoin as its native asset and allows users to issue their own assets.
@@ -31,12 +33,12 @@ Coinos comprises of the folowing components:
 - **[Nostr](https://nostr.com/):** Nostr is a simple, open protocol that enables global, decentralized, and censorship-resistant social media.
 - **[Cashu Nutshell](https://github.com/cashubtc/nutshell):** Nutshell is an Ecash wallet and mint for Bitcoin Lightning based on the Cashu protocol.
 
-A complete Coinos site utilizes all of the above components to support it's features. However, 
-its important to note the most important ones: **Coinos Server**, **Bitcoin node**, **Core Lightning** and **KeyDB**. Without these, 
-none of the Coinos features would work and the server would probably not start. 
+A complete Coinos site utilizes all of the above components to support it's features. However,
+its important to note the most important ones: **Coinos Server**, **Bitcoin node**, **Core Lightning** and **KeyDB**. Without these,
+none of the Coinos features would work and the server would probably not start.
 
-If you want to run thin, you can remove the other containers 
-from the setup(You will get to see where to do this later). 
+If you want to run thin, you can remove the other containers
+from the setup(You will get to see where to do this later).
 
 ### How Coinos Works
 
@@ -44,12 +46,12 @@ Running the startup script `./setup.sh` runs a few commands for you in the backg
 
 1. `cp config.ts.sample config.ts`:
 
-A `config.ts` file is created and it's contents copied from the sample file `config.ts.sample`. This file holds the configuration options 
+A `config.ts` file is created and it's contents copied from the sample file `config.ts.sample`. This file holds the configuration options
 the various Coinos components discussed above.
 
 2. `cp compose.yml.sample compose.yml`
 
-A `compose.yml` file is created and it's contents copied from the sample file `compose.yml.sample`. This file conatins instructions 
+A `compose.yml` file is created and it's contents copied from the sample file `compose.yml.sample`. This file conatins instructions
 on the various Docker containers required to start Coinos. You will also notice duplicate component containers with different names such as cl,clb and clc. These are meant to easen the testing and development process locally as you can simulate transactions and connections.
 
 3. `cp -r sampledata data`
@@ -58,7 +60,7 @@ A folder `data` is created and it's contents copied from the `sampledata` folder
 
 4. `docker compose up -d` and `docker run -it -v $(pwd):/home/bun/app --entrypoint bun asoltys/coinos-server i`
 
-Finally, the various Docker containers configured above are started  and the Coinos server application is run. At this point, all containers should be running, otherwise it could indicate a problem with the previous tasks execution. You can check your container's status by running this command: `docker ps -a`.
+Finally, the various Docker containers configured above are started and the Coinos server application is run. At this point, all containers should be running, otherwise it could indicate a problem with the previous tasks execution. You can check your container's status by running this command: `docker ps -a`.
 
 5. `docker exec -it bc bitcoin-cli createwallet coinos` and `docker exec -it bc bitcoin-cli rescanblockchain`
 

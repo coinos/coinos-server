@@ -16,7 +16,7 @@ try {
 
   const balanceAfter = await wallet.getBalance();
   console.log("Balance after:", JSON.stringify(balanceAfter));
-} catch(e: any) {
+} catch (e: any) {
   console.error("Error:", e.message);
 }
 

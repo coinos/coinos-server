@@ -1,11 +1,6 @@
 import config from "$config";
 import { warn } from "$lib/logging";
-import {
-  createClient,
-  CreateAccountError,
-  AccountFlags,
-  TransferFlags,
-} from "tigerbeetle-node";
+import { createClient, CreateAccountError, AccountFlags, TransferFlags } from "tigerbeetle-node";
 import { createHash } from "crypto";
 
 let client: any;
@@ -231,10 +226,7 @@ export async function tbDebit(
   let coveredMicro = 0n;
   if (ourfee > 0 && creditType && creditLedger[creditType]) {
     const creditAcct = await getAccount(
-      creditId(
-        uid === aid ? uid : "00000000-0000-0000-0000-000000000000",
-        creditType,
-      ),
+      creditId(uid === aid ? uid : "00000000-0000-0000-0000-000000000000", creditType),
     );
     const creditBalMicro = accountBalanceMicro(creditAcct);
     const ourfeeMicro = BigInt(ourfee) * MSATS;
@@ -349,9 +341,7 @@ export async function tbCredit(
   // Add fee credit if applicable - MICROSATS for sub-satoshi precision!
   // e.g., 2% of 10 sats = 0.2 sats = 200,000 microsats (accumulates over time)
   if (creditType && creditLedger[creditType] && config.fee[creditType]) {
-    const creditAmountMicro = BigInt(
-      Math.round(amount * MSATS_NUM * config.fee[creditType]),
-    );
+    const creditAmountMicro = BigInt(Math.round(amount * MSATS_NUM * config.fee[creditType]));
     if (creditAmountMicro > 0n) {
       transfers.push({
         id: nextTransferId(),
@@ -421,11 +411,7 @@ export async function tbConfirm(aid: string, amount: number) {
   }
 }
 
-export async function tbReverse(
-  uid: string,
-  total: number,
-  creditAmount: number,
-) {
+export async function tbReverse(uid: string, total: number, creditAmount: number) {
   const transfers: any[] = [];
   const linked = TransferFlags.linked;
 
@@ -650,11 +636,7 @@ export async function tbFundCredit(name: string, amount: number) {
   }
 }
 
-export async function tbFundDebit(
-  name: string,
-  amount: number,
-  errMsg: string,
-): Promise<any> {
+export async function tbFundDebit(name: string, amount: number, errMsg: string): Promise<any> {
   const transfers = [
     {
       id: nextTransferId(),
@@ -700,11 +682,7 @@ export async function tbMultiplyForMicrosats(uid: string): Promise<number> {
   const MULTIPLIER = 999999n; // Adding this turns X into X*1000000
   let count = 0;
 
-  const multiplyAccount = async (
-    accountId: bigint,
-    ledger: number,
-    houseId: bigint,
-  ) => {
+  const multiplyAccount = async (accountId: bigint, ledger: number, houseId: bigint) => {
     const acct = await client.lookupAccounts([u128(accountId)]);
     if (!acct.length) return;
     const current = acct[0].credits_posted - acct[0].debits_posted;
@@ -736,11 +714,7 @@ export async function tbMultiplyForMicrosats(uid: string): Promise<number> {
   await multiplyAccount(balId, LEDGER_SATS, HOUSE_SATS);
   await multiplyAccount(pendId, LEDGER_SATS, HOUSE_SATS);
   await multiplyAccount(creditId(uid, "bitcoin"), LEDGER_CREDIT_BTC, HOUSE_BTC);
-  await multiplyAccount(
-    creditId(uid, "lightning"),
-    LEDGER_CREDIT_LN,
-    HOUSE_LN,
-  );
+  await multiplyAccount(creditId(uid, "lightning"), LEDGER_CREDIT_LN, HOUSE_LN);
   await multiplyAccount(creditId(uid, "liquid"), LEDGER_CREDIT_LQ, HOUSE_LQ);
 
   return count;

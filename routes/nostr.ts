@@ -40,9 +40,7 @@ export default {
       const parts = parseContent(event);
 
       let pubkeys = parts
-        .filter(
-          ({ type }) => type.includes("nprofile") || type.includes("npub"),
-        )
+        .filter(({ type }) => type.includes("nprofile") || type.includes("npub"))
         .map(({ value }) => value.pubkey);
 
       const zapEvents = await scan({ kinds: [9735], "#e": [id] });
@@ -74,12 +72,7 @@ export default {
         })
       )
         .reduce((a, b) => {
-          a.set(
-            b.pubkey,
-            b.created_at > (a.get(b.pubkey)?.created_at || 0)
-              ? b
-              : a.get(b.pubkey),
-          );
+          a.set(b.pubkey, b.created_at > (a.get(b.pubkey)?.created_at || 0) ? b : a.get(b.pubkey));
           return a;
         }, new Map())
         .values();
@@ -133,9 +126,7 @@ export default {
 
       const event = await get({ ids: [id] });
 
-      const rootId = event.tags.find(
-        (tag) => tag[0] === "e" && tag[3] === "root",
-      )?.[1];
+      const rootId = event.tags.find((tag) => tag[0] === "e" && tag[3] === "root")?.[1];
 
       let root;
       if (rootId) root = await get({ ids: [rootId] });
@@ -262,9 +253,7 @@ export default {
       const event = await get({ authors: [pubkey], kinds: [3] });
       if (!event) return res.send([]);
 
-      let pubkeys = event.tags
-        .filter((tag) => tag[0] === "p")
-        .map((tag) => tag[1]);
+      let pubkeys = event.tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]);
 
       follows = [];
       if (pubkeysOnly) follows = pubkeys;

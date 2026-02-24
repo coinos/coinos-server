@@ -4,9 +4,7 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
-import type {
-  AuthenticatorTransportFuture,
-} from "@simplewebauthn/types";
+import type { AuthenticatorTransportFuture } from "@simplewebauthn/types";
 import { db, g, s } from "$lib/db";
 import { fail, getUser } from "$lib/utils";
 import { v4 } from "uuid";
@@ -102,9 +100,7 @@ export async function verifyPasskeyLogin(response: any, challengeId: string, ori
   if (!user) fail("User not found");
 
   const passkeys = user.passkeys || [];
-  const passkey = passkeys.find(
-    (p: any) => p.credentialID === response.id,
-  );
+  const passkey = passkeys.find((p: any) => p.credentialID === response.id);
   if (!passkey) fail("Passkey not found");
 
   const expectedChallenge = await db.get(`challenge:passkey:${challengeId}`);

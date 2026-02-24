@@ -49,7 +49,7 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
 
 export const getAccount = async (id) => {
   return g(`account:${id}`);
-}
+};
 
 export const getUser = async (username, fields = undefined) => {
   if (username === "undefined") fail("invalid user");
@@ -121,22 +121,17 @@ export function formatReceipt(items, currency) {
     };
   }
   const maxLineWidth = 32;
-  const { quantityColumnWidth, priceColumnWidth } =
-    calculateColumnWidths(items);
+  const { quantityColumnWidth, priceColumnWidth } = calculateColumnWidths(items);
   const nameColumnWidth = maxLineWidth - quantityColumnWidth - priceColumnWidth;
 
   return items
     .map((item) => {
       const quantityStr = String(item.quantity).padEnd(quantityColumnWidth);
-      const priceStr = f(item.price * item.quantity, currency).padStart(
-        priceColumnWidth,
-      );
+      const priceStr = f(item.price * item.quantity, currency).padStart(priceColumnWidth);
       const nameLines = wrapText(item.name, nameColumnWidth);
 
       // Construct the full line(s) with the first line including the price
-      const fullLines = [
-        `${quantityStr}${nameLines[0].padEnd(nameColumnWidth)}${priceStr}`,
-      ];
+      const fullLines = [`${quantityStr}${nameLines[0].padEnd(nameColumnWidth)}${priceStr}`];
       // Add any additional name lines, properly indented
       for (let i = 1; i < nameLines.length; i++) {
         fullLines.push(" ".repeat(quantityColumnWidth) + nameLines[i]);
@@ -162,9 +157,7 @@ export const time = (() => {
 })();
 
 export const fmt = (sats) =>
-  `⚡️${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
-    sats,
-  )}`;
+  `⚡️${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(sats)}`;
 
 export const link = (id) => `${URL}/payment/${id}`;
 

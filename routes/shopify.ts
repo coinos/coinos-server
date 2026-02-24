@@ -25,19 +25,16 @@ export default async (req, res) => {
 
   try {
     const r = await got
-      .post(
-        `https://${user.shopifyStore}.myshopify.com/admin/api/2023-07/graphql.json`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Shopify-Access-Token": user.shopifyToken,
-          },
-          json: {
-            query,
-            variables: { input: { id: `gid://shopify/Order/${id}` } },
-          },
+      .post(`https://${user.shopifyStore}.myshopify.com/admin/api/2023-07/graphql.json`, {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": user.shopifyToken,
         },
-      )
+        json: {
+          query,
+          variables: { input: { id: `gid://shopify/Order/${id}` } },
+        },
+      })
       .json();
 
     l("shopify success", r);

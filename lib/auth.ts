@@ -50,8 +50,7 @@ export const jwtStrategy = new jwt.Strategy(
     let { id } = payload;
     const wl = { GET: ["/invoice", "/payments"], POST: ["/invoice"] };
 
-    if (id.endsWith("-ro") && wl[m].some((p) => u.startsWith(p)))
-      id = id.slice(0, -3);
+    if (id.endsWith("-ro") && wl[m].some((p) => u.startsWith(p))) id = id.slice(0, -3);
 
     const user = await getUser(id);
     next(null, user);

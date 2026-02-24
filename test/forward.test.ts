@@ -111,9 +111,13 @@ const resetAll = () => {
 const makeRes = () => {
   let sent: any;
   return {
-    send: (data: any) => { sent = data; },
+    send: (data: any) => {
+      sent = data;
+    },
     code: (code: number) => ({
-      send: (data: any) => { sent = data; },
+      send: (data: any) => {
+        sent = data;
+      },
     }),
     getSent: () => sent,
   };
@@ -129,7 +133,13 @@ describe("completePayment", () => {
   test("forwards payment and debit stays in custodial", async () => {
     const user = makeUser();
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11 });
-    const p = { amount: 1000, confirmed: true, type: "ark", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     await completePayment(inv, p, user);
 
@@ -141,7 +151,13 @@ describe("completePayment", () => {
   test("forwards and debit stays in custodial when aid matches user", async () => {
     const user = makeUser();
     const inv = makeInvoice({ aid: custodialUid, forward: bolt11 });
-    const p = { amount: 1000, confirmed: true, type: "ark", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     await completePayment(inv, p, user);
 
@@ -152,9 +168,17 @@ describe("completePayment", () => {
   test("handles forward failure gracefully", async () => {
     const user = makeUser();
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11 });
-    const p = { amount: 1000, confirmed: true, type: "ark", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
-    mockLnXpay.mockImplementationOnce(async () => { throw new Error("route not found"); });
+    mockLnXpay.mockImplementationOnce(async () => {
+      throw new Error("route not found");
+    });
 
     const w = await completePayment(inv, p, user);
 
@@ -166,7 +190,13 @@ describe("completePayment", () => {
   test("skips forward when already forwarded", async () => {
     const user = makeUser();
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11, forwarded: true });
-    const p = { amount: 1000, confirmed: true, type: "ark", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     const w = await completePayment(inv, p, user);
 
@@ -177,7 +207,13 @@ describe("completePayment", () => {
   test("skips forward when payment not confirmed", async () => {
     const user = makeUser();
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11 });
-    const p = { amount: 1000, confirmed: false, type: "ark", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: false,
+      type: "ark",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     const w = await completePayment(inv, p, user);
 
@@ -251,7 +287,9 @@ describe("arkReceive", () => {
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11 });
     seedInvoice(inv);
 
-    mockLnXpay.mockImplementationOnce(async () => { throw new Error("no route"); });
+    mockLnXpay.mockImplementationOnce(async () => {
+      throw new Error("no route");
+    });
 
     const req = {
       body: { iid: inv.id, amount: 1000, hash: "ark-txid-777" },
@@ -353,14 +391,15 @@ describe("arkSync", () => {
     // Pre-store a known tx hash and its sync lock
     store().kvStore[`arksync:${arkAccountId}:known-hash`] = "1";
     store().kvStore[`payment:${arkAccountId}:known-hash`] = JSON.stringify("existing-id");
-    store().kvStore["payment:existing-id"] = JSON.stringify({ id: "existing-id", confirmed: false });
+    store().kvStore["payment:existing-id"] = JSON.stringify({
+      id: "existing-id",
+      confirmed: false,
+    });
 
     const req = {
       body: {
         aid: arkAccountId,
-        transactions: [
-          { hash: "known-hash", amount: -1000, settled: true, createdAt: Date.now() },
-        ],
+        transactions: [{ hash: "known-hash", amount: -1000, settled: true, createdAt: Date.now() }],
       },
       user: makeUser(),
     };
@@ -385,8 +424,30 @@ describe("arkSync reconciliation", () => {
 
   test("creates expired debit when payment sum exceeds wallet balance", async () => {
     // Pre-seed two received payments totaling 7128
-    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() - 2000 };
-    const pay2 = { id: "pay-2", aid: arkAccountId, amount: 2128, hash: "h2", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() - 1000 };
+    const pay1 = {
+      id: "pay-1",
+      aid: arkAccountId,
+      amount: 5000,
+      hash: "h1",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now() - 2000,
+    };
+    const pay2 = {
+      id: "pay-2",
+      aid: arkAccountId,
+      amount: 2128,
+      hash: "h2",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now() - 1000,
+    };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:pay-2`] = JSON.stringify(pay2);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
@@ -421,7 +482,18 @@ describe("arkSync reconciliation", () => {
 
   test("does not reconcile when sum matches balance", async () => {
     // Pre-seed a payment of 5000
-    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    const pay1 = {
+      id: "pay-1",
+      aid: arkAccountId,
+      amount: 5000,
+      hash: "h1",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now(),
+    };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
@@ -445,7 +517,18 @@ describe("arkSync reconciliation", () => {
   });
 
   test("does not reconcile when balance is not provided (backward compat)", async () => {
-    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    const pay1 = {
+      id: "pay-1",
+      aid: arkAccountId,
+      amount: 5000,
+      hash: "h1",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now(),
+    };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
@@ -468,7 +551,18 @@ describe("arkSync reconciliation", () => {
 
   test("is idempotent — second sync does not create duplicate", async () => {
     // Seed payment sum = 5000, balance = 0
-    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 5000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    const pay1 = {
+      id: "pay-1",
+      aid: arkAccountId,
+      amount: 5000,
+      hash: "h1",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now(),
+    };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
@@ -495,8 +589,30 @@ describe("arkSync reconciliation", () => {
 
   test("reconciles partial expiry", async () => {
     // 10000 received, 3000 sent, sum = 7000. Actual balance = 2000 (5000 expired)
-    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 10000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
-    const pay2 = { id: "pay-2", aid: arkAccountId, amount: -3000, hash: "h2", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    const pay1 = {
+      id: "pay-1",
+      aid: arkAccountId,
+      amount: 10000,
+      hash: "h1",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now(),
+    };
+    const pay2 = {
+      id: "pay-2",
+      aid: arkAccountId,
+      amount: -3000,
+      hash: "h2",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now(),
+    };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:pay-2`] = JSON.stringify(pay2);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
@@ -519,7 +635,18 @@ describe("arkSync reconciliation", () => {
 
   test("does not reconcile when sum is less than balance", async () => {
     // Sum = 3000, balance = 5000 (e.g., recovered VTXOs already synced)
-    const pay1 = { id: "pay-1", aid: arkAccountId, amount: 3000, hash: "h1", confirmed: true, type: "ark", uid: custodialUid, rate: 50000, currency: "USD", created: Date.now() };
+    const pay1 = {
+      id: "pay-1",
+      aid: arkAccountId,
+      amount: 3000,
+      hash: "h1",
+      confirmed: true,
+      type: "ark",
+      uid: custodialUid,
+      rate: 50000,
+      currency: "USD",
+      created: Date.now(),
+    };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
@@ -568,7 +695,13 @@ describe("BOLT12 autowithdraw", () => {
     seedUser(user);
 
     const inv = makeInvoice({ type: "lightning", amount: 1000 });
-    const p = { amount: 1000, confirmed: true, type: "lightning", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "lightning",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     await completePayment(inv, p, user);
 
@@ -602,7 +735,13 @@ describe("BOLT12 autowithdraw", () => {
 
     const user = makeUser();
     const inv = makeInvoice({ forward: bolt12Offer });
-    const p = { amount: 1000, confirmed: true, type: "lightning", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "lightning",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     await completePayment(inv, p, user);
 
@@ -621,7 +760,13 @@ describe("BOLT12 autowithdraw", () => {
     seedUser(user);
 
     const inv = makeInvoice({ type: "lightning", amount: 1000 });
-    const p = { amount: 1000, confirmed: true, type: "lightning", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "lightning",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     await completePayment(inv, p, user);
 
@@ -642,10 +787,12 @@ describe("BOLT12 autowithdraw", () => {
 
     // Simulate a route with 50 sat routing fee (getroutes response format)
     mockLnGetroutes.mockImplementation(async () => ({
-      routes: [{
-        amount_msat: balance * 1000,
-        path: [{ amount_msat: (balance + routingFee) * 1000 }],
-      }],
+      routes: [
+        {
+          amount_msat: balance * 1000,
+          path: [{ amount_msat: (balance + routingFee) * 1000 }],
+        },
+      ],
     }));
 
     mockLnFetchinvoice.mockImplementation(async () => ({
@@ -661,7 +808,13 @@ describe("BOLT12 autowithdraw", () => {
     seedUser(user);
 
     const inv = makeInvoice({ type: "lightning", amount: 1000 });
-    const p = { amount: 1000, confirmed: true, type: "lightning", uid: custodialUid, created: Date.now() };
+    const p = {
+      amount: 1000,
+      confirmed: true,
+      type: "lightning",
+      uid: custodialUid,
+      created: Date.now(),
+    };
 
     await completePayment(inv, p, user);
 

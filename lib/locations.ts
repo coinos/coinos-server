@@ -6,10 +6,7 @@ import got from "got";
 const dedup = (array) =>
   Object.values(
     array.reduce((acc, obj) => {
-      if (
-        !acc[obj.id] ||
-        new Date(obj.updated_at) > new Date(acc[obj.id].updated_at)
-      ) {
+      if (!acc[obj.id] || new Date(obj.updated_at) > new Date(acc[obj.id].updated_at)) {
         acc[obj.id] = obj;
       }
       return acc;
