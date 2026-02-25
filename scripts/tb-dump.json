@@ -1,0 +1,58 @@
+[
+  {
+    "id": "1",
+    "ledger": 1,
+    "code": 1,
+    "flags": 0,
+    "balance_micro": "-2099000000"
+  },
+  {
+    "id": "2",
+    "ledger": 2,
+    "code": 1,
+    "flags": 0,
+    "balance_micro": "0"
+  },
+  {
+    "id": "3",
+    "ledger": 3,
+    "code": 1,
+    "flags": 0,
+    "balance_micro": "0"
+  },
+  {
+    "id": "4",
+    "ledger": 4,
+    "code": 1,
+    "flags": 0,
+    "balance_micro": "0"
+  },
+  {
+    "id": "154044882585978912721608634723889690896",
+    "ledger": 1,
+    "code": 1,
+    "flags": 2,
+    "balance_micro": "2099000000"
+  },
+  {
+    "id": "154044882585978912666268402502761036048",
+    "ledger": 1,
+    "code": 1,
+    "flags": 2,
+    "balance_micro": "0"
+  },
+  {
+    "id": "28979678647761563727999679858331371930",
+    "ledger": 1,
+    "code": 1,
+    "flags": 2,
+    "balance_micro": "0"
+  },
+  {
+    "id": "28979678647761563820233400226879130010",
+    "ledger": 1,
+    "code": 1,
+    "flags": 2,
+    "balance_micro": "0"
+  }
+]
