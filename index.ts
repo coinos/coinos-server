@@ -1,5 +1,8 @@
+import config from "$config";
 import app from "$lib/app";
+import { sendArk } from "$lib/ark";
 import { admin, auth, optional } from "$lib/auth";
+import { g, s } from "$lib/db";
 
 import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
 import { startHealthCheck } from "$lib/health";
@@ -222,6 +225,30 @@ app.get("/replay/:index", (req, res) => {
 app.post("/echo", (req, res) => {
   console.log("echo", req.body);
   res.send(req.body);
+});
+
+app.post("/test/ark/send", async (req, res) => {
+  try {
+    const secret = req.headers["x-test-secret"] as string;
+    if (!config.testSecret || secret !== config.testSecret) {
+      return res.code(403).send("Forbidden");
+    }
+    const { address, amount, iid } = req.body;
+    const txid = await sendArk(address, amount);
+
+    // Mark invoice as paid so tests don't need client-side SDK sync
+    if (iid) {
+      const invoice = await g(`invoice:${iid}`);
+      if (invoice) {
+        invoice.received = (invoice.received || 0) + amount;
+        await s(`invoice:${iid}`, invoice);
+      }
+    }
+
+    res.send({ txid, iid });
+  } catch (e: any) {
+    res.code(500).send(e.message);
+  }
 });
 
 const host: string = process.env["HOST"] || "0.0.0.0";

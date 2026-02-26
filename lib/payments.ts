@@ -46,7 +46,7 @@ import {
   sleep,
   t,
 } from "$lib/utils";
-import { sendArk } from "$lib/ark";
+import { getArkBalance, sendArk } from "$lib/ark";
 import { callWebhook } from "$lib/webhooks";
 import rpc from "@coinos/rpc";
 import { selectUTXO, p2wpkh } from "@scure/btc-signer";
@@ -493,29 +493,49 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
     });
 
   if (to.startsWith("ark") || to.startsWith("tark")) {
-    // Check for local custodial receive - do internal transfer
-    const vault = await g(`arkaddr:${to}`);
-    if (vault) {
-      const vaultAccount = await g(`account:${vault.aid}`);
-      if (vaultAccount?.arkAddress) {
-        const iid = await g(`custodial-ark-invoice:${vaultAccount.arkAddress}`);
-        if (iid) {
-          const invoice = await getInvoice(iid);
-          if (invoice && !invoice.hash) invoice.hash = invoice.id;
-          const recipient = await getUser(vault.uid);
-          if (recipient && invoice)
-            return sendInternal({ amount, invoice, recipient, sender: user });
-        }
-      }
-    }
-
-    const txid = await sendArk(to, amount);
+    const tmpHash = v4();
     const p = await debit({
-      hash: txid,
+      hash: tmpHash,
       amount,
       user,
       type: PaymentType.ark,
     });
+
+    try {
+      const txid = await sendArk(to, amount);
+      p.hash = txid;
+      await s(`payment:${p.id}`, p);
+      await s(`payment:${txid}`, p.id);
+
+      // Instant vault notification
+      try {
+        const vaultInfo = await g(`arkaddr:${to}`);
+        if (vaultInfo) {
+          const { aid: vaultAid, uid: vaultUid } = vaultInfo;
+          const isForward = await g(`custodial-ark-invoice:${to}`);
+          const vaultOwner = await g(`user:${vaultUid}`);
+          const { rate, currency } = await getUserRate(vaultOwner || user);
+          const vp = await createArkPayment({
+            aid: vaultAid,
+            uid: vaultUid,
+            amount,
+            hash: txid,
+            rate,
+            currency,
+            extraHashMappings: [txid],
+          });
+          if (!isForward) {
+            l("ark pay: instant vault credit", vaultAid, txid);
+            emit(vaultUid, "payment", vp);
+          }
+        }
+      } catch (e) {
+        warn("ark pay: instant vault notification failed", e.message);
+      }
+    } catch (e) {
+      await reverse(p);
+      throw e;
+    }
 
     return p;
   }
@@ -1375,7 +1395,7 @@ const finalize = async (r, p) => {
   return p;
 };
 
-const reverse = async (p) => {
+export const reverse = async (p) => {
   await sleep(Math.floor(Math.random() * (1500 - 500 + 1)) + 500);
 
   const total = Math.abs(p.amount) + p.fee + p.ourfee;
@@ -1423,6 +1443,14 @@ const freezeCheck = async () => {
   await s("fund:limit", Math.max(lnbalance - lnthreshold, 0));
   await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));
   await s("bolt12:limit", Math.max(lnbalance - lnthreshold, 0));
+
+  try {
+    const arkBalance = await getArkBalance();
+    const arkthreshold = (await g("ark:threshold")) || 0;
+    await s("ark:limit", Math.max(arkBalance.available - arkthreshold, 0));
+  } catch (e) {
+    warn("freezeCheck ark balance failed:", e.message);
+  }
 
   setTimeout(freezeCheck, 10000);
 };

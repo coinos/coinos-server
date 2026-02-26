@@ -19,6 +19,7 @@ import {
   decode,
   getUserRate,
   processWatchedTx,
+  reverse,
   sendInternal,
   sendLightning,
   sendOnchain,
@@ -77,15 +78,52 @@ export default {
           if (invoice?.type === PaymentType.ark) {
             if (!amount) ({ amount } = invoice);
             if (!invoice.text) fail("Missing ark address");
-            const txid = await sendArk(invoice.text, amount);
+            const tmpHash = v4();
             p = await debit({
-              hash: txid,
+              hash: tmpHash,
               amount,
               memo,
               user,
               type: PaymentType.ark,
               aid,
             });
+            try {
+              const txid = await sendArk(invoice.text, amount);
+              p.hash = txid;
+              await s(`payment:${p.id}`, p);
+              await s(`payment:${txid}`, p.id);
+
+              // Instant vault notification
+              try {
+                const vaultInfo = await g(`arkaddr:${invoice.text}`);
+                if (vaultInfo) {
+                  const { aid: vaultAid, uid: vaultUid } = vaultInfo;
+                  const isForward = await g(`custodial-ark-invoice:${invoice.text}`);
+                  const vaultOwner = await g(`user:${vaultUid}`);
+                  const { rate: vRate, currency: vCurrency } = await getUserRate(
+                    vaultOwner || user,
+                  );
+                  const vp = await createArkPayment({
+                    aid: vaultAid,
+                    uid: vaultUid,
+                    amount,
+                    hash: txid,
+                    rate: vRate,
+                    currency: vCurrency,
+                    extraHashMappings: [txid],
+                  });
+                  if (!isForward) {
+                    l("ark invoice: instant vault credit", vaultAid, txid);
+                    emit(vaultUid, "payment", vp);
+                  }
+                }
+              } catch (e) {
+                warn("ark invoice: instant vault notification failed", e.message);
+              }
+            } catch (e) {
+              await reverse(p);
+              throw e;
+            }
           } else {
             // Check if recipient account is non-custodial (vault)
             const recipientAccount = invoice?.aid ? await g(`account:${invoice.aid}`) : null;
@@ -757,38 +795,58 @@ export default {
     try {
       await requirePin({ body, user });
 
-      // Check for local custodial receive - do internal transfer
-      const vault = await g(`arkaddr:${address}`);
-      if (vault) {
-        const account = await g(`account:${vault.aid}`);
-        if (account?.arkAddress) {
-          const iid = await g(`custodial-ark-invoice:${account.arkAddress}`);
-          if (iid) {
-            const invoice = await getInvoice(iid);
-            if (invoice && !invoice.hash) invoice.hash = invoice.id;
-            const recipient = await getUser(vault.uid);
-            if (recipient && invoice) {
-              l("ark local send", user.username, recipient.username, amount);
-              const p = await sendInternal({ amount, invoice, recipient, sender: user });
-              await db.del(`custodial-ark-invoice:${account.arkAddress}`);
-              return res.send(p);
-            }
-          }
-        }
-      }
-
       l("ark send", user.username, address, amount);
-      const txid = await sendArk(address, amount);
-      l("ark send complete", txid);
-      const hash = txid;
-
+      const tmpHash = v4();
       const p = await debit({
-        hash,
+        hash: tmpHash,
         amount,
         user,
         type: PaymentType.ark,
         aid,
       });
+
+      try {
+        const txid = await sendArk(address, amount);
+        l("ark send complete", txid);
+        p.hash = txid;
+        await s(`payment:${p.id}`, p);
+        await s(`payment:${txid}`, p.id);
+
+        // Instant vault notification: if destination is a vault on our platform,
+        // create the receive payment immediately so the client doesn't have to
+        // wait for ASP indexer + arkSync backoff delays
+        try {
+          const vaultInfo = await g(`arkaddr:${address}`);
+          if (vaultInfo) {
+            const { aid: vaultAid, uid: vaultUid } = vaultInfo;
+
+            // Skip notification if this is a forward (e.g. vault → lightning);
+            // the funds are transient and will leave again immediately
+            const isForward = await g(`custodial-ark-invoice:${address}`);
+
+            const vaultOwner = await g(`user:${vaultUid}`);
+            const { rate, currency } = await getUserRate(vaultOwner || user);
+            const vp = await createArkPayment({
+              aid: vaultAid,
+              uid: vaultUid,
+              amount: parseInt(amount),
+              hash: txid,
+              rate,
+              currency,
+              extraHashMappings: [txid],
+            });
+            if (!isForward) {
+              l("ark send: instant vault credit", vaultAid, txid);
+              emit(vaultUid, "payment", vp);
+            }
+          }
+        } catch (e) {
+          warn("ark send: instant vault notification failed", e.message);
+        }
+      } catch (e) {
+        await reverse(p);
+        throw e;
+      }
 
       res.send(p);
     } catch (e) {
@@ -941,6 +999,10 @@ export default {
           }
           if (found) continue;
 
+          // Skip sent/zero transactions not recorded via vault-send — these are
+          // from internal wallet operations (settle, refresh) not real sends
+          if (tx.amount <= 0) continue;
+
           const primaryHash = hashes[0];
 
           const p = await createArkPayment({
@@ -981,12 +1043,21 @@ export default {
         if (typeof balance === "number" && balance >= 0) {
           const paymentIds = await db.lRange(`${aid}:payments`, 0, -1);
           let expectedBalance = 0;
+          const now = Date.now();
+          let hasRecentPayments = false;
           for (const pid of paymentIds) {
             const pay = await g(`payment:${pid}`);
-            if (pay) expectedBalance += pay.amount;
+            if (pay) {
+              expectedBalance += pay.amount;
+              // Skip reconciliation if there are recent payments the SDK
+              // may not have indexed yet (e.g. instant vault credits)
+              if (pay.amount > 0 && now - pay.created < 120_000) {
+                hasRecentPayments = true;
+              }
+            }
           }
 
-          if (expectedBalance > balance) {
+          if (expectedBalance > balance && !hasRecentPayments) {
             const p = await createArkPayment({
               aid,
               uid,
