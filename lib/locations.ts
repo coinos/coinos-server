@@ -1,4 +1,4 @@
-import { g, s } from "$lib/db";
+import { db, g, s } from "$lib/db";
 import { err } from "$lib/logging";
 import { fields, getUser } from "$lib/utils";
 import got from "got";
@@ -49,8 +49,17 @@ export const getLocations = async () => {
 
     locations.push(...previous);
 
-    await s("locations", dedup(locations));
+    const dedupedLocations = dedup(locations);
+    await s("locations", dedupedLocations);
     await s("locations:since", `${new Date().toISOString().split(".")[0]}Z`);
+
+    for (const loc of dedupedLocations) {
+      if (loc.deleted_at) continue;
+      const { lat, lon } = loc.osm_json;
+      if (!(lat && lon)) continue;
+      await db.geoAdd("locations:geo", { longitude: lon, latitude: lat, member: String(loc.id) });
+      await s(`location:${loc.id}`, loc);
+    }
   } catch (e) {
     console.log(e);
     err("problem fetching locations", e);

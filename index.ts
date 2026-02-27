@@ -66,6 +66,7 @@ app.get("/rate", rates.last);
 app.get("/rates", rates.index);
 
 app.get("/locations", locations.list);
+app.get("/locations/nearby", locations.nearby);
 
 app.get("/invoice/:id", invoices.get);
 app.get("/invoices", auth, invoices.list);
