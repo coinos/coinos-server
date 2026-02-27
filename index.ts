@@ -35,6 +35,7 @@ import shopify from "$routes/shopify";
 import square from "$routes/square";
 import users from "$routes/users";
 
+console.log("test");
 try {
   await initTigerBeetle();
   getLocations();
