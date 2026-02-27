@@ -176,7 +176,7 @@ export default {
       if (!body.user) fail("no user object provided");
       let { user } = body;
 
-      const fields = ["pubkey", "password", "username", "picture", "fresh"];
+      const fields = ["pubkey", "password", "username", "picture", "fresh", "authPubkey"];
       user = await register(pick(user, fields), ip);
 
       const payload = { id: user.id };
@@ -348,6 +348,7 @@ export default {
           algorithm: "bcrypt",
           cost: 4,
         });
+        if (body.authPubkey) user.authPubkey = body.authPubkey;
       }
 
       user.haspin = !!user.pin;
@@ -412,6 +413,11 @@ export default {
         }
       }
 
+      if (req.body.authPubkey && !user.authPubkey) {
+        user.authPubkey = req.body.authPubkey;
+        await s(`user:${user.id}`, user);
+      }
+
       if (username !== "coinos") l("logged in", username, req.headers["cf-connecting-ip"]);
 
       const payload = { id: user.id };
@@ -426,10 +432,65 @@ export default {
     }
   },
 
-  async challenge(_, res) {
+  async challenge(req, res) {
     const id = v4();
     await db.set(`challenge:${id}`, id, { EX: 300 });
-    res.send({ challenge: id });
+    const username = req.query?.username;
+    let hasAuthKey = false;
+    if (username) {
+      const user = await getUser(username.toLowerCase().replace(/\s/g, ""));
+      if (user?.authPubkey) hasAuthKey = true;
+    }
+    res.send({ challenge: id, hasAuthKey });
+  },
+
+  async authKeyLogin(req, res) {
+    try {
+      const { event, challenge, username: rawUsername, twofa, recaptcha } = req.body;
+      const ip = req.headers["cf-connecting-ip"] || req.socket.remoteAddress;
+
+      const ipKey = `ip:${ip}:login`;
+      const ipCount = await db.incr(ipKey);
+      if (ipCount === 1) await db.expire(ipKey, 10);
+      if (ipCount > 30) return res.code(429).send({});
+
+      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
+      if (!recaptchaOk) return res.code(401).send("failed captcha");
+
+      const c = await g(`challenge:${challenge}`);
+      if (!c) fail("Invalid or expired challenge");
+
+      const { kind } = event;
+      if (kind !== 27235) fail("Invalid event");
+
+      if (!verifyEvent(event) || event.tags.find((t) => t[0] === "challenge")?.[1] !== challenge)
+        fail("Invalid signature or challenge mismatch.");
+
+      const username = rawUsername.toLowerCase().replace(/\s/g, "");
+      let user = await getUser(username);
+      if (!user) fail("User not found");
+      if (!user.authPubkey || user.authPubkey !== event.pubkey)
+        fail("Auth key mismatch");
+
+      if (
+        user.twofa &&
+        (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret))
+      ) {
+        return res.code(401).send("2fa required");
+      }
+
+      l("authkey login", username, ip);
+
+      const payload = { id: user.id };
+      const token = jwt.sign(payload, config.jwt);
+      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      user = pick(user, whitelist);
+      res.send({ user, token });
+    } catch (e) {
+      console.log(e);
+      err("authkey login error", e.message, req.socket.remoteAddress);
+      res.code(401).send({});
+    }
   },
 
   async nostrAuth(req, res) {
@@ -646,6 +707,7 @@ export default {
 
       user.pin = null;
       user.nsec = null;
+      user.authPubkey = null;
 
       user.password = await Bun.password.hash(password, {
         algorithm: "bcrypt",

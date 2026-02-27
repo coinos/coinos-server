@@ -13,7 +13,7 @@ import { v4 } from "uuid";
 
 const valid = /^[\p{L}\p{N}]{2,24}$/u;
 export default async (user, ip) => {
-  let { password, pubkey, username } = user;
+  let { password, pubkey, username, authPubkey } = user;
   l("registering", username);
 
   const reserved = ["ecash"];

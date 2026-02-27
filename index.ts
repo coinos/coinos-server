@@ -173,6 +173,7 @@ app.post(
 );
 app.post("/flash", users.flash);
 app.get("/challenge", users.challenge);
+app.post("/authKeyLogin", users.authKeyLogin);
 app.post("/nostrAuth", users.nostrAuth);
 app.post("/passkey/register/options", auth, users.passkeyRegisterOptions);
 app.post("/passkey/register/verify", auth, users.passkeyRegisterVerify);
