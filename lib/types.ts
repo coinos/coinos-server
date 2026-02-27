@@ -12,6 +12,7 @@ export interface User {
   destination: string;
   display: string;
   email: string;
+  encryptedKeys: Record<string, string>;
   fiat: string;
   followers: string;
   follows: string;

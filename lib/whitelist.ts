@@ -12,6 +12,7 @@ export default [
   "destination",
   "display",
   "email",
+  "encryptedKeys",
   "fiat",
   "fresh",
   "followers",
