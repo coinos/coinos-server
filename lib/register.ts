@@ -74,7 +74,6 @@ export default async (user, ip) => {
   const account = JSON.stringify({
     id,
     type: "ecash",
-    name: "Spending",
   });
 
   const bytes = randomBytes(32);
