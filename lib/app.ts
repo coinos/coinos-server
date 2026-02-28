@@ -30,7 +30,7 @@ app.use("*", async (c, next) => {
   // Skip rate limiting for public assets
   if (url.includes("public")) return next();
 
-  const ip = (c.req.header("cf-connecting-ip") as string) || c.env?.ip || "unknown";
+  const ip = (c.req.header("cf-connecting-ip") as string) || (c.env as any)?.ip || "unknown";
   const ua = c.req.header("user-agent") || "unknown-ua";
   const rateLimitBy = c.req.header("rate-limit-by");
   const key = rateLimitBy === "ua" ? ua : ip;
@@ -103,7 +103,7 @@ app.use("*", async (c, next) => {
   if (shouldLog) {
     const xff = c.req.header("x-forwarded-for");
     const forwardedIp = xff?.split(",")[0]?.trim();
-    const ip = c.req.header("cf-connecting-ip") || forwardedIp || c.env?.ip || "unknown";
+    const ip = c.req.header("cf-connecting-ip") || forwardedIp || (c.env as any)?.ip || "unknown";
 
     let body;
     // Only parse body for non-GET requests
@@ -119,7 +119,7 @@ app.use("*", async (c, next) => {
       ip,
       query: c.req.query(),
       body,
-      user: c.get("user")?.username,
+      user: (c.get("user" as never) as any)?.username,
     });
   }
 
@@ -141,7 +141,7 @@ app.use("*", async (c, next) => {
 });
 
 // Error handler
-app.onError((err, c) => {
+app.onError((_err, c) => {
   return c.json({ ok: false }, 500);
 });
 

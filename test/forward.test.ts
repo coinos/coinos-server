@@ -16,7 +16,8 @@ const mockLnDecode = ln.decode as any;
 const mockLnGetroutes = ln.getroutes as any;
 
 import { completePayment } from "$lib/payments";
-import routes from "$routes/payments";
+import _routes from "$routes/payments";
+const routes: any = _routes;
 
 // =====================================================================
 // Helpers
@@ -114,7 +115,7 @@ const makeRes = () => {
     send: (data: any) => {
       sent = data;
     },
-    code: (code: number) => ({
+    code: (_code: number) => ({
       send: (data: any) => {
         sent = data;
       },

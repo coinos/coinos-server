@@ -21,7 +21,7 @@ function isSocketDied(e: any) {
   return code === "EPIPE" || code === "ECONNRESET" || code === "ENOENT" || code === 2;
 }
 
-function lightningProxy(rpcPath: string) {
+function lightningProxy(rpcPath: string): any {
   let client: any = null;
 
   let nextTryAt = 0;

@@ -7,9 +7,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { utf8ToBytes } from "@noble/hashes/utils.js";
 import { base64urlnopad as base64 } from "@scure/base";
 import { SquareClient } from "square";
-import { v4 } from "uuid";
-
-const { scopes, url, appId, clientSecret, environment } = config.square;
+const { scopes, url, appId, clientSecret: _clientSecret, environment } = config.square;
 
 export default {
   async connect(c) {
@@ -19,12 +17,12 @@ export default {
       return c.json("connected");
     }
 
-    const codeVerifier = base64.encode(crypto.randomBytes(32));
+    const codeVerifier = base64.encode(crypto.randomBytes(32) as any);
     await s(`${user.id}:codeVerifier`, codeVerifier);
 
     const challenge = base64.encode(sha256(utf8ToBytes(codeVerifier)));
 
-    const state = base64.encode(crypto.randomBytes(12));
+    const state = base64.encode(crypto.randomBytes(12) as any);
     const scope = scopes.join("+");
 
     return c.json(

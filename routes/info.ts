@@ -1,5 +1,4 @@
-import { archive } from "$lib/db";
-import { db, g } from "$lib/db";
+import { g } from "$lib/db";
 import { getHealthStatus } from "$lib/health";
 import ln from "$lib/ln";
 import { getDecodedToken } from "@cashu/cashu-ts";
@@ -12,8 +11,6 @@ export default {
   },
 
   async balances(c) {
-    let total = 0;
-
     const funds = await ln.listfunds();
     const lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
     const lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));

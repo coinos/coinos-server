@@ -32,11 +32,6 @@ const creditLedger: Record<string, number> = {
   liquid: LEDGER_CREDIT_LQ,
 };
 
-const houseCreditAccount: Record<string, bigint> = {
-  bitcoin: HOUSE_BTC,
-  lightning: HOUSE_LN,
-  liquid: HOUSE_LQ,
-};
 
 function uuidToBigInt(uuid: string): bigint {
   return BigInt(`0x${uuid.replace(/-/g, "")}`);

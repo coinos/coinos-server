@@ -15,17 +15,17 @@ export default async (c) => {
 
     let buf = Buffer.from(await (file as File).arrayBuffer());
 
-    const [format, ext] = (await fileTypeFromBuffer(buf)).mime.split("/");
+    const [format, ext] = (await fileTypeFromBuffer(buf as any)).mime.split("/");
 
     if (format !== "image" && !["jpg", "jpeg", "png"].includes(ext)) fail("unsupported file type");
 
     const w = type === "banner" ? 1920 : 240;
     buf = await sharp(buf, { failOnError: false }).rotate().resize(w).webp().toBuffer();
 
-    const hash = createHash("sha256").update(buf).digest("hex");
+    const hash = createHash("sha256").update(buf as any).digest("hex");
 
     const filePath = `/home/bun/app/data/uploads/${hash}.webp`;
-    writeFileSync(filePath, buf);
+    writeFileSync(filePath, buf as any);
 
     return c.json({ hash });
   } catch (e) {

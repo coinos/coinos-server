@@ -1,5 +1,5 @@
 import { EventSource } from "eventsource";
-if (!globalThis.EventSource) globalThis.EventSource = EventSource;
+if (!globalThis.EventSource) globalThis.EventSource = EventSource as any;
 import { SingleKey, Wallet } from "@arkade-os/sdk";
 
 const key = "0ebe9a690651e9e08d7c2f4db106d8ec264725241fdb34c57aedb26155b0e027";

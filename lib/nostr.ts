@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g, s } from "$lib/db";
+import { db, g } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { scan } from "$lib/strfry";
 import { fail, fields, getUser, pick } from "$lib/utils";
@@ -23,8 +23,7 @@ const alwaysTrue: any = (t: Event) => {
   t[Symbol("verified")] = true;
   return true;
 };
-export const pool = new AbstractSimplePool({ verifyEvent: alwaysTrue });
-const opts = { maxWait: 2000 };
+export const pool = new (AbstractSimplePool as any)({ verifyEvent: alwaysTrue });
 
 export const anon = (pubkey) => ({
   username: pubkey.substr(0, 6),
@@ -124,9 +123,10 @@ export const getRelays = async (pubkey): Promise<any> => {
       if (!r[2] || r[2] === "read") read.push(r[1]);
     }
   } else
-    pool
+    (pool as any)
       .get(relays, filter)
-      .then(send)
+      // @ts-ignore
+      .then(send as any)
       .catch(() => {});
 
   return { read, write };
@@ -163,7 +163,8 @@ export const getCount = async (pubkey) => {
     let followers = await g(k);
 
     if (followers === null) {
-      [followers] = await count({
+      // @ts-ignore
+      [followers] = await (count as any)({
         "#p": [pubkey],
         kinds: [3],
       });
@@ -220,7 +221,7 @@ export const q = async (f) => {
 
   const p = new Promise((resolve) => {
     const r = [];
-    pool.subscribeMany(["wss://relay.primal.net"], [f], {
+    (pool as any).subscribeMany(["wss://relay.primal.net"], [f], {
       onevent(e) {
         r.push(e);
         coinos.publish(e);

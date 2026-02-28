@@ -63,6 +63,7 @@ function u128(n: bigint): bigint {
 }
 
 async function resolveAddresses(addresses: string[]): Promise<string[]> {
+  // @ts-ignore
   const { lookup } = await import("node:dns/promises");
   const resolved: string[] = [];
   for (const addr of addresses) {
@@ -181,12 +182,12 @@ async function getAccount(id: bigint) {
 // Raw microsats balance for internal use
 function accountBalanceMicro(account: any): bigint {
   if (!account) return 0n;
-  return account.credits_posted - account.debits_posted;
+  return BigInt(account.credits_posted) - BigInt(account.debits_posted);
 }
 
 function accountBalance(account: any): number {
   if (!account) return 0;
-  const micro = account.credits_posted - account.debits_posted;
+  const micro = BigInt(account.credits_posted) - BigInt(account.debits_posted);
   return Number(micro / MSATS); // Floor division to sats
 }
 
@@ -685,7 +686,7 @@ export async function tbMultiplyForMicrosats(uid: string): Promise<number> {
   const multiplyAccount = async (accountId: bigint, ledger: number, houseId: bigint) => {
     const acct = await client.lookupAccounts([u128(accountId)]);
     if (!acct.length) return;
-    const current = acct[0].credits_posted - acct[0].debits_posted;
+    const current = BigInt(acct[0].credits_posted) - BigInt(acct[0].debits_posted);
     if (current <= 0n) return;
 
     const results = await client.createTransfers([

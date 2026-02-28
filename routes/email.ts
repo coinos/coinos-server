@@ -1,7 +1,7 @@
 import { bail } from "$lib/utils";
 import got from "got";
 import config from "$config";
-import { l, warn } from "$lib/logging";
+import { warn } from "$lib/logging";
 import { SESClient } from "@aws-sdk/client-ses";
 import { SendEmailCommand } from "@aws-sdk/client-ses";
 
@@ -21,7 +21,7 @@ export default {
             response,
           },
         })
-        .json();
+        .json() as any;
 
       if (success || response === config.adminpass) {
         body.token = undefined;

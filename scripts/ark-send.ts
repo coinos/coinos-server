@@ -1,4 +1,4 @@
-import { sendArk } from "../lib/ark";
+import { sendArk } from "../lib/ark.js";
 
 const address = process.argv[2];
 const amount = parseInt(process.argv[3]);

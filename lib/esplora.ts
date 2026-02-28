@@ -37,7 +37,7 @@ export const getAddressUtxos = async (addresses: string[]) => {
   const results = [];
   for (const address of addresses) {
     const utxos = await getUtxos(address);
-    for (const u of utxos) {
+    for (const u of utxos as any) {
       u.address = address;
       results.push(u);
     }
@@ -98,7 +98,7 @@ const hdVersionsForKey = (pubkey: string) => {
 
 export const deriveAddress = (
   pubkey: string,
-  fingerprint: string,
+  _fingerprint: string,
   index: number,
   internal = false,
 ) => {
@@ -140,7 +140,7 @@ export const findLastUsedIndex = async (pubkey: string, fingerprint: string, max
   for (let i = 0; i < maxScan; i++) {
     const { address } = deriveAddress(pubkey, fingerprint, i, false);
     const txs = await getAddressTxs(address);
-    if (txs.length > 0) lastUsed = i;
+    if ((txs as any).length > 0) lastUsed = i;
   }
   return lastUsed + 1;
 };

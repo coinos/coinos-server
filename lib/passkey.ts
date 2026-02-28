@@ -4,9 +4,10 @@ import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
+// @ts-ignore
 import type { AuthenticatorTransportFuture } from "@simplewebauthn/types";
 import { db, g, s } from "$lib/db";
-import { fail, getUser } from "$lib/utils";
+import { fail } from "$lib/utils";
 import { v4 } from "uuid";
 
 const rpName = "coinos";
@@ -27,7 +28,7 @@ export async function generatePasskeyRegistration(user: any, origin: string) {
     rpName,
     rpID,
     userName: user.username,
-    userID: new TextEncoder().encode(user.id),
+    userID: new TextEncoder().encode(user.id) as any,
     attestationType: "none",
     excludeCredentials: passkeys.map((p: any) => ({
       id: p.credentialID,
@@ -51,7 +52,7 @@ export async function verifyPasskeyRegistration(user: any, response: any, origin
 
   const verification = await verifyRegistrationResponse({
     response,
-    expectedChallenge,
+    expectedChallenge: expectedChallenge as string,
     expectedOrigin: origin,
     expectedRPID: rpID,
   });
@@ -108,15 +109,15 @@ export async function verifyPasskeyLogin(response: any, challengeId: string, ori
 
   const verification = await verifyAuthenticationResponse({
     response,
-    expectedChallenge,
+    expectedChallenge: expectedChallenge as string,
     expectedOrigin: origin,
     expectedRPID: rpID,
     credential: {
       id: passkey.credentialID,
-      publicKey: Buffer.from(passkey.credentialPublicKey, "base64url"),
+      publicKey: Buffer.from(passkey.credentialPublicKey, "base64url") as any,
       counter: passkey.counter,
       transports: passkey.transports as AuthenticatorTransportFuture[],
-    },
+    } as any,
   });
 
   if (!verification.verified) fail("Passkey authentication failed");

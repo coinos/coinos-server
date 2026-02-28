@@ -8,7 +8,7 @@ import { describe, test, expect, beforeAll } from "bun:test";
 
 const APP = "http://localhost:3119";
 
-const api = async (path: string, token: string, opts: any = {}) => {
+const api = async (path: string, token: string, opts: any = {}): Promise<any> => {
   const res = await fetch(`${APP}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -17,28 +17,19 @@ const api = async (path: string, token: string, opts: any = {}) => {
     },
     ...opts,
   });
-  return res.json();
+  return res.json() as any;
 };
 
-const register = async (username: string, password: string) => {
+const register = async (username: string, password: string): Promise<any> => {
   const res = await fetch(`${APP}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user: { username, password } }),
   });
   if (!res.ok) throw new Error(`register failed: ${await res.text()}`);
-  return res.json();
+  return res.json() as any;
 };
 
-const login = async (username: string, password: string) => {
-  const res = await fetch(`${APP}/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-  if (!res.ok) throw new Error(`login failed: ${await res.text()}`);
-  return res.json();
-};
 
 const createInvoice = (token: string, invoice: any) =>
   api("/invoice", token, {
@@ -46,8 +37,6 @@ const createInvoice = (token: string, invoice: any) =>
     body: JSON.stringify({ invoice }),
   });
 
-const getPayments = (token: string, aid?: string) =>
-  api(`/payments${aid ? `?aid=${aid}` : ""}`, token);
 
 // =====================================================================
 // Test state
@@ -79,7 +68,7 @@ beforeAll(async () => {
     body: JSON.stringify({ type: "ark", name: "ark vault" }),
   });
   if (res.ok) {
-    const account = await res.json();
+    const account = await res.json() as any;
     arkAccountId = account.id;
   } else {
     // Fallback: use user's own ID as the account

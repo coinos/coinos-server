@@ -1,5 +1,5 @@
 import config from "$config";
-import { db, g, s } from "$lib/db";
+import { db, g } from "$lib/db";
 import ln from "$lib/ln";
 import {
   EX,
@@ -18,7 +18,7 @@ import { bail, fail, fields, getUser } from "$lib/utils";
 import got from "got";
 import type { Event } from "nostr-tools";
 import { decode } from "nostr-tools/nip19";
-import type { ProfilePointer } from "nostr-tools/nip19";
+
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
 
 export default {
@@ -163,7 +163,8 @@ export default {
       const filter = { kinds: [9735], "#e": [id] };
       let events = await scan(filter);
       if (!events.length) {
-        await sync("wss://relay.primal.net", filter);
+        // @ts-ignore
+        await (sync as any)("wss://relay.primal.net", filter);
         events = await scan(filter);
       }
       if (!events.length) return c.json([]);
@@ -331,7 +332,7 @@ export default {
     } else {
       const records = await db.sMembers("nip5");
       for (const s of records) {
-        const [name, pubkey] = s.split(":");
+        const [name, pubkey] = (s as string).split(":");
         names[name] = pubkey;
       }
     }
@@ -346,8 +347,8 @@ export default {
   async profile(c) {
     const profile = c.req.param("profile");
     const { data } = decode(profile);
-    const { pubkey, relays } = data as ProfilePointer;
-    const recipient = await getProfile(pubkey, relays);
+    const { pubkey, relays } = data as any;
+    const recipient = await (getProfile as any)(pubkey, relays);
     recipient.relays = relays;
     return c.json(recipient);
   },
@@ -357,7 +358,7 @@ export default {
       const body = await c.req.json();
       const { amount, id } = body;
       const { pubkey } = await get({ ids: [id] });
-      const event = await makeZapRequest({
+      const event = await (makeZapRequest as any)({
         profile: pubkey,
         event: id,
         amount: amount * 1000,

@@ -12,7 +12,7 @@ console.log(mintQuote.request);
 let interval = setInterval(async () => {
   const mintQuoteChecked = await wallet.checkMintQuote(mintQuote.quote);
   if (mintQuoteChecked.state == MintQuoteState.PAID) {
-    const { proofs } = await wallet.mintTokens(amt, mintQuote.quote);
+    const { proofs } = await (wallet as any).mintTokens(amt, mintQuote.quote);
 
     const token = getEncodedTokenV4({
       token: [{ mint: mintUrl, proofs }],

@@ -1,16 +1,15 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 
 import { tbCredit, tbConfirm } from "$lib/tb";
-import { emit } from "$lib/sockets";
 import { callWebhook } from "$lib/webhooks";
 
 const mockTbCredit = tbCredit as any;
 const mockTbConfirm = tbConfirm as any;
-const mockEmit = emit as any;
 const mockCallWebhook = callWebhook as any;
 
-import { processWatchedTx, credit, catchUp } from "$lib/payments";
-import routes from "$routes/payments";
+import { processWatchedTx, catchUp } from "$lib/payments";
+import _routes from "$routes/payments";
+const routes: any = _routes;
 import { PaymentType } from "$lib/types";
 
 // =====================================================================
@@ -105,7 +104,7 @@ const makeRes = () => {
     send: (data: any) => {
       sent = data;
     },
-    code: (code: number) => ({
+    code: (_code: number) => ({
       send: (data: any) => {
         sent = data;
       },

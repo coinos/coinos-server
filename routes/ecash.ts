@@ -103,7 +103,7 @@ export default {
       const rates = await g("rates");
       const rate = rates[currency];
 
-      if (ourfee.err) fail(ourfee.err);
+      if ((ourfee as any).err) fail((ourfee as any).err);
 
       const id = v4();
       const p = {

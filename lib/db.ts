@@ -59,7 +59,7 @@ export default db;
 export const g = async (k) => {
   const v = await db.get(k);
   try {
-    return JSON.parse(v);
+    return JSON.parse(v as string);
   } catch (e) {
     return v;
   }
@@ -79,7 +79,7 @@ export async function* scan(pattern: string) {
 export const ga = async (k) => {
   const v = await archive.get(k);
   try {
-    return JSON.parse(v);
+    return JSON.parse(v as string);
   } catch (e) {
     return v;
   }
@@ -98,7 +98,7 @@ export const gf = async (k) => {
   let v = await db.get(k);
   if (v === null) v = await archive.get(k);
   try {
-    return JSON.parse(v);
+    return JSON.parse(v as string);
   } catch (e) {
     return v;
   }
@@ -116,13 +116,13 @@ export const getWithArchive = async (prefix, id) => {
   if (v === null) v = await archive.get(`${prefix}:${id}`);
   if (v === null) return null;
   try {
-    const parsed = JSON.parse(v);
+    const parsed = JSON.parse(v as string);
     // If it's a reference to another key, follow it
     if (typeof parsed === "string") {
       let ref = await db.get(`${prefix}:${parsed}`);
       if (ref === null) ref = await archive.get(`${prefix}:${parsed}`);
       if (ref === null) return null;
-      return JSON.parse(ref);
+      return JSON.parse(ref as string);
     }
     return parsed;
   } catch (e) {

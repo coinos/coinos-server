@@ -50,7 +50,7 @@ export default {
     try {
       const id = c.req.param("id");
       const body = await c.req.json();
-      const { tip, webhook, secret, received } = body.invoice;
+      const { tip, webhook, secret, received: _received } = body.invoice;
 
       if (tip < 0) fail("Invalid tip");
 

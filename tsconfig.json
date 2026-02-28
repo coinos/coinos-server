@@ -3,7 +3,7 @@
     // Enable latest features
     "lib": ["ESNext"],
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "nodenext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
@@ -18,7 +18,6 @@
     // Some stricter flags
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noAssignInExpressions": false,
 
     "baseUrl": ".",
     "paths": {

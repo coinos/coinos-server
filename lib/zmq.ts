@@ -221,8 +221,8 @@ const startSub = (url: string, topic: string, onMessage: (b: Uint8Array) => void
     };
 
     socket.on("connect", () => socket.write(greeting()));
-    socket.on("data", (d: Uint8Array) => {
-      buffer = concatBytes(buffer, d);
+    socket.on("data", (d: any) => {
+      buffer = concatBytes(buffer, d as Uint8Array) as any;
       processBuffer().catch((e) => err("zmq parse error", e.message));
     });
     socket.on("error", (e) => {

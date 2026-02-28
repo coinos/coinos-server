@@ -1,6 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
-import { db, g, ga, gf, s } from "$lib/db";
+import { db, g, gf, s } from "$lib/db";
 import {
   broadcastTx,
   btcNetwork,
@@ -922,7 +922,7 @@ const getAddressType = async (a) => {
   }
 };
 
-const buildNonCustodial = async ({ aid, amount, address, feeRate, subtract, user }) => {
+const buildNonCustodial = async ({ aid, amount, address, feeRate, subtract, user: _user }) => {
   const account = await g(`account:${aid}`);
   if (!account?.pubkey) fail("account missing pubkey");
 
@@ -1146,10 +1146,10 @@ export const catchUp = async () => {
   try {
     // Check watched addresses for any missed bitcoin transactions
     const watched = await db.sMembers("watching");
-    for (const address of watched) {
+    for (const address of watched as any) {
       try {
-        const txs = await getAddressTxs(address);
-        for (const tx of txs) {
+        const txs = await getAddressTxs(address as string);
+        for (const tx of txs as any) {
           await processWatchedTx(tx);
         }
       } catch (e) {
@@ -1160,7 +1160,6 @@ export const catchUp = async () => {
     // Non-custodial accounts: check pending outgoing payments
     const inflightAccounts = await db.keys("inflight:*");
     for (const key of inflightAccounts) {
-      const aid = key.replace("inflight:", "");
       const keyType = await db.type(key);
       if (keyType !== "set") continue;
       const paymentIds = await db.sMembers(key);
@@ -1171,7 +1170,7 @@ export const catchUp = async () => {
             await db.sRem(key, pid);
             continue;
           }
-          const status = await getTxStatus(p.hash);
+          const status = await getTxStatus(p.hash) as any;
           if (status.confirmed) {
             p.confirmed = true;
             await s(`payment:${p.id}`, p);
@@ -1258,7 +1257,7 @@ export const importAccountHistory = async (account) => {
     const txsById = new Map();
     for (const address of allAddrs) {
       const txs = await getAddressTxs(address);
-      for (const tx of txs) {
+      for (const tx of txs as any) {
         txsById.set(tx.txid, tx);
       }
     }

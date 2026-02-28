@@ -57,8 +57,8 @@ export const notify = async (p, user, withdrawal) => {
     url: `/payment/${p.id}`,
   };
 
-  for (const s of subscriptions) {
-    webpush.sendNotification(JSON.parse(s), JSON.stringify(payload)).catch((e) => {
+  for (const s of subscriptions as any) {
+    webpush.sendNotification(JSON.parse(s as string), JSON.stringify(payload)).catch((e) => {
       warn("sub failed", e.message);
       db.sRem(`${user.id}:subscriptions`, s);
     });
@@ -77,7 +77,7 @@ export const nwcNotify = async (p) => {
   try {
     const user = await getUser(p.uid);
     const pubkeys = await db.sMembers(`${user.id}:apps`);
-    if (pubkeys.length) {
+    if ((pubkeys as any).length) {
       let payment_hash = "";
       if (p.type === "lightning") ({ payment_hash } = await ln.decode(p.hash));
       for (const pubkey of pubkeys) {
@@ -102,7 +102,7 @@ export const nwcNotify = async (p) => {
           notification,
         });
 
-        const content = await nip04.encrypt(serverSecret2, pubkey, payload);
+        const content = await nip04.encrypt(serverSecret2 as any, pubkey as string, payload);
 
         const unsigned = {
           content,
@@ -111,7 +111,7 @@ export const nwcNotify = async (p) => {
           created_at: Math.floor(Date.now() / 1000),
         };
 
-        const event = finalizeEvent(unsigned, hexToBytes(serverSecret2));
+        const event = finalizeEvent(unsigned as any, hexToBytes(serverSecret2));
 
         publish(event).catch(nada);
       }

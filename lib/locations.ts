@@ -53,7 +53,7 @@ export const getLocations = async () => {
     await s("locations", dedupedLocations);
     await s("locations:since", `${new Date().toISOString().split(".")[0]}Z`);
 
-    for (const loc of dedupedLocations) {
+    for (const loc of dedupedLocations as any) {
       if (loc.deleted_at) continue;
       const { lat, lon } = loc.osm_json;
       if (!(lat && lon)) continue;

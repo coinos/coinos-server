@@ -1,10 +1,9 @@
-import { l, err, warn } from "$lib/logging";
+import { l, err } from "$lib/logging";
 import config from "$config";
 import { SESClient } from "@aws-sdk/client-ses";
 import { SendEmailCommand } from "@aws-sdk/client-ses";
 import handlebars from "handlebars";
 import fs from "fs";
-import path from "path";
 
 const Charset = "UTF-8";
 

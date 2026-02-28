@@ -73,7 +73,7 @@ app.post("/invoice", optional, invoices.create);
 app.post("/invoice/:id", optional, invoices.update);
 app.post("/sign", auth, invoices.sign);
 
-app.get("/assetlinks.json", (c) => {
+app.get("/assetlinks.json", (_c) => {
   return new Response(Bun.file("assetlinks.json"));
 });
 app.get("/nostr.json", nostr.identities);

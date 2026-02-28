@@ -25,7 +25,7 @@ export const migrateAccounts = async () => {
 
   for (const key of keys) {
     try {
-      if (key.endsWith(":invoices")) continue;
+      if ((key as string).endsWith(":invoices")) continue;
       const keyType = await db.type(key);
       if (keyType !== "string") continue;
 
@@ -65,8 +65,8 @@ export const migrateBalancesToTB = async () => {
   // Migrate balance:* keys
   for await (const k of scan("balance:*")) {
     try {
-      const id = k.split(":")[1];
-      const balance = Number.parseInt((await db.get(k)) || "0");
+      const id = (k as string).split(":")[1];
+      const balance = Number.parseInt(((await db.get(k)) as string) || "0");
       await createBalanceAccount(id);
       if (balance > 0) await tbSetBalance(id, balance);
       count++;
@@ -78,8 +78,8 @@ export const migrateBalancesToTB = async () => {
   // Migrate pending:* keys
   for await (const k of scan("pending:*")) {
     try {
-      const id = k.split(":")[1];
-      const pending = Number.parseInt((await db.get(k)) || "0");
+      const id = (k as string).split(":")[1];
+      const pending = Number.parseInt(((await db.get(k)) as string) || "0");
       if (pending > 0) await tbSetPending(id, pending);
     } catch (e) {
       warn("failed to migrate pending", k, e.message);
@@ -89,10 +89,10 @@ export const migrateBalancesToTB = async () => {
   // Migrate credit:*:* keys
   for await (const k of scan("credit:*:*")) {
     try {
-      const parts = k.split(":");
+      const parts = (k as string).split(":");
       const type = parts[1];
       const uid = parts[2];
-      const amount = Number.parseInt((await db.get(k)) || "0");
+      const amount = Number.parseInt(((await db.get(k)) as string) || "0");
       await createCreditAccounts(uid);
       if (amount > 0) await tbSetCredit(uid, type, amount);
     } catch (e) {
@@ -118,9 +118,9 @@ export const migrateToMicrosats = async () => {
       if (!raw) continue;
 
       // Skip user alias keys (they just contain another key reference)
-      if (!raw.startsWith("{")) continue;
+      if (!(raw as string).startsWith("{")) continue;
 
-      const user = JSON.parse(raw);
+      const user = JSON.parse(raw as string);
       if (!user.id) continue;
 
       const multiplied = await tbMultiplyForMicrosats(user.id);
@@ -144,9 +144,9 @@ export const migrateAutowithdraw = async () => {
   for await (const k of scan("user:*")) {
     try {
       const raw = await db.get(k);
-      if (!raw || !raw.startsWith("{")) continue;
+      if (!raw || !(raw as string).startsWith("{")) continue;
 
-      const user = JSON.parse(raw);
+      const user = JSON.parse(raw as string);
       if (!user.id || !user.autowithdraw) continue;
 
       const accountIds = await db.lRange(`${user.id}:accounts`, 0, -1);
@@ -184,7 +184,7 @@ export const migrateFundsToTB = async () => {
   for await (const k of scan("fund:*")) {
     try {
       // Skip sub-keys like fund:name:payments, fund:name:managers, fund:limit
-      const parts = k.split(":");
+      const parts = (k as string).split(":");
       if (parts.length !== 2) continue;
       const name = parts[1];
       if (name === "limit") continue;
@@ -192,7 +192,7 @@ export const migrateFundsToTB = async () => {
       const keyType = await db.type(k);
       if (keyType !== "string") continue;
 
-      const balance = Number.parseInt((await db.get(k)) || "0");
+      const balance = Number.parseInt(((await db.get(k)) as string) || "0");
       await createFundAccount(name);
       if (balance > 0) await tbFundCredit(name, balance);
       count++;

@@ -327,7 +327,7 @@ export default {
     const body = await c.req.json();
     const { id, fiat, currency, amount } = body;
 
-    const managers = await db.sMembers(`fund:${id}:managers`);
+    const managers = [...await db.sMembers(`fund:${id}:managers`)];
     if (managers.length && !managers.includes(uid)) fail("Unauthorized");
 
     const authorization = {
@@ -386,7 +386,7 @@ export default {
         l("funded fund", id);
       }
 
-      const managers = await db.sMembers(`fund:${id}:managers`);
+      const managers = [...await db.sMembers(`fund:${id}:managers`)];
       if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
 
       const result: any = await tbFundDebit(id, amount, "Insufficient funds");
@@ -413,7 +413,7 @@ export default {
   async managers(c) {
     const name = c.req.param("name");
 
-    const ids = await db.sMembers(`fund:${name}:managers`);
+    const ids = [...await db.sMembers(`fund:${name}:managers`)];
 
     const managers = (await Promise.all(ids.map(async (id) => await getUser(id, fields)))).filter(
       Boolean,
@@ -429,7 +429,7 @@ export default {
 
     const k = `fund:${id}:managers`;
 
-    let managers = await db.sMembers(k);
+    let managers: any[] = [...await db.sMembers(k)];
     if (managers.length) {
       if (!managers.includes(user.id)) fail("Unauthorized");
     } else {
@@ -442,7 +442,7 @@ export default {
 
     await db.sAdd(k, uid);
 
-    const ids = await db.sMembers(k);
+    const ids = [...await db.sMembers(k)];
     if (!managers.length)
       managers = await Promise.all(ids.map(async (id) => await getUser(id, fields)));
 
@@ -457,7 +457,7 @@ export default {
       const user = c.get("user");
 
       const k = `fund:${name}:managers`;
-      let managers = await db.sMembers(k);
+      let managers: any[] = [...await db.sMembers(k)];
 
       if (managers.length) {
         if (!managers.includes(user.id)) fail("Unauthorized");
@@ -465,7 +465,7 @@ export default {
 
       await db.sRem(k, uid);
 
-      const ids = await db.sMembers(k);
+      const ids = [...await db.sMembers(k)];
       managers = await Promise.all(ids.map(async (id) => await getUser(id, fields)));
 
       return c.json(managers);
@@ -491,7 +491,7 @@ export default {
         const p = await getPayment(`${txid}:${vout}`);
 
         if (!p) {
-          const invoice = await getInvoice(address);
+          await getInvoice(address);
           if (sats(amount) < 300) continue;
 
           const lockKey = `lock:${txid}:${vout}`;
@@ -1040,7 +1040,7 @@ export default {
               currency,
               created: Date.now(),
               extraHashMappings: [],
-            });
+            }) as any;
             p.memo = "expired";
             await s(`payment:${p.id}`, p);
             payments.push(p);

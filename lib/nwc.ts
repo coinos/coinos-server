@@ -2,7 +2,7 @@ import config from "$config";
 import { archive, db, g, gf } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
-import { err, l, warn } from "$lib/logging";
+import { l, warn } from "$lib/logging";
 import { handleZap, serverPubkey, serverPubkey2, serverSecret, serverSecret2 } from "$lib/nostr";
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { getBalance } from "$lib/tb";
@@ -92,8 +92,8 @@ export default () => {
         db.zAdd(handledKey, { score: now, value: ev.id });
         db.zRemRangeByScore(handledKey, 0, now - nwcEventMaxAgeSeconds);
         const size = await db.zCard(handledKey);
-        if (size > handledMaxSize) {
-          await db.zRemRangeByRank(handledKey, 0, size - handledMaxSize - 1);
+        if (Number(size) > handledMaxSize) {
+          await db.zRemRangeByRank(handledKey, 0, Number(size) - handledMaxSize - 1);
         }
         let { content, pubkey } = ev;
         const pk = ev.tags.find((t) => t[0] === "p")[1];

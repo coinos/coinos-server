@@ -32,10 +32,6 @@ const clExec = async (container: string, ...args: string[]): Promise<any> => {
   }
 };
 
-const mine = async (n: number) => {
-  const addr = await exec("docker exec bc bitcoin-cli -regtest -rpcwallet=coinos getnewaddress");
-  await exec(`docker exec bc bitcoin-cli -regtest generatetoaddress ${n} ${addr}`);
-};
 
 const waitFor = async <T>(fn: () => Promise<T>, timeout = 30000): Promise<T> => {
   const start = Date.now();
@@ -52,17 +48,17 @@ const waitFor = async <T>(fn: () => Promise<T>, timeout = 30000): Promise<T> => 
   throw new Error(`waitFor timed out: ${lastError?.message || "no result"}`);
 };
 
-const register = async (username: string, password: string) => {
+const register = async (username: string, password: string): Promise<any> => {
   const res = await fetch(`${APP}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user: { username, password } }),
   });
   if (!res.ok) throw new Error(`register failed: ${await res.text()}`);
-  return res.json();
+  return res.json() as any;
 };
 
-const api = async (path: string, token: string, opts: any = {}) => {
+const api = async (path: string, token: string, opts: any = {}): Promise<any> => {
   const res = await fetch(`${APP}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -71,7 +67,7 @@ const api = async (path: string, token: string, opts: any = {}) => {
     },
     ...opts,
   });
-  return res.json();
+  return res.json() as any;
 };
 
 const updateUser = (token: string, settings: any) =>
@@ -102,8 +98,6 @@ const getPayments = (token: string) => api("/payments", token);
 
 let funderToken: string;
 let withdrawerToken: string;
-let funderUser: any;
-let withdrawerUser: any;
 
 // =====================================================================
 // Setup: register users, fund the funder via lightning
@@ -128,11 +122,9 @@ beforeAll(async () => {
   // Register test users
   const funder = await register(funderName, "testpass123");
   funderToken = funder.token;
-  funderUser = funder;
 
   const withdrawer = await register(withdrawerName, "testpass123");
   withdrawerToken = withdrawer.token;
-  withdrawerUser = withdrawer;
 
   // Fund the funder: generate a lightning invoice and pay from clb
   const inv = await createInvoice(funderToken, {

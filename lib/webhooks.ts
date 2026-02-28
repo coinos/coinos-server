@@ -1,4 +1,3 @@
-import config from "$config";
 import got from "got";
 import { l, err } from "$lib/logging";
 

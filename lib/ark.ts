@@ -1,5 +1,5 @@
 import { EventSource } from "eventsource";
-if (!globalThis.EventSource) globalThis.EventSource = EventSource;
+if (!globalThis.EventSource) globalThis.EventSource = EventSource as any;
 
 import config from "$config";
 import { SingleKey, Wallet, Ramps, RestArkProvider, VtxoManager } from "@arkade-os/sdk";
@@ -149,6 +149,6 @@ export const verifyArkVtxo = async (hash: string) => {
   const r = await fetch(
     `${config.ark.arkServerUrl}/v1/indexer/vtxos?scripts=5120${vtxoHex}&spendable_only=true`,
   );
-  const { vtxos } = await r.json();
+  const { vtxos } = await r.json() as any;
   return vtxos?.some((v: any) => v.outpoint?.txid === hash) ?? false;
 };

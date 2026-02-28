@@ -1,5 +1,4 @@
-import { createReadStream } from "node:fs";
-import { unlink, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
 import { db, g, ga, gf, s, scan } from "$lib/db";
@@ -18,8 +17,6 @@ import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
-import { bech32m } from "@scure/base";
-
 import { $ } from "bun";
 import got from "got";
 import jwt from "jsonwebtoken";
@@ -49,7 +46,7 @@ const verifyRecaptcha = async (response, c?, body?) => {
   if (typeof ua === "string") {
     const prefixes = await db.sMembers("nocaptcha_ua");
     const uaLower = ua.toLowerCase();
-    if (prefixes.some((p) => uaLower.startsWith(p.toLowerCase()))) {
+    if ([...prefixes].some((p) => uaLower.startsWith(p.toString().toLowerCase()))) {
       return true;
     }
   }
@@ -67,7 +64,7 @@ const verifyRecaptcha = async (response, c?, body?) => {
 
   try {
     const ip = c?.req?.header("cf-connecting-ip") || c?.env?.ip;
-    const { success } = await got
+    const { success } = (await got
       .post("https://www.google.com/recaptcha/api/siteverify", {
         form: {
           secret,
@@ -75,7 +72,7 @@ const verifyRecaptcha = async (response, c?, body?) => {
           remoteip: ip,
         },
       })
-      .json();
+      .json()) as any;
     return success || response === config.adminpass;
   } catch {
     return false;
@@ -153,7 +150,7 @@ export default {
 
       if (key.startsWith("nprofile")) {
         try {
-          ({ pubkey: key } = nip19.decode(key).data as ProfilePointer);
+          ({ pubkey: key } = nip19.decode(key).data as unknown as ProfilePointer);
         } catch (e) {}
       }
 
@@ -374,7 +371,7 @@ export default {
       const ipKey = `ip:${ip}:login`;
       const ipCount = await db.incr(ipKey);
       if (ipCount === 1) await db.expire(ipKey, 10);
-      if (ipCount > 30) return c.json({}, 429);
+      if (Number(ipCount) > 30) return c.json({}, 429);
 
       const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) {
@@ -385,10 +382,9 @@ export default {
       username = username.split("@")[0];
 
       const fk = `${username}:failures`;
-      const failures = await g(fk);
       const ipFailKey = `ip:${ip}:login:fail`;
       const ipFailures = await g(ipFailKey);
-      if (ipFailures > 20) return c.json({}, 429);
+      if (Number(ipFailures) > 20) return c.json({}, 429);
 
       let user = await getUser(username);
 
@@ -451,7 +447,7 @@ export default {
       const ipKey = `ip:${ip}:login`;
       const ipCount = await db.incr(ipKey);
       if (ipCount === 1) await db.expire(ipKey, 10);
-      if (ipCount > 30) return c.json({}, 429);
+      if (Number(ipCount) > 30) return c.json({}, 429);
 
       const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) return c.json("failed captcha", 401);
@@ -495,7 +491,7 @@ export default {
   async nostrAuth(c) {
     try {
       const body = await c.req.json();
-      const { event, challenge, twofa, recaptcha } = body;
+      const { event, challenge, twofa: _twofa, recaptcha } = body;
       const ip = c.req.header("cf-connecting-ip");
       const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) {
@@ -620,12 +616,12 @@ export default {
     const limit = c.req.param("limit");
     const lastlen = (await g(`${id}:lastlen`)) || 0;
     const len = await db.lLen(`${id}:payments`);
-    const payments = (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
+    const payments = (await db.lRange(`${id}:payments`, 0, Number(len) - Number(lastlen))) || [];
     await db.set(`${id}:lastlen`, len);
 
     let contacts = (await g(`${id}:contacts`)) || [];
-    const pins = await db.sMembers(`${id}:pins`);
-    const trust = await db.sMembers(`${id}:trust`);
+    const pins = [...await db.sMembers(`${id}:pins`)];
+    const trust = [...await db.sMembers(`${id}:trust`)];
 
     for (const { ref } of (
       await Promise.all(payments.reverse().map(async (id) => await gf(`payment:${id}`)))
@@ -678,8 +674,8 @@ export default {
     const invoices = await db.lRange(`${id}:invoices`, 0, -1);
     const payments = await db.lRange(`${id}:payments`, 0, -1);
 
-    for (const { id } of invoices) db.del(`invoice:${id}`);
-    for (const { id } of payments) db.del(`payment:${id}`);
+    for (const inv of invoices) db.del(`invoice:${(inv as any).id}`);
+    for (const pay of payments) db.del(`payment:${(pay as any).id}`);
     db.del(`user:${username.toLowerCase()}`);
     db.del(`user:${id}`);
     db.del(`user:${pubkey}`);
@@ -692,7 +688,6 @@ export default {
     const { code, username, password } = body;
     const u = c.get("user");
     try {
-      const admin = u?.admin;
       let id;
       let user;
 
@@ -856,13 +851,14 @@ export default {
 
       const accounts = [];
       for (const id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
-        const account = await g(`account:${id}`);
+        const aid = id as string;
+        const account = await g(`account:${aid}`);
         if (account) {
           if ((account.seed || user.seed) && account.pubkey && !account.importedAt) {
             await importAccountHistory(account);
           }
-          account.balance = await getBalance(id);
-          account.pending = await getPending(id);
+          account.balance = await getBalance(aid);
+          account.pending = await getPending(aid);
           accounts.push(account);
         }
 
@@ -1079,7 +1075,7 @@ export default {
 
   async apps(c) {
     const user = c.get("user");
-    const pubkeys = await db.sMembers(`${user.id}:apps`);
+    const pubkeys = [...await db.sMembers(`${user.id}:apps`)];
     const apps = await Promise.all(pubkeys.map((p) => g(`app:${p}`)));
 
     const lud16 = `${user.username}@${host}`;

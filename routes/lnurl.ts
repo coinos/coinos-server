@@ -20,7 +20,7 @@ export default {
     const url = `https://${domain}/.well-known/lnurlp/${name.toLowerCase().replace(/\s/g, "")}`;
 
     try {
-      const r = await got(url).json();
+      const r = await got(url).json() as any;
       if (r.tag !== "payRequest") fail("not an ln address");
     } catch (e) {
       const m = `failed to lookup lightning address ${address}`;
