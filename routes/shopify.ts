@@ -3,21 +3,20 @@ import { g } from "$lib/db";
 import { l, err } from "$lib/logging";
 import { getPayment } from "$lib/utils";
 
-const query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) { 
-  orderMarkAsPaid(input: $input) { 
-    order { id } 
-    userErrors { 
+const query = `mutation orderMarkAsPaid($input: OrderMarkAsPaidInput!) {
+  orderMarkAsPaid(input: $input) {
+    order { id }
+    userErrors {
       field
       message
     }
   }
 }`;
 
-export default async (req, res) => {
-  const {
-    body: { hash },
-    params: { id },
-  } = req;
+export default async (c) => {
+  const body = await c.req.json();
+  const { hash } = body;
+  const id = c.req.param("id");
   const p = await getPayment(hash);
   const user = await g(`user:${p.uid}`);
 
@@ -39,7 +38,7 @@ export default async (req, res) => {
 
     l("shopify success", r);
 
-    res.send(r);
+    return c.json(r);
   } catch (e) {
     err("problem marking shopify order as paid", e.message);
   }

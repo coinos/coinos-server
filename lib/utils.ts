@@ -20,7 +20,7 @@ export const wait = async (f, s = 300, n = 50) => {
 
 export const prod = process.env.NODE_ENV === "production";
 
-export const bail = (res, msg) => res.code(500).send(msg);
+export const bail = (c, msg) => c.json(msg, 500);
 
 export const SATS = 100000000;
 export const sats = (n) => Math.round(n * SATS);

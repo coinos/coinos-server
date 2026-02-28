@@ -11,7 +11,7 @@ import { v4 } from "uuid";
 import { PaymentType } from "$lib/types";
 const { ecash: type } = PaymentType;
 
-Error.stackTraceLimit = 100; // Set this to the desired limit
+Error.stackTraceLimit = 100;
 
 const sendCash = async ({ amount, user }) => {
   const id = v4();
@@ -28,39 +28,33 @@ const sendCash = async ({ amount, user }) => {
 };
 
 export default {
-  async save(req, res) {
-    const {
-      body: { token },
-    } = req;
+  async save(c) {
+    const { token } = await c.req.json();
     try {
       const id = v4();
       await s(`cash:${id}`, token);
-      res.send({ id });
+      return c.json({ id });
     } catch (e) {
       err(e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async get(req, res) {
-    const {
-      params: { id },
-    } = req;
+  async get(c) {
+    const id = c.req.param("id");
     try {
       const token = await get(id);
       const status = await check(token);
-      res.send({ token, status });
+      return c.json({ token, status });
     } catch (e) {
       err(e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async claim(req, res) {
-    const {
-      body: { token },
-      user,
-    } = req;
+  async claim(c) {
+    const { token } = await c.req.json();
+    const user = c.get("user");
     try {
       const amount = await claim(token);
 
@@ -79,25 +73,25 @@ export default {
 
       await credit({ hash, amount, memo, ref: user.id, type });
 
-      res.send({ ok: true });
+      return c.json({ ok: true });
     } catch (e) {
       err(e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async mint(req, res) {
-    const { body, user } = req;
+  async mint(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
     const amount = parseInt(body.amount);
     fail("disabled");
-    res.send(await sendCash({ amount, user }));
+    return c.json(await sendCash({ amount, user }));
   },
 
-  async melt(req, res) {
-    let {
-      body: { amount, bolt11: hash, preimage },
-      user,
-    } = req;
+  async melt(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
+    let { amount, bolt11: hash, preimage } = body;
     try {
       amount = Math.round(amount / 1000);
       const ref = preimage;
@@ -133,15 +127,16 @@ export default {
       l(user.username, "sent", type, amount);
       emit(user.id, "payment", p);
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async receive(req, res) {
+  async receive(c) {
     try {
-      const { id, proofs, mint, memo } = req.body;
+      const body = await c.req.json();
+      const { id, proofs, mint, memo } = body;
       const { uid: ref } = await getInvoice(id);
 
       const amount = await claim(
@@ -153,11 +148,11 @@ export default {
 
       await credit({ hash: id, amount, memo, ref, type });
 
-      res.send({ id });
+      return c.json({ id });
     } catch (e) {
       console.log(e);
       err(e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 };

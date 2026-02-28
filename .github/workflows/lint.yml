@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: bun run lint
+      - run: bun run lint:fix
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-fix lint & formatting"

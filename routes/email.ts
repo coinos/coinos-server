@@ -6,8 +6,9 @@ import { SESClient } from "@aws-sdk/client-ses";
 import { SendEmailCommand } from "@aws-sdk/client-ses";
 
 export default {
-  async send({ body }, res) {
+  async send(c) {
     try {
+      const body = await c.req.json();
       const { email, message, username, token: response } = body;
 
       const Charset = "UTF-8";
@@ -48,9 +49,9 @@ export default {
           }),
         );
 
-        res.send({ ok: true });
+        return c.json({ ok: true });
       } else {
-        bail(res, "failed captcha");
+        return bail(c, "failed captcha");
       }
     } catch (e) {
       console.log(e);

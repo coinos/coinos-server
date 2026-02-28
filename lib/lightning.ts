@@ -164,7 +164,7 @@ export async function replay(index) {
   }
 }
 
-export const fixBolt12 = async (_, res) => {
+export const fixBolt12 = async (c) => {
   for await (const k of scan("payment:*")) {
     const p = await g(k);
     if (p.type === "bolt12") {
@@ -182,5 +182,5 @@ export const fixBolt12 = async (_, res) => {
     }
   }
 
-  res.send({});
+  return c.json({});
 };

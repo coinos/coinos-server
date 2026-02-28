@@ -2,17 +2,17 @@ import { g } from "$lib/db";
 import { rate } from "$lib/rates";
 
 export default {
-  async fx(_, res) {
+  async fx(c) {
     const { fx } = await g("fx");
-    res.send({ fx });
+    return c.json({ fx });
   },
 
-  async last(_, res) {
-    res.send(rate || (await g("rate")));
+  async last(c) {
+    return c.json(rate || (await g("rate")));
   },
 
-  async index(_, res) {
+  async index(c) {
     const { date, fx, ...rates } = await g("rates");
-    res.send(rates);
+    return c.json(rates);
   },
 };

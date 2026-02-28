@@ -27,6 +27,7 @@ import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
+import { setCookie } from "hono/cookie";
 
 import { PaymentType } from "$lib/types";
 import { createBalanceAccount, getBalance, getCredit, getPending } from "$lib/tb";
@@ -36,16 +37,14 @@ import type { ProfilePointer } from "nostr-tools/nip19";
 const { host } = new URL(process.env.URL);
 const relay = encodeURIComponent(config.publicRelay);
 
-const verifyRecaptcha = async (response, req?) => {
+const verifyRecaptcha = async (response, c?, body?) => {
   const { recaptcha: secret } = config;
   if (!secret) return true;
 
-  // Skip captcha for Tor users accessing via .onion
-  const host = req?.headers?.["host"] || "";
-  if (host.endsWith(".onion")) return true;
+  const reqHost = c?.req?.header("host") || "";
+  if (reqHost.endsWith(".onion")) return true;
 
-  // Skip captcha for allowlisted User-Agents (prefix match)
-  const uaRaw = req?.headers?.["user-agent"] || req?.headers?.["User-Agent"];
+  const uaRaw = c?.req?.header("user-agent");
   const ua = Array.isArray(uaRaw) ? uaRaw[0] : uaRaw;
   if (typeof ua === "string") {
     const prefixes = await db.sMembers("nocaptcha_ua");
@@ -55,20 +54,19 @@ const verifyRecaptcha = async (response, req?) => {
     }
   }
 
-  // Check for valid API key to bypass captcha
-  const apiKey = req?.headers?.["x-api-key"];
+  const apiKey = c?.req?.header("x-api-key");
   if (apiKey && (await db.sIsMember("apikeys", apiKey))) {
     return true;
   }
 
-  const { username } = req.body;
+  const { username } = body || {};
   if (username && (await db.sIsMember("nocaptcha", username.toLowerCase().replace(/\s/g, ""))))
     return true;
 
   if (!response) return false;
 
   try {
-    const ip = req?.headers?.["cf-connecting-ip"] || req?.socket?.remoteAddress;
+    const ip = c?.req?.header("cf-connecting-ip") || c?.env?.ip;
     const { success } = await got
       .post("https://www.google.com/recaptcha/api/siteverify", {
         form: {
@@ -87,8 +85,8 @@ const verifyRecaptcha = async (response, req?) => {
 export default {
   upload,
 
-  async me(req, res) {
-    const { user } = req;
+  async me(c) {
+    const user = c.get("user");
     try {
       user.balance = await getBalance(user.id);
       user.locked = await ga(`balance:${user.id}`);
@@ -104,15 +102,15 @@ export default {
       user.prompt = !!user.prompt;
       if (user.pubkey) user.npub = nip19.npubEncode(user.pubkey);
 
-      res.send(pick(user, whitelist));
+      return c.json(pick(user, whitelist));
     } catch (e) {
       console.log("problem fetching user", e);
-      res.code(500).send(e.message);
+      return c.json(e.message, 500);
     }
   },
 
-  async list(req, res) {
-    const { user } = req;
+  async list(c) {
+    const user = c.get("user");
     if (!user.admin) fail("unauthorized");
 
     const users = [];
@@ -140,13 +138,11 @@ export default {
       users.push(u);
     }
 
-    res.send(users);
+    return c.json(users);
   },
 
-  async get(req, res) {
-    let {
-      params: { key },
-    } = req;
+  async get(c) {
+    let key = c.req.param("key");
     key = key.toLowerCase().replace(/\s/g, "");
     try {
       if (key.startsWith("npub")) {
@@ -162,43 +158,43 @@ export default {
       }
 
       const user = await getNostrUser(key);
-      res.send(pick(user, fields));
+      return c.json(pick(user, fields));
     } catch (e) {
       err("problem getting user", key, e.message);
-      res.code(500).send(e.message);
+      return c.json(e.message, 500);
     }
   },
 
-  async create(req, res) {
-    const { body, headers } = req;
+  async create(c) {
+    const body = await c.req.json();
+    const headers = c.req.header();
     try {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
       let { user } = body;
 
-      const fields = ["pubkey", "password", "username", "picture", "fresh", "authPubkey"];
-      user = await register(pick(user, fields), ip);
+      const flds = ["pubkey", "password", "username", "picture", "fresh", "authPubkey"];
+      user = await register(pick(user, flds), ip);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
 
       l("registered new user", user.username);
 
-      res.send({ ...pick(user, whitelist), sk: user.sk, token });
+      return c.json({ ...pick(user, whitelist), sk: user.sk, token });
     } catch (e) {
       err("problem registering", e.message);
-      res.code(500).send(e.message);
+      return c.json(e.message, 500);
     }
   },
 
-  async disable2fa(req, res) {
-    const {
-      user,
-      body: { token },
-    } = req;
+  async disable2fa(c) {
+    const user = c.get("user");
+    const body = await c.req.json();
+    const { token } = body;
     const { id, twofa, username, otpsecret } = user;
     if (twofa && !authenticator.check(token, otpsecret)) {
-      return res.code(401).send("2fa required");
+      return c.json("2fa required", 401);
     }
 
     user.twofa = false;
@@ -206,15 +202,14 @@ export default {
     emit(username, "user", user);
     emit(username, "otpsecret", user.otpsecret);
     l("disabled 2fa", username);
-    res.send({});
+    return c.json({});
   },
 
-  async enable2fa(req, res) {
+  async enable2fa(c) {
     try {
-      const {
-        user,
-        body: { token },
-      } = req;
+      const user = c.get("user");
+      const body = await c.req.json();
+      const { token } = body;
       const { id, otpsecret, username } = user;
       const isValid = authenticator.check(token, otpsecret);
       if (isValid) {
@@ -222,21 +217,22 @@ export default {
         await s(`user:${id}`, user);
         emit(username, "user", user);
       } else {
-        return res.code(500).send("Invalid token");
+        return c.json("Invalid token", 500);
       }
 
       l("enabled 2fa", username);
-      res.send({});
+      return c.json({});
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async update(req, res) {
-    const { user, body } = req;
+  async update(c) {
+    const user = c.get("user");
+    const body = await c.req.json();
     try {
-      const { id: tokid } = jwt.verify(req.headers.authorization.split(" ")[1], config.jwt);
+      const { id: tokid } = jwt.verify(c.req.header("authorization").split(" ")[1], config.jwt);
       l("updating user", user.username, tokid);
       if (user.id !== tokid) fail("unauthorized");
 
@@ -265,8 +261,8 @@ export default {
 
         const event = JSON.parse(body.event);
         const challenge = event.tags.find((t) => t[0] === "challenge")[1];
-        const c = await g(`challenge:${challenge}`);
-        if (!c) fail("Invalid or expired challenge");
+        const ch = await g(`challenge:${challenge}`);
+        if (!ch) fail("Invalid or expired challenge");
 
         if (!verifyEvent(event) || event.pubkey !== pubkey)
           fail("Invalid signature or challenge mismatch.");
@@ -361,27 +357,28 @@ export default {
       if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
 
       emit(user.id, "user", user);
-      res.send({ user });
+      return c.json({ user });
     } catch (e) {
       console.log(e);
       warn("failed to update", user.username, e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async login(req, res) {
+  async login(c) {
     try {
-      let { username, password, token: twofa, recaptcha } = req.body;
-      const ip = req.headers["cf-connecting-ip"] || req.socket.remoteAddress;
+      const body = await c.req.json();
+      let { username, password, token: twofa, recaptcha } = body;
+      const ip = c.req.header("cf-connecting-ip") || c.env?.ip || "unknown";
 
       const ipKey = `ip:${ip}:login`;
       const ipCount = await db.incr(ipKey);
       if (ipCount === 1) await db.expire(ipKey, 10);
-      if (ipCount > 30) return res.code(429).send({});
+      if (ipCount > 30) return c.json({}, 429);
 
-      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
+      const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) {
-        return res.code(401).send("failed captcha");
+        return c.json("failed captcha", 401);
       }
 
       username = username.toLowerCase().replace(/\s/g, "");
@@ -391,7 +388,7 @@ export default {
       const failures = await g(fk);
       const ipFailKey = `ip:${ip}:login:fail`;
       const ipFailures = await g(ipFailKey);
-      if (ipFailures > 20) return res.code(429).send({});
+      if (ipFailures > 20) return c.json({}, 429);
 
       let user = await getUser(username);
 
@@ -401,7 +398,7 @@ export default {
           if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
           await db.incrBy(fk, 1);
           setTimeout(() => db.decrBy(fk, 1), 120000);
-          return res.code(401).send({});
+          return c.json({}, 401);
         }
 
         if (
@@ -410,56 +407,57 @@ export default {
         ) {
           await db.incrBy(ipFailKey, 1);
           if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
-          return res.code(401).send("2fa required");
+          return c.json("2fa required", 401);
         }
       }
 
-      if (req.body.authPubkey && !user.authPubkey) {
-        user.authPubkey = req.body.authPubkey;
+      if (body.authPubkey && !user.authPubkey) {
+        user.authPubkey = body.authPubkey;
         await s(`user:${user.id}`, user);
       }
 
-      if (username !== "coinos") l("logged in", username, req.headers["cf-connecting-ip"]);
+      if (username !== "coinos") l("logged in", username, c.req.header("cf-connecting-ip"));
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      setCookie(c, "token", token, { expires: new Date(Date.now() + 432000000), path: "/" });
       user = pick(user, whitelist);
-      res.send({ user, token });
+      return c.json({ user, token });
     } catch (e) {
       console.log(e);
-      err("login error", e.message, req.socket.remoteAddress);
-      res.code(401).send({});
+      err("login error", e.message, c.env?.ip);
+      return c.json({}, 401);
     }
   },
 
-  async challenge(req, res) {
+  async challenge(c) {
     const id = v4();
     await db.set(`challenge:${id}`, id, { EX: 300 });
-    const username = req.query?.username;
+    const username = c.req.query("username");
     let hasAuthKey = false;
     if (username) {
       const user = await getUser(username.toLowerCase().replace(/\s/g, ""));
       if (user?.authPubkey) hasAuthKey = true;
     }
-    res.send({ challenge: id, hasAuthKey });
+    return c.json({ challenge: id, hasAuthKey });
   },
 
-  async authKeyLogin(req, res) {
+  async authKeyLogin(c) {
     try {
-      const { event, challenge, username: rawUsername, twofa, recaptcha } = req.body;
-      const ip = req.headers["cf-connecting-ip"] || req.socket.remoteAddress;
+      const body = await c.req.json();
+      const { event, challenge, username: rawUsername, twofa, recaptcha } = body;
+      const ip = c.req.header("cf-connecting-ip") || c.env?.ip || "unknown";
 
       const ipKey = `ip:${ip}:login`;
       const ipCount = await db.incr(ipKey);
       if (ipCount === 1) await db.expire(ipKey, 10);
-      if (ipCount > 30) return res.code(429).send({});
+      if (ipCount > 30) return c.json({}, 429);
 
-      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
-      if (!recaptchaOk) return res.code(401).send("failed captcha");
+      const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
+      if (!recaptchaOk) return c.json("failed captcha", 401);
 
-      const c = await g(`challenge:${challenge}`);
-      if (!c) fail("Invalid or expired challenge");
+      const ch = await g(`challenge:${challenge}`);
+      if (!ch) fail("Invalid or expired challenge");
 
       const { kind } = event;
       if (kind !== 27235) fail("Invalid event");
@@ -477,35 +475,36 @@ export default {
         user.twofa &&
         (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret))
       ) {
-        return res.code(401).send("2fa required");
+        return c.json("2fa required", 401);
       }
 
       l("authkey login", username, ip);
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      setCookie(c, "token", token, { expires: new Date(Date.now() + 432000000), path: "/" });
       user = pick(user, whitelist);
-      res.send({ user, token });
+      return c.json({ user, token });
     } catch (e) {
       console.log(e);
-      err("authkey login error", e.message, req.socket.remoteAddress);
-      res.code(401).send({});
+      err("authkey login error", e.message, c.env?.ip);
+      return c.json({}, 401);
     }
   },
 
-  async nostrAuth(req, res) {
+  async nostrAuth(c) {
     try {
-      const { event, challenge, twofa, recaptcha } = req.body;
-      const ip = req.headers["cf-connecting-ip"];
-      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
+      const body = await c.req.json();
+      const { event, challenge, twofa, recaptcha } = body;
+      const ip = c.req.header("cf-connecting-ip");
+      const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) {
-        return res.code(401).send("failed captcha");
+        return c.json("failed captcha", 401);
       }
-      const c = await g(`challenge:${challenge}`);
+      const ch = await g(`challenge:${challenge}`);
       const { pubkey: key, kind } = event;
       if (kind !== 27235) fail("Invalid event");
-      if (!c) fail("Invalid or expired login challenge");
+      if (!ch) fail("Invalid or expired login challenge");
 
       if (!verifyEvent(event) || event.tags.find((t) => t[0] === "challenge")?.[1] !== challenge)
         fail("Invalid signature or challenge mismatch.");
@@ -536,86 +535,89 @@ export default {
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      setCookie(c, "token", token, { expires: new Date(Date.now() + 432000000), path: "/" });
       user = pick(user, whitelist);
-      res.send({ user, token });
+      return c.json({ user, token });
     } catch (e) {
       console.log(e);
-      err("nostr login error", e.message, req.socket.remoteAddress);
-      res.code(401).send({});
+      err("nostr login error", e.message, c.env?.ip);
+      return c.json({}, 401);
     }
   },
 
-  async subscriptions(req, res) {
+  async subscriptions(c) {
     try {
-      const { user } = req;
+      const user = c.get("user");
       const subscriptions = await db.sMembers(`${user.id}:subscriptions`);
-      res.send(subscriptions);
+      return c.json(subscriptions);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async subscription(req, res) {
+  async subscription(c) {
     try {
-      const { subscription } = req.body;
-      const { id } = req.user;
+      const body = await c.req.json();
+      const { subscription } = body;
+      const { id } = c.get("user");
       await db.sAdd(`${id}:subscriptions`, JSON.stringify(subscription));
-      res.send(subscription);
+      return c.json(subscription);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async deleteSubscription(req, res) {
+  async deleteSubscription(c) {
     try {
-      const { subscription } = req.body;
-      const { id } = req.user;
+      const body = await c.req.json();
+      const { subscription } = body;
+      const { id } = c.get("user");
       await db.sRem(`${id}:subscriptions`, JSON.stringify(subscription));
-      res.send(subscription);
+      return c.json(subscription);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async password(req, res) {
-    const {
-      body: { password },
-      user,
-    } = req;
-    if (!user.password) return res.send(true);
+  async password(c) {
+    const body = await c.req.json();
+    const { password } = body;
+    const user = c.get("user");
+    if (!user.password) return c.json(true);
 
     try {
       if (!password) fail("password not provided");
-      res.send(await Bun.password.verify(password, user.password));
+      return c.json(await Bun.password.verify(password, user.password));
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async pin(req, res) {
-    const {
-      body: { pin },
-      user,
-    } = req;
-    res.send(!user.pin || user.pin === pin);
+  async pin(c) {
+    const body = await c.req.json();
+    const { pin } = body;
+    const user = c.get("user");
+    return c.json(!user.pin || user.pin === pin);
   },
 
-  async otpsecret(req, res) {
+  async otpsecret(c) {
     try {
-      await requirePin(req);
-      const { otpsecret, username } = req.user;
-      res.send({ secret: otpsecret, username });
+      const user = c.get("user");
+      const body = await c.req.json();
+      await requirePin({ body, user });
+      const { otpsecret, username } = user;
+      return c.json({ secret: otpsecret, username });
     } catch (e) {
-      res.code(500).send(e.message);
+      return c.json(e.message, 500);
     }
   },
 
-  async contacts(req, res) {
-    const { params, user } = req;
+  async contacts(c) {
+    const user = c.get("user");
     const { id } = user;
+    const limit = c.req.param("limit");
     const lastlen = (await g(`${id}:lastlen`)) || 0;
     const len = await db.lLen(`${id}:payments`);
     const payments = (await db.lRange(`${id}:payments`, 0, len - lastlen)) || [];
@@ -654,24 +656,21 @@ export default {
       c.trusted = true;
     });
 
-    let { limit } = params;
-    limit ||= contacts.length;
+    let contactLimit = limit || contacts.length;
     contacts = contacts.filter((c) => !pins.includes(c.id));
-    contacts = contacts.slice(0, limit);
+    contacts = contacts.slice(0, contactLimit);
 
     const combined = [...pinned, ...contacts];
 
-    res.send(combined);
+    return c.json(combined);
   },
 
-  async del(req, res) {
-    let {
-      params: { username },
-      headers: { authorization },
-    } = req;
+  async del(c) {
+    let username = c.req.param("username");
+    const authorization = c.req.header("authorization");
     fail("Unauthorized");
     username = username.toLowerCase();
-    if (!authorization?.includes(config.admin)) return res.code(401).send("unauthorized");
+    if (!authorization?.includes(config.admin)) return c.json("unauthorized", 401);
 
     const { id, pubkey } = await g(
       `user:${await g(`user:${username.replace(/\s/g, "").toLowerCase()}`)}`,
@@ -685,14 +684,13 @@ export default {
     db.del(`user:${id}`);
     db.del(`user:${pubkey}`);
 
-    res.send({});
+    return c.json({});
   },
 
-  async reset(req, res) {
-    const {
-      body: { code, username, password },
-      user: u,
-    } = req;
+  async reset(c) {
+    const body = await c.req.json();
+    const { code, username, password } = body;
+    const u = c.get("user");
     try {
       const admin = u?.admin;
       let id;
@@ -704,7 +702,7 @@ export default {
 
       if (!user) fail("user not found");
 
-      warn("password reset", user.username, code, req.headers["cf-connecting-ip"]);
+      warn("password reset", user.username, code, c.req.header("cf-connecting-ip"));
 
       user.pin = null;
       user.nsec = null;
@@ -718,40 +716,38 @@ export default {
       await s(`user:${id}`, user);
       await db.del(`reset:${code}`);
 
-      res.send(pick(user, whitelist));
+      return c.json(pick(user, whitelist));
     } catch (e) {
-      err("password reset failed", e.message, req.headers["cf-connecting-ip"]);
-      bail(res, e.message);
+      err("password reset failed", e.message, c.req.header("cf-connecting-ip"));
+      return bail(c, e.message);
     }
   },
 
-  async printerlogin(req, res) {
-    const {
-      body: { username, topic },
-    } = req;
-    if (username === topic) res.send({ ok: true });
-    else bail(res, "unauthorized");
+  async printerlogin(c) {
+    const body = await c.req.json();
+    const { username, topic } = body;
+    if (username === topic) return c.json({ ok: true });
+    else return bail(c, "unauthorized");
   },
 
-  async acl(req, res) {
-    const {
-      body: { username, topic },
-    } = req;
-    if (username === topic) res.send({ ok: true });
-    else bail(res, "unauthorized");
+  async acl(c) {
+    const body = await c.req.json();
+    const { username, topic } = body;
+    if (username === topic) return c.json({ ok: true });
+    else return bail(c, "unauthorized");
   },
 
-  async superuser(req, res) {
-    const {
-      body: { username },
-    } = req;
-    if (username === config.mqtt2.username) res.send({ ok: true });
-    else bail(res, "unauthorized");
+  async superuser(c) {
+    const body = await c.req.json();
+    const { username } = body;
+    if (username === config.mqtt2.username) return c.json({ ok: true });
+    else return bail(c, "unauthorized");
   },
 
-  async request(req, res) {
-    const { email } = req.body;
-    const { user } = req;
+  async request(c) {
+    const body = await c.req.json();
+    const { email } = body;
+    const user = c.get("user");
     const { id } = user;
 
     try {
@@ -777,16 +773,14 @@ export default {
         link,
       });
 
-      res.send({ ok: true });
+      return c.json({ ok: true });
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async verify(req, res) {
-    const {
-      params: { code },
-    } = req;
+  async verify(c) {
+    const code = c.req.param("code");
     try {
       const { id, email } = await g(`verify:${code}`);
       if (!id) fail("verification failed");
@@ -796,16 +790,15 @@ export default {
       await s(`user:${id}`, user);
       await s(`email:${email.toLowerCase()}`, id);
 
-      res.send(pick(user, fields));
+      return c.json(pick(user, fields));
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async forgot(req, res) {
-    const {
-      body: { email },
-    } = req;
+  async forgot(c) {
+    const body = await c.req.json();
+    const { email } = body;
     try {
       const uid = await g(`email:${email.toLowerCase()}`);
       const user = await g(`user:${uid}`);
@@ -821,47 +814,45 @@ export default {
         });
       }
 
-      res.send({});
+      return c.json({});
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async hidepay(req, res) {
-    const {
-      body: { username },
-    } = req;
+  async hidepay(c) {
+    const body = await c.req.json();
+    const { username } = body;
     const u = await getUser(username);
     u.hidepay = true;
     await s(`user:${u.id}`, u);
-    res.send({});
+    return c.json({});
   },
 
-  async unlimit(req, res) {
-    const {
-      body: { username },
-    } = req;
+  async unlimit(c) {
+    const body = await c.req.json();
+    const { username } = body;
     const u = await getUser(username);
     u.unlimited = true;
     await s(`user:${u.id}`, u);
-    res.send({});
+    return c.json({});
   },
 
-  async account(req, res) {
-    const { id } = req.params;
-    const { id: uid } = req.user;
+  async account(c) {
+    const id = c.req.param("id");
+    const { id: uid } = c.get("user");
 
     const pos = await db.lPos(`${uid}:accounts`, id);
     if (pos == null) fail("account not found");
 
     const account = await g(`account:${id}`);
     if (account) account.balance = await getBalance(id);
-    res.send(account);
+    return c.json(account);
   },
 
-  async accounts(req, res) {
+  async accounts(c) {
     try {
-      const { user } = req;
+      const user = c.get("user");
 
       const accounts = [];
       for (const id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
@@ -886,17 +877,18 @@ export default {
         }
       }
 
-      res.send(accounts.reverse());
+      return c.json(accounts.reverse());
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async createAccount(req, res) {
+  async createAccount(c) {
     try {
-      const { fingerprint, pubkey, name, seed, type, arkAddress, accountIndex } = req.body;
-      const { user } = req;
+      const body = await c.req.json();
+      const { fingerprint, pubkey, name, seed, type, arkAddress, accountIndex } = body;
+      const user = c.get("user");
       const { id: uid } = user;
 
       const id = v4();
@@ -917,14 +909,12 @@ export default {
 
       await createBalanceAccount(id);
 
-      // ARK accounts don't need Bitcoin Core wallet setup
       if (type === "ark") {
         const accountIds = await db.lRange(`${user.id}:accounts`, 0, -1);
         for (const accId of accountIds) {
           const acc = await g(`account:${accId}`);
           if (acc?.type === "ark") {
-            bail(res, "You already have an Ark vault");
-            return;
+            return bail(c, "You already have an Ark vault");
           }
         }
         const m = db
@@ -934,11 +924,9 @@ export default {
         if (arkAddress) m.set(`arkaddr:${arkAddress}`, JSON.stringify({ aid: id, uid }));
         await m.exec();
 
-        res.send(account);
-        return;
+        return c.json(account);
       }
 
-      // Bitcoin on-chain wallet setup
       let node = rpc(config[type]);
 
       await node.createWallet({
@@ -976,17 +964,18 @@ export default {
         .lPush(`${user.id}:accounts`, id)
         .exec();
 
-      res.send(account);
+      return c.json(account);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async updateAccount(req, res) {
-    const { id } = req.params;
-    const { id: uid } = req.user;
+  async updateAccount(c) {
+    const id = c.req.param("id");
+    const { id: uid } = c.get("user");
+    const body = await c.req.json();
     const { name, autowithdraw, threshold, reserve, destination, currency, fingerprint, pubkey } =
-      req.body;
+      body;
 
     const pos = await db.lPos(`${uid}:accounts`, id);
     if (pos == null) fail("account not found");
@@ -1017,19 +1006,19 @@ export default {
         .catch((e) => console.error("importAccountHistory failed:", e.message));
     }
 
-    res.send(account);
+    return c.json(account);
   },
 
-  async deleteAccount(req, res) {
+  async deleteAccount(c) {
     try {
-      const { id } = req.body;
-      const { id: uid } = req.user;
+      const body = await c.req.json();
+      const { id } = body;
+      const { id: uid } = c.get("user");
       const account = await g(`account:${id}`);
 
       const pos = await db.lPos(`${uid}:accounts`, id);
       if (!(account && pos != null)) fail("account not found");
 
-      // Only unload Bitcoin Core wallet for non-ARK accounts
       if (account.type !== "ark") {
         try {
           const node = rpc({ ...config[account.type], wallet: id });
@@ -1046,25 +1035,27 @@ export default {
         .del(`${id}:payments`)
         .exec();
 
-      res.send({ ok: true });
+      return c.json({ ok: true });
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async flash(req, res) {
-    const { ssid, key, token } = req.body;
+  async flash(c) {
+    const body = await c.req.json();
+    const { ssid, key, token } = body;
     const cfg = `${ssid.trim()}\n${key.trim()}\n${token.trim()}\n`;
     await writeFile("./printer/config.txt", cfg, "utf8");
     await $`./mklittlefs -c ./printer -p 256 -b 4096 -s 0x20000 ./littlefs.img`;
-    res.header("Content-Type", "application/octet-stream");
-    return res.send(createReadStream("./littlefs.img"));
+    return new Response(Bun.file("./littlefs.img"), {
+      headers: { "Content-Type": "application/octet-stream" },
+    });
   },
 
-  async app(req, res) {
-    const { pubkey } = req.params;
-    const { user } = req;
+  async app(c) {
+    const pubkey = c.req.param("pubkey");
+    const user = c.get("user");
     const app = await g(`app:${pubkey}`);
     if (app.uid !== user.id) fail("unauthorized");
 
@@ -1083,11 +1074,11 @@ export default {
     app.nwc = `nostr+walletconnect://${serverPubkey2}?relay=${relay}&secret=${app.secret}&lud16=${lud16}`;
     app.payments = payments.filter((p) => p);
 
-    res.send(app);
+    return c.json(app);
   },
 
-  async apps(req, res) {
-    const { user } = req;
+  async apps(c) {
+    const user = c.get("user");
     const pubkeys = await db.sMembers(`${user.id}:apps`);
     const apps = await Promise.all(pubkeys.map((p) => g(`app:${p}`)));
 
@@ -1112,14 +1103,15 @@ export default {
       }),
     );
 
-    res.send(apps);
+    return c.json(apps);
   },
 
-  async updateApp(req, res) {
+  async updateApp(c) {
     try {
-      let { secret, pubkey, max_amount, max_fee, budget_renewal, name, notify } = req.body;
+      const body = await c.req.json();
+      let { secret, pubkey, max_amount, max_fee, budget_renewal, name, notify } = body;
 
-      const { user } = req;
+      const user = c.get("user");
       const uid = user.id;
       let app = await g(pubkey);
 
@@ -1144,18 +1136,19 @@ export default {
       await s(`app:${pubkey}`, app);
       await db.sAdd(`${uid}:apps`, pubkey);
 
-      res.send({});
+      return c.json({});
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async deleteApp(req, res) {
+  async deleteApp(c) {
     try {
-      const { user } = req;
+      const user = c.get("user");
       const uid = user.id;
-      const { pubkey } = req.body;
+      const body = await c.req.json();
+      const { pubkey } = body;
       const app = await g(`app:${pubkey}`);
       if (app && uid !== app.uid) {
         warn(app.uid, uid);
@@ -1163,110 +1156,118 @@ export default {
       }
       await db.sRem(`${uid}:apps`, pubkey);
       await db.del(`app:${pubkey}`);
-      res.send({});
+      return c.json({});
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async addPin(req, res) {
-    const { id: uid } = req.user;
-    const { id } = req.body;
+  async addPin(c) {
+    const { id: uid } = c.get("user");
+    const body = await c.req.json();
+    const { id } = body;
     await db.sAdd(`${uid}:pins`, id);
-    res.send({});
+    return c.json({});
   },
 
-  async deletePin(req, res) {
-    const { id: uid } = req.user;
-    const { id } = req.body;
+  async deletePin(c) {
+    const { id: uid } = c.get("user");
+    const body = await c.req.json();
+    const { id } = body;
     await db.sRem(`${uid}:pins`, id);
-    res.send({});
+    return c.json({});
   },
 
-  async trust(req, res) {
-    const { id } = req.user;
-    res.send(await db.sMembers(`${id}:trust`));
+  async trust(c) {
+    const { id } = c.get("user");
+    return c.json(await db.sMembers(`${id}:trust`));
   },
 
-  async addTrust(req, res) {
-    const { id: uid } = req.user;
-    const { id } = req.body;
+  async addTrust(c) {
+    const { id: uid } = c.get("user");
+    const body = await c.req.json();
+    const { id } = body;
     await db.sAdd(`${uid}:trust`, id);
-    res.send({});
+    return c.json({});
   },
 
-  async deleteTrust(req, res) {
-    const { id: uid } = req.user;
-    const { id } = req.body;
+  async deleteTrust(c) {
+    const { id: uid } = c.get("user");
+    const body = await c.req.json();
+    const { id } = body;
     await db.sRem(`${uid}:trust`, id);
-    res.send({});
+    return c.json({});
   },
 
-  async passkeyRegisterOptions(req, res) {
+  async passkeyRegisterOptions(c) {
     try {
-      const { user } = req;
-      const origin = req.body.origin || `https://${config.hostname}`;
+      const user = c.get("user");
+      const body = await c.req.json();
+      const origin = body.origin || `https://${config.hostname}`;
       const options = await generatePasskeyRegistration(user, origin);
-      res.send(options);
+      return c.json(options);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async passkeyRegisterVerify(req, res) {
+  async passkeyRegisterVerify(c) {
     try {
-      const { user } = req;
-      const origin = req.body.origin || `https://${config.hostname}`;
-      const credential = await verifyPasskeyRegistration(user, req.body, origin);
+      const user = c.get("user");
+      const body = await c.req.json();
+      const origin = body.origin || `https://${config.hostname}`;
+      const credential = await verifyPasskeyRegistration(user, body, origin);
       if (!user.passkeys) user.passkeys = [];
       user.passkeys.push(credential);
       await s(`user:${user.id}`, user);
-      res.send({ ok: true });
+      return c.json({ ok: true });
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async passkeyLoginOptions(req, res) {
+  async passkeyLoginOptions(c) {
     try {
-      const origin = req.body.origin || `https://${config.hostname}`;
+      const body = await c.req.json();
+      const origin = body.origin || `https://${config.hostname}`;
       const options = await generatePasskeyLogin(origin);
-      res.send(options);
+      return c.json(options);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async passkeyLoginVerify(req, res) {
+  async passkeyLoginVerify(c) {
     try {
-      const { credential, challengeId, origin: reqOrigin } = req.body;
+      const body = await c.req.json();
+      const { credential, challengeId, origin: reqOrigin } = body;
       const origin = reqOrigin || `https://${config.hostname}`;
       const user = await verifyPasskeyLogin(credential, challengeId, origin);
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
-      res.send({ user: pick(user, whitelist), token });
+      return c.json({ user: pick(user, whitelist), token });
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async credits(req, res) {
-    const { id } = req.user;
+  async credits(c) {
+    const { id } = c.get("user");
     const bitcoin = await getCredit(id, "bitcoin");
     const lightning = await getCredit(id, "lightning");
     const liquid = await getCredit(id, "liquid");
-    res.send({ bitcoin, lightning, liquid });
+    return c.json({ bitcoin, lightning, liquid });
   },
 
-  async ro(req, res) {
-    const { user } = req;
+  async ro(c) {
+    const user = c.get("user");
     const payload = { id: `${user.id}-ro` };
     const token = jwt.sign(payload, config.jwt);
-    res.send(token);
+    return c.json(token);
   },
 };

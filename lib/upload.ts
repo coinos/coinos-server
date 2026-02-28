@@ -5,14 +5,15 @@ import { bail, fail } from "$lib/utils";
 import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 
-export default async (req, res) => {
+export default async (c) => {
   try {
-    const {
-      params: { type },
-    } = req;
+    const type = c.req.param("type");
 
-    const data = await req.file();
-    let buf = await data.toBuffer();
+    const body = await c.req.parseBody();
+    const file = body.file || Object.values(body).find((v) => v instanceof File);
+    if (!file) fail("no file uploaded");
+
+    let buf = Buffer.from(await (file as File).arrayBuffer());
 
     const [format, ext] = (await fileTypeFromBuffer(buf)).mime.split("/");
 
@@ -26,9 +27,9 @@ export default async (req, res) => {
     const filePath = `/home/bun/app/data/uploads/${hash}.webp`;
     writeFileSync(filePath, buf);
 
-    res.send({ hash });
+    return c.json({ hash });
   } catch (e) {
     err("problem uploading", e.message);
-    bail(res, e.message);
+    return bail(c, e.message);
   }
 };

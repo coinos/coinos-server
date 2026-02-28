@@ -41,12 +41,13 @@ import got from "got";
 import { v4 } from "uuid";
 
 export default {
-  async info(_, res) {
-    res.send(await ln.getinfo());
+  async info(c) {
+    return c.json(await ln.getinfo());
   },
 
-  async create(req, res) {
-    const { body, user } = req;
+  async create(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
 
     let { amount, hash, fee, fund, memo, payreq, aid } = body;
     const balance = await getBalance(user.id);
@@ -93,7 +94,6 @@ export default {
               await s(`payment:${p.id}`, p);
               await s(`payment:${txid}`, p.id);
 
-              // Instant vault notification
               try {
                 const vaultInfo = await g(`arkaddr:${invoice.text}`);
                 if (vaultInfo) {
@@ -125,7 +125,6 @@ export default {
               throw e;
             }
           } else {
-            // Check if recipient account is non-custodial (vault)
             const recipientAccount = invoice?.aid ? await g(`account:${invoice.aid}`) : null;
             if (recipientAccount?.pubkey || recipientAccount?.seed) {
               p = await sendOnchain({
@@ -157,19 +156,24 @@ export default {
         }
       }
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
       warn(user.username, "payment failed", amount, balance, hash, payreq);
       err(e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async list(req, res) {
-    let {
-      user: { id },
-      query: { aid, start, end, limit, offset, received },
-    } = req;
+  async list(c) {
+    const user = c.get("user");
+    let { id } = user;
+    let aid = c.req.query("aid");
+    const start = c.req.query("start");
+    const end = c.req.query("end");
+    let limit = c.req.query("limit");
+    let offset = c.req.query("offset");
+    const received = c.req.query("received");
+
     if (!aid || aid === "undefined") aid = id;
 
     const index = await db.lPos(`${id}:accounts`, aid);
@@ -244,30 +248,27 @@ export default {
     const { length: count } = payments;
     if (limit) payments = payments.slice(offset, offset + limit);
 
-    res.send({ payments, count, incoming, outgoing });
+    return c.json({ payments, count, incoming, outgoing });
   },
 
-  async get(req, res) {
+  async get(c) {
     try {
-      const {
-        params: { hash },
-      } = req;
+      const hash = c.req.param("hash");
       const p = await getPayment(hash);
       if (p?.type === PaymentType.internal) p.with = await getUser(p.ref, fields);
       if (p?.type === PaymentType.fund) p.with = await getUser(p.uid, fields);
-      res.send(p);
+      return c.json(p);
     } catch (e) {
       console.log(e);
       err("failed to get payment", e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async parse(req, res) {
-    const {
-      body: { payreq },
-      user,
-    } = req;
+  async parse(c) {
+    const body = await c.req.json();
+    const { payreq } = body;
+    const user = c.get("user");
     try {
       const hour = 1000 * 60 * 60;
       let nodes = await g("nodes");
@@ -297,20 +298,18 @@ export default {
       const covered = Math.min(creditBal, ourfee) || 0;
       ourfee -= covered;
 
-      res.send({ alias, amount, ourfee });
+      return c.json({ alias, amount, ourfee });
     } catch (e) {
       console.log(e);
       err("problem parsing", e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async fund(req, res) {
-    const {
-      params: { id },
-    } = req;
+  async fund(c) {
+    const id = c.req.param("id");
     const amount = await getFundBalance(id);
-    if (amount === null) return bail(res, "fund not found");
+    if (amount === null) return bail(c, "fund not found");
     let payments = (await db.lRange(`fund:${id}:payments`, 0, -1)) || [];
     payments = await Promise.all(payments.map((hash) => gf(`payment:${hash}`)));
 
@@ -319,30 +318,14 @@ export default {
     payments = payments.filter((p) => p);
 
     const authorization = await g(`authorization:${id}`);
-    res.send({ amount, authorization: authorization?.amount, payments });
+    return c.json({ amount, authorization: authorization?.amount, payments });
   },
 
-  // async withdraw(req, res) {
-  //   const {
-  //     params: { name },
-  //   } = req;
-  //   const { user } = req;
-  //   const balance = await g(`fund:${name}`);
-  //   const managers = await db.sMembers(`fund:${name}:managers`);
-  //   if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
-  //   res.send({
-  //     tag: "withdrawRequest",
-  //     callback: `${URL}/api/lnurlw`,
-  //     k1: name,
-  //     defaultDescription: `Withdraw from coinos fund ${name}`,
-  //     minWithdrawable: balance > 0 ? 1000 : 0,
-  //     maxWithdrawable: balance * 1000,
-  //   });
-  // },
-
-  async authorize(req, res) {
-    const { id: uid } = req.user;
-    const { id, fiat, currency, amount } = req.body;
+  async authorize(c) {
+    const user = c.get("user");
+    const { id: uid } = user;
+    const body = await c.req.json();
+    const { id, fiat, currency, amount } = body;
 
     const managers = await db.sMembers(`fund:${id}:managers`);
     if (managers.length && !managers.includes(uid)) fail("Unauthorized");
@@ -355,14 +338,13 @@ export default {
     };
 
     await s(`authorization:${id}`, authorization);
-    res.send({});
+    return c.json({});
   },
 
-  async take(req, res) {
-    let {
-      body: { id, amount, invoice: iid },
-      user,
-    } = req;
+  async take(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
+    let { id, amount, invoice: iid } = body;
     try {
       amount = Number.parseInt(amount);
       if (amount <= 0) fail("Invalid amount");
@@ -421,15 +403,15 @@ export default {
 
       await db.lPush(`fund:${id}:payments`, payment.id);
 
-      res.send(payment);
+      return c.json(payment);
     } catch (e) {
       warn("problem withdrawing from fund", user.username, e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async managers(req, res) {
-    const { name } = req.params;
+  async managers(c) {
+    const name = c.req.param("name");
 
     const ids = await db.sMembers(`fund:${name}:managers`);
 
@@ -437,12 +419,13 @@ export default {
       Boolean,
     );
 
-    res.send(managers);
+    return c.json(managers);
   },
 
-  async addManager(req, res) {
-    const { id, username } = req.body;
-    const { user } = req;
+  async addManager(c) {
+    const body = await c.req.json();
+    const { id, username } = body;
+    const user = c.get("user");
 
     const k = `fund:${id}:managers`;
 
@@ -463,14 +446,15 @@ export default {
     if (!managers.length)
       managers = await Promise.all(ids.map(async (id) => await getUser(id, fields)));
 
-    res.send(managers);
+    return c.json(managers);
   },
 
-  async deleteManager(req, res) {
+  async deleteManager(c) {
     try {
-      const { name } = req.params;
-      const { id: uid } = req.body;
-      const { user } = req;
+      const name = c.req.param("name");
+      const body = await c.req.json();
+      const { id: uid } = body;
+      const user = c.get("user");
 
       const k = `fund:${name}:managers`;
       let managers = await db.sMembers(k);
@@ -484,16 +468,15 @@ export default {
       const ids = await db.sMembers(k);
       managers = await Promise.all(ids.map(async (id) => await getUser(id, fields)));
 
-      res.send(managers);
+      return c.json(managers);
     } catch (e) {}
   },
 
-  async confirm(req, res) {
-    const {
-      body: { txid, wallet, type },
-    } = req;
+  async confirm(c) {
+    const body = await c.req.json();
+    const { txid, wallet, type } = body;
 
-    if (type !== PaymentType.liquid) return res.send({});
+    if (type !== PaymentType.liquid) return c.json({});
 
     try {
       const node = rpc({ ...config[type], wallet });
@@ -546,17 +529,18 @@ export default {
           await completePayment(invoice, p, user);
         }
       }
-      res.send({});
+      return c.json({});
     } catch (e) {
       console.log(e);
       warn(`problem processing ${txid}`);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async txWebhook(req, res) {
-    const { txid, secret } = req.body || {};
-    const headerSecret = req.headers["x-hook-secret"];
+  async txWebhook(c) {
+    const body = await c.req.json();
+    const { txid, secret } = body || {};
+    const headerSecret = c.req.header("x-hook-secret");
     const hookSecret = secret || headerSecret;
 
     try {
@@ -566,59 +550,59 @@ export default {
       const tx = await getTx(txid);
       await processWatchedTx(tx);
 
-      res.send({});
+      return c.json({});
     } catch (e) {
       warn("problem processing tx webhook", e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async fee(req, res) {
-    const { body, user } = req;
+  async fee(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
     try {
-      res.send(await build({ ...body, user }));
+      return c.json(await build({ ...body, user }));
     } catch (e) {
       warn("problem estimating fee", e.message, user.username, body.amount, body.address);
       let msg = e.message;
       if (msg.includes("500")) msg = "";
-      bail(res, `Failed to prepare transaction ${msg}`);
+      return bail(c, `Failed to prepare transaction ${msg}`);
     }
   },
 
-  async send(req, res) {
-    const { body, user } = req;
+  async send(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
     try {
       await requirePin({ body, user });
       const { hash: txid } = await sendOnchain({ ...body, user });
       const pid = await g(`payment:${txid}`);
       const p = await g(`payment:${pid}`);
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
       warn(user.username, "payment failed", e.message);
-      res.code(500).send(e.message);
+      return c.json(e.message, 500);
     }
   },
 
-  async freeze(req, res) {
-    const {
-      body: { secret },
-    } = req;
+  async freeze(c) {
+    const body = await c.req.json();
+    const { secret } = body;
     try {
       if (secret !== config.adminpass) fail("unauthorized");
       await s("freeze", true);
-      res.send("ok");
+      return c.json("ok");
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async print(req, res) {
-    const {
-      body: { id },
-      user,
-    } = req;
+  async print(c) {
+    const body = await c.req.json();
+    const { id } = body;
+    const user = c.get("user");
     try {
       const p = await gf(`payment:${id}`);
       if (!p) fail("Payment not found");
@@ -629,18 +613,17 @@ export default {
 
       mqtt.publish(username, `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`);
 
-      res.send({ ok: true });
+      return c.json({ ok: true });
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async lnaddress(req, res) {
-    let {
-      params: { lnaddress, amount },
-      body,
-      user,
-    } = req;
+  async lnaddress(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
+    let lnaddress = c.req.param("lnaddress");
+    let amount = c.req.param("amount");
     const { fee } = body;
     try {
       lnaddress = decodeURIComponent(lnaddress);
@@ -667,27 +650,25 @@ export default {
         await credit({ hash: pr, amount, memo, ref: user.id });
       } else p = await sendLightning({ user, pr, amount, fee, memo });
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async gateway(req, res) {
-    const {
-      body: { short_channel_id, webhook },
-    } = req;
+  async gateway(c) {
+    const body = await c.req.json();
+    const { short_channel_id, webhook } = body;
 
     await s(short_channel_id, webhook);
-    res.send({ ok: true });
+    return c.json({ ok: true });
   },
 
-  async replace(req, res) {
-    const {
-      body: { id },
-      user,
-    } = req;
+  async replace(c) {
+    const body = await c.req.json();
+    const { id } = body;
+    const user = c.get("user");
     try {
       const p = await gf(`payment:${id}`);
       if (!p) fail("Payment not found");
@@ -724,47 +705,50 @@ export default {
       if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
       warn("bump", user.username, p.hex);
 
-      res.send({ ok: true });
+      return c.json({ ok: true });
     } catch (e) {
       err("failed to bump payment", id, e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async internal(req, res) {
-    const {
-      body: { username, amount },
-      user: sender,
-    } = req;
+  async internal(c) {
+    const body = await c.req.json();
+    const { username, amount } = body;
+    const sender = c.get("user");
 
     const recipient = await getUser(username);
-    res.send(await sendInternal({ amount, sender, recipient }));
+    return c.json(await sendInternal({ amount, sender, recipient }));
   },
 
-  async decode(req, res) {
-    const { bolt11 } = req.params;
-    res.send(await ln.decode(bolt11));
+  async decode(c) {
+    const bolt11 = c.req.param("bolt11");
+    return c.json(await ln.decode(bolt11));
   },
 
-  async fetchinvoice(req, res) {
-    const { amount, offer } = req.body;
-    res.send(await ln.fetchinvoice(offer, amount ? amount * 1000 : null));
+  async fetchinvoice(c) {
+    const body = await c.req.json();
+    const { amount, offer } = body;
+    return c.json(await ln.fetchinvoice(offer, amount ? amount * 1000 : null));
   },
 
-  async auth(req, res) {
-    console.log(req.query);
-    res.send(req.query);
+  async auth(c) {
+    const query = c.req.query();
+    console.log(query);
+    return c.json(query);
   },
 
-  async order(req, res) {
-    console.log(req.body);
-    res.send(req.body);
+  async order(c) {
+    const body = await c.req.json();
+    console.log(body);
+    return c.json(body);
   },
 
-  async sendinvoice(req, res) {
+  async sendinvoice(c) {
     try {
-      const { user } = req;
-      const { invreq } = req.body;
+      const user = c.get("user");
+      const body = await c.req.json();
+      const { invreq } = body;
 
       const { amount_msat, bolt12, pay_index } = await ln.sendinvoice({
         invreq,
@@ -782,14 +766,15 @@ export default {
 
       const p = await replay(pay_index);
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async ark(req, res) {
-    const { body, user } = req;
+  async ark(c) {
+    const body = await c.req.json();
+    const user = c.get("user");
     const { address, amount, aid } = body;
 
     try {
@@ -812,16 +797,11 @@ export default {
         await s(`payment:${p.id}`, p);
         await s(`payment:${txid}`, p.id);
 
-        // Instant vault notification: if destination is a vault on our platform,
-        // create the receive payment immediately so the client doesn't have to
-        // wait for ASP indexer + arkSync backoff delays
         try {
           const vaultInfo = await g(`arkaddr:${address}`);
           if (vaultInfo) {
             const { aid: vaultAid, uid: vaultUid } = vaultInfo;
 
-            // Skip notification if this is a forward (e.g. vault → lightning);
-            // the funds are transient and will leave again immediately
             const isForward = await g(`custodial-ark-invoice:${address}`);
 
             const vaultOwner = await g(`user:${vaultUid}`);
@@ -848,16 +828,17 @@ export default {
         throw e;
       }
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
       warn(user.username, "ark payment failed", e.message);
-      res.code(500).send(e.message);
+      return c.json(e.message, 500);
     }
   },
 
-  async arkVaultSend(req, res) {
+  async arkVaultSend(c) {
     try {
-      const { body, user } = req;
+      const body = await c.req.json();
+      const user = c.get("user");
       const { hash, amount, aid } = body;
       const { rate, currency } = await getUserRate(user);
 
@@ -871,15 +852,16 @@ export default {
         mapHashToId: true,
       });
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async arkVaultReceive(req, res) {
+  async arkVaultReceive(c) {
     try {
-      const { body, user } = req;
+      const body = await c.req.json();
+      const user = c.get("user");
       const { amount, hash, aid } = body;
 
       if (amount <= 0) fail("Invalid amount");
@@ -895,19 +877,20 @@ export default {
         currency,
       });
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async arkAddress(_, res) {
-    res.send(await getArkAddress());
+  async arkAddress(c) {
+    return c.json(await getArkAddress());
   },
 
-  async arkReceive(req, res) {
+  async arkReceive(c) {
     try {
-      const { body, user } = req;
+      const body = await c.req.json();
+      const user = c.get("user");
       const { iid, amount, hash } = body;
       const { id: uid } = user;
 
@@ -921,7 +904,6 @@ export default {
       if (hash) {
         await acquireArkLock(hash);
 
-        // Skip VTXO verification for vault→custodial (same user, debit handled by arkVaultSend)
         if (!(aid && aid !== uid)) {
           if (!(await verifyArkVtxo(hash))) fail("VTXO not found in server wallet");
         }
@@ -931,7 +913,6 @@ export default {
       const { rates } = await getUserRate(user);
       const rate = rates[currency];
 
-      // Always credit custodial balance (Ark funds received by server)
       await tbCredit(uid, uid, type, amount, false);
 
       const p = await createArkPayment({
@@ -951,26 +932,25 @@ export default {
 
       await completePayment(invoice, p, user);
 
-      // Clean up custodial ark invoice index
       if (invoice.text) await db.del(`custodial-ark-invoice:${invoice.text}`);
 
-      res.send(p);
+      return c.json(p);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async arkSync(req, res) {
+  async arkSync(c) {
     try {
-      const { user } = req;
-      const { transactions = [], aid } = req.body;
+      const user = c.get("user");
+      const body = await c.req.json();
+      const { transactions = [], aid } = body;
       const { id: uid } = user;
-      l("arkSync", user.username, aid, "txs:", transactions.length, "bal:", req.body.balance);
+      l("arkSync", user.username, aid, "txs:", transactions.length, "bal:", body.balance);
 
-      // Per-account lock prevents concurrent syncs from racing
       const lockKey = `arksynclock:${aid}`;
       const gotLock = await db.set(lockKey, "1", { NX: true, EX: 30 });
-      if (!gotLock) return res.send({ synced: 0, received: 0, payments: [] });
+      if (!gotLock) return c.json({ synced: 0, received: 0, payments: [] });
 
       try {
         const { rate, currency } = await getUserRate(user);
@@ -983,7 +963,6 @@ export default {
           const hashes = [tx.arkTxid, tx.commitmentTxid, tx.hash].filter(Boolean);
           if (!hashes.length) continue;
 
-          // Check if any hash is already known
           let found = false;
           for (const h of hashes) {
             const existingId = await g(`payment:${aid}:${h}`);
@@ -999,8 +978,6 @@ export default {
           }
           if (found) continue;
 
-          // Skip sent/zero transactions not recorded via vault-send — these are
-          // from internal wallet operations (settle, refresh) not real sends
           if (tx.amount <= 0) continue;
 
           const primaryHash = hashes[0];
@@ -1021,7 +998,6 @@ export default {
           if (tx.amount > 0) {
             received += tx.amount;
 
-            // Find an unpaid ark invoice for this account and mark it received
             const invoiceIds = await db.lRange(`${aid}:invoices`, 0, 20);
             for (const iid of invoiceIds) {
               const inv = await getInvoice(iid);
@@ -1038,8 +1014,7 @@ export default {
           }
         }
 
-        // Reconcile expired VTXOs
-        const { balance } = req.body;
+        const { balance } = body;
         if (typeof balance === "number" && balance >= 0) {
           const paymentIds = await db.lRange(`${aid}:payments`, 0, -1);
           let expectedBalance = 0;
@@ -1049,8 +1024,6 @@ export default {
             const pay = await g(`payment:${pid}`);
             if (pay) {
               expectedBalance += pay.amount;
-              // Skip reconciliation if there are recent payments the SDK
-              // may not have indexed yet (e.g. instant vault credits)
               if (pay.amount > 0 && now - pay.created < 120_000) {
                 hasRecentPayments = true;
               }
@@ -1075,7 +1048,6 @@ export default {
           }
         }
 
-        // Check for pending custodial ark invoice to forward
         let forward;
         if (received > 0) {
           const account = await g(`account:${aid}`);
@@ -1098,12 +1070,12 @@ export default {
           }
         }
 
-        res.send({ synced, received, payments, forward });
+        return c.json({ synced, received, payments, forward });
       } finally {
         await db.del(lockKey);
       }
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 };

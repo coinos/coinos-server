@@ -12,11 +12,11 @@ import { v4 } from "uuid";
 const { scopes, url, appId, clientSecret, environment } = config.square;
 
 export default {
-  async connect(req, res) {
-    const { user } = req;
+  async connect(c) {
+    const user = c.get("user");
 
     if (await db.exists(`${user.id}:square`)) {
-      return res.send("connected");
+      return c.json("connected");
     }
 
     const codeVerifier = base64.encode(crypto.randomBytes(32));
@@ -27,13 +27,13 @@ export default {
     const state = base64.encode(crypto.randomBytes(12));
     const scope = scopes.join("+");
 
-    res.send(
+    return c.json(
       `${url}oauth2/authorize?client_id=${appId}&session=false&scope=${scope}&state=${state}&code_challenge=${challenge}`,
     );
   },
 
-  async auth(req, res) {
-    const { user } = req;
+  async auth(c) {
+    const user = c.get("user");
 
     const codeVerifier = await g(`${user.id}:codeVerifier`);
 
@@ -41,7 +41,7 @@ export default {
       environment,
     });
 
-    const { code } = req.query;
+    const code = c.req.query("code");
 
     try {
       const result = await client.oAuth.obtainToken({
@@ -53,15 +53,15 @@ export default {
 
       await s(`${user.id}:square`, result);
       await s(result.merchantId, user.id);
-      res.send({});
+      return c.json({});
     } catch (e) {
       console.log(e);
     }
   },
 
-  async payment(req, res) {
+  async payment(c) {
     try {
-      const { body } = req;
+      const body = await c.req.json();
       const { data, type, merchant_id } = body;
       const { payment } = data.object;
 
@@ -86,9 +86,9 @@ export default {
         await generate({ invoice, user });
       }
 
-      res.send({});
+      return c.json({});
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 };

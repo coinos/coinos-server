@@ -5,22 +5,14 @@ import ln from "$lib/ln";
 import { getDecodedToken } from "@cashu/cashu-ts";
 
 export default {
-  async health(_, res) {
+  async health(c) {
     const status = getHealthStatus();
     const httpStatus = status.healthy ? 200 : 503;
-    res.status(httpStatus).send(status);
+    return c.json(status, httpStatus);
   },
 
-  async balances(_, res) {
+  async balances(c) {
     let total = 0;
-
-    // for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
-    //   total += parseInt(await db.get(k));
-    // }
-    //
-    // for await (const k of archive.scanIterator({ MATCH: "balance:*" })) {
-    //   total += parseInt(await archive.get(k));
-    // }
 
     const funds = await ln.listfunds();
     const lnchannel = parseInt(funds.channels.reduce((a, b) => a + b.channel_sat, 0));
@@ -34,6 +26,6 @@ export default {
       lnwallet,
     };
 
-    res.send(info);
+    return c.json(info);
   },
 };

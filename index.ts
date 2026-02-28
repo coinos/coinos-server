@@ -17,7 +17,7 @@ import {
 import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
-import { sendHeartbeat } from "$lib/sockets";
+import { sendHeartbeat, websocket } from "$lib/sockets";
 import { initTigerBeetle } from "$lib/tb";
 import { startZmq } from "$lib/zmq";
 
@@ -35,7 +35,6 @@ import shopify from "$routes/shopify";
 import square from "$routes/square";
 import users from "$routes/users";
 
-console.log("test");
 try {
   await initTigerBeetle();
   getLocations();
@@ -74,7 +73,9 @@ app.post("/invoice", optional, invoices.create);
 app.post("/invoice/:id", optional, invoices.update);
 app.post("/sign", auth, invoices.sign);
 
-app.get("/assetlinks.json", (_, res) => res.sendFile("assetlinks.json"));
+app.get("/assetlinks.json", (c) => {
+  return new Response(Bun.file("assetlinks.json"));
+});
 app.get("/nostr.json", nostr.identities);
 app.get("/profile/:profile", nostr.profile);
 app.get("/:pubkey/count", nostr.count);
@@ -97,7 +98,6 @@ app.get("/payments", auth, payments.list);
 app.get("/payments/:hash", payments.get);
 app.post("/parse", auth, payments.parse);
 app.get("/fund/:id", payments.fund);
-// app.get("/fund/:name/withdraw", auth, payments.withdraw);
 app.get("/fund/:name/managers", payments.managers);
 app.post("/fund/managers", auth, payments.addManager);
 app.post("/fund/:name/managers/delete", auth, payments.deleteManager);
@@ -125,7 +125,6 @@ app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
 app.get("/pay/:username", lnurl.pay);
 app.get("/pay/:username/:amount", lnurl.pay);
-// app.get("/lnurlw", lnurl.withdraw);
 
 app.post("/freeze", payments.freeze);
 
@@ -160,19 +159,7 @@ app.post("/superuser", users.superuser);
 app.get("/verify/:code", users.verify);
 app.post("/request", auth, users.request);
 app.post("/forgot", users.forgot);
-app.post(
-  "/login",
-  {
-    config: {
-      rateLimit: {
-        max: 5,
-        timeWindow: "5 seconds",
-        keyGenerator: (req) => req.headers["cf-connecting-ip"] as string, // IP-based rate limiting
-      },
-    },
-  },
-  users.login,
-);
+app.post("/login", users.login);
 app.post("/flash", users.flash);
 app.get("/challenge", users.challenge);
 app.post("/authKeyLogin", users.authKeyLogin);
@@ -220,26 +207,27 @@ app.post("/mint", auth, ecash.mint);
 app.post("/melt", auth, ecash.melt);
 app.post("/ecash/:id", ecash.receive);
 
-app.get("/replay/:index", (req, res) => {
-  replay(req.params.index);
-  res.send({});
+app.get("/replay/:index", (c) => {
+  replay(c.req.param("index"));
+  return c.json({});
 });
 
-app.post("/echo", (req, res) => {
-  console.log("echo", req.body);
-  res.send(req.body);
+app.post("/echo", async (c) => {
+  const body = await c.req.json();
+  console.log("echo", body);
+  return c.json(body);
 });
 
-app.post("/test/ark/send", async (req, res) => {
+app.post("/test/ark/send", async (c) => {
   try {
-    const secret = req.headers["x-test-secret"] as string;
+    const secret = c.req.header("x-test-secret");
     if (!config.testSecret || secret !== config.testSecret) {
-      return res.code(403).send("Forbidden");
+      return c.json("Forbidden", 403);
     }
-    const { address, amount, iid } = req.body;
+    const body = await c.req.json();
+    const { address, amount, iid } = body;
     const txid = await sendArk(address, amount);
 
-    // Mark invoice as paid so tests don't need client-side SDK sync
     if (iid) {
       const invoice = await g(`invoice:${iid}`);
       if (invoice) {
@@ -248,16 +236,24 @@ app.post("/test/ark/send", async (req, res) => {
       }
     }
 
-    res.send({ txid, iid });
+    return c.json({ txid, iid });
   } catch (e: any) {
-    res.code(500).send(e.message);
+    return c.json(e.message, 500);
   }
 });
 
-const host: string = process.env["HOST"] || "0.0.0.0";
+const host_: string = process.env["HOST"] || "0.0.0.0";
 const port: number = Number.parseInt(process.env["PORT"]) || 3119;
 
-app.listen({ host, port });
+Bun.serve({
+  fetch(req, server) {
+    if (new URL(req.url).pathname === "/ws" && server.upgrade(req)) return;
+    return app.fetch(req, server);
+  },
+  websocket,
+  port,
+  hostname: host_,
+});
 
 const logerr = (e: Error) => console.log(e);
 process.on("unhandledRejection", logerr);

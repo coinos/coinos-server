@@ -1,58 +1,53 @@
 import config from "$config";
 import { fail, getUser } from "$lib/utils";
-import fastifyPassport from "@fastify/passport";
-import jwt from "passport-jwt";
+import jwt from "jsonwebtoken";
+import { getCookie } from "hono/cookie";
 
-export const admin = {
-  preValidation: fastifyPassport.authenticate(
-    "jwt",
-    { session: false },
-    (req, res, err, user, info) => {
-      if (!user.admin) return res.code(401).send("unauthorized");
-      req.user = user;
-    },
-  ),
+const extractToken = (c) => {
+  const authHeader = c.req.header("authorization");
+  if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
+  return getCookie(c, "token") || null;
 };
 
-export const optional = {
-  preValidation: fastifyPassport.authenticate(
-    "jwt",
-    { session: false },
-    (req, res, err, user, info) => {
-      req.user = user;
-    },
-  ),
+const authenticate = async (c) => {
+  const token = extractToken(c);
+  if (!token) return null;
+
+  try {
+    const payload = jwt.verify(token, config.jwt);
+    let { id } = payload as any;
+    const url = c.req.path;
+    const method = c.req.method;
+
+    const wl = { GET: ["/invoice", "/payments"], POST: ["/invoice"] };
+    if (id.endsWith("-ro") && wl[method]?.some((p) => url.startsWith(p))) id = id.slice(0, -3);
+
+    return await getUser(id);
+  } catch {
+    return null;
+  }
 };
 
-export const auth = {
-  preValidation: fastifyPassport.authenticate("jwt", {
-    authInfo: false,
-    session: false,
-  }),
+export const auth = async (c, next) => {
+  const user = await authenticate(c);
+  if (!user) return c.json("unauthorized", 401);
+  c.set("user", user);
+  await next();
+};
+
+export const optional = async (c, next) => {
+  const user = await authenticate(c);
+  if (user) c.set("user", user);
+  await next();
+};
+
+export const admin = async (c, next) => {
+  const user = await authenticate(c);
+  if (!user?.admin) return c.json("unauthorized", 401);
+  c.set("user", user);
+  await next();
 };
 
 export const requirePin = async ({ body, user }) => {
   if (!user || (user.pin && user.pin !== body.pin)) fail("Invalid pin");
 };
-
-export const jwtStrategy = new jwt.Strategy(
-  {
-    jwtFromRequest: jwt.ExtractJwt.fromExtractors([
-      jwt.ExtractJwt.fromAuthHeaderAsBearerToken(),
-      (req) => (req.cookies ? req.cookies.token : null),
-    ]),
-    secretOrKey: config.jwt,
-    passReqToCallback: true,
-  },
-  async (req, payload, next) => {
-    const { originalUrl: u, method: m } = req;
-
-    let { id } = payload;
-    const wl = { GET: ["/invoice", "/payments"], POST: ["/invoice"] };
-
-    if (id.endsWith("-ro") && wl[m].some((p) => u.startsWith(p))) id = id.slice(0, -3);
-
-    const user = await getUser(id);
-    next(null, user);
-  },
-);

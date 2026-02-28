@@ -14,10 +14,8 @@ const host = URL.split("/").at(-1);
 const fiveMinutes = 1000 * 60 * 5;
 
 export default {
-  async encode(req, res) {
-    const {
-      query: { address },
-    } = req;
+  async encode(c) {
+    const address = c.req.query("address");
     const [name, domain] = address.split("@");
     const url = `https://${domain}/.well-known/lnurlp/${name.toLowerCase().replace(/\s/g, "")}`;
 
@@ -27,32 +25,29 @@ export default {
     } catch (e) {
       const m = `failed to lookup lightning address ${address}`;
       warn(m);
-      return bail(res, m);
+      return bail(c, m);
     }
 
     const enc = bech32.encode("lnurl", bech32.toWords(Buffer.from(url)), 20000);
-    res.send(enc);
+    return c.json(enc);
   },
 
-  async decode(req, res) {
-    const {
-      query: { text },
-    } = req;
+  async decode(c) {
+    const text = c.req.query("text");
     try {
       const url = Buffer.from(bech32.fromWords(bech32.decode(text, 20000).words)).toString();
 
       const r = await got(url).json();
-      res.send(r);
+      return c.json(r);
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async lnurlp(req, res) {
-    const {
-      params: { username },
-      query: { minSendable = 1000, maxSendable = 100000000000 },
-    } = req;
+  async lnurlp(c) {
+    const username = c.req.param("username");
+    const minSendable = c.req.query("minSendable") || 1000;
+    const maxSendable = c.req.query("maxSendable") || 100000000000;
     try {
       const user = await getUser(
         username.replace("lightning:", "").replace(/\s/g, "").replace("=", "").toLowerCase(),
@@ -69,7 +64,7 @@ export default {
       const id = v4();
       await s(`lnurl:${id}`, uid);
 
-      res.send({
+      return c.json({
         allowsNostr: true,
         minSendable,
         maxSendable,
@@ -82,15 +77,15 @@ export default {
     } catch (e) {
       if (!e.message.includes("found"))
         warn("problem generating lnurlp request", username, e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async lnurl(req, res) {
-    const {
-      params: { id },
-      query: { amount, comment, nostr },
-    } = req;
+  async lnurl(c) {
+    const id = c.req.param("id");
+    const amount = c.req.query("amount");
+    const comment = c.req.query("comment");
+    const nostr = c.req.query("nostr");
     try {
       const iid = await g(`lnurl:${id}:invoice`);
       const uid = await g(`lnurl:${id}`);
@@ -109,7 +104,6 @@ export default {
       if (nostr) {
         try {
           const event = JSON.parse(decodeURIComponent(nostr));
-          // TODO: validate the event
           await s(`zap:${id}`, event);
           metadata = nostr;
         } catch (e) {
@@ -128,31 +122,30 @@ export default {
             user,
           });
 
-      res.send({
+      return c.json({
         pr: invoice.text,
         routes: [],
         verify: `${URL}/api/lnurl/verify/${invoice.id}`,
       });
     } catch (e) {
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async verify(req, res) {
-    const {
-      params: { id },
-    } = req;
+  async verify(c) {
+    const id = c.req.param("id");
     const inv = await getInvoice(id);
-    if (!inv) return res.send({ status: "ERROR", reason: "Not found" });
+    if (!inv) return c.json({ status: "ERROR", reason: "Not found" });
 
     const { hash, received, amount, preimage } = inv;
     const settled = received >= amount;
 
-    res.send({ pr: hash, status: "OK", settled, preimage: preimage || null });
+    return c.json({ pr: hash, status: "OK", settled, preimage: preimage || null });
   },
 
-  async pay(req, res) {
-    const { amount, username } = req.params;
+  async pay(c) {
+    const amount = c.req.param("amount");
+    const username = c.req.param("username");
     try {
       const user = await getUser(username);
 
@@ -206,7 +199,7 @@ export default {
       await s(`lnurl:${id}`, uid);
       if (total > 0) await s(`lnurl:${id}:invoice`, invoice.id);
 
-      res.send({
+      return c.json({
         allowsNostr: true,
         minSendable: invoice.amount ? total : 1000,
         maxSendable: invoice.amount ? total : 10 * 1000 * SATS,
@@ -219,7 +212,7 @@ export default {
     } catch (e) {
       if (!e.message.includes("found"))
         warn("problem generating lnurlp request", username, e.message);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 };

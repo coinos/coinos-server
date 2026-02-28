@@ -22,20 +22,20 @@ import type { ProfilePointer } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
 
 export default {
-  async event(req, res) {
+  async event(c) {
     try {
-      let { id } = req.params;
-      const full = req.url.endsWith("full");
+      let id = c.req.param("id");
+      const full = c.req.url.endsWith("full");
 
       if (id.startsWith("nevent")) id = decode(id).data.id;
       if (id.startsWith("note")) id = decode(id).data;
 
       const k = `event:${id}${full ? ":full" : ""}`;
       let event = await g(k);
-      if (event) return res.send(event);
+      if (event) return c.json(event);
 
       event = await get({ ids: [id] });
-      if (!full) return res.send(event);
+      if (!full) return c.json(event);
 
       const parts = parseContent(event);
 
@@ -98,15 +98,16 @@ export default {
 
       await db.set(k, JSON.stringify(event), { EX });
 
-      res.send(event);
+      return c.json(event);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async parse(req, res) {
-    const { event } = req.body;
+  async parse(c) {
+    const body = await c.req.json();
+    const { event } = body;
     const parts = parseContent(event);
     const names = {};
 
@@ -117,12 +118,12 @@ export default {
       }
     }
 
-    res.send({ parts, names });
+    return c.json({ parts, names });
   },
 
-  async thread(req, res) {
+  async thread(c) {
     try {
-      const { id } = req.params;
+      const id = c.req.param("id");
 
       const event = await get({ ids: [id] });
 
@@ -147,16 +148,16 @@ export default {
         }
       }
 
-      res.send(thread);
+      return c.json(thread);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async zaps(req, res) {
+  async zaps(c) {
     try {
-      let { id } = req.params;
+      let id = c.req.param("id");
       if (id.startsWith("nevent")) id = decode(id).data.id;
       if (id.startsWith("note")) id = decode(id).data;
       const filter = { kinds: [9735], "#e": [id] };
@@ -165,7 +166,7 @@ export default {
         await sync("wss://relay.primal.net", filter);
         events = await scan(filter);
       }
-      if (!events.length) return res.send([]);
+      if (!events.length) return c.json([]);
 
       const zaps = [];
       for (const { tags } of events) {
@@ -187,17 +188,19 @@ export default {
         }
       }
 
-      res.send(zaps.filter((z) => z.amount > 0));
+      return c.json(zaps.filter((z) => z.amount > 0));
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async publish(req, res) {
+  async publish(c) {
     try {
-      const { event } = req.body;
-      const { pubkey } = req.user;
+      const body = await c.req.json();
+      const { event } = body;
+      const user = c.get("user");
+      const { pubkey } = user;
 
       await publish(event);
 
@@ -206,17 +209,15 @@ export default {
         db.del(`${pubkey}:follows:n`);
       }
 
-      res.send({});
+      return c.json({});
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async events(req, res) {
-    const {
-      params: { pubkey },
-    } = req;
+  async events(c) {
+    const pubkey = c.req.param("pubkey");
     try {
       const events = await q({ kinds: [1], authors: [pubkey], limit: 20 });
 
@@ -233,25 +234,25 @@ export default {
         }
       }
 
-      res.send(events);
+      return c.json(events);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async follows(req, res) {
-    const {
-      params: { pubkey },
-      query: { limit = 20, offset = 0, pubkeysOnly },
-    } = req;
+  async follows(c) {
+    const pubkey = c.req.param("pubkey");
+    const limit = parseInt(c.req.query("limit") || "20");
+    const offset = parseInt(c.req.query("offset") || "0");
+    const pubkeysOnly = c.req.query("pubkeysOnly");
     try {
       const k = `${pubkey}:follows${pubkeysOnly ? ":pubkeys" : ""}`;
       let follows = await g(k);
-      if (follows?.length) return res.send(follows);
+      if (follows?.length) return c.json(follows);
 
       const event = await get({ authors: [pubkey], kinds: [3] });
-      if (!event) return res.send([]);
+      if (!event) return c.json([]);
 
       let pubkeys = event.tags.filter((tag) => tag[0] === "p").map((tag) => tag[1]);
 
@@ -273,24 +274,23 @@ export default {
 
       await db.set(k, JSON.stringify(follows), { EX });
 
-      res.send(follows);
+      return c.json(follows);
     } catch (e) {
       console.log("follows fail", e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async followers(req, res) {
-    const {
-      params: { pubkey },
-      query: { limit = 20, offset = 0 },
-    } = req;
+  async followers(c) {
+    const pubkey = c.req.param("pubkey");
+    const limit = parseInt(c.req.query("limit") || "20");
+    const offset = parseInt(c.req.query("offset") || "0");
     try {
       let followers = await g(`${pubkey}:followers`);
-      if (followers?.length) return res.send(followers);
+      if (followers?.length) return c.json(followers);
 
       const events = await q({ kinds: [3], "#p": [pubkey], limit });
-      if (!events.length) return res.send([]);
+      if (!events.length) return c.json([]);
 
       const pubkeys = events.map((e) => e.pubkey).slice(offset, offset + limit);
       followers = (
@@ -306,28 +306,25 @@ export default {
 
       await db.set(`${pubkey}:followers`, JSON.stringify(followers), { EX });
 
-      res.send(followers);
+      return c.json(followers);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async count(req, res) {
+  async count(c) {
     try {
-      const { pubkey } = req.params;
-      // res.send({ followers: 0, follows: 0 });
-      res.send(await getCount(pubkey));
+      const pubkey = c.req.param("pubkey");
+      return c.json(await getCount(pubkey));
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 
-  async identities(req, res) {
-    const {
-      query: { name },
-    } = req;
+  async identities(c) {
+    const name = c.req.query("name");
     let names = {};
     if (name) {
       names = { [name]: (await getUser(name, fields)).pubkey };
@@ -339,25 +336,26 @@ export default {
       }
     }
 
-    res.send({ names });
+    return c.json({ names });
   },
 
-  async info(_, res) {
-    res.send({ pubkey: serverPubkey });
+  async info(c) {
+    return c.json({ pubkey: serverPubkey });
   },
 
-  async profile(req, res) {
-    const { profile } = req.params;
+  async profile(c) {
+    const profile = c.req.param("profile");
     const { data } = decode(profile);
     const { pubkey, relays } = data as ProfilePointer;
     const recipient = await getProfile(pubkey, relays);
     recipient.relays = relays;
-    res.send(recipient);
+    return c.json(recipient);
   },
 
-  async zapRequest(req, res) {
+  async zapRequest(c) {
     try {
-      const { amount, id } = req.body;
+      const body = await c.req.json();
+      const { amount, id } = body;
       const { pubkey } = await get({ ids: [id] });
       const event = await makeZapRequest({
         profile: pubkey,
@@ -367,15 +365,16 @@ export default {
         comment: "",
       });
 
-      res.send(event);
+      return c.json(event);
     } catch (e) {
       console.log(e);
     }
   },
 
-  async zap(req, res) {
+  async zap(c) {
     try {
-      const { event } = req.body;
+      const body = await c.req.json();
+      const { event } = body;
       const amount = event.tags.find((t) => t[0] === "amount")[1];
       const pubkey = event.tags.find((t) => t[0] === "p")[1];
       const content = JSON.stringify(await getProfile(pubkey));
@@ -386,10 +385,10 @@ export default {
       const url = `${callback}?amount=${amount}&nostr=${encodedEvent}`;
       const json = await got(url).json();
 
-      res.send(json);
+      return c.json(json);
     } catch (e) {
       console.log(e);
-      bail(res, e.message);
+      return bail(c, e.message);
     }
   },
 };
