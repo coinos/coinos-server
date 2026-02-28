@@ -272,7 +272,7 @@ export default {
       }
 
       if (user.pin && !(pin === user.pin)) fail("Pin required");
-      if (typeof newpin !== "undefined" && newpin.length === 6) user.pin = newpin;
+      if (typeof newpin !== "undefined" && (newpin.length === 6 || newpin.length === 64)) user.pin = newpin;
       if (user.pin === "delete") user.pin = undefined;
 
       if (username) {

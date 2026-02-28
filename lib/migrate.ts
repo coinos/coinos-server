@@ -206,4 +206,32 @@ export const migrateFundsToTB = async () => {
   return count;
 };
 
+export const hashPins = async () => {
+  const migrated = await db.get("pins:hashed");
+  if (migrated) return 0;
+
+  let count = 0;
+
+  for await (const k of scan("user:*")) {
+    try {
+      const raw = await db.get(k);
+      if (!raw || !(raw as string).startsWith("{")) continue;
+
+      const user = JSON.parse(raw as string);
+      if (!user.pin || user.pin.length !== 6) continue;
+
+      const hash = new Bun.CryptoHasher("sha256").update(user.pin).digest("hex");
+      user.pin = hash;
+      await s(k as string, user);
+      count++;
+    } catch (e) {
+      warn("pin hash migration error", k, e.message);
+    }
+  }
+
+  await db.set("pins:hashed", Date.now().toString());
+  l(`Hashed ${count} user PINs`);
+  return count;
+};
+
 export default migrate;
