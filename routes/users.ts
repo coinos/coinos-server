@@ -14,7 +14,7 @@ import {
 import register from "$lib/register";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
-import { bail, fail, fields, getUser, pick } from "$lib/utils";
+import { bail, fail, fields, getUser, pick, prod } from "$lib/utils";
 import whitelist from "$lib/whitelist";
 import rpc from "@coinos/rpc";
 import { $ } from "bun";
@@ -371,7 +371,7 @@ export default {
       const ipKey = `ip:${ip}:login`;
       const ipCount = await db.incr(ipKey);
       if (ipCount === 1) await db.expire(ipKey, 10);
-      if (Number(ipCount) > 30) return c.json({}, 429);
+      if (prod && Number(ipCount) > 30) return c.json({}, 429);
 
       const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) {
@@ -384,7 +384,7 @@ export default {
       const fk = `${username}:failures`;
       const ipFailKey = `ip:${ip}:login:fail`;
       const ipFailures = await g(ipFailKey);
-      if (Number(ipFailures) > 20) return c.json({}, 429);
+      if (prod && Number(ipFailures) > 20) return c.json({}, 429);
 
       let user = await getUser(username);
 
@@ -447,7 +447,7 @@ export default {
       const ipKey = `ip:${ip}:login`;
       const ipCount = await db.incr(ipKey);
       if (ipCount === 1) await db.expire(ipKey, 10);
-      if (Number(ipCount) > 30) return c.json({}, 429);
+      if (prod && Number(ipCount) > 30) return c.json({}, 429);
 
       const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
       if (!recaptchaOk) return c.json("failed captcha", 401);

@@ -371,11 +371,9 @@ export const completePayment = async (inv, p, user) => {
           inv.forwarded = true;
           await s(`invoice:${inv.id}`, inv);
 
-          // Skip forward if destination is the same user's own Lightning invoice
-          if (inv.forward.startsWith("ln")) {
-            const destInv = await getInvoice(inv.forward).catch(() => null);
-            if (destInv?.uid === id) return;
-          }
+          // Skip forward if destination belongs to the same user
+          const destInv = await getInvoice(inv.forward).catch(() => null);
+          if (destInv?.uid === id) return;
 
           await pay({ amount: p.amount, to: inv.forward, user });
         } catch (e) {

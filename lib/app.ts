@@ -20,63 +20,66 @@ app.use(
 // Static files
 app.use("/public/*", serveStatic({ root: "/home/bun/app/data/uploads", rewriteRequestPath: (p) => p.replace("/public", "") }));
 
-// Rate limiting
+// Rate limiting (disabled in development)
+const prod = process.env.NODE_ENV === "production";
 const rateLimits = new Map<string, { count: number; reset: number }>();
 const strictLimits = new Map<string, { count: number; reset: number }>();
 
-app.use("*", async (c, next) => {
-  const url = c.req.path;
+if (prod) {
+  app.use("*", async (c, next) => {
+    const url = c.req.path;
 
-  // Skip rate limiting for public assets
-  if (url.includes("public")) return next();
+    // Skip rate limiting for public assets
+    if (url.includes("public")) return next();
 
-  const ip = (c.req.header("cf-connecting-ip") as string) || (c.env as any)?.ip || "unknown";
-  const ua = c.req.header("user-agent") || "unknown-ua";
-  const rateLimitBy = c.req.header("rate-limit-by");
-  const key = rateLimitBy === "ua" ? ua : ip;
-  const now = Date.now();
+    const ip = (c.req.header("cf-connecting-ip") as string) || (c.env as any)?.ip || "unknown";
+    const ua = c.req.header("user-agent") || "unknown-ua";
+    const rateLimitBy = c.req.header("rate-limit-by");
+    const key = rateLimitBy === "ua" ? ua : ip;
+    const now = Date.now();
 
-  // General rate limit: 2000 req / 2s
-  const gen = rateLimits.get(key);
-  if (gen && now < gen.reset) {
-    gen.count++;
-    if (gen.count > 2000) {
-      return c.json(
-        { statusCode: 429, error: "Too Many Requests", message: "Rate limit exceeded, retry in 2 seconds" },
-        429,
-      );
-    }
-  } else {
-    rateLimits.set(key, { count: 1, reset: now + 2000 });
-  }
-
-  // Strict rate limit for /login and /send: 10 req / 10s
-  const isStrict = url.includes("/login") || url.includes("/send");
-  if (isStrict) {
-    const strictKey = `strict:${ua}`;
-    const s = strictLimits.get(strictKey);
-    if (s && now < s.reset) {
-      s.count++;
-      if (s.count > 10) {
+    // General rate limit: 2000 req / 2s
+    const gen = rateLimits.get(key);
+    if (gen && now < gen.reset) {
+      gen.count++;
+      if (gen.count > 2000) {
         return c.json(
-          { statusCode: 429, error: "Too Many Requests", message: "Rate limit exceeded" },
+          { statusCode: 429, error: "Too Many Requests", message: "Rate limit exceeded, retry in 2 seconds" },
           429,
         );
       }
     } else {
-      strictLimits.set(strictKey, { count: 1, reset: now + 10000 });
+      rateLimits.set(key, { count: 1, reset: now + 2000 });
     }
-  }
 
-  return next();
-});
+    // Strict rate limit for /login and /send: 10 req / 10s
+    const isStrict = url.includes("/login") || url.includes("/send");
+    if (isStrict) {
+      const strictKey = `strict:${ua}`;
+      const s = strictLimits.get(strictKey);
+      if (s && now < s.reset) {
+        s.count++;
+        if (s.count > 10) {
+          return c.json(
+            { statusCode: 429, error: "Too Many Requests", message: "Rate limit exceeded" },
+            429,
+          );
+        }
+      } else {
+        strictLimits.set(strictKey, { count: 1, reset: now + 10000 });
+      }
+    }
 
-// Clean up rate limit maps periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of rateLimits) if (now >= v.reset) rateLimits.delete(k);
-  for (const [k, v] of strictLimits) if (now >= v.reset) strictLimits.delete(k);
-}, 5000);
+    return next();
+  });
+
+  // Clean up rate limit maps periodically
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of rateLimits) if (now >= v.reset) rateLimits.delete(k);
+    for (const [k, v] of strictLimits) if (now >= v.reset) strictLimits.delete(k);
+  }, 5000);
+}
 
 // Request logging
 app.use("*", async (c, next) => {
