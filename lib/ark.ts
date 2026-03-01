@@ -115,13 +115,15 @@ export const sendArk = async (address: string, amount: number) => {
     setTimeout(() => reject(new Error("Ark send timed out")), 60000),
   );
   const send = async () => {
-    const w = await getWallet();
+    let w = await getWallet();
     try {
       return await w.sendBitcoin({ address, amount });
     } catch (e: any) {
-      if (/insufficient funds/i.test(e.message)) {
-        l("ark send got insufficient funds, refreshing wallet and retrying");
+      if (/insufficient funds/i.test(e.message) || /VTXO_RECOVERABLE/i.test(e.message) || /VTXO_ALREADY_SPENT/i.test(e.message) || /VTXO_ALREADY_REGISTERED/i.test(e.message)) {
+        l("ark send failed:", e.message, "— recreating wallet and retrying");
+        wallet = null;
         await refreshArkWallet(true);
+        w = await getWallet();
         return w.sendBitcoin({ address, amount });
       }
       throw e;
