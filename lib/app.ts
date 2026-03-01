@@ -141,7 +141,8 @@ app.use("*", async (c, next) => {
 });
 
 // Error handler
-app.onError((_err, c) => {
+app.onError((err, c) => {
+  console.error("unhandled error:", c.req.method, c.req.path, err?.message || err);
   return c.json({ ok: false }, 500);
 });
 

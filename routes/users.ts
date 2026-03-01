@@ -1010,10 +1010,22 @@ export default {
       const body = await c.req.json();
       const { id } = body;
       const { id: uid } = c.get("user");
+      l("deleteAccount", id, "uid:", uid);
       const account = await g(`account:${id}`);
+      l("deleteAccount account:", !!account, "type:", account?.type);
+      if (!account) fail("account not found");
 
-      const pos = await db.lPos(`${uid}:accounts`, id);
-      if (!(account && pos != null)) fail("account not found");
+      // Support both list and set storage for accounts
+      const keyType = await db.type(`${uid}:accounts`);
+      if (keyType === "list") {
+        const pos = await db.lPos(`${uid}:accounts`, id);
+        if (pos == null) fail("account not found");
+      } else if (keyType === "set") {
+        const isMember = await db.sIsMember(`${uid}:accounts`, id);
+        if (!isMember) fail("account not found");
+      } else {
+        fail("account not found");
+      }
 
       if (account.type !== "ark") {
         try {
@@ -1024,12 +1036,12 @@ export default {
         }
       }
 
-      await db
-        .multi()
-        .lRem(`${uid}:accounts`, 1, id)
-        .del(`account:${id}`)
-        .del(`${id}:payments`)
-        .exec();
+      const m = db.multi();
+      if (keyType === "list") m.lRem(`${uid}:accounts`, 1, id);
+      else if (keyType === "set") m.sRem(`${uid}:accounts`, id);
+      m.del(`account:${id}`).del(`${id}:payments`);
+      if (account.arkAddress) m.del(`arkaddr:${account.arkAddress}`);
+      await m.exec();
 
       return c.json({ ok: true });
     } catch (e) {

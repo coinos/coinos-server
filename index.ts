@@ -138,16 +138,17 @@ app.post("/ark/send", auth, payments.ark);
 app.post("/ark/vault-send", auth, payments.arkVaultSend);
 app.post("/ark/vault-receive", auth, payments.arkVaultReceive);
 
+app.post("/account/delete", auth, users.deleteAccount);
 app.get("/account/:id", auth, users.account);
 app.post("/account/:id", auth, users.updateAccount);
 app.get("/accounts", auth, users.accounts);
 app.post("/accounts", auth, users.createAccount);
-app.post("/account/delete", auth, users.deleteAccount);
 
 app.get("/users", auth, users.list);
 app.get("/me", auth, users.me);
 app.get("/ro", auth, users.ro);
 app.get("/credits", auth, users.credits);
+app.get("/users/delete/:username", users.del);
 app.get("/users/:key", users.get);
 app.post("/register", users.create);
 app.post("/disable2fa", auth, users.disable2fa);
@@ -155,7 +156,6 @@ app.post("/2fa", auth, users.enable2fa);
 app.post("/user", auth, users.update);
 app.post("/reset", optional, users.reset);
 app.post("/upload/:type", users.upload);
-app.get("/users/delete/:username", users.del);
 app.post("/acl", users.acl);
 app.post("/superuser", users.superuser);
 app.get("/verify/:code", users.verify);

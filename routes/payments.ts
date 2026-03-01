@@ -953,6 +953,18 @@ export default {
       if (!gotLock) return c.json({ synced: 0, received: 0, payments: [] });
 
       try {
+        // Sync ark address if client reports a different one
+        if (body.arkAddress) {
+          const account = await g(`account:${aid}`);
+          if (account && account.arkAddress !== body.arkAddress) {
+            if (account.arkAddress) await db.del(`arkaddr:${account.arkAddress}`);
+            account.arkAddress = body.arkAddress;
+            await s(`account:${aid}`, account);
+            await db.set(`arkaddr:${body.arkAddress}`, JSON.stringify({ aid, uid }));
+            l("arkSync updated arkAddress for", aid);
+          }
+        }
+
         const { rate, currency } = await getUserRate(user);
 
         let synced = 0;
