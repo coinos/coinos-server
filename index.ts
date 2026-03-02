@@ -139,6 +139,7 @@ app.post("/ark/vault-send", auth, payments.arkVaultSend);
 app.post("/ark/vault-receive", auth, payments.arkVaultReceive);
 
 app.post("/account/delete", auth, users.deleteAccount);
+app.post("/user/delete", auth, users.deleteUser);
 app.get("/account/:id", auth, users.account);
 app.post("/account/:id", auth, users.updateAccount);
 app.get("/accounts", auth, users.accounts);

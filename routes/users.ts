@@ -1050,6 +1050,43 @@ export default {
     }
   },
 
+  async deleteUser(c) {
+    try {
+      const user = c.get("user");
+      const { id, username, pubkey } = user;
+      l("deleteUser", username, id);
+
+      // Remove app created during registration
+      const appKeys = await db.sMembers(`${id}:apps`);
+      const m = db.multi();
+      for (const key of appKeys) {
+        m.del(`app:${key}`);
+      }
+
+      // Reverse everything register() created
+      m.del(`user:${id}`)
+        .del(`user:${username}`)
+        .del(`account:${id}`)
+        .del(`${id}:accounts`)
+        .del(`${id}:apps`);
+
+      if (pubkey) {
+        m.del(`user:${pubkey}`)
+          .del(`${pubkey}:follows:n`)
+          .del(`${pubkey}:followers:n`)
+          .del(`${pubkey}:pubkeys`);
+      }
+
+      await m.exec();
+
+      l("deleted user", username);
+      return c.json({ ok: true });
+    } catch (e) {
+      err("problem deleting user", e.message);
+      return bail(c, e.message);
+    }
+  },
+
   async flash(c) {
     const body = await c.req.json();
     const { ssid, key, token } = body;
