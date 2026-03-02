@@ -946,7 +946,7 @@ export default {
       const body = await c.req.json();
       const { transactions = [], aid } = body;
       const { id: uid } = user;
-      l("arkSync", user.username, aid, "txs:", transactions.length, "bal:", body.balance);
+      // verbose arkSync logging removed to reduce noise
 
       const lockKey = `arksynclock:${aid}`;
       const gotLock = await db.set(lockKey, "1", { NX: true, EX: 30 });
@@ -961,7 +961,7 @@ export default {
             account.arkAddress = body.arkAddress;
             await s(`account:${aid}`, account);
             await db.set(`arkaddr:${body.arkAddress}`, JSON.stringify({ aid, uid }));
-            l("arkSync updated arkAddress for", aid);
+            // arkSync updated arkAddress silently
           }
         }
 
@@ -1063,10 +1063,8 @@ export default {
         let forward;
         if (received > 0) {
           const account = await g(`account:${aid}`);
-          l("arkSync forward check", aid, account?.arkAddress, received);
           if (account?.arkAddress) {
             const iid = await g(`custodial-ark-invoice:${account.arkAddress}`);
-            l("arkSync custodial invoice lookup", account.arkAddress, iid);
             if (iid) {
               const inv = await getInvoice(iid);
               if (inv && (inv.received < inv.amount || inv.amount === 0)) {
@@ -1076,7 +1074,6 @@ export default {
                   amount: inv.amount || received,
                   serverArkAddress,
                 };
-                l("arkSync returning forward", forward);
               }
             }
           }

@@ -110,6 +110,24 @@ export const refreshArkWallet = async (force = false) => {
 // Initial check after 30s startup delay; ongoing checks triggered by ZMQ blocks
 setTimeout(refreshArkWallet, 30_000);
 
+// Log ark wallet balances every 60s
+setInterval(async () => {
+  try {
+    const w = await getWallet();
+    const balance = await w.getBalance();
+    l(
+      "ark balance — available:",
+      balance.available,
+      "recoverable:",
+      balance.recoverable,
+      "boarding:",
+      balance.boarding.confirmed,
+    );
+  } catch (e: any) {
+    warn("ark balance check failed:", e.message);
+  }
+}, 60_000);
+
 export const sendArk = async (address: string, amount: number) => {
   const timeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error("Ark send timed out")), 60000),
