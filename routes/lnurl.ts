@@ -148,6 +148,7 @@ export default {
     const username = c.req.param("username");
     try {
       const user = await getUser(username);
+      if (!user) fail(`User ${username} not found`);
 
       const invoices = await db.lRange(`${user.id}:invoices`, 0, 10);
       let invoice;

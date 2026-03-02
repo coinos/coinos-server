@@ -43,6 +43,8 @@ export const refreshArkWallet = async (force = false) => {
       balance.recoverable,
       "boarding:",
       balance.boarding.confirmed,
+      "pending:",
+      balance.boarding.unconfirmed,
     );
 
     const manager = new VtxoManager(w);
@@ -122,6 +124,8 @@ setInterval(async () => {
       balance.recoverable,
       "boarding:",
       balance.boarding.confirmed,
+      "pending:",
+      balance.boarding.unconfirmed,
     );
   } catch (e: any) {
     warn("ark balance check failed:", e.message);
