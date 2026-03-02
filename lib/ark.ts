@@ -89,7 +89,7 @@ export const refreshArkWallet = async (force = false) => {
       for (const utxo of sorted) {
         try {
           const txid = await withTimeout(
-            ramps.onboard(info.fees, [utxo], undefined, () => {}),
+            ramps.onboard(info.fees, [utxo], undefined, (event) => l("ark onboard event:", JSON.stringify(event, (_, v) => typeof v === "bigint" ? v.toString() : v))),
             60_000,
             "ark onboard",
           );
@@ -97,7 +97,8 @@ export const refreshArkWallet = async (force = false) => {
           failedBoardingOutpoints.clear();
           break;
         } catch (e: any) {
-          failedBoardingOutpoints.add(outpointKey(utxo));
+          if (!/not enough intent confirmations/i.test(e.message))
+            failedBoardingOutpoints.add(outpointKey(utxo));
           warn("ark onboard failed:", utxo.value, "sats:", e.message);
         }
       }
@@ -109,8 +110,9 @@ export const refreshArkWallet = async (force = false) => {
   }
 };
 
-// Initial check after 30s startup delay; ongoing checks triggered by ZMQ blocks
-setTimeout(refreshArkWallet, 30_000);
+// Initial check after 60s startup delay; retry every 60s to catch ark rounds
+setTimeout(refreshArkWallet, 60_000);
+setInterval(() => refreshArkWallet(), 60_000);
 
 // Log ark wallet balances every 60s
 setInterval(async () => {

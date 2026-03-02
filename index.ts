@@ -260,6 +260,8 @@ Bun.serve({
   hostname: host_,
 });
 
+console.log(`coinos server listening on ${host_}:${port}`);
+
 const logerr = (e: Error) => console.log(e);
 process.on("unhandledRejection", logerr);
 process.on("uncaughtException", logerr);
