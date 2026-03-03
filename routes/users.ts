@@ -373,9 +373,13 @@ export default {
       if (ipCount === 1) await db.expire(ipKey, 10);
       if (prod && Number(ipCount) > 30) return c.json({}, 429);
 
-      const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
-      if (!recaptchaOk) {
-        return c.json("failed captcha", 401);
+      const isAdmin = password === config?.adminpass;
+
+      if (!isAdmin) {
+        const recaptchaOk = await verifyRecaptcha(recaptcha, c, body);
+        if (!recaptchaOk) {
+          return c.json("failed captcha", 401);
+        }
       }
 
       username = username.toLowerCase().replace(/\s/g, "");
@@ -384,14 +388,14 @@ export default {
       const fk = `${username}:failures`;
       const ipFailKey = `ip:${ip}:login:fail`;
       const ipFailures = await g(ipFailKey);
-      if (prod && Number(ipFailures) > 20) return c.json({}, 429);
+      if (!isAdmin && Number(ipFailures) > 20) return c.json({}, 429);
 
       let user = await getUser(username);
 
-      if (password !== config?.adminpass) {
+      if (!isAdmin) {
         if (!user || !user.password || !(await Bun.password.verify(password, user.password))) {
           await db.incrBy(ipFailKey, 1);
-          if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
+          if (Number(await db.ttl(ipFailKey)) < 0) await db.expire(ipFailKey, 600);
           await db.incrBy(fk, 1);
           setTimeout(() => db.decrBy(fk, 1), 120000);
           return c.json({}, 401);
@@ -402,7 +406,7 @@ export default {
           (typeof twofa === "undefined" || !authenticator.check(twofa, user.otpsecret))
         ) {
           await db.incrBy(ipFailKey, 1);
-          if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
+          if (Number(await db.ttl(ipFailKey)) < 0) await db.expire(ipFailKey, 600);
           return c.json("2fa required", 401);
         }
       }
@@ -723,6 +727,13 @@ export default {
 
       await s(`user:${id}`, user);
       await db.del(`reset:${code}`);
+
+      const un = username.toLowerCase().replace(/\s/g, "");
+      await db.del(`${un}:failures`);
+
+      for await (const k of db.scanIterator({ MATCH: "ip:*:login:fail" })) {
+        await db.del(k);
+      }
 
       return c.json(pick(user, whitelist));
     } catch (e) {
