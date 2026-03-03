@@ -9,6 +9,7 @@ import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
+import { createCpfpChild, estimateBumpCost } from "$lib/cpfp";
 import {
   acquireArkLock,
   build,
@@ -16,7 +17,6 @@ import {
   createArkPayment,
   credit,
   debit,
-  decode,
   getUserRate,
   processWatchedTx,
   reverse,
@@ -665,49 +665,53 @@ export default {
     return c.json({ ok: true });
   },
 
-  async replace(c) {
+  async bump(c) {
     const body = await c.req.json();
-    const { id } = body;
+    const { id, targetFeeRate } = body;
+    const user = c.get("user");
+    try {
+      const p = await gf(`payment:${id}`);
+      if (!p) fail("Payment not found");
+      if (p.uid !== user.id) fail("unauthorized");
+      if (p.confirmed) fail("transaction already confirmed");
+      if (p.type !== PaymentType.bitcoin) fail("only bitcoin transactions can be bumped");
+      if (!p.bumpReserve || p.bumpReserve <= 0) fail("no bump reserve available");
+      if (p.childTxid) fail("transaction already bumped");
+
+      const { txid, childFee } = await createCpfpChild(p, targetFeeRate);
+
+      return c.json({
+        txid,
+        childFee,
+        remaining: p.bumpReserve - childFee,
+      });
+    } catch (e) {
+      err("failed to bump payment", id, e.message);
+      return bail(c, e.message);
+    }
+  },
+
+  async bumpEstimate(c) {
+    const body = await c.req.json();
+    const { id, targetFeeRate } = body;
     const user = c.get("user");
     try {
       const p = await gf(`payment:${id}`);
       if (!p) fail("Payment not found");
       if (p.uid !== user.id) fail("unauthorized");
 
-      const { tx, type } = await decode(p.hex);
-      const node = rpc(config[type]);
+      const cost = estimateBumpCost(p.fee, p.parentVsize, targetFeeRate);
 
-      const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
+      const fees: any = await fetch(`${api[PaymentType.bitcoin]}/fees/recommended`).then((r) =>
+        r.json(),
+      );
 
-      const outputs = [];
-      for (const {
-        scriptPubKey: { address },
-        value,
-      } of tx.vout) {
-        if (address && !(await node.getAddressInfo(address)).ismine)
-          outputs.push({ [address]: value });
-      }
-
-      const raw = await node.createRawTransaction(tx.vin, outputs);
-
-      const newTx = await node.fundRawTransaction(raw, {
-        fee_rate: fees.fastestFee + 50,
-        replaceable: true,
-        subtractFeeFromOutputs: [],
+      return c.json({
+        cost,
+        fees,
+        bumpReserve: p.bumpReserve || 0,
       });
-
-      const diff = sats(newTx.fee) - p.fee;
-      if (diff < 0) fail("fee must increase");
-
-      if (config[type].walletpass) await node.walletPassphrase(config[type].walletpass, 300);
-      p.hex = (await node.signRawTransactionWithWallet(newTx.hex)).hex;
-      const r = await node.testMempoolAccept([p.hex]);
-      if (!r[0].allowed) fail(`transaction rejected ${p.hex}`);
-      warn("bump", user.username, p.hex);
-
-      return c.json({ ok: true });
     } catch (e) {
-      err("failed to bump payment", id, e.message);
       return bail(c, e.message);
     }
   },

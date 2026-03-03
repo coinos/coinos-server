@@ -3,7 +3,7 @@ import config from "$config";
 import { btcNetwork } from "$lib/esplora";
 import { refreshArkWallet } from "$lib/ark";
 import { err, l, warn } from "$lib/logging";
-import { processWatchedTx } from "$lib/payments";
+import { checkOutgoingConfirmations, processWatchedTx } from "$lib/payments";
 import { Transaction } from "@scure/btc-signer";
 import { concatBytes, sha256x2 } from "@scure/btc-signer/utils.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
@@ -115,6 +115,7 @@ const handleRawBlock = async (raw: Uint8Array) => {
     }
   }
 
+  checkOutgoingConfirmations().catch((e) => warn("block confirmation check failed", e.message));
   refreshArkWallet().catch(() => {});
 };
 
