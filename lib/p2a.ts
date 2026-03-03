@@ -8,13 +8,6 @@ export const CHILD_VSIZE = 152;
 const P2A_WITNESS_PROGRAM = new Uint8Array([0x4e, 0x73]);
 const P2A_WITNESS_VERSION = 1;
 
-const P2A_ADDRESSES: Record<string, string> = {
-  mainnet: "bc1pfeessrawgf",
-  testnet: "tb1pfeessrawgf",
-  signet: "tb1pfeessrawgf",
-  regtest: "bcrt1pfeessrawgf",
-};
-
 const BECH32M_PREFIXES: Record<string, string> = {
   mainnet: "bc",
   testnet: "tb",
@@ -22,22 +15,16 @@ const BECH32M_PREFIXES: Record<string, string> = {
   regtest: "bcrt",
 };
 
-function verifyP2AAddresses() {
-  for (const [network, expected] of Object.entries(P2A_ADDRESSES)) {
-    const prefix = BECH32M_PREFIXES[network];
-    const words = [P2A_WITNESS_VERSION, ...bech32m.toWords(P2A_WITNESS_PROGRAM)];
-    const encoded = bech32m.encode(prefix, words);
-    if (encoded !== expected) {
-      throw new Error(`P2A address mismatch for ${network}: got ${encoded}, expected ${expected}`);
-    }
-  }
+function encodeP2AAddress(network: string): string {
+  const prefix = BECH32M_PREFIXES[network];
+  if (!prefix) throw new Error(`Unknown network: ${network}`);
+  const words = [P2A_WITNESS_VERSION, ...bech32m.toWords(P2A_WITNESS_PROGRAM)];
+  return bech32m.encode(prefix, words);
 }
-
-verifyP2AAddresses();
 
 export function getP2AAddress(): string {
   const network = config.bitcoin.network || "mainnet";
-  return P2A_ADDRESSES[network];
+  return encodeP2AAddress(network);
 }
 
 export function isP2AOutput(scriptPubKeyHex: string): boolean {
