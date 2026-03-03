@@ -104,6 +104,30 @@ export const gf = async (k) => {
   }
 };
 
+// Batch get with fallback to archive
+export const gfAll = async (keys: string[]) => {
+  if (!keys.length) return [];
+  const values = await db.mGet(keys);
+  const missing: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] === null) missing.push(i);
+  }
+  if (missing.length) {
+    const archiveKeys = missing.map((i) => keys[i]);
+    const archiveValues = await archive.mGet(archiveKeys);
+    for (let j = 0; j < missing.length; j++) {
+      values[missing[j]] = archiveValues[j];
+    }
+  }
+  return values.map((v) => {
+    try {
+      return JSON.parse(v as string);
+    } catch {
+      return v;
+    }
+  });
+};
+
 // lRange with fallback to archive for missing items
 export const lRangeWithArchive = async (k, start, end) => {
   const items = await db.lRange(k, start, end);

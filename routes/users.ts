@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
-import { db, g, ga, gf, s, scan } from "$lib/db";
+import { db, g, ga, gf, gfAll, s, scan } from "$lib/db";
 import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
@@ -623,15 +623,28 @@ export default {
     const pins = [...await db.sMembers(`${id}:pins`)];
     const trust = [...await db.sMembers(`${id}:trust`)];
 
-    for (const { ref } of (
-      await Promise.all(payments.reverse().map(async (id) => await gf(`payment:${id}`)))
-    ).filter((p) => p && p.type === PaymentType.internal && p.ref)) {
-      if (ref === id) continue;
-      const i = contacts.findIndex((c) => c && c.id === ref);
-      if (~i) contacts.splice(i, 1);
-      let u = await g(`user:${ref}`);
-      if (typeof u === "string") u = await g(`user:${ref}`);
-      if (u) contacts.unshift(pick(u, ["id", "picture", "username"]));
+    const paymentKeys = payments.reverse().map((pid) => `payment:${pid}`);
+    const fetched = await gfAll(paymentKeys);
+    const refs = fetched
+      .filter((p) => p && p.type === PaymentType.internal && p.ref && p.ref !== id)
+      .map((p) => p.ref);
+
+    const uniqueRefs = [...new Set(refs)];
+    if (uniqueRefs.length) {
+      const userKeys = uniqueRefs.map((ref) => `user:${ref}`);
+      const users = await gfAll(userKeys);
+      const userMap = new Map<string, any>();
+      for (let i = 0; i < uniqueRefs.length; i++) {
+        let u = users[i];
+        if (typeof u === "string") u = await g(`user:${u}`);
+        if (u) userMap.set(uniqueRefs[i], u);
+      }
+      for (const ref of refs) {
+        const i = contacts.findIndex((c) => c && c.id === ref);
+        if (~i) contacts.splice(i, 1);
+        const u = userMap.get(ref);
+        if (u) contacts.unshift(pick(u, ["id", "picture", "username"]));
+      }
     }
 
     await s(`${id}:contacts`, contacts);
@@ -849,28 +862,35 @@ export default {
     try {
       const user = c.get("user");
 
+      const accountIds = (await db.lRange(`${user.id}:accounts`, 0, -1)) as string[];
+      const accountKeys = accountIds.map((aid) => `account:${aid}`);
+      const accountData = await gfAll(accountKeys);
+
       const accounts = [];
-      for (const id of await db.lRange(`${user.id}:accounts`, 0, -1)) {
-        const aid = id as string;
-        const account = await g(`account:${aid}`);
-        if (account) {
-          if ((account.seed || user.seed) && account.pubkey && !account.importedAt) {
-            await importAccountHistory(account);
-          }
-          account.balance = await getBalance(aid);
-          account.pending = await getPending(aid);
-          accounts.push(account);
+      for (let i = 0; i < accountIds.length; i++) {
+        const aid = accountIds[i];
+        const account = accountData[i];
+        if (!account) continue;
+
+        if ((account.seed || user.seed) && account.pubkey && !account.importedAt) {
+          await importAccountHistory(account);
         }
 
         if (account.type === PaymentType.ark) {
-          const paymentIds = await db.lRange(`${id}:payments`, 0, -1);
+          const paymentIds = (await db.lRange(`${aid}:payments`, 0, -1)) as string[];
+          const paymentKeys = paymentIds.map((pid) => `payment:${pid}`);
+          const payments = await gfAll(paymentKeys);
           let sum = 0;
-          for (const pid of paymentIds) {
-            const pay = await g(`payment:${pid}`);
+          for (const pay of payments) {
             if (pay) sum += pay.amount;
           }
           account.balance = Math.max(sum, 0);
+        } else {
+          account.balance = await getBalance(aid);
         }
+
+        account.pending = await getPending(aid);
+        accounts.push(account);
       }
 
       return c.json(accounts.reverse());

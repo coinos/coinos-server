@@ -2,7 +2,7 @@ import config from "$config";
 import api from "$lib/api";
 import { getArkAddress, sendArk, verifyArkVtxo } from "$lib/ark";
 import { requirePin } from "$lib/auth";
-import { archive, db, g, gf, s } from "$lib/db";
+import { archive, db, g, gf, gfAll, s } from "$lib/db";
 import { getTx } from "$lib/esplora";
 import { generate } from "$lib/invoices";
 import { replay } from "$lib/lightning";
@@ -35,7 +35,7 @@ import {
   tbFundDebit,
 } from "$lib/tb";
 import { PaymentType } from "$lib/types";
-import { SATS, bail, fail, fields, getInvoice, getPayment, getUser, sats } from "$lib/utils";
+import { SATS, bail, fail, fields, getInvoice, getPayment, getUser, pick, sats } from "$lib/utils";
 import rpc from "@coinos/rpc";
 import got from "got";
 import { v4 } from "uuid";
@@ -197,24 +197,49 @@ export default {
       }
     }
 
-    payments = (
-      await Promise.all(
-        payments.map(async (pid) => {
-          const p = await gf(`payment:${pid}`);
-          if (!p) {
-            warn("user", id, "missing payment", pid);
-            await db.lRem(listKey, 0, pid);
-            return p;
-          }
-          if (received && p.amount < 0) return;
-          if (p.created < start || p.created > end) return;
-          if (p.type === PaymentType.internal) p.with = await getUser(p.ref, fields);
-          return p;
-        }),
-      )
-    )
-      .filter((p) => p)
-      .sort((a, b) => b.created - a.created);
+    const paymentKeys = payments.map((pid) => `payment:${pid}`);
+    const fetched = await gfAll(paymentKeys);
+
+    const missingIds: any[] = [];
+    const validPayments: any[] = [];
+
+    for (let i = 0; i < fetched.length; i++) {
+      const p = fetched[i];
+      if (!p) {
+        warn("user", id, "missing payment", payments[i]);
+        missingIds.push(payments[i]);
+        continue;
+      }
+      if (received && p.amount < 0) continue;
+      if (p.created < start || p.created > end) continue;
+      validPayments.push(p);
+    }
+
+    if (missingIds.length) {
+      for (const pid of missingIds) await db.lRem(listKey, 0, pid);
+    }
+
+    const internalRefs = [...new Set(
+      validPayments
+        .filter((p) => p.type === PaymentType.internal && p.ref)
+        .map((p) => p.ref),
+    )];
+
+    if (internalRefs.length) {
+      const userKeys = internalRefs.map((ref) => `user:${ref}`);
+      const users = await gfAll(userKeys);
+      const userMap = new Map<string, any>();
+      for (let i = 0; i < internalRefs.length; i++) {
+        let u = users[i];
+        if (typeof u === "string") u = await g(`user:${u}`);
+        if (u) userMap.set(internalRefs[i], fields ? pick(u, fields) : u);
+      }
+      for (const p of validPayments) {
+        if (p.type === PaymentType.internal && p.ref) p.with = userMap.get(p.ref);
+      }
+    }
+
+    payments = validPayments.sort((a, b) => b.created - a.created);
 
     const fn = (a, b) => ({
       ...a,
