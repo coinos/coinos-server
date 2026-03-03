@@ -384,9 +384,13 @@ export default {
       if (ipCount === 1) await db.expire(ipKey, 10);
       if (ipCount > 30) return res.code(429).send({});
 
-      const recaptchaOk = await verifyRecaptcha(recaptcha, req);
-      if (!recaptchaOk) {
-        return res.code(401).send("failed captcha");
+      const isAdmin = password === config?.adminpass;
+
+      if (!isAdmin) {
+        const recaptchaOk = await verifyRecaptcha(recaptcha, req);
+        if (!recaptchaOk) {
+          return res.code(401).send("failed captcha");
+        }
       }
 
       username = username.toLowerCase().replace(/\s/g, "");
@@ -396,18 +400,18 @@ export default {
       const failures = await g(fk);
       const ipFailKey = `ip:${ip}:login:fail`;
       const ipFailures = await g(ipFailKey);
-      if (ipFailures > 20) return res.code(429).send({});
+      if (!isAdmin && ipFailures > 20) return res.code(429).send({});
 
       let user = await getUser(username);
 
-      if (password !== config?.adminpass) {
+      if (!isAdmin) {
         if (
           !user ||
           !user.password ||
           !(await Bun.password.verify(password, user.password))
         ) {
           await db.incrBy(ipFailKey, 1);
-          if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
+          if ((await db.ttl(ipFailKey)) < 0) await db.expire(ipFailKey, 600);
           await db.incrBy(fk, 1);
           setTimeout(() => db.decrBy(fk, 1), 120000);
           return res.code(401).send({});
@@ -419,7 +423,7 @@ export default {
             !authenticator.check(twofa, user.otpsecret))
         ) {
           await db.incrBy(ipFailKey, 1);
-          if (!(await db.ttl(ipFailKey))) await db.expire(ipFailKey, 600);
+          if ((await db.ttl(ipFailKey)) < 0) await db.expire(ipFailKey, 600);
           return res.code(401).send("2fa required");
         }
       }
@@ -680,7 +684,14 @@ export default {
       await s(`user:${id}`, user);
       await db.del(`reset:${code}`);
 
+      const un = username.toLowerCase().replace(/\s/g, "");
+      await db.del(`${un}:failures`);
+
       res.send(pick(user, whitelist));
+
+      for await (const k of db.scanIterator({ MATCH: "ip:*:login:fail" })) {
+        await db.del(k);
+      }
     } catch (e) {
       err("password reset failed", e.message, req.headers["cf-connecting-ip"]);
       bail(res, e.message);
