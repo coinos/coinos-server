@@ -962,7 +962,6 @@ const buildNonCustodial = async ({ aid, amount, address, feeRate, subtract, user
   fees.fastestFee = Math.ceil(fees.fastestFee * 1.5);
 
   if (!feeRate) feeRate = fees.halfHourFee;
-  if (feeRate < fees.hourFee) fail("fee rate too low");
 
   const nextIndex = account.nextIndex || 0;
 
@@ -1020,7 +1019,7 @@ const buildNonCustodial = async ({ aid, amount, address, feeRate, subtract, user
 
   let selected = selectUTXO(utxoInputs, outputs, "default", {
     changeAddress,
-    feePerByte: BigInt(feeRate),
+    feePerByte: BigInt(Math.ceil(feeRate)),
     network: btcNetwork,
     createTx: true,
   });
@@ -1035,7 +1034,7 @@ const buildNonCustodial = async ({ aid, amount, address, feeRate, subtract, user
     const maxOutputs = [{ address, amount: BigInt(amount) }];
     selected = selectUTXO(utxoInputs, maxOutputs, "all", {
       changeAddress,
-      feePerByte: BigInt(feeRate),
+      feePerByte: BigInt(Math.ceil(feeRate)),
       network: btcNetwork,
       createTx: true,
     });

@@ -5,6 +5,7 @@ import { admin, auth, optional } from "$lib/auth";
 import { g, s } from "$lib/db";
 
 import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
+import { l } from "$lib/logging";
 import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
 import {
@@ -261,7 +262,7 @@ Bun.serve({
   hostname: host_,
 });
 
-console.log(`coinos server listening on ${host_}:${port}`);
+l(`coinos server listening on ${host_}:${port}`);
 
 const logerr = (e: Error) => console.log(e);
 process.on("unhandledRejection", logerr);
