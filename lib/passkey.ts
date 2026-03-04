@@ -112,6 +112,7 @@ export async function verifyPasskeyLogin(response: any, challengeId: string, ori
     expectedChallenge: expectedChallenge as string,
     expectedOrigin: origin,
     expectedRPID: rpID,
+    requireUserVerification: false,
     credential: {
       id: passkey.credentialID,
       publicKey: Buffer.from(passkey.credentialPublicKey, "base64url") as any,
