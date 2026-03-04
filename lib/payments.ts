@@ -675,7 +675,7 @@ const sendNonCustodial = async (params) => {
 };
 
 export const sendOnchain = async (params) => {
-  let { aid, hex, rate, user, signed } = params;
+  let { aid, hex, rate, user, signed, feeRate } = params;
   if (!aid) aid = user.id;
 
   // Non-custodial bitcoin account — use esplora
@@ -763,8 +763,18 @@ export const sendOnchain = async (params) => {
     }
 
     const amount = total - change;
-    const bumpReserve = buildResult?.bumpReserve || 0;
-    const parentVsize = buildResult?.parentVsize || 0;
+    let bumpReserve = buildResult?.bumpReserve || 0;
+    let parentVsize = buildResult?.parentVsize || 0;
+
+    // When hex is pre-built (custodial form submit), recalculate bump reserve
+    if (isBitcoin && p2aVout >= 0 && !buildResult) {
+      const decoded = await node.decodeRawTransaction(hex);
+      parentVsize = decoded.vsize;
+      const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
+      const fastestFee = Math.ceil(fees.fastestFee * 1.5);
+      const userRate = parseFloat(feeRate) || fees.halfHourFee;
+      bumpReserve = calculateBumpReserve(userRate, fastestFee, parentVsize);
+    }
 
     const p = await debit({
       aid,
@@ -1069,7 +1079,7 @@ export const build = async ({ aid, amount, address, feeRate, subtract, user }) =
   if (!aid) aid = user.id;
 
   // Non-custodial bitcoin account — use esplora
-  if (aid !== user.id && type === PaymentType.bitcoin) {
+  if (type === PaymentType.bitcoin) {
     const account = await g(`account:${aid}`);
     if (account?.pubkey) {
       return buildNonCustodial({ aid, amount, address, feeRate, subtract, user });
