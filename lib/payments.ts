@@ -1341,6 +1341,7 @@ export const syncBitcoinVault = async (account, user) => {
   const internalAddrs = deriveAddresses(pubkey, fingerprint, count, true);
   const allAddrs = [...externalAddrs, ...internalAddrs];
   const addressSet = new Set(allAddrs);
+  const changeSet = new Set(internalAddrs);
 
   const utxos = await getAddressUtxos(allAddrs);
   const confirmedUtxos = utxos.filter((u) => u.status.confirmed && u.value >= 300);
@@ -1351,59 +1352,12 @@ export const syncBitcoinVault = async (account, user) => {
   const { rate, currency } = await getUserRate(user);
 
   const newPayments = [];
+  const externalSet = new Set(externalAddrs);
 
-  // Process confirmed UTXOs (incoming)
-  for (const u of confirmedUtxos) {
-    const ref = `${u.txid}:${u.vout}`;
-    const existing = await getPayment(ref);
-    if (existing?.aid === id) {
-      if (!existing.confirmed) {
-        existing.confirmed = true;
-        await s(`payment:${existing.id}`, existing);
-      }
-      continue;
-    }
-
-    if (existing) {
-      existing.aid = id;
-      existing.confirmed = true;
-      await db
-        .multi()
-        .set(`payment:${existing.id}`, JSON.stringify(existing))
-        .lPush(`${id}:payments`, existing.id)
-        .exec();
-      continue;
-    }
-
-    const created = u.status?.block_time ? u.status.block_time * 1000 : Date.now();
-    const p = {
-      id: v4(),
-      aid: id,
-      amount: u.value,
-      fee: 0,
-      hash: u.address,
-      confirmed: true,
-      rate,
-      currency,
-      type: PaymentType.bitcoin,
-      uid,
-      ref,
-      created,
-    };
-
-    await db
-      .multi()
-      .set(`payment:${ref}`, p.id)
-      .set(`payment:${p.id}`, JSON.stringify(p))
-      .lPush(`${id}:payments`, p.id)
-      .set(`${id}:payments:last`, p.created)
-      .exec();
-
-    newPayments.push(p);
-  }
-
-  // Process pending (unconfirmed) UTXOs
+  // Scan pending UTXOs for unconfirmed incoming (external only)
   for (const u of pendingUtxos) {
+    if (!externalSet.has(u.address)) continue;
+
     const ref = `${u.txid}:${u.vout}`;
     const existing = await getPayment(ref);
     if (existing?.aid === id) continue;
@@ -1444,7 +1398,7 @@ export const syncBitcoinVault = async (account, user) => {
     newPayments.push(p);
   }
 
-  // Process outgoing transactions
+  // Process all transactions from history (incoming + outgoing)
   const txsById = new Map();
   for (const address of allAddrs) {
     const txs = await getAddressTxs(address);
@@ -1455,20 +1409,10 @@ export const syncBitcoinVault = async (account, user) => {
 
   for (const tx of txsById.values()) {
     if (!tx.status?.confirmed) continue;
-    const existing = await getPayment(tx.txid);
-    if (existing?.aid === id) continue;
-    if (existing) {
-      existing.aid = id;
-      await db
-        .multi()
-        .set(`payment:${existing.id}`, JSON.stringify(existing))
-        .lPush(`${id}:payments`, existing.id)
-        .exec();
-      continue;
-    }
 
     let inputsFromUs = 0;
     let outputsToUs = 0;
+    let outputsToExternal = 0;
     let totalIn = 0;
     let totalOut = 0;
 
@@ -1484,40 +1428,108 @@ export const syncBitcoinVault = async (account, user) => {
       const value = Number.parseInt(vout.value) || 0;
       totalOut += value;
       if (addressSet.has(vout.scriptpubkey_address)) outputsToUs += value;
+      if (externalSet.has(vout.scriptpubkey_address)) outputsToExternal += value;
     }
 
-    if (!inputsFromUs) continue;
-
-    const net = outputsToUs - inputsFromUs;
-    if (net >= 0) continue;
-
-    const amount = totalOut - outputsToUs;
-    if (amount <= 0) continue;
-
-    const fee = Math.max(0, totalIn - totalOut);
     const created = tx.status?.block_time ? tx.status.block_time * 1000 : Date.now();
 
-    const p = {
-      id: v4(),
-      aid: id,
-      amount: -amount,
-      fee,
-      hash: tx.txid,
-      confirmed: true,
-      rate,
-      currency,
-      type: PaymentType.bitcoin,
-      uid,
-      created,
-    };
+    if (inputsFromUs) {
+      // Outgoing transaction
+      const net = outputsToUs - inputsFromUs;
+      if (net >= 0) continue;
 
-    await db
-      .multi()
-      .set(`payment:${tx.txid}`, p.id)
-      .set(`payment:${p.id}`, JSON.stringify(p))
-      .lPush(`${id}:payments`, p.id)
-      .set(`${id}:payments:last`, p.created)
-      .exec();
+      const amount = totalOut - outputsToUs;
+      if (amount <= 0) continue;
+
+      const existing = await getPayment(tx.txid);
+      if (existing?.aid === id) continue;
+      if (existing) {
+        existing.aid = id;
+        await db
+          .multi()
+          .set(`payment:${existing.id}`, JSON.stringify(existing))
+          .lPush(`${id}:payments`, existing.id)
+          .exec();
+        continue;
+      }
+
+      const fee = Math.max(0, totalIn - totalOut);
+      const p = {
+        id: v4(),
+        aid: id,
+        amount: -amount,
+        fee,
+        hash: tx.txid,
+        confirmed: true,
+        rate,
+        currency,
+        type: PaymentType.bitcoin,
+        uid,
+        created,
+      };
+
+      await db
+        .multi()
+        .set(`payment:${tx.txid}`, p.id)
+        .set(`payment:${p.id}`, JSON.stringify(p))
+        .lPush(`${id}:payments`, p.id)
+        .set(`${id}:payments:last`, p.created)
+        .exec();
+    } else if (outputsToExternal) {
+      // Incoming transaction (to external addresses, not from us)
+      for (const vout of tx.vout || []) {
+        const value = Number.parseInt(vout.value) || 0;
+        if (value < 300) continue;
+        if (!externalSet.has(vout.scriptpubkey_address)) continue;
+
+        const voutIndex = tx.vout.indexOf(vout);
+        const ref = `${tx.txid}:${voutIndex}`;
+        const existing = await getPayment(ref);
+        if (existing?.aid === id) {
+          if (!existing.confirmed) {
+            existing.confirmed = true;
+            await s(`payment:${existing.id}`, existing);
+          }
+          continue;
+        }
+
+        if (existing) {
+          existing.aid = id;
+          existing.confirmed = true;
+          await db
+            .multi()
+            .set(`payment:${existing.id}`, JSON.stringify(existing))
+            .lPush(`${id}:payments`, existing.id)
+            .exec();
+          continue;
+        }
+
+        const p = {
+          id: v4(),
+          aid: id,
+          amount: value,
+          fee: 0,
+          hash: vout.scriptpubkey_address,
+          confirmed: true,
+          rate,
+          currency,
+          type: PaymentType.bitcoin,
+          uid,
+          ref,
+          created,
+        };
+
+        await db
+          .multi()
+          .set(`payment:${ref}`, p.id)
+          .set(`payment:${p.id}`, JSON.stringify(p))
+          .lPush(`${id}:payments`, p.id)
+          .set(`${id}:payments:last`, p.created)
+          .exec();
+
+        newPayments.push(p);
+      }
+    }
   }
 
   return { confirmedTotal, pendingTotal, newPayments };

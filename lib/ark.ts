@@ -22,6 +22,13 @@ let lastRefresh = 0;
 const REFRESH_COOLDOWN = 30_000;
 const failedBoardingOutpoints = new Set<string>();
 
+let recoveryFailures = 0;
+let renewalFailures = 0;
+const MAX_FAILURES_BEFORE_BACKOFF = 3;
+const BACKOFF_CYCLES = 30; // skip ~30 cycles (30 min at 60s interval)
+let recoverySkipUntil = 0;
+let renewalSkipUntil = 0;
+
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string) =>
   Promise.race([
     promise,
@@ -49,26 +56,42 @@ export const refreshArkWallet = async (force = false) => {
 
     const manager = new VtxoManager(w);
 
-    // Recover swept/expired VTXOs
-    if (balance.recoverable > 0) {
+    // Recover swept/expired VTXOs (with backoff on repeated failures)
+    if (balance.recoverable > 0 && now >= recoverySkipUntil) {
       try {
         const txid = await withTimeout(manager.recoverVtxos(), 60_000, "ark recovery");
         l("ark recovered swept vtxos, txid:", txid);
+        recoveryFailures = 0;
       } catch (e: any) {
-        warn("ark vtxo recovery failed:", e.message);
+        recoveryFailures++;
+        if (recoveryFailures >= MAX_FAILURES_BEFORE_BACKOFF) {
+          recoverySkipUntil = Date.now() + BACKOFF_CYCLES * 60_000;
+          warn("ark vtxo recovery failed", recoveryFailures, "times, backing off 30m");
+        } else {
+          warn("ark vtxo recovery failed:", e.message);
+        }
       }
     }
 
-    // Renew VTXOs approaching expiry (SDK default: 3 days)
-    try {
-      const expiring = await manager.getExpiringVtxos();
-      if (expiring.length > 0) {
-        l("ark renewing", expiring.length, "expiring vtxos");
-        const txid = await withTimeout(manager.renewVtxos(), 60_000, "ark renewal");
-        l("ark renewed vtxos, txid:", txid);
+    // Renew VTXOs approaching expiry (with backoff on repeated failures)
+    if (now >= renewalSkipUntil) {
+      try {
+        const expiring = await manager.getExpiringVtxos();
+        if (expiring.length > 0) {
+          l("ark renewing", expiring.length, "expiring vtxos");
+          const txid = await withTimeout(manager.renewVtxos(), 60_000, "ark renewal");
+          l("ark renewed vtxos, txid:", txid);
+          renewalFailures = 0;
+        }
+      } catch (e: any) {
+        renewalFailures++;
+        if (renewalFailures >= MAX_FAILURES_BEFORE_BACKOFF) {
+          renewalSkipUntil = Date.now() + BACKOFF_CYCLES * 60_000;
+          warn("ark vtxo renewal failed", renewalFailures, "times, backing off 30m");
+        } else {
+          warn("ark vtxo renewal failed:", e.message);
+        }
       }
-    } catch (e: any) {
-      warn("ark vtxo renewal failed:", e.message);
     }
 
     // Onboard confirmed boarding UTXOs
@@ -97,8 +120,8 @@ export const refreshArkWallet = async (force = false) => {
           failedBoardingOutpoints.clear();
           break;
         } catch (e: any) {
-          if (!/not enough intent confirmations/i.test(e.message))
-            failedBoardingOutpoints.add(outpointKey(utxo));
+          const retriable = /not enough intent confirmations/i.test(e.message);
+          if (!retriable) failedBoardingOutpoints.add(outpointKey(utxo));
           warn("ark onboard failed:", utxo.value, "sats:", e.message);
         }
       }
@@ -114,25 +137,6 @@ export const refreshArkWallet = async (force = false) => {
 setTimeout(refreshArkWallet, 60_000);
 setInterval(() => refreshArkWallet(), 60_000);
 
-// Log ark wallet balances every 60s
-setInterval(async () => {
-  try {
-    const w = await getWallet();
-    const balance = await w.getBalance();
-    l(
-      "ark balance — available:",
-      balance.available,
-      "recoverable:",
-      balance.recoverable,
-      "boarding:",
-      balance.boarding.confirmed,
-      "pending:",
-      balance.boarding.unconfirmed,
-    );
-  } catch (e: any) {
-    warn("ark balance check failed:", e.message);
-  }
-}, 60_000);
 
 export const sendArk = async (address: string, amount: number) => {
   const timeout = new Promise((_, reject) =>

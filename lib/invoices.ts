@@ -100,6 +100,7 @@ export const generate = async ({ invoice, user }) => {
     account.nextIndex = nextIndex + 1;
     await s(`account:${aid}`, account);
     await s(`invoice:${hash}`, id);
+    await db.sAdd("watching", hash);
   } else if (type === PaymentType.lightning) {
     let r;
     if (bolt11) {

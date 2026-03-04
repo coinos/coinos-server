@@ -1167,7 +1167,7 @@ export default {
         const allPayments = await gfAll(paymentKeys);
         let balance = 0;
         for (const pay of allPayments) {
-          if (pay) balance += pay.amount;
+          if (pay && pay.confirmed !== false) balance += pay.amount - (pay.fee || 0);
         }
         balance = Math.max(balance, 0);
 

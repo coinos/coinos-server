@@ -18,8 +18,6 @@ const createDnsRecord = async (username: string, bolt12: string) => {
   const name = `${username}.user._bitcoin-payment.${config.hostname}`;
   const content = `bitcoin:?lno=${bolt12}`;
 
-  const { zoneId } = config.cloudflare;
-
   const listRes = await fetch(
     `${cfApi}/zones/${zoneId}/dns_records?type=TXT&name=${name}`,
     { headers: cfHeaders() },

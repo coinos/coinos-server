@@ -899,15 +899,18 @@ export default {
           const paymentKeys = paymentIds.map((pid) => `payment:${pid}`);
           const payments = await gfAll(paymentKeys);
           let sum = 0;
+          let pending = 0;
           for (const pay of payments) {
-            if (pay) sum += pay.amount;
+            if (!pay) continue;
+            if (pay.confirmed === false) pending += pay.amount;
+            else sum += pay.amount - (pay.fee || 0);
           }
           account.balance = Math.max(sum, 0);
+          account.pending = Math.max(pending, 0);
         } else {
           account.balance = await getBalance(aid);
+          account.pending = await getPending(aid);
         }
-
-        account.pending = await getPending(aid);
         accounts.push(account);
       }
 
@@ -942,6 +945,16 @@ export default {
       };
 
       await createBalanceAccount(id);
+
+      if (pubkey && type === "bitcoin") {
+        const accountIds = await db.lRange(`${uid}:accounts`, 0, -1);
+        for (const accId of accountIds) {
+          const acc = await g(`account:${accId}`);
+          if (acc?.pubkey === pubkey) {
+            return bail(c, "A vault with this key already exists");
+          }
+        }
+      }
 
       if (type === "ark") {
         const accountIds = await db.lRange(`${user.id}:accounts`, 0, -1);
