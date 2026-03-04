@@ -63,6 +63,22 @@ const { URL } = process.env;
 
 const dust = 547;
 
+const resolveBip353 = async (name: string, domain: string) => {
+  const qname = `${name}.user._bitcoin-payment.${domain}`;
+  const res = await fetch(
+    `https://1.1.1.1/dns-query?name=${qname}&type=TXT`,
+    { headers: { accept: "application/dns-json" } },
+  );
+  const data = await res.json();
+  if (!data.AD) return null; // DNSSEC validation failed
+  if (!data.Answer?.length) return null;
+  for (const ans of data.Answer) {
+    const txt = ans.data?.replace(/^"|"$/g, "").replaceAll('" "', "");
+    if (txt?.startsWith("bitcoin:")) return txt;
+  }
+  return null;
+};
+
 export const getUserRate = async (user) => {
   const rates = await g("rates");
   const { currency } = user;
@@ -478,7 +494,24 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
   if (to.includes("@") && to.includes(".")) {
     const [name, domain] = to.split("@");
     if (URL.includes(domain)) to = name;
-    lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
+    else {
+      try {
+        const uri = await resolveBip353(name, domain);
+        if (uri) {
+          const params = new URLSearchParams(uri.split("?")[1]);
+          if (params.has("lno")) to = params.get("lno");
+          else if (params.has("sp")) to = params.get("sp");
+          else if (params.has("lightning")) to = params.get("lightning");
+          else {
+            const addr = uri.replace("bitcoin:", "").split("?")[0];
+            if (addr) to = addr;
+          }
+        }
+      } catch (e) {
+        warn("BIP 353 resolution failed, falling back to LNURL", e.message);
+      }
+      if (to.includes("@")) lnurl = `https://${domain}/.well-known/lnurlp/${name}`;
+    }
   } else if (to.startsWith("lnurl")) {
     lnurl = Buffer.from(bech32.fromWords(bech32.decode(to, 20000).words)).toString();
   }

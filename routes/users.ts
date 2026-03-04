@@ -26,6 +26,7 @@ import { authenticator } from "otplib";
 import { v4 } from "uuid";
 import { setCookie } from "hono/cookie";
 
+import { setupBip353, teardownBip353 } from "$lib/bip353";
 import { PaymentType } from "$lib/types";
 import { createBalanceAccount, getBalance, getCredit, getPending } from "$lib/tb";
 import { importAccountHistory } from "$lib/payments";
@@ -297,6 +298,7 @@ export default {
         "arkAddress",
         "autowithdraw",
         "banner",
+        "bip353",
         "currencies",
         "currency",
         "destination",
@@ -352,6 +354,11 @@ export default {
 
       await s(`user:${user.id}`, user);
       if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
+
+      if (typeof body.bip353 !== "undefined") {
+        if (user.bip353) setupBip353(user).catch((e) => warn("BIP 353 setup failed", e.message));
+        else teardownBip353(user).catch((e) => warn("BIP 353 teardown failed", e.message));
+      }
 
       emit(user.id, "user", user);
       return c.json({ user });
