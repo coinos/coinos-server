@@ -108,6 +108,8 @@ app.get("/fund/:name/managers", payments.managers);
 app.post("/fund/managers", auth, payments.addManager);
 app.post("/fund/:name/managers/delete", auth, payments.deleteManager);
 app.post("/authorize", auth, payments.authorize);
+app.get("/fund/:id/authorizations", payments.listAuthorizations);
+app.post("/fund/:id/authorization/:authId/delete", auth, payments.deleteAuthorization);
 app.post("/take", auth, payments.take);
 app.post("/print", auth, payments.print);
 app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);

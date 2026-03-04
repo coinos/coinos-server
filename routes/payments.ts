@@ -360,8 +360,10 @@ export default {
 
     payments = payments.filter((p) => p);
 
-    const authorization = await g(`authorization:${id}`);
-    return c.json({ amount, authorization: authorization?.amount, payments });
+    const authIds = await db.lRange(`fund:${id}:authorizations`, 0, -1) || [];
+    const allAuths = await Promise.all(authIds.map((authId) => g(`authorization:${authId}`)));
+    const authorizations = allAuths.filter((a) => a && !a.claimed);
+    return c.json({ amount, authorizations, payments });
   },
 
   async authorize(c) {
@@ -373,21 +375,51 @@ export default {
     const managers = [...await db.sMembers(`fund:${id}:managers`)];
     if (managers.length && !managers.includes(uid)) fail("Unauthorized");
 
+    const authId = v4();
     const authorization = {
+      authId,
+      fundId: id,
       uid,
       currency,
       fiat,
       amount,
+      created: Date.now(),
     };
 
-    await s(`authorization:${id}`, authorization);
+    await s(`authorization:${authId}`, authorization);
+    await db.lPush(`fund:${id}:authorizations`, authId);
+    return c.json({ authId });
+  },
+
+  async listAuthorizations(c) {
+    const id = c.req.param("id");
+    const authIds = await db.lRange(`fund:${id}:authorizations`, 0, -1) || [];
+    const allAuths = await Promise.all(authIds.map((authId) => g(`authorization:${authId}`)));
+    const authorizations = allAuths.filter((a) => a && !a.claimed);
+    return c.json(authorizations);
+  },
+
+  async deleteAuthorization(c) {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const authId = c.req.param("authId");
+
+    const managers = [...await db.sMembers(`fund:${id}:managers`)];
+    if (managers.length && !managers.includes(user.id)) fail("Unauthorized");
+
+    const authorization = await g(`authorization:${authId}`);
+    if (!authorization || authorization.fundId !== id) return bail(c, "Authorization not found");
+    if (authorization.claimed) return bail(c, "Authorization already claimed");
+
+    await db.lRem(`fund:${id}:authorizations`, 0, authId);
+    await db.del(`authorization:${authId}`);
     return c.json({});
   },
 
   async take(c) {
     const body = await c.req.json();
     const user = c.get("user");
-    let { id, amount, invoice: iid } = body;
+    let { id, amount, invoice: iid, authId } = body;
     try {
       amount = Number.parseInt(amount);
       if (amount <= 0) fail("Invalid amount");
@@ -402,14 +434,29 @@ export default {
         iid = inv.id;
       }
 
-      const authorization = await g(`authorization:${id}`);
+      let authorization;
+      if (authId) {
+        authorization = await g(`authorization:${authId}`);
+        if (authorization && authorization.fundId !== id) authorization = null;
+      } else {
+        const authIds = await db.lRange(`fund:${id}:authorizations`, 0, -1) || [];
+        for (const aid of authIds) {
+          const auth = await g(`authorization:${aid}`);
+          if (auth && !auth.claimed) {
+            authorization = auth;
+            authId = aid;
+            break;
+          }
+        }
+      }
+
       if (authorization && !authorization.claimed) {
         const { currency, fiat } = authorization;
         amount = Math.min(amount, sats(fiat / rates[currency]));
 
         const sender = await getUser(authorization.uid);
         authorization.claimed = true;
-        await s(`authorization:${id}`, authorization);
+        await s(`authorization:${authId}`, authorization);
 
         const { hash } = await generate({
           invoice: { amount, type: "lightning" },
