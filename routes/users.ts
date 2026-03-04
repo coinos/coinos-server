@@ -418,6 +418,8 @@ export default {
         }
       }
 
+      if (!user) return c.json({}, 401);
+
       if (body.authPubkey && !user.authPubkey) {
         user.authPubkey = body.authPubkey;
         await s(`user:${user.id}`, user);

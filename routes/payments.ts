@@ -153,6 +153,7 @@ export default {
           });
           await tbFundCredit(fund, amount);
           await db.lPush(`fund:${fund}:payments`, p.id);
+          await db.sAdd(`user:${user.id}:funds`, fund);
           l("funded fund", fund);
         }
       }
@@ -332,6 +333,22 @@ export default {
     }
   },
 
+  async funds(c) {
+    const user = c.get("user");
+    const fundIds = [...await db.sMembers(`user:${user.id}:funds`)];
+
+    const funds = await Promise.all(
+      fundIds.map(async (id) => {
+        const amount = await getFundBalance(id);
+        if (amount === null) return null;
+        const managers = [...await db.sMembers(`fund:${id}:managers`)];
+        return { id, amount, managed: managers.includes(user.id), managers: managers.length };
+      }),
+    );
+
+    return c.json(funds.filter(Boolean));
+  },
+
   async fund(c) {
     const id = c.req.param("id");
     const amount = await getFundBalance(id);
@@ -409,6 +426,7 @@ export default {
 
         await tbFundCredit(id, amount);
         await db.lPush(`fund:${id}:payments`, pid);
+        await db.sAdd(`user:${sender.id}:funds`, id);
         l("funded fund", id);
       }
 
@@ -428,6 +446,7 @@ export default {
       });
 
       await db.lPush(`fund:${id}:payments`, payment.id);
+      await db.sAdd(`user:${user.id}:funds`, id);
 
       return c.json(payment);
     } catch (e) {
