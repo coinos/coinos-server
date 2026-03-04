@@ -894,7 +894,7 @@ export default {
           await importAccountHistory(account);
         }
 
-        if (account.type === PaymentType.ark) {
+        if (account.type === PaymentType.ark || (account.pubkey && account.fingerprint)) {
           const paymentIds = (await db.lRange(`${aid}:payments`, 0, -1)) as string[];
           const paymentKeys = paymentIds.map((pid) => `payment:${pid}`);
           const payments = await gfAll(paymentKeys);

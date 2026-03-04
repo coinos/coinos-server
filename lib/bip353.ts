@@ -5,56 +5,58 @@ import { l, warn } from "$lib/logging";
 import { v4 } from "uuid";
 import { PaymentType } from "$lib/types";
 
-const { CF_EMAIL, CF_API_KEY, CF_ZONE_ID } = process.env;
 const cfApi = "https://api.cloudflare.com/client/v4";
-const cfHeaders = {
-  "X-Auth-Email": CF_EMAIL,
-  "X-Auth-Key": CF_API_KEY,
+const cfHeaders = () => ({
+  Authorization: `Bearer ${config.cloudflare?.apiToken}`,
   "Content-Type": "application/json",
-};
+});
 
 const createDnsRecord = async (username: string, bolt12: string) => {
-  if (!CF_API_KEY || !CF_ZONE_ID) return;
+  const { apiToken, zoneId } = config.cloudflare || {};
+  if (!apiToken || !zoneId) return;
 
   const name = `${username}.user._bitcoin-payment.${config.hostname}`;
   const content = `bitcoin:?lno=${bolt12}`;
 
+  const { zoneId } = config.cloudflare;
+
   const listRes = await fetch(
-    `${cfApi}/zones/${CF_ZONE_ID}/dns_records?type=TXT&name=${name}`,
-    { headers: cfHeaders },
+    `${cfApi}/zones/${zoneId}/dns_records?type=TXT&name=${name}`,
+    { headers: cfHeaders() },
   );
   const listData = (await listRes.json()) as any;
 
   if (listData.result?.length) {
     const recordId = listData.result[0].id;
-    await fetch(`${cfApi}/zones/${CF_ZONE_ID}/dns_records/${recordId}`, {
+    await fetch(`${cfApi}/zones/${zoneId}/dns_records/${recordId}`, {
       method: "PUT",
-      headers: cfHeaders,
+      headers: cfHeaders(),
       body: JSON.stringify({ type: "TXT", name, content, ttl: 3600 }),
     });
   } else {
-    await fetch(`${cfApi}/zones/${CF_ZONE_ID}/dns_records`, {
+    await fetch(`${cfApi}/zones/${zoneId}/dns_records`, {
       method: "POST",
-      headers: cfHeaders,
+      headers: cfHeaders(),
       body: JSON.stringify({ type: "TXT", name, content, ttl: 3600 }),
     });
   }
 };
 
 const deleteDnsRecord = async (username: string) => {
-  if (!CF_API_KEY || !CF_ZONE_ID) return;
+  const { apiToken, zoneId } = config.cloudflare || {};
+  if (!apiToken || !zoneId) return;
 
   const name = `${username}.user._bitcoin-payment.${config.hostname}`;
   const listRes = await fetch(
-    `${cfApi}/zones/${CF_ZONE_ID}/dns_records?type=TXT&name=${name}`,
-    { headers: cfHeaders },
+    `${cfApi}/zones/${zoneId}/dns_records?type=TXT&name=${name}`,
+    { headers: cfHeaders() },
   );
   const listData = (await listRes.json()) as any;
 
   for (const record of listData.result || []) {
-    await fetch(`${cfApi}/zones/${CF_ZONE_ID}/dns_records/${record.id}`, {
+    await fetch(`${cfApi}/zones/${zoneId}/dns_records/${record.id}`, {
       method: "DELETE",
-      headers: cfHeaders,
+      headers: cfHeaders(),
     });
   }
 };

@@ -23,6 +23,7 @@ import {
   sendInternal,
   sendLightning,
   sendOnchain,
+  syncBitcoinVault,
 } from "$lib/payments";
 import { emit } from "$lib/sockets";
 import {
@@ -1109,6 +1110,74 @@ export default {
         }
 
         return c.json({ synced, received, payments, forward });
+      } finally {
+        await db.del(lockKey);
+      }
+    } catch (e) {
+      return bail(c, e.message);
+    }
+  },
+
+  async bitcoinSync(c) {
+    try {
+      const user = c.get("user");
+      const { aid } = await c.req.json();
+      const { id: uid } = user;
+
+      const pos = await db.lPos(`${uid}:accounts`, aid);
+      if (pos === null) return bail(c, "account not found");
+
+      const account = await g(`account:${aid}`);
+      if (!account?.pubkey || !account?.fingerprint) return bail(c, "not a bitcoin vault");
+
+      const lockKey = `btcsynclock:${aid}`;
+      const gotLock = await db.set(lockKey, "1", { NX: true, EX: 30 });
+      if (!gotLock) return c.json({ synced: 0, received: 0, payments: [] });
+
+      try {
+        const { pendingTotal, newPayments } = await syncBitcoinVault(account, user);
+
+        let received = 0;
+        const payments = [];
+
+        for (const p of newPayments) {
+          if (p.amount > 0) {
+            received += p.amount;
+            payments.push(p);
+
+            const invoiceIds = await db.lRange(`${aid}:invoices`, 0, 20);
+            for (const iid of invoiceIds) {
+              const inv = await getInvoice(iid);
+              if (!inv || inv.type !== "bitcoin") continue;
+              if (inv.received >= inv.amount && inv.amount > 0) continue;
+              if (inv.amount > 0 && p.amount < inv.amount) continue;
+              inv.received = (inv.received || 0) + p.amount;
+              p.iid = iid;
+              await s(`invoice:${iid}`, inv);
+              await s(`payment:${p.id}`, p);
+              emit(uid, "payment", p);
+              break;
+            }
+          }
+        }
+
+        // Compute balance from payments
+        const paymentIds = await db.lRange(`${aid}:payments`, 0, -1);
+        const paymentKeys = paymentIds.map((pid) => `payment:${pid}`);
+        const allPayments = await gfAll(paymentKeys);
+        let balance = 0;
+        for (const pay of allPayments) {
+          if (pay) balance += pay.amount;
+        }
+        balance = Math.max(balance, 0);
+
+        return c.json({
+          synced: newPayments.length,
+          received,
+          payments,
+          balance,
+          pending: pendingTotal,
+        });
       } finally {
         await db.del(lockKey);
       }

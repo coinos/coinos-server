@@ -1325,153 +1325,214 @@ export const catchUp = async () => {
   }
 };
 
+export const syncBitcoinVault = async (account, user) => {
+  const { id, uid, pubkey, fingerprint } = account;
+
+  let nextIndex = account.nextIndex || 0;
+  const lastUsed = await findLastUsedIndex(pubkey, fingerprint);
+  if (lastUsed > nextIndex) {
+    nextIndex = lastUsed;
+    account.nextIndex = nextIndex;
+    await s(`account:${id}`, account);
+  }
+
+  const count = nextIndex + 1;
+  const externalAddrs = deriveAddresses(pubkey, fingerprint, count, false);
+  const internalAddrs = deriveAddresses(pubkey, fingerprint, count, true);
+  const allAddrs = [...externalAddrs, ...internalAddrs];
+  const addressSet = new Set(allAddrs);
+
+  const utxos = await getAddressUtxos(allAddrs);
+  const confirmedUtxos = utxos.filter((u) => u.status.confirmed && u.value >= 300);
+  const pendingUtxos = utxos.filter((u) => !u.status.confirmed && u.value >= 300);
+  const confirmedTotal = confirmedUtxos.reduce((sum, u) => sum + u.value, 0);
+  const pendingTotal = pendingUtxos.reduce((sum, u) => sum + u.value, 0);
+
+  const { rate, currency } = await getUserRate(user);
+
+  const newPayments = [];
+
+  // Process confirmed UTXOs (incoming)
+  for (const u of confirmedUtxos) {
+    const ref = `${u.txid}:${u.vout}`;
+    const existing = await getPayment(ref);
+    if (existing?.aid === id) {
+      if (!existing.confirmed) {
+        existing.confirmed = true;
+        await s(`payment:${existing.id}`, existing);
+      }
+      continue;
+    }
+
+    if (existing) {
+      existing.aid = id;
+      existing.confirmed = true;
+      await db
+        .multi()
+        .set(`payment:${existing.id}`, JSON.stringify(existing))
+        .lPush(`${id}:payments`, existing.id)
+        .exec();
+      continue;
+    }
+
+    const created = u.status?.block_time ? u.status.block_time * 1000 : Date.now();
+    const p = {
+      id: v4(),
+      aid: id,
+      amount: u.value,
+      fee: 0,
+      hash: u.address,
+      confirmed: true,
+      rate,
+      currency,
+      type: PaymentType.bitcoin,
+      uid,
+      ref,
+      created,
+    };
+
+    await db
+      .multi()
+      .set(`payment:${ref}`, p.id)
+      .set(`payment:${p.id}`, JSON.stringify(p))
+      .lPush(`${id}:payments`, p.id)
+      .set(`${id}:payments:last`, p.created)
+      .exec();
+
+    newPayments.push(p);
+  }
+
+  // Process pending (unconfirmed) UTXOs
+  for (const u of pendingUtxos) {
+    const ref = `${u.txid}:${u.vout}`;
+    const existing = await getPayment(ref);
+    if (existing?.aid === id) continue;
+
+    if (existing) {
+      existing.aid = id;
+      await db
+        .multi()
+        .set(`payment:${existing.id}`, JSON.stringify(existing))
+        .lPush(`${id}:payments`, existing.id)
+        .exec();
+      continue;
+    }
+
+    const p = {
+      id: v4(),
+      aid: id,
+      amount: u.value,
+      fee: 0,
+      hash: u.address,
+      confirmed: false,
+      rate,
+      currency,
+      type: PaymentType.bitcoin,
+      uid,
+      ref,
+      created: Date.now(),
+    };
+
+    await db
+      .multi()
+      .set(`payment:${ref}`, p.id)
+      .set(`payment:${p.id}`, JSON.stringify(p))
+      .lPush(`${id}:payments`, p.id)
+      .set(`${id}:payments:last`, p.created)
+      .exec();
+
+    newPayments.push(p);
+  }
+
+  // Process outgoing transactions
+  const txsById = new Map();
+  for (const address of allAddrs) {
+    const txs = await getAddressTxs(address);
+    for (const tx of txs as any) {
+      txsById.set(tx.txid, tx);
+    }
+  }
+
+  for (const tx of txsById.values()) {
+    if (!tx.status?.confirmed) continue;
+    const existing = await getPayment(tx.txid);
+    if (existing?.aid === id) continue;
+    if (existing) {
+      existing.aid = id;
+      await db
+        .multi()
+        .set(`payment:${existing.id}`, JSON.stringify(existing))
+        .lPush(`${id}:payments`, existing.id)
+        .exec();
+      continue;
+    }
+
+    let inputsFromUs = 0;
+    let outputsToUs = 0;
+    let totalIn = 0;
+    let totalOut = 0;
+
+    for (const vin of tx.vin || []) {
+      const prev = vin.prevout;
+      if (!prev) continue;
+      const value = Number.parseInt(prev.value) || 0;
+      totalIn += value;
+      if (addressSet.has(prev.scriptpubkey_address)) inputsFromUs += value;
+    }
+
+    for (const vout of tx.vout || []) {
+      const value = Number.parseInt(vout.value) || 0;
+      totalOut += value;
+      if (addressSet.has(vout.scriptpubkey_address)) outputsToUs += value;
+    }
+
+    if (!inputsFromUs) continue;
+
+    const net = outputsToUs - inputsFromUs;
+    if (net >= 0) continue;
+
+    const amount = totalOut - outputsToUs;
+    if (amount <= 0) continue;
+
+    const fee = Math.max(0, totalIn - totalOut);
+    const created = tx.status?.block_time ? tx.status.block_time * 1000 : Date.now();
+
+    const p = {
+      id: v4(),
+      aid: id,
+      amount: -amount,
+      fee,
+      hash: tx.txid,
+      confirmed: true,
+      rate,
+      currency,
+      type: PaymentType.bitcoin,
+      uid,
+      created,
+    };
+
+    await db
+      .multi()
+      .set(`payment:${tx.txid}`, p.id)
+      .set(`payment:${p.id}`, JSON.stringify(p))
+      .lPush(`${id}:payments`, p.id)
+      .set(`${id}:payments:last`, p.created)
+      .exec();
+  }
+
+  return { confirmedTotal, pendingTotal, newPayments };
+};
+
 export const importAccountHistory = async (account) => {
   try {
-    const { id, uid, pubkey, fingerprint } = account;
-    const user = await getUser(uid);
+    const user = await getUser(account.uid);
+    const { confirmedTotal } = await syncBitcoinVault(account, user);
 
-    let nextIndex = account.nextIndex || 0;
-    if (!account.importedAt) {
-      const lastUsed = await findLastUsedIndex(pubkey, fingerprint);
-      if (lastUsed > nextIndex) nextIndex = lastUsed;
-      account.nextIndex = nextIndex;
-    }
-
-    const count = nextIndex + 1;
-    const externalAddrs = deriveAddresses(pubkey, fingerprint, count, false);
-    const internalAddrs = deriveAddresses(pubkey, fingerprint, count, true);
-    const allAddrs = [...externalAddrs, ...internalAddrs];
-    const addressSet = new Set(allAddrs);
-
-    const utxos = await getAddressUtxos(allAddrs);
-    const confirmedUtxos = utxos.filter((u) => u.status.confirmed && u.value >= 300);
-    const total = confirmedUtxos.reduce((sum, u) => sum + u.value, 0);
-
-    const rates = await g("rates");
-    const currency = account.currency || user.currency;
-    let rate = rates[currency];
-    if (!rate) await sleep(1000);
-    rate = rate || rates[currency];
-
-    for (const u of confirmedUtxos) {
-      const existing = await getPayment(`${u.txid}:${u.vout}`);
-      if (existing?.aid === id) continue;
-
-      if (existing) {
-        existing.aid = id;
-        await db
-          .multi()
-          .set(`payment:${existing.id}`, JSON.stringify(existing))
-          .lPush(`${id}:payments`, existing.id)
-          .exec();
-        continue;
-      }
-
-      const created = u.status?.block_time ? u.status.block_time * 1000 : Date.now();
-      const p = {
-        id: v4(),
-        aid: id,
-        amount: u.value,
-        fee: 0,
-        hash: u.address,
-        confirmed: true,
-        rate,
-        currency: user.currency,
-        type: PaymentType.bitcoin,
-        uid,
-        ref: `${u.txid}:${u.vout}`,
-        created,
-      };
-
-      await db
-        .multi()
-        .set(`payment:${u.txid}:${u.vout}`, p.id)
-        .set(`payment:${p.id}`, JSON.stringify(p))
-        .lPush(`${id}:payments`, p.id)
-        .set(`${id}:payments:last`, p.created)
-        .exec();
-    }
-
-    const txsById = new Map();
-    for (const address of allAddrs) {
-      const txs = await getAddressTxs(address);
-      for (const tx of txs as any) {
-        txsById.set(tx.txid, tx);
-      }
-    }
-
-    for (const tx of txsById.values()) {
-      if (!tx.status?.confirmed) continue;
-      const existing = await getPayment(tx.txid);
-      if (existing?.aid === id) continue;
-      if (existing) {
-        existing.aid = id;
-        await db
-          .multi()
-          .set(`payment:${existing.id}`, JSON.stringify(existing))
-          .lPush(`${id}:payments`, existing.id)
-          .exec();
-        continue;
-      }
-
-      let inputsFromUs = 0;
-      let outputsToUs = 0;
-      let totalIn = 0;
-      let totalOut = 0;
-
-      for (const vin of tx.vin || []) {
-        const prev = vin.prevout;
-        if (!prev) continue;
-        const value = Number.parseInt(prev.value) || 0;
-        totalIn += value;
-        if (addressSet.has(prev.scriptpubkey_address)) inputsFromUs += value;
-      }
-
-      for (const vout of tx.vout || []) {
-        const value = Number.parseInt(vout.value) || 0;
-        totalOut += value;
-        if (addressSet.has(vout.scriptpubkey_address)) outputsToUs += value;
-      }
-
-      if (!inputsFromUs) continue;
-
-      const net = outputsToUs - inputsFromUs;
-      if (net >= 0) continue;
-
-      const amount = totalOut - outputsToUs;
-      if (amount <= 0) continue;
-
-      const fee = Math.max(0, totalIn - totalOut);
-      const created = tx.status?.block_time ? tx.status.block_time * 1000 : Date.now();
-
-      const p = {
-        id: v4(),
-        aid: id,
-        amount: -amount,
-        fee,
-        hash: tx.txid,
-        confirmed: true,
-        rate,
-        currency: user.currency,
-        type: PaymentType.bitcoin,
-        uid,
-        created,
-      };
-
-      await db
-        .multi()
-        .set(`payment:${tx.txid}`, p.id)
-        .set(`payment:${p.id}`, JSON.stringify(p))
-        .lPush(`${id}:payments`, p.id)
-        .set(`${id}:payments:last`, p.created)
-        .exec();
-    }
-
-    await tbSetBalance(id, total);
-    await tbSetPending(id, 0);
+    await tbSetBalance(account.id, confirmedTotal);
+    await tbSetPending(account.id, 0);
 
     account.importedAt = account.importedAt || Date.now();
-    await s(`account:${id}`, account);
+    await s(`account:${account.id}`, account);
   } catch (e) {
     console.log(e);
     warn("problem importing account history", e.message, account);

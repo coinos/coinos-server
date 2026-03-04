@@ -119,6 +119,7 @@ app.post("/fetchinvoice", payments.fetchinvoice);
 app.get("/ark/address", payments.arkAddress);
 app.post("/ark/receive", auth, payments.arkReceive);
 app.post("/ark/sync", auth, payments.arkSync);
+app.post("/bitcoin/sync", auth, payments.bitcoinSync);
 
 app.get("/square/connect", auth, square.connect);
 app.get("/square/auth", auth, square.auth);
