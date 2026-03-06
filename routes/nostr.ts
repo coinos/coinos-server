@@ -1,4 +1,3 @@
-import config from "$config";
 import { db, g } from "$lib/db";
 import ln from "$lib/ln";
 import {
@@ -7,7 +6,6 @@ import {
   getCount,
   getNostrUser,
   getProfile,
-  pool,
   publish,
   q,
   serverPubkey,
@@ -66,7 +64,7 @@ export default {
       const missing = pubkeys.filter((p) => !found.includes(p));
 
       const missingProfiles = (
-        await pool.querySync(config.relays, {
+        await q({
           kinds: [0],
           authors: missing,
         })

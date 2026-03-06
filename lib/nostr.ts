@@ -6,7 +6,6 @@ import { fail, fields, getUser, pick } from "$lib/utils";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { finalizeEvent, getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import type { Event } from "nostr-tools";
-import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
 
 export const EX = 60 * 60 * 24;
@@ -18,12 +17,6 @@ export const serverSecret2 = bytesToHex(nip19.decode(config.nostrKey2).data as U
 
 export const serverPubkey = getPublicKey(hexToBytes(serverSecret));
 export const serverPubkey2 = getPublicKey(hexToBytes(serverSecret2));
-
-const alwaysTrue: any = (t: Event) => {
-  t[Symbol("verified")] = true;
-  return true;
-};
-export const pool = new (AbstractSimplePool as any)({ verifyEvent: alwaysTrue });
 
 export const anon = (pubkey) => ({
   username: pubkey.substr(0, 6),
@@ -108,7 +101,7 @@ export async function handleZap(invoice, sender = undefined) {
 export const getRelays = async (pubkey): Promise<any> => {
   const { relays } = config;
   const filter = { authors: [pubkey], kinds: [10002] };
-  const result = await scan(filter);
+  const result = await q(filter);
 
   let read = relays;
   let write = relays;
@@ -122,12 +115,7 @@ export const getRelays = async (pubkey): Promise<any> => {
       if (!r[2] || r[2] === "write") write.push(r[1]);
       if (!r[2] || r[2] === "read") read.push(r[1]);
     }
-  } else
-    (pool as any)
-      .get(relays, filter)
-      // @ts-ignore
-      .then(send as any)
-      .catch(() => {});
+  }
 
   return { read, write };
 };
