@@ -260,8 +260,9 @@ export default {
           else fail("Key in use by another account");
         }
 
-        // Allow initial pubkey setting without signed event (e.g. during registration)
-        if (user.pubkey && body.event) {
+        // Require signed event to change pubkey, unless it's a server-generated key
+        // (user.nsec exists means server generated the key during registration)
+        if (body.event) {
           const event = JSON.parse(body.event);
           const challenge = event.tags.find((t) => t[0] === "challenge")[1];
           const ch = await g(`challenge:${challenge}`);
@@ -269,7 +270,7 @@ export default {
 
           if (!verifyEvent(event) || event.pubkey !== pubkey)
             fail("Invalid signature or challenge mismatch.");
-        } else if (user.pubkey) {
+        } else if (user.pubkey && !user.nsec) {
           fail("Signed event required to change pubkey");
         }
 
