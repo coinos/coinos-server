@@ -13,6 +13,8 @@ export default {
   nostr: "ws://nostr:8080",
   relays: [
     "ws://nostr:8080",
+    "wss://relay.primal.net",
+    "wss://relay.damus.io",
     "wss://nostr-pub.wellorder.net",
     "wss://brb.io",
     "wss://nostr.v0l.io",

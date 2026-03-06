@@ -215,25 +215,39 @@ export const getNostrUser = async (key) => {
 
 export const q = async (f) => {
   let events = (await scan(f)) as Event[];
+  if (events.length) return events;
+
   const k = JSON.stringify(f).replace(/[^a-zA-Z0-9]/g, "");
-  const since = await g(`${k}:since}`);
+  const since = await g(`${k}:since`);
   if (since) f.since = since;
 
-  const p = new Promise((resolve) => {
-    const r = [];
-    (pool as any).subscribeMany(["wss://relay.primal.net"], [f], {
-      onevent(e) {
-        r.push(e);
-        coinos.publish(e);
-      },
-      oneose() {
-        resolve(r);
-      },
-    });
-  });
+  const externalRelays = config.relays.filter((r) => r.startsWith("wss://"));
 
-  if (events.length) return events;
-  events = (await p) as Event[];
+  events = (
+    await Promise.all(
+      externalRelays.map(
+        (url) =>
+          new Promise<Event[]>((resolve) => {
+            const found: Event[] = [];
+            Relay.connect(url)
+              .then((r) => {
+                r.subscribe([f], {
+                  onevent(e) {
+                    found.push(e);
+                    coinos.publish(e).catch(() => {});
+                  },
+                  oneose() {
+                    r.close();
+                    resolve(found);
+                  },
+                });
+              })
+              .catch(() => resolve([]));
+          }),
+      ),
+    )
+  ).flat();
+
   if (events.length) db.set(`${k}:since`, events[events.length - 1].created_at);
   return events;
 };
