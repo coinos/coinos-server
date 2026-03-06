@@ -120,7 +120,7 @@ export const refreshArkWallet = async (force = false) => {
           failedBoardingOutpoints.clear();
           break;
         } catch (e: any) {
-          const retriable = /not enough intent confirmations/i.test(e.message);
+          const retriable = /not enough intent confirmations|timed out|signing_session/i.test(e.message);
           if (!retriable) failedBoardingOutpoints.add(outpointKey(utxo));
           warn("ark onboard failed:", utxo.value, "sats:", e.message);
         }

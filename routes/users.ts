@@ -24,7 +24,7 @@ import { getPublicKey, nip19, verifyEvent } from "nostr-tools";
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { authenticator } from "otplib";
 import { v4 } from "uuid";
-import { setCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
 
 import { setupBip353, teardownBip353 } from "$lib/bip353";
 import { PaymentType } from "$lib/types";
@@ -230,7 +230,10 @@ export default {
     const user = c.get("user");
     const body = await c.req.json();
     try {
-      const { id: tokid } = jwt.verify(c.req.header("authorization").split(" ")[1], config.jwt);
+      const authHeader = c.req.header("authorization");
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : getCookie(c, "token");
+      if (!token) fail("unauthorized");
+      const { id: tokid } = jwt.verify(token, config.jwt);
       l("updating user", user.username, tokid);
       if (user.id !== tokid) fail("unauthorized");
 
@@ -257,13 +260,18 @@ export default {
           else fail("Key in use by another account");
         }
 
-        const event = JSON.parse(body.event);
-        const challenge = event.tags.find((t) => t[0] === "challenge")[1];
-        const ch = await g(`challenge:${challenge}`);
-        if (!ch) fail("Invalid or expired challenge");
+        // Allow initial pubkey setting without signed event (e.g. during registration)
+        if (user.pubkey && body.event) {
+          const event = JSON.parse(body.event);
+          const challenge = event.tags.find((t) => t[0] === "challenge")[1];
+          const ch = await g(`challenge:${challenge}`);
+          if (!ch) fail("Invalid or expired challenge");
 
-        if (!verifyEvent(event) || event.pubkey !== pubkey)
-          fail("Invalid signature or challenge mismatch.");
+          if (!verifyEvent(event) || event.pubkey !== pubkey)
+            fail("Invalid signature or challenge mismatch.");
+        } else if (user.pubkey) {
+          fail("Signed event required to change pubkey");
+        }
 
         pubkey = pubkey.replace(/\s*/g, "");
         if (pubkey.length !== 64) fail(`Invalid pubkey ${pubkey}`);
