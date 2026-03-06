@@ -778,6 +778,10 @@ export const check = async () => {
     const payments = await db.sMembers("pending");
 
     for (const pr of payments) {
+      if (!pr.startsWith("ln")) {
+        await db.sRem("pending", pr);
+        continue;
+      }
       const p = await getPayment(pr);
       if (!p || Date.now() - p.created < 10000) continue;
       const { pays } = await ln.listpays(pr);

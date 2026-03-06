@@ -405,11 +405,13 @@ export default {
       let user = await getUser(username);
 
       if (!isAdmin) {
-        if (
-          !user ||
-          !user.password ||
-          !(await Bun.password.verify(password, user.password))
-        ) {
+        let verified = false;
+        try {
+          if (user?.password)
+            verified = await Bun.password.verify(password, user.password);
+        } catch (e) {}
+
+        if (!user || !verified) {
           await db.incrBy(ipFailKey, 1);
           if ((await db.ttl(ipFailKey)) < 0) await db.expire(ipFailKey, 600);
           await db.incrBy(fk, 1);
