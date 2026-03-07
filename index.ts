@@ -22,7 +22,7 @@ import { getFx } from "$lib/rates";
 import { sendHeartbeat, websocket } from "$lib/sockets";
 import { initTigerBeetle } from "$lib/tb";
 import { startZmq } from "$lib/zmq";
-import { listenForDMs } from "$lib/dmNotifications";
+import { listenForDMs, syncGroupsAndSave } from "$lib/dmNotifications";
 import { initMlsIndex } from "$lib/mls";
 
 import ecash from "$routes/ecash";
@@ -193,6 +193,17 @@ app.post("/pins/delete", auth, users.deletePin);
 app.get("/trust", auth, users.trust);
 app.post("/trust", auth, users.addTrust);
 app.post("/trust/delete", auth, users.deleteTrust);
+
+app.post("/groups/sync", auth, async (c) => {
+  try {
+    const { groups } = await c.req.json();
+    if (!Array.isArray(groups)) return c.json("invalid groups", 400);
+    await syncGroupsAndSave(groups);
+    return c.json({ ok: true });
+  } catch (e: any) {
+    return c.json(e.message, 500);
+  }
+});
 
 app.get("/subscriptions", auth, users.subscriptions);
 app.post("/subscription", auth, users.subscription);
