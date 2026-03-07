@@ -9,50 +9,56 @@ if (config.vapid) {
   webpush.setVapidDetails(`mailto:${config.support}`, config.vapid.pk, config.vapid.sk);
 }
 
-export const listenForDMs = async () => {
+const handleDmEvent = async (event: any) => {
+  const pTag = event.tags.find((t: any) => t[0] === "p");
+  l(`dm event ${event.id.slice(0, 8)} p=${pTag?.[1]?.slice(0, 12) || "none"}`);
+  if (!pTag) return;
+
+  const recipientPubkey = pTag[1];
+
   try {
-    const relay = await Relay.connect(config.nostr);
-    const since = Math.floor(Date.now() / 1000);
+    const user = await getUser(recipientPubkey);
+    if (!user?.id) return;
 
-    relay.subscribe([{ kinds: [1059], since }], {
-      onevent: async (event) => {
-        const pTag = event.tags.find((t) => t[0] === "p");
-        l(`dm event ${event.id.slice(0, 8)} p=${pTag?.[1]?.slice(0, 12) || "none"}`);
-        if (!pTag) return;
+    const subscriptions = await db.sMembers(`${user.id}:subscriptions`);
+    if (!subscriptions?.length) return;
 
-        const recipientPubkey = pTag[1];
+    l(`dm push to ${user.username} (${subscriptions.length} subs)`);
 
-        try {
-          const user = await getUser(recipientPubkey);
-          if (!user?.id) { l(`dm no user for ${recipientPubkey.slice(0, 12)}`); return; }
-
-          const subscriptions = await db.sMembers(`${user.id}:subscriptions`);
-          l(`dm user=${user.username} subs=${subscriptions?.length || 0}`);
-          if (!subscriptions?.length) return;
-
-          const payload = JSON.stringify({
-            title: "New message",
-            body: "You have a new encrypted message",
-            url: "/messages",
-          });
-
-          for (const s of subscriptions as any) {
-            webpush
-              .sendNotification(JSON.parse(s as string), payload)
-              .catch((e) => {
-                warn("dm push failed", e.message);
-                db.sRem(`${user.id}:subscriptions`, s);
-              });
-          }
-        } catch (e) {
-          // User not found for this pubkey - not a coinos user
-        }
-      },
+    const payload = JSON.stringify({
+      title: "New message",
+      body: "You have a new encrypted message",
+      url: "/messages",
     });
 
-    l("listening for DM notifications on relay");
+    for (const s of subscriptions as any) {
+      webpush
+        .sendNotification(JSON.parse(s as string), payload)
+        .catch((e) => {
+          warn("dm push failed", e.message);
+          db.sRem(`${user.id}:subscriptions`, s);
+        });
+    }
   } catch (e) {
-    warn("DM notification listener failed", e.message);
-    setTimeout(listenForDMs, 5000);
+    // User not found for this pubkey - not a coinos user
   }
+};
+
+const subscribeRelay = (url: string) => {
+  Relay.connect(url)
+    .then((relay) => {
+      relay.subscribe([{ kinds: [1059], since: Math.floor(Date.now() / 1000) }], {
+        onevent: handleDmEvent,
+      });
+      l(`listening for DM notifications on ${url}`);
+    })
+    .catch((e) => {
+      warn(`DM listener failed ${url}`, e.message);
+      setTimeout(() => subscribeRelay(url), 5000);
+    });
+};
+
+export const listenForDMs = () => {
+  const relays = new Set([config.nostr, ...config.relays.filter((r: string) => r.startsWith("wss://"))]);
+  for (const url of relays) subscribeRelay(url);
 };
