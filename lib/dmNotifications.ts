@@ -13,7 +13,7 @@ if (config.vapid) {
 // Push notification delivery
 // ---------------------------------------------------------------------------
 
-const sendPush = async (pubkey: string, url = "/messages") => {
+const sendPush = async (pubkey: string, url = "/messages", event?: any) => {
   try {
     const user = await getUser(pubkey);
     if (!user?.id) return;
@@ -23,11 +23,19 @@ const sendPush = async (pubkey: string, url = "/messages") => {
 
     l(`push to ${user.username} (${subscriptions.length} subs)`);
 
-    const payload = JSON.stringify({
+    const payloadObj: any = {
       title: "New message",
       body: "You have a new encrypted message",
       url,
-    });
+    };
+
+    // Include the raw event for push-as-data-transport (size guard for ~4KB push limit)
+    if (event) {
+      const eventStr = JSON.stringify(event);
+      if (eventStr.length < 3000) payloadObj.event = eventStr;
+    }
+
+    const payload = JSON.stringify(payloadObj);
 
     for (const s of subscriptions as any) {
       webpush
@@ -78,7 +86,7 @@ const handleGroupMessage = async (event: any) => {
 
   const sender = event.pubkey;
   for (const member of group.members) {
-    if (member !== sender) sendPush(member);
+    if (member !== sender) sendPush(member, "/messages", event);
   }
 };
 
