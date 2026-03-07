@@ -5,6 +5,10 @@ import { getUser } from "$lib/utils";
 import { Relay } from "nostr-tools/relay";
 import webpush from "web-push";
 
+if (config.vapid) {
+  webpush.setVapidDetails(`mailto:${config.support}`, config.vapid.pk, config.vapid.sk);
+}
+
 export const listenForDMs = async () => {
   try {
     const relay = await Relay.connect(config.nostr);
