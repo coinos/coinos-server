@@ -17,15 +17,17 @@ export const listenForDMs = async () => {
     relay.subscribe([{ kinds: [1059], since }], {
       onevent: async (event) => {
         const pTag = event.tags.find((t) => t[0] === "p");
+        l(`dm event ${event.id.slice(0, 8)} p=${pTag?.[1]?.slice(0, 12) || "none"}`);
         if (!pTag) return;
 
         const recipientPubkey = pTag[1];
 
         try {
           const user = await getUser(recipientPubkey);
-          if (!user?.id) return;
+          if (!user?.id) { l(`dm no user for ${recipientPubkey.slice(0, 12)}`); return; }
 
           const subscriptions = await db.sMembers(`${user.id}:subscriptions`);
+          l(`dm user=${user.username} subs=${subscriptions?.length || 0}`);
           if (!subscriptions?.length) return;
 
           const payload = JSON.stringify({
