@@ -1,5 +1,6 @@
 import { db, g } from "$lib/db";
 import ln from "$lib/ln";
+import { getMlsUsers } from "$lib/mls";
 import {
   EX,
   get,
@@ -20,6 +21,14 @@ import { decode } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
 
 export default {
+  async mlsUsers(c) {
+    try {
+      return c.json(await getMlsUsers());
+    } catch (e) {
+      return bail(c, e.message);
+    }
+  },
+
   async event(c) {
     try {
       let id = c.req.param("id");
