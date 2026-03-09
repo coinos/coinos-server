@@ -1,7 +1,9 @@
 import { db, g, gf, s } from "$lib/db";
 import { generate } from "$lib/invoices";
-import { err, warn } from "$lib/logging";
+import ln from "$lib/ln";
+import { err, l, warn } from "$lib/logging";
 import { serverPubkey2 } from "$lib/nostr";
+import { getFundBalance, tbFundCredit, tbFundDebit } from "$lib/tb";
 import { SATS, bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
 import got from "got";
@@ -141,6 +143,80 @@ export default {
     const settled = received >= amount;
 
     return c.json({ pr: hash, status: "OK", settled, preimage: preimage || null });
+  },
+
+  async lnurlw(c) {
+    const fundId = c.req.param("fundId");
+    try {
+      const balance = await getFundBalance(fundId);
+      if (balance === null || balance <= 0)
+        return c.json({ status: "ERROR", reason: "Fund not found or empty" });
+
+      const k1 = v4();
+      await s(`lnurlw:${k1}`, fundId);
+      await db.expire(`lnurlw:${k1}`, 300);
+
+      return c.json({
+        tag: "withdrawRequest",
+        callback: `${URL}/api/lnurlw/${fundId}/callback`,
+        k1,
+        defaultDescription: `Withdraw from fund ${fundId}`,
+        minWithdrawable: 1000,
+        maxWithdrawable: balance * 1000,
+      });
+    } catch (e) {
+      warn("lnurlw request failed", fundId, e.message);
+      return bail(c, e.message);
+    }
+  },
+
+  async lnurlwCallback(c) {
+    const fundId = c.req.param("fundId");
+    const k1 = c.req.query("k1");
+    const pr = c.req.query("pr");
+
+    try {
+      if (!k1 || !pr) fail("Missing k1 or pr");
+
+      const storedFundId = await g(`lnurlw:${k1}`);
+      if (storedFundId !== fundId)
+        return c.json({ status: "ERROR", reason: "Invalid or expired k1" });
+
+      await db.del(`lnurlw:${k1}`);
+
+      const decoded = await ln.decode(pr);
+      const amount = Math.round(decoded.amount_msat / 1000);
+      if (amount <= 0) fail("Invalid invoice amount");
+
+      const balance = await getFundBalance(fundId);
+      if (amount > balance)
+        return c.json({ status: "ERROR", reason: `Insufficient funds: ${balance} < ${amount}` });
+
+      const result: any = await tbFundDebit(fundId, amount, "Insufficient funds");
+      if (result.err)
+        return c.json({ status: "ERROR", reason: result.err });
+
+      l("lnurlw paying invoice from fund", fundId, amount);
+
+      try {
+        await ln.xpay({
+          invstring: pr.replace(/\s/g, "").toLowerCase(),
+          maxfee: Math.max(5, Math.round(amount * 0.02)) * 1000,
+          retry_for: 20,
+        });
+
+        await db.lPush(`fund:${fundId}:payments`, `lnurlw:${pr.slice(-8)}:${amount}`);
+        l("lnurlw paid from fund", fundId, amount);
+        return c.json({ status: "OK" });
+      } catch (e) {
+        warn("lnurlw payment failed, reversing fund debit", fundId, e.message);
+        await tbFundCredit(fundId, amount);
+        return c.json({ status: "ERROR", reason: "Payment failed" });
+      }
+    } catch (e) {
+      warn("lnurlw callback failed", fundId, e.message);
+      return c.json({ status: "ERROR", reason: e.message });
+    }
   },
 
   async pay(c) {

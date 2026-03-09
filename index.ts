@@ -136,6 +136,8 @@ app.get("/decode", lnurl.decode);
 app.get("/lnurl/verify/:id", lnurl.verify);
 app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
+app.get("/lnurlw/:fundId", lnurl.lnurlw);
+app.get("/lnurlw/:fundId/callback", lnurl.lnurlwCallback);
 app.get("/pay/:username", lnurl.pay);
 app.get("/pay/:username/:amount", lnurl.pay);
 
