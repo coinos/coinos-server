@@ -11,6 +11,8 @@ import { fail } from "$lib/utils";
 import { v4 } from "uuid";
 
 const rpName = "coinos";
+const androidOrigin =
+  "android:apk-key-hash:DaYNHto1fsy7jrhOfRaDDy4HCRNqFo8H0gf3DmW7bOw";
 
 function getRpID(origin: string) {
   try {
@@ -18,6 +20,10 @@ function getRpID(origin: string) {
   } catch {
     return "localhost";
   }
+}
+
+function getExpectedOrigins(origin: string) {
+  return [origin, androidOrigin];
 }
 
 export async function generatePasskeyRegistration(user: any, origin: string) {
@@ -53,7 +59,7 @@ export async function verifyPasskeyRegistration(user: any, response: any, origin
   const verification = await verifyRegistrationResponse({
     response,
     expectedChallenge: expectedChallenge as string,
-    expectedOrigin: origin,
+    expectedOrigin: getExpectedOrigins(origin),
     expectedRPID: rpID,
   });
 
@@ -110,7 +116,7 @@ export async function verifyPasskeyLogin(response: any, challengeId: string, ori
   const verification = await verifyAuthenticationResponse({
     response,
     expectedChallenge: expectedChallenge as string,
-    expectedOrigin: origin,
+    expectedOrigin: getExpectedOrigins(origin),
     expectedRPID: rpID,
     requireUserVerification: false,
     credential: {
