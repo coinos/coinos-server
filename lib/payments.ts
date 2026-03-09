@@ -158,8 +158,9 @@ export const debit = async ({
   const serverLimit = await g(`${type}:limit`);
   const userLimit = await g("limit");
   const frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== PaymentType.internal);
+  const skipServerLimit = type === PaymentType.fund || type === PaymentType.internal;
 
-  if (frozen || (userLimit != null && amount > userLimit && !whitelisted) || (serverLimit != null && amount > serverLimit)) {
+  if (frozen || (userLimit != null && amount > userLimit && !whitelisted) || (!skipServerLimit && serverLimit != null && amount > serverLimit)) {
     warn("Blocking", user.username, amount, hash, user.id, type, frozen, userLimit, serverLimit);
     fail("Problem sending payment");
   }
