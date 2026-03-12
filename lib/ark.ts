@@ -3,7 +3,15 @@ if (!globalThis.EventSource) globalThis.EventSource = EventSource as any;
 
 import config from "$config";
 import { SingleKey, Wallet, Ramps, RestArkProvider, VtxoManager } from "@arkade-os/sdk";
+import { db } from "$lib/db";
 import { l, warn } from "$lib/logging";
+
+// Log ark wallet operations to Redis for auditing/reconciliation
+const logArkOp = async (op: string, details: Record<string, any>) => {
+  const entry = { op, ts: Date.now(), ...details };
+  await db.lPush("ark:ops", JSON.stringify(entry));
+  await db.lTrim("ark:ops", 0, 9999);
+};
 
 let wallet: any;
 
@@ -61,6 +69,7 @@ export const refreshArkWallet = async (force = false) => {
       try {
         const txid = await withTimeout(manager.recoverVtxos(), 60_000, "ark recovery");
         l("ark recovered swept vtxos, txid:", txid);
+        await logArkOp("recovery", { txid, amount: balance.recoverable });
         recoveryFailures = 0;
       } catch (e: any) {
         recoveryFailures++;
@@ -74,13 +83,17 @@ export const refreshArkWallet = async (force = false) => {
     }
 
     // Renew VTXOs approaching expiry (with backoff on repeated failures)
+    // 1h threshold — default SDK is 24h which causes excessive renewals/fees
+    const RENEWAL_THRESHOLD_MS = 60 * 60 * 1000;
     if (now >= renewalSkipUntil) {
       try {
-        const expiring = await manager.getExpiringVtxos();
+        const expiring = await manager.getExpiringVtxos(RENEWAL_THRESHOLD_MS);
         if (expiring.length > 0) {
-          l("ark renewing", expiring.length, "expiring vtxos");
+          const expiringTotal = expiring.reduce((s: number, v: any) => s + v.value, 0);
+          l("ark renewing", expiring.length, "expiring vtxos, total:", expiringTotal, "sats");
           const txid = await withTimeout(manager.renewVtxos(), 60_000, "ark renewal");
           l("ark renewed vtxos, txid:", txid);
+          await logArkOp("renewal", { txid, vtxoCount: expiring.length, amount: expiringTotal });
           renewalFailures = 0;
         }
       } catch (e: any) {
@@ -117,6 +130,7 @@ export const refreshArkWallet = async (force = false) => {
             "ark onboard",
           );
           l("ark onboarded boarding utxo:", utxo.value, "sats, txid:", txid);
+          await logArkOp("onboard", { txid, amount: utxo.value, boardingTxid: utxo.txid, vout: utxo.vout });
           failedBoardingOutpoints.clear();
           break;
         } catch (e: any) {
@@ -145,14 +159,18 @@ export const sendArk = async (address: string, amount: number) => {
   const send = async () => {
     let w = await getWallet();
     try {
-      return await w.sendBitcoin({ address, amount });
+      const txid = await w.sendBitcoin({ address, amount });
+      await logArkOp("send", { txid, address, amount });
+      return txid;
     } catch (e: any) {
       if (/insufficient funds/i.test(e.message) || /VTXO_RECOVERABLE/i.test(e.message) || /VTXO_ALREADY_SPENT/i.test(e.message) || /VTXO_ALREADY_REGISTERED/i.test(e.message)) {
         l("ark send failed:", e.message, "— recreating wallet and retrying");
         wallet = null;
         await refreshArkWallet(true);
         w = await getWallet();
-        return w.sendBitcoin({ address, amount });
+        const txid = await w.sendBitcoin({ address, amount });
+        await logArkOp("send", { txid, address, amount });
+        return txid;
       }
       throw e;
     }
