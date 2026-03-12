@@ -56,6 +56,7 @@ import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
 import { P2A_VALUE, getP2AAddress, isP2AOutput, calculateBumpReserve } from "$lib/p2a";
+import { buildCpfpSend } from "$lib/cpfp";
 
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
@@ -723,6 +724,61 @@ export const sendOnchain = async (params) => {
     hex = buildResult.hex;
   }
 
+  // CPFP+send path: already signed, needs package submission
+  if (buildResult?.signed) {
+    const { txid, parentHex, fee, bumpReserve, p2aVout, parentVsize, ourfee, cpfpParentId, cpfpSubsidy } = buildResult;
+
+    try {
+      if (inflight[txid]) fail("payment in flight");
+      inflight[txid] = true;
+
+      // Submit as package (parent + child) since parent may not be in mempool
+      const r = await bc.testMempoolAccept([hex]);
+      if (r[0].allowed) {
+        await bc.sendRawTransaction(hex);
+      } else {
+        const pkg = await bc.submitPackage([parentHex, hex]);
+        if (!pkg["tx-results"]) fail("package submission failed");
+      }
+
+      // Decode to get the send amount
+      const decoded = await bc.decodeRawTransaction(hex);
+      let amount = 0;
+      for (const out of decoded.vout) {
+        if (isP2AOutput(out.scriptPubKey.hex)) continue;
+        const info = await bc.getAddressInfo(out.scriptPubKey.address);
+        if (!info.ismine) amount += sats(out.value);
+      }
+
+      const p = await debit({
+        aid,
+        hash: txid,
+        amount,
+        fee: fee + bumpReserve,
+        rate,
+        user,
+        type: PaymentType.bitcoin,
+      });
+
+      p.fee = fee;
+      p.hex = hex;
+      (p as any).bumpReserve = bumpReserve;
+      (p as any).p2aVout = p2aVout;
+      (p as any).parentVsize = parentVsize;
+      (p as any).cpfpParentId = cpfpParentId;
+      p.confirmed = false;
+
+      await s(`payment:${p.id}`, p);
+      await db.sAdd("outgoing:unconfirmed", p.id);
+
+      delete inflight[txid];
+      return p;
+    } catch (e) {
+      delete inflight[txid];
+      throw e;
+    }
+  }
+
   const { tx, type } = await decode(hex);
   const node = rpc(config[type]);
   const isBitcoin = type === PaymentType.bitcoin;
@@ -1162,6 +1218,21 @@ export const build = async ({ aid, amount, address, feeRate, subtract, user }) =
   let tx;
   let bumpReserve = 0;
   let parentVsize = 0;
+
+  // Check if confirmed UTXOs can cover this send — if not, fall back to CPFP+send
+  if (isBitcoin) {
+    const confirmedUtxos = await node.listUnspent(1);
+    const confirmedTotal = confirmedUtxos.reduce((sum, u) => sum + sats(u.amount), 0);
+    if (confirmedTotal < amount + P2A_VALUE) {
+      const balance = await getBalance(aid);
+      let ourfee = Math.round(amount * config.fee[type]);
+      const creditBal = await getCredit(aid, type);
+      const covered = Math.min(creditBal, ourfee);
+      ourfee -= covered;
+      const cpfp = await buildCpfpSend({ address, amount: amount - ourfee, feeRate, fees });
+      return { ...cpfp, feeRate, ourfee, fees, inputs: [], subtract, signed: true };
+    }
+  }
 
   try {
     tx = await node.fundRawTransaction(raw, {
