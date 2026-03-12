@@ -9,7 +9,7 @@ import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
-import { createCpfpChild, estimateBumpCost } from "$lib/cpfp";
+import { createCpfpChild } from "$lib/cpfp";
 import {
   acquireArkLock,
   build,
@@ -759,7 +759,7 @@ export default {
 
   async bump(c) {
     const body = await c.req.json();
-    const { id, targetFeeRate } = body;
+    const { id } = body;
     const user = c.get("user");
     try {
       const p = await gf(`payment:${id}`);
@@ -770,6 +770,11 @@ export default {
       if (!p.bumpReserve || p.bumpReserve <= 0) fail("no bump reserve available");
       if (p.childTxid) fail("transaction already bumped");
 
+      const fees: any = await fetch(`${api[PaymentType.bitcoin]}/fees/recommended`).then((r) =>
+        r.json(),
+      );
+      const targetFeeRate = Math.ceil(fees.fastestFee * 1.5);
+
       const { txid, childFee } = await createCpfpChild(p, targetFeeRate);
 
       return c.json({
@@ -779,31 +784,6 @@ export default {
       });
     } catch (e) {
       err("failed to bump payment", id, e.message);
-      return bail(c, e.message);
-    }
-  },
-
-  async bumpEstimate(c) {
-    const body = await c.req.json();
-    const { id, targetFeeRate } = body;
-    const user = c.get("user");
-    try {
-      const p = await gf(`payment:${id}`);
-      if (!p) fail("Payment not found");
-      if (p.uid !== user.id) fail("unauthorized");
-
-      const cost = estimateBumpCost(p.fee, p.parentVsize, targetFeeRate);
-
-      const fees: any = await fetch(`${api[PaymentType.bitcoin]}/fees/recommended`).then((r) =>
-        r.json(),
-      );
-
-      return c.json({
-        cost,
-        fees,
-        bumpReserve: p.bumpReserve || 0,
-      });
-    } catch (e) {
       return bail(c, e.message);
     }
   },

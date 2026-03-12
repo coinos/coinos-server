@@ -119,7 +119,6 @@ app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
 app.post("/send", auth, payments.internal);
 app.post("/gateway", payments.gateway);
 app.post("/bump", auth, payments.bump);
-app.post("/bump/estimate", auth, payments.bumpEstimate);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);
 app.get("/ark/address", payments.arkAddress);
