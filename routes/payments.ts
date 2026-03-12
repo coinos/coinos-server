@@ -768,7 +768,6 @@ export default {
       if (p.confirmed) fail("transaction already confirmed");
       if (p.type !== PaymentType.bitcoin) fail("only bitcoin transactions can be bumped");
       if (!p.bumpReserve || p.bumpReserve <= 0) fail("no bump reserve available");
-      if (p.childTxid) fail("transaction already bumped");
 
       const fees: any = await fetch(`${api[PaymentType.bitcoin]}/fees/recommended`).then((r) =>
         r.json(),

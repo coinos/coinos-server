@@ -849,7 +849,7 @@ export const sendOnchain = async (params) => {
         }
       }
 
-      fee = totalIn - total;
+      fee = totalIn - total - (p2aVout >= 0 ? P2A_VALUE : 0);
     }
 
     const amount = total - change;
@@ -1219,19 +1219,16 @@ export const build = async ({ aid, amount, address, feeRate, subtract, user }) =
   let bumpReserve = 0;
   let parentVsize = 0;
 
-  // Check if confirmed UTXOs can cover this send — if not, fall back to CPFP+send
+  // Piggyback on an unconfirmed parent via CPFP if one exists
   if (isBitcoin) {
-    const confirmedUtxos = await node.listUnspent(1);
-    const confirmedTotal = confirmedUtxos.reduce((sum, u) => sum + sats(u.amount), 0);
-    if (confirmedTotal < amount + P2A_VALUE) {
-      const balance = await getBalance(aid);
+    try {
       let ourfee = Math.round(amount * config.fee[type]);
       const creditBal = await getCredit(aid, type);
       const covered = Math.min(creditBal, ourfee);
       ourfee -= covered;
       const cpfp = await buildCpfpSend({ address, amount: amount - ourfee, feeRate, fees });
       return { ...cpfp, feeRate, ourfee, fees, inputs: [], subtract, signed: true };
-    }
+    } catch {}
   }
 
   try {
