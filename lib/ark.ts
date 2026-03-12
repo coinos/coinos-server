@@ -63,6 +63,8 @@ export const refreshArkWallet = async (force = false) => {
     );
 
     const manager = new VtxoManager(w);
+    const provider = new RestArkProvider(config.ark.arkServerUrl);
+    const info = await provider.getInfo();
 
     // Recover swept/expired VTXOs (with backoff on repeated failures)
     if (balance.recoverable > 0 && now >= recoverySkipUntil) {
@@ -87,10 +89,11 @@ export const refreshArkWallet = async (force = false) => {
     const RENEWAL_THRESHOLD_MS = 60 * 60 * 1000;
     if (now >= renewalSkipUntil) {
       try {
-        const expiring = await manager.getExpiringVtxos(RENEWAL_THRESHOLD_MS);
+        const allExpiring = await manager.getExpiringVtxos(RENEWAL_THRESHOLD_MS);
+        const expiring = allExpiring.filter((v: any) => v.value > Number(info.dust));
         if (expiring.length > 0) {
           const expiringTotal = expiring.reduce((s: number, v: any) => s + v.value, 0);
-          l("ark renewing", expiring.length, "expiring vtxos, total:", expiringTotal, "sats");
+          l("ark renewing", expiring.length, "expiring vtxos, total:", expiringTotal, "sats (skipped", allExpiring.length - expiring.length, "dust)");
           const txid = await withTimeout(manager.renewVtxos(), 60_000, "ark renewal");
           l("ark renewed vtxos, txid:", txid);
           await logArkOp("renewal", { txid, vtxoCount: expiring.length, amount: expiringTotal });
@@ -112,8 +115,6 @@ export const refreshArkWallet = async (force = false) => {
     const confirmed = boardingUtxos.filter((u: any) => u.status?.confirmed);
 
     if (confirmed.length > 0) {
-      const provider = new RestArkProvider(config.ark.arkServerUrl);
-      const info = await provider.getInfo();
       const ramps = new Ramps(w);
 
       // Try each boarding UTXO, freshest first, skipping known failures
