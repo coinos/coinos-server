@@ -9,6 +9,7 @@ const P2A_WITNESS_PROGRAM = new Uint8Array([0x4e, 0x73]);
 const P2A_WITNESS_VERSION = 1;
 
 const BECH32M_PREFIXES: Record<string, string> = {
+  bitcoin: "bc",
   mainnet: "bc",
   testnet: "tb",
   signet: "tb",
