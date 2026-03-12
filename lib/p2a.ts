@@ -37,6 +37,6 @@ export function calculateBumpReserve(
   fastestRate: number,
   parentVsize: number,
 ): number {
-  if (userRate >= fastestRate) return 0;
-  return Math.ceil((fastestRate - userRate) * parentVsize + fastestRate * CHILD_VSIZE);
+  const subsidy = Math.max(0, (fastestRate - userRate) * parentVsize);
+  return Math.ceil(subsidy + fastestRate * CHILD_VSIZE);
 }

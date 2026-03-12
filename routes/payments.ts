@@ -772,7 +772,7 @@ export default {
       const fees: any = await fetch(`${api[PaymentType.bitcoin]}/fees/recommended`).then((r) =>
         r.json(),
       );
-      const targetFeeRate = Math.ceil(fees.fastestFee * 1.5);
+      const targetFeeRate = Math.max(Math.ceil(fees.fastestFee * 1.5), 4);
 
       const { txid, childFee } = await createCpfpChild(p, targetFeeRate);
 

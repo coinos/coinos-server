@@ -293,7 +293,7 @@ export async function buildCpfpSend({
     "payments:", paymentOutputs.length);
 
   // Calculate User B's bump reserve for this child
-  const fastestFee = Math.ceil(fees.fastestFee * 1.5);
+  const fastestFee = Math.max(Math.ceil(fees.fastestFee * 1.5), 4);
   const childBumpReserve = calculateBumpReserve(feeRate, fastestFee, decoded.vsize);
 
   return {

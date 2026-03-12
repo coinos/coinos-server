@@ -856,14 +856,32 @@ export const sendOnchain = async (params) => {
     let bumpReserve = buildResult?.bumpReserve || 0;
     let parentVsize = buildResult?.parentVsize || 0;
 
-    // When hex is pre-built (custodial form submit), recalculate bump reserve
-    if (isBitcoin && p2aVout >= 0 && !buildResult) {
+    // When hex is pre-built, check if the fee rate is still acceptable
+    if (isBitcoin && !buildResult) {
+      const currentFees: any = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
+      const minAcceptable = currentFees.hourFee;
       const decoded = await node.decodeRawTransaction(hex);
-      parentVsize = decoded.vsize;
-      const fees: any = await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
-      const fastestFee = Math.ceil(fees.fastestFee * 1.5);
-      const userRate = parseFloat(feeRate) || fees.halfHourFee;
-      bumpReserve = calculateBumpReserve(userRate, fastestFee, parentVsize);
+      const originalRate = fee / decoded.vsize;
+
+      if (originalRate < minAcceptable) {
+        // Fee rate is stale — rebuild the tx from scratch
+        buildResult = await build(params);
+        hex = buildResult.hex;
+
+        ({ hex } = await node.signRawTransactionWithWallet(hex));
+        ({ txid } = await node.decodeRawTransaction(hex));
+
+        const r2 = await node.testMempoolAccept([hex]);
+        if (!r2[0].allowed) fail("rebuilt transaction rejected");
+
+        bumpReserve = buildResult.bumpReserve || 0;
+        parentVsize = buildResult.parentVsize || 0;
+        fee = buildResult.fee || 0;
+      } else {
+        // Original rate still acceptable — honor what was shown to the user
+        bumpReserve = Number(params.bumpReserve) || 0;
+        parentVsize = Number(params.parentVsize) || 0;
+      }
     }
 
     const p = await debit({
@@ -1059,7 +1077,7 @@ const buildNonCustodial = async ({ aid, amount, address, feeRate, subtract, user
 
   fees.hourFee = fees.halfHourFee;
   fees.halfHourFee = fees.fastestFee;
-  fees.fastestFee = Math.ceil(fees.fastestFee * 1.5);
+  fees.fastestFee = Math.max(Math.ceil(fees.fastestFee * 1.5), 4);
 
   if (!feeRate) feeRate = fees.halfHourFee;
 
@@ -1188,10 +1206,12 @@ export const build = async ({ aid, amount, address, feeRate, subtract, user }) =
       ? { fastestFee: 0.1, halfHourFee: 0.1, hourFee: 0.1 }
       : await fetch(`${api[type]}/fees/recommended`).then((r) => r.json());
 
+  const rawFastestFee = fees.fastestFee;
+
   if (isBitcoin) {
     fees.hourFee = fees.halfHourFee;
     fees.halfHourFee = fees.fastestFee;
-    fees.fastestFee = Math.ceil(fees.fastestFee * 1.5);
+    fees.fastestFee = Math.max(Math.ceil(fees.fastestFee * 1.5), 4);
   }
 
   if (!feeRate) {
@@ -1256,20 +1276,19 @@ export const build = async ({ aid, amount, address, feeRate, subtract, user }) =
   const covered = Math.min(creditBal, ourfee);
   ourfee -= covered;
 
-  if (subtract || amount + fee + ourfee + bumpReserve > balance) {
+  // Full balance withdrawal — skip reserve and P2A, nothing to refund to
+  const fullWithdrawal = subtract || amount + fee + ourfee + bumpReserve > balance;
+
+  if (fullWithdrawal) {
     subtract = true;
+    bumpReserve = 0;
+    feeRate = Math.max(rawFastestFee, 1);
 
-    if (isBitcoin && parentVsize === 0) {
-      parentVsize = 200;
-      bumpReserve = calculateBumpReserve(feeRate, fees.fastestFee, parentVsize);
+    if (amount <= fee + ourfee + dust) {
+      fail(`insufficient funds ⚡️${balance} of ⚡️${amount + fee + ourfee + dust}`);
     }
 
-    if (amount <= fee + ourfee + bumpReserve + dust) {
-      fail(`insufficient funds ⚡️${balance} of ⚡️${amount + fee + ourfee + bumpReserve + dust}`);
-    }
-
-    outs = [{ [address]: btc(amount - ourfee - bumpReserve) }];
-    if (p2aAddress) outs.push({ [p2aAddress]: btc(P2A_VALUE) });
+    outs = [{ [address]: btc(amount - ourfee) }];
 
     raw = await node.createRawTransaction([], outs, 0, replaceable);
     if (isBitcoin) raw = "03000000" + raw.substring(8);
