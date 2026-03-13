@@ -35,6 +35,7 @@ export default {
       if (event) return res.send(event);
 
       event = await get({ ids: [id] });
+      if (!event) return res.code(404).send("Not found");
       if (!full) return res.send(event);
 
       const parts = parseContent(event);
