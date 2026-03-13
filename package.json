@@ -11,7 +11,7 @@
     "format": "oxfmt ."
   },
   "dependencies": {
-    "@arkade-os/sdk": "0.3.13",
+    "@arkade-os/sdk": "0.4.6",
     "@asoltys/clightning-client": "^0.2.0",
     "@aws-sdk/client-ses": "^3.997.0",
     "@cashu/cashu-ts": "^2.9.0",

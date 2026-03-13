@@ -3,6 +3,7 @@ if (!globalThis.EventSource) globalThis.EventSource = EventSource as any;
 
 import config from "$config";
 import { SingleKey, Wallet, Ramps, RestArkProvider, VtxoManager } from "@arkade-os/sdk";
+import { ValkeyWalletRepository, ValkeyContractRepository } from "$lib/arkRepository";
 import { db } from "$lib/db";
 import { l, warn } from "$lib/logging";
 
@@ -21,7 +22,15 @@ const getWallet = async () => {
   const { arkPrivateKey, arkServerUrl, esploraUrl } = config.ark;
   const identity = SingleKey.fromHex(arkPrivateKey);
 
-  wallet = await Wallet.create({ identity, arkServerUrl, esploraUrl });
+  wallet = await Wallet.create({
+    identity,
+    arkServerUrl,
+    esploraUrl,
+    storage: {
+      walletRepository: new ValkeyWalletRepository(),
+      contractRepository: new ValkeyContractRepository(),
+    },
+  });
   return wallet;
 };
 
