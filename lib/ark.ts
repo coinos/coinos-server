@@ -28,7 +28,13 @@ const getWallet = async () => {
 let refreshing = false;
 let lastRefresh = 0;
 const REFRESH_COOLDOWN = 30_000;
-const failedBoardingOutpoints = new Set<string>();
+let failedBoardingOutpoints = new Set<string>();
+const FAILED_BOARDING_KEY = "ark:failedBoardingOutpoints";
+const loadFailedOutpoints = async () => {
+  const members = await db.sMembers(FAILED_BOARDING_KEY);
+  failedBoardingOutpoints = new Set(members);
+};
+loadFailedOutpoints();
 
 let recoveryFailures = 0;
 let renewalFailures = 0;
@@ -147,10 +153,14 @@ export const refreshArkWallet = async (force = false) => {
           l("ark onboarded boarding utxo:", utxo.value, "sats, txid:", txid);
           await logArkOp("onboard", { txid, amount: utxo.value, boardingTxid: utxo.txid, vout: utxo.vout });
           failedBoardingOutpoints.clear();
+          await db.del(FAILED_BOARDING_KEY);
           break;
         } catch (e: any) {
           const retriable = /not enough intent confirmations|timed out|signing_session/i.test(e.message);
-          if (!retriable) failedBoardingOutpoints.add(outpointKey(utxo));
+          if (!retriable) {
+            failedBoardingOutpoints.add(outpointKey(utxo));
+            await db.sAdd(FAILED_BOARDING_KEY, outpointKey(utxo));
+          }
           warn("ark onboard failed:", utxo.value, "sats:", e.message);
         }
       }

@@ -390,9 +390,9 @@ export const completePayment = async (inv, p, user) => {
           inv.forwarded = true;
           await s(`invoice:${inv.id}`, inv);
 
-          // Skip forward if destination belongs to the same user
+          // Skip forward if destination is the same account (not just same user)
           const destInv = await getInvoice(inv.forward).catch(() => null);
-          if (destInv?.uid === id) return;
+          if (destInv?.uid === id && destInv?.aid === aid) return;
 
           await pay({ amount: p.amount, to: inv.forward, user });
         } catch (e) {
@@ -762,6 +762,7 @@ export const sendOnchain = async (params) => {
 
       p.fee = fee;
       p.hex = hex;
+      (p as any).address = params.address;
       (p as any).bumpReserve = bumpReserve;
       (p as any).p2aVout = p2aVout;
       (p as any).parentVsize = parentVsize;
@@ -896,19 +897,22 @@ export const sendOnchain = async (params) => {
 
     p.fee = fee;
     p.hex = hex;
+    (p as any).address = params.address;
 
-    if (isBitcoin && bumpReserve > 0) {
-      (p as any).bumpReserve = bumpReserve;
-      (p as any).p2aVout = p2aVout;
-      (p as any).parentVsize = parentVsize;
+    if (isBitcoin) {
       p.confirmed = false;
+      if (bumpReserve > 0) {
+        (p as any).bumpReserve = bumpReserve;
+        (p as any).p2aVout = p2aVout;
+        (p as any).parentVsize = parentVsize;
+      }
     }
 
     await s(`payment:${p.id}`, p);
 
     await node.sendRawTransaction(hex);
 
-    if (isBitcoin && bumpReserve > 0) {
+    if (isBitcoin) {
       await db.sAdd("outgoing:unconfirmed", p.id);
     }
 

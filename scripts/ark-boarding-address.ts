@@ -1,8 +1,9 @@
 import config from "../config.ts";
 import { SingleKey, Wallet } from "@arkade-os/sdk";
 
-const { arkPrivateKey, arkServerUrl } = config.ark;
-const esploraUrl = process.argv[2] || config.ark.esploraUrl;
+const { arkPrivateKey} = config.ark;
+const arkServerUrl = "localhost:7070";
+const esploraUrl = "localhost:3000";
 const identity = SingleKey.fromHex(arkPrivateKey);
 const wallet = await Wallet.create({ identity, arkServerUrl, esploraUrl });
 
