@@ -51,35 +51,42 @@ export const refreshArkWallet = async (force = false) => {
     lastRefresh = now;
     const w = await getWallet();
     const balance = await w.getBalance();
+    const manager = new VtxoManager(w);
+    const provider = new RestArkProvider(config.ark.arkServerUrl);
+    const info = await provider.getInfo();
+    const dust = Number(info.dust);
+
+    const recoverableDisplay = balance.recoverable > dust ? balance.recoverable : 0;
     l(
       "ark wallet check — available:",
       balance.available,
       "recoverable:",
-      balance.recoverable,
+      recoverableDisplay,
       "boarding:",
       balance.boarding.confirmed,
       "pending:",
       balance.boarding.unconfirmed,
     );
 
-    const manager = new VtxoManager(w);
-    const provider = new RestArkProvider(config.ark.arkServerUrl);
-    const info = await provider.getInfo();
-
     // Recover swept/expired VTXOs (with backoff on repeated failures)
-    if (balance.recoverable > 0 && now >= recoverySkipUntil) {
+    const recoverableAboveDust = balance.recoverable > dust;
+    if (recoverableAboveDust && now >= recoverySkipUntil) {
       try {
         const txid = await withTimeout(manager.recoverVtxos(), 60_000, "ark recovery");
         l("ark recovered swept vtxos, txid:", txid);
         await logArkOp("recovery", { txid, amount: balance.recoverable });
         recoveryFailures = 0;
       } catch (e: any) {
-        recoveryFailures++;
-        if (recoveryFailures >= MAX_FAILURES_BEFORE_BACKOFF) {
-          recoverySkipUntil = Date.now() + BACKOFF_CYCLES * 60_000;
-          warn("ark vtxo recovery failed", recoveryFailures, "times, backing off 30m");
+        if (/no recoverable/i.test(e.message)) {
+          l("ark recovery: no recoverable vtxos above dust");
         } else {
-          warn("ark vtxo recovery failed:", e.message);
+          recoveryFailures++;
+          if (recoveryFailures >= MAX_FAILURES_BEFORE_BACKOFF) {
+            recoverySkipUntil = Date.now() + BACKOFF_CYCLES * 60_000;
+            warn("ark vtxo recovery failed", recoveryFailures, "times, backing off 30m");
+          } else {
+            warn("ark vtxo recovery failed:", e.message);
+          }
         }
       }
     }
@@ -123,6 +130,13 @@ export const refreshArkWallet = async (force = false) => {
         .filter((u: any) => !failedBoardingOutpoints.has(outpointKey(u)))
         .sort((a: any, b: any) => (b.status?.block_height || 0) - (a.status?.block_height || 0));
 
+      // Suppress SDK "Unknown event type" console.warn during onboard
+      const origWarn = console.warn;
+      console.warn = (...args: any[]) => {
+        if (typeof args[0] === "string" && args[0].includes("Unknown event type")) return;
+        origWarn.apply(console, args);
+      };
+
       for (const utxo of sorted) {
         try {
           const txid = await withTimeout(
@@ -140,6 +154,8 @@ export const refreshArkWallet = async (force = false) => {
           warn("ark onboard failed:", utxo.value, "sats:", e.message);
         }
       }
+
+      console.warn = origWarn;
     }
   } catch (e: any) {
     warn("ark wallet refresh failed:", e.message);
