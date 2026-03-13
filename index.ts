@@ -2,6 +2,7 @@ import config from "$config";
 import app from "$lib/app";
 import { sendArk } from "$lib/ark";
 import { admin, auth, optional } from "$lib/auth";
+import { getDelegateInfo, receiveDelegation } from "$lib/delegator";
 import { g, s } from "$lib/db";
 
 import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
@@ -125,6 +126,25 @@ app.get("/ark/address", payments.arkAddress);
 app.post("/ark/receive", auth, payments.arkReceive);
 app.post("/ark/sync", auth, payments.arkSync);
 app.post("/bitcoin/sync", auth, payments.bitcoinSync);
+
+app.get("/v1/delegator/info", async (c) => {
+  try {
+    const info = await getDelegateInfo();
+    return c.json(info);
+  } catch (e: any) {
+    return c.json(e.message, 500);
+  }
+});
+
+app.post("/v1/delegate", async (c) => {
+  try {
+    const body = await c.req.json();
+    await receiveDelegation(body);
+    return c.json({ ok: true });
+  } catch (e: any) {
+    return c.json(e.message, 500);
+  }
+});
 
 app.get("/square/connect", auth, square.connect);
 app.get("/square/auth", auth, square.auth);
