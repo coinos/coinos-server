@@ -1750,12 +1750,11 @@ const freezeCheck = async () => {
   await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));
   await s("bolt12:limit", Math.max(lnbalance - lnthreshold, 0));
 
-  try {
-    const arkBalance = await getArkBalance();
+  const arkBalance = getArkBalance();
+  if (arkBalance) {
     const arkthreshold = (await g("ark:threshold")) || 0;
+    await s("ark:available", arkBalance.available);
     await s("ark:limit", Math.max(arkBalance.available - arkthreshold, 0));
-  } catch (e) {
-    warn("freezeCheck ark balance failed:", e.message);
   }
 
   setTimeout(freezeCheck, 10000);

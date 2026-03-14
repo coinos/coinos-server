@@ -36,7 +36,7 @@ const getWallet = async () => {
 
 let refreshing = false;
 let lastRefresh = 0;
-const REFRESH_COOLDOWN = 30_000;
+const REFRESH_COOLDOWN = 300_000;
 let failedBoardingOutpoints = new Set<string>();
 const FAILED_BOARDING_KEY = "ark:failedBoardingOutpoints";
 const loadFailedOutpoints = async () => {
@@ -66,6 +66,7 @@ export const refreshArkWallet = async (force = false) => {
     lastRefresh = now;
     const w = await getWallet();
     const balance = await w.getBalance();
+    cachedArkBalance = balance;
     const manager = new VtxoManager(w);
     const provider = new RestArkProvider(config.ark.arkServerUrl);
     const info = await provider.getInfo();
@@ -184,8 +185,8 @@ export const refreshArkWallet = async (force = false) => {
 };
 
 // Initial check after 60s startup delay; retry every 60s to catch ark rounds
-setTimeout(refreshArkWallet, 60_000);
-setInterval(() => refreshArkWallet(), 60_000);
+setTimeout(refreshArkWallet, 300_000);
+setInterval(() => refreshArkWallet(), 300_000);
 
 
 export const sendArk = async (address: string, amount: number) => {
@@ -219,10 +220,9 @@ export const getArkAddress = async () => {
   return w.getAddress();
 };
 
-export const getArkBalance = async () => {
-  const w = await getWallet();
-  return w.getBalance();
-};
+let cachedArkBalance: any = null;
+
+export const getArkBalance = () => cachedArkBalance;
 
 export const verifyArkVtxo = async (hash: string) => {
   const { bech32m } = await import("@scure/base");
