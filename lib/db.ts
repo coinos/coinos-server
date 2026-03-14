@@ -100,7 +100,7 @@ async function dbReconnect() {
 
 async function archiveReconnect() {
   try {
-    await archive.connect();
+    if (!archive.isOpen) await archive.connect();
   } catch (err) {
     console.error("Failed to connect to Redis, retrying...", err);
     setTimeout(archiveReconnect, 5000); // Retry after 5 seconds
