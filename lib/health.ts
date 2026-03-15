@@ -37,7 +37,7 @@ async function checkLightningHealth(): Promise<boolean> {
   const startTime = Date.now();
 
   try {
-    l("health check: testing lightning connection...");
+    // l("health check: testing lightning connection...");
     const info = await withTimeout(ln.getinfo(), RPC_TIMEOUT, "getinfo");
 
     if (!info?.id) {
@@ -71,7 +71,7 @@ async function checkLightningHealth(): Promise<boolean> {
     }
 
     const duration = Date.now() - startTime;
-    l(`health check: passed in ${duration}ms, node: ${info.id.slice(0, 16)}...`);
+    // l(`health check: passed in ${duration}ms, node: ${info.id.slice(0, 16)}...`);
 
     return true;
   } catch (e: any) {
@@ -139,9 +139,9 @@ export async function runHealthCheck() {
 }
 
 export function startHealthCheck() {
-  l(
-    `health check: starting (interval=${HEALTH_CHECK_INTERVAL / 1000}s, timeout=${RPC_TIMEOUT / 1000}s, max_failures=${MAX_CONSECUTIVE_FAILURES})`,
-  );
+  // l(
+  //   `health check: starting (interval=${HEALTH_CHECK_INTERVAL / 1000}s, timeout=${RPC_TIMEOUT / 1000}s, max_failures=${MAX_CONSECUTIVE_FAILURES})`,
+  // );
   // Run first check after a delay to let the app initialize
   checkTimer = setTimeout(runHealthCheck, 30000);
 }

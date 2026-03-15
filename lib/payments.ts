@@ -309,7 +309,6 @@ export const completePayment = async (inv, p, user) => {
           };
         }
       } catch (e) {
-        console.log(e);
         withdrawal = { failed: true };
         warn(username, "autowithdraw failed", e.message);
       }
@@ -543,11 +542,12 @@ export const sendLightning = async ({
     payee = invoice_node_id;
   }
 
-  let minfee = 2;
+  const amt = amount_msat ? Math.round(amount_msat / 1000) : amount;
+  let minfee = Math.max(5, Math.round(amt * 0.005));
   const { channels } = await ln.listpeerchannels();
   if (channels.some((c) => c.peer_id === payee)) minfee = 0;
 
-  fee = Math.max(Number.parseInt(fee || 0), minfee);
+  fee = Math.max(Number.parseInt(fee) || minfee, minfee);
   if (fee < 0) fail("Fee cannot be negative");
 
   const { pays } = await ln.listpays(pr);
@@ -576,7 +576,8 @@ export const sendLightning = async ({
       // bolt11: pr.replace(/\s/g, "").toLowerCase(),
       amount_msat: amount_msat ? undefined : amount * 1000,
       maxfee: fee * 1000,
-      retry_for: 10,
+      retry_for: 30,
+      layers: ["prefer-kappa"],
     });
 
     try {

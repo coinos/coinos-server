@@ -118,6 +118,7 @@ app.register(fastifyProxy, {
   prefix: "/ws",
   rewritePrefix: "/ws",
   websocket: true,
+  disableRequestLogging: true,
 });
 
 app.register(fastifySecureSession, {

@@ -123,7 +123,7 @@ export default ln;
 
 // Dedicated proxy for long-polling (waitanyinvoice) — uses its own socket
 // so it doesn't block the main connection
-export const lnListen = lightningProxy(config.lightning);
+export const lnListen = lightningProxy(config.lightningListen || config.lightning);
 
 export const lnb = lightningProxy(config.lightningb);
 export { LightningUnavailableError };

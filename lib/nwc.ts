@@ -185,14 +185,6 @@ const handle = (method, params, ev, app, user) =>
       );
 
       if (!created) {
-        warn(
-          "old nwc token",
-          pubkey,
-          user?.username,
-          spent,
-          amount,
-          max_amount,
-        );
         return error({
           code: "UNAUTHORIZED",
           message: `This NWC connection is no longer valid please create a new one at https://coinos.io/settings/nostr`,
@@ -334,7 +326,7 @@ const handle = (method, params, ev, app, user) =>
 
     async make_invoice() {
       const { amount, description, description_hash, expiry } = params;
-      l("nwc make_invoice", user.username);
+      // l("nwc make_invoice", user.username);
 
       const invoice = {
         amount: Math.round(amount / 1000),

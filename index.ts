@@ -29,7 +29,7 @@ try {
   catchUp();
   nwc();
   check();
-  startHealthCheck();
+  // startHealthCheck();
 } catch (e) {
   console.log(e);
 }
