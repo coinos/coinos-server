@@ -9,14 +9,6 @@ import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
 import { l } from "$lib/logging";
 import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
-import {
-  hashPins,
-  migrateAccounts,
-  migrateAutowithdraw,
-  migrateBalancesToTB,
-  migrateFundsToTB,
-  migrateToMicrosats,
-} from "$lib/migrate";
 import nwc from "$lib/nwc";
 import { catchUp, check } from "$lib/payments";
 import { getFx } from "$lib/rates";
@@ -49,12 +41,6 @@ try {
   startHealthCheck();
   startZmq();
   catchUp();
-  migrateAccounts().then((n) => n && console.log(`Migrated ${n} accounts`));
-  migrateBalancesToTB().then((n) => n && console.log(`Migrated ${n} balances to TB`));
-  migrateToMicrosats().then((n) => n && console.log(`Migrated ${n} users to microsats`));
-  migrateAutowithdraw().then((n) => n && console.log(`Migrated autowithdraw to ${n} accounts`));
-  migrateFundsToTB().then((n) => n && console.log(`Migrated ${n} funds to TB`));
-  hashPins().then((n) => n && console.log(`Hashed ${n} user PINs`));
 } catch (e) {
   console.log(e);
 }
