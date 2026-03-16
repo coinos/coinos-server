@@ -87,5 +87,5 @@ export default ln;
 // so it doesn't block the main connection
 export const lnListen = lightningProxy(config.lightning);
 
-export const lnb = lightningProxy(config.lightningb);
+export const lnb = config.lightningb ? lightningProxy(config.lightningb) : ln;
 export { LightningUnavailableError };
