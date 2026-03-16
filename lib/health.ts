@@ -134,9 +134,6 @@ export async function runHealthCheck() {
 }
 
 export function startHealthCheck() {
-  l(
-    `health check: starting (interval=${HEALTH_CHECK_INTERVAL / 1000}s, timeout=${RPC_TIMEOUT / 1000}s, max_failures=${MAX_CONSECUTIVE_FAILURES})`,
-  );
   // Run first check after a delay to let the app initialize
   checkTimer = setTimeout(runHealthCheck, 30000);
 }

@@ -84,8 +84,6 @@ async function backfill(): Promise<void> {
     const oldest = Math.min(...events.map((e) => e.created_at));
     if (oldest <= threeWeeksAgo) break;
     until = oldest;
-
-    l(`mls backfill pass ${pass}: ${knownPubkeys.size} users, oldest ${new Date(oldest * 1000).toISOString()}`);
   }
 
   l(`mls backfill complete: ${knownPubkeys.size} users`);
@@ -110,7 +108,6 @@ export async function initMlsIndex(): Promise<void> {
   try {
     const existing = await db.hGetAll(MLS_KEY);
     for (const pk of Object.keys(existing)) knownPubkeys.add(pk);
-    l(`mls index loaded: ${knownPubkeys.size} users`);
   } catch {}
 
   // Subscribe for new key packages

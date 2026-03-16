@@ -226,31 +226,38 @@ const startSub = (url: string, topic: string, onMessage: (b: Uint8Array) => void
       buffer = concatBytes(buffer, d as Uint8Array) as any;
       processBuffer().catch((e) => err("zmq parse error", e.message));
     });
-    socket.on("error", (e) => {
+    socket.on("error", () => {
       if (closed) return;
       closed = true;
-      warn("zmq socket error", e.message);
       resolve();
     });
     socket.on("close", () => {
       if (closed) return;
       closed = true;
-      warn("zmq socket closed", url);
       resolve();
     });
   });
 
 export const startZmq = async () => {
   if (process.env.DISABLE_ZMQ === "1") return;
-  l("zmq connecting", RAWTX_URL, RAWBLOCK_URL);
 
   const retry = async (url: string, topic: string, handler: (b: Uint8Array) => Promise<void>) => {
-    let delay = 1000;
-    const maxDelay = 30000;
+    let delay = 5000;
+    const maxDelay = 60000;
+    let failing = false;
     while (true) {
-      await startSub(url, topic, (raw) =>
-        handler(raw).catch((e) => warn(`${topic} error`, e.message)),
-      );
+      await startSub(url, topic, (raw) => {
+        if (failing) {
+          l("zmq reconnected", topic, url);
+          failing = false;
+          delay = 5000;
+        }
+        handler(raw).catch((e) => warn(`${topic} error`, e.message));
+      });
+      if (!failing) {
+        warn("zmq disconnected, retrying", topic, url);
+        failing = true;
+      }
       await new Promise((r) => setTimeout(r, delay));
       delay = Math.min(maxDelay, Math.floor(delay * 1.5));
     }

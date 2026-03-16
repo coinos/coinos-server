@@ -101,7 +101,7 @@ const subscribeGroupRelay = (url: string) => {
         { onevent: handleGroupMessage },
       );
       groupRelaySubs.push(() => sub.close());
-      l(`listening for group messages on ${url}`);
+      // l(`listening for group messages on ${url}`);
     })
     .catch((e) => {
       warn(`group listener failed ${url}`, e.message);
@@ -130,7 +130,7 @@ const subscribeInviteRelay = (url: string) => {
       relay.subscribe([{ kinds: [1059], since: Math.floor(Date.now() / 1000) }], {
         onevent: handleInviteEvent,
       });
-      l(`listening for invites on ${url}`);
+      // l(`listening for invites on ${url}`);
     })
     .catch((e) => {
       warn(`invite listener failed ${url}`, e.message);
