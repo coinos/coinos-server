@@ -109,19 +109,30 @@ const resetAll = () => {
   seedUser(makeUser());
 };
 
-const makeRes = () => {
+const makeContext = (opts: { body?: any; user?: any } = {}) => {
   let sent: any;
-  return {
-    send: (data: any) => {
-      sent = data;
+  const ctx: any = {
+    req: {
+      json: async () => opts.body,
+      header: () => undefined,
+      path: "/test",
+      method: "POST",
+      query: () => ({}),
+      raw: { clone: () => ({ json: async () => opts.body }) },
     },
-    code: (_code: number) => ({
-      send: (data: any) => {
-        sent = data;
-      },
-    }),
+    get: (key: string) => {
+      if (key === "user") return opts.user;
+      return undefined;
+    },
+    set: () => {},
+    json: (data: any, _status?: number) => {
+      sent = data;
+      return new Response(JSON.stringify(data), { status: _status || 200 });
+    },
+    env: {},
     getSent: () => sent,
   };
+  return ctx;
 };
 
 // =====================================================================
@@ -234,14 +245,13 @@ describe("arkReceive", () => {
     const inv = makeInvoice({ aid: arkAccountId, forward: bolt11 });
     seedInvoice(inv);
 
-    const req = {
+    const ctx = makeContext({
       body: { iid: inv.id, amount: 1000, hash: "ark-txid-999" },
       user: makeUser(),
-    };
-    const res = makeRes();
+    });
 
-    await routes.arkReceive(req as any, res as any);
-    const sent = (res as any).getSent();
+    await routes.arkReceive(ctx);
+    const sent = ctx.getSent();
 
     // Response is the custodial credit record
     expect(sent).toBeTruthy();
@@ -265,14 +275,13 @@ describe("arkReceive", () => {
     const inv = makeInvoice({ aid: arkAccountId });
     seedInvoice(inv);
 
-    const req = {
+    const ctx = makeContext({
       body: { iid: inv.id, amount: 1000, hash: "ark-txid-888" },
       user: makeUser(),
-    };
-    const res = makeRes();
+    });
 
-    await routes.arkReceive(req as any, res as any);
-    const sent = (res as any).getSent();
+    await routes.arkReceive(ctx);
+    const sent = ctx.getSent();
 
     expect(sent).toBeTruthy();
     expect(sent.amount).toBe(1000);
@@ -292,14 +301,13 @@ describe("arkReceive", () => {
       throw new Error("no route");
     });
 
-    const req = {
+    const ctx = makeContext({
       body: { iid: inv.id, amount: 1000, hash: "ark-txid-777" },
       user: makeUser(),
-    };
-    const res = makeRes();
+    });
 
-    await routes.arkReceive(req as any, res as any);
-    const sent = (res as any).getSent();
+    await routes.arkReceive(ctx);
+    const sent = ctx.getSent();
 
     // Credit still lands in custodial even though forward failed
     expect(sent).toBeTruthy();
@@ -314,15 +322,14 @@ describe("arkReceive", () => {
     const inv = makeInvoice();
     seedInvoice(inv);
 
-    const req = {
+    const ctx = makeContext({
       body: { iid: inv.id, amount: 0, hash: "ark-txid-000" },
       user: makeUser(),
-    };
-    const res = makeRes();
+    });
 
-    await routes.arkReceive(req as any, res as any);
+    await routes.arkReceive(ctx);
     // Should error - check that send wasn't called with a valid payment
-    const sent = (res as any).getSent();
+    const sent = ctx.getSent();
     expect(sent).toBeDefined();
   });
 
@@ -330,14 +337,13 @@ describe("arkReceive", () => {
     const inv = makeInvoice({ uid: "other-user-id" });
     seedInvoice(inv);
 
-    const req = {
+    const ctx = makeContext({
       body: { iid: inv.id, amount: 1000, hash: "ark-txid-666" },
       user: makeUser(),
-    };
-    const res = makeRes();
+    });
 
-    await routes.arkReceive(req as any, res as any);
-    const sent = (res as any).getSent();
+    await routes.arkReceive(ctx);
+    const sent = ctx.getSent();
     expect(sent).toBeDefined();
   });
 });
@@ -350,7 +356,7 @@ describe("arkSync", () => {
   beforeEach(resetAll);
 
   test("records received VTXOs (positive amounts)", async () => {
-    const req = {
+    const ctx = makeContext({
       body: {
         aid: arkAccountId,
         transactions: [
@@ -358,19 +364,17 @@ describe("arkSync", () => {
         ],
       },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(1);
     expect(sent.received).toBe(9000);
     expect(store().listStore[`${arkAccountId}:payments`] ?? []).toHaveLength(1);
   });
 
-  test("records sent transactions (negative amounts)", async () => {
-    const req = {
+  test("skips sent transactions (negative amounts)", async () => {
+    const ctx = makeContext({
       body: {
         aid: arkAccountId,
         transactions: [
@@ -378,14 +382,12 @@ describe("arkSync", () => {
         ],
       },
       user: makeUser(),
-    };
-    const res = makeRes();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
-
-    expect(sent.synced).toBe(1);
-    expect((store().listStore[`${arkAccountId}:payments`] ?? []).length).toBe(1);
+    // Negative amounts are skipped — balance reconciliation handles losses
+    expect(sent.synced).toBe(0);
   });
 
   test("deduplicates known transactions", async () => {
@@ -397,17 +399,15 @@ describe("arkSync", () => {
       confirmed: false,
     });
 
-    const req = {
+    const ctx = makeContext({
       body: {
         aid: arkAccountId,
         transactions: [{ hash: "known-hash", amount: -1000, settled: true, createdAt: Date.now() }],
       },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(0);
     // Existing record should be updated to confirmed
@@ -425,6 +425,8 @@ describe("arkSync reconciliation", () => {
 
   test("creates expired debit when payment sum exceeds wallet balance", async () => {
     // Pre-seed two received payments totaling 7128
+    // Timestamps must be >120s old to pass hasRecentPayments guard
+    const oldTime = Date.now() - 200_000;
     const pay1 = {
       id: "pay-1",
       aid: arkAccountId,
@@ -435,7 +437,7 @@ describe("arkSync reconciliation", () => {
       uid: custodialUid,
       rate: 50000,
       currency: "USD",
-      created: Date.now() - 2000,
+      created: oldTime,
     };
     const pay2 = {
       id: "pay-2",
@@ -447,7 +449,7 @@ describe("arkSync reconciliation", () => {
       uid: custodialUid,
       rate: 50000,
       currency: "USD",
-      created: Date.now() - 1000,
+      created: oldTime,
     };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:pay-2`] = JSON.stringify(pay2);
@@ -456,18 +458,16 @@ describe("arkSync reconciliation", () => {
     store().listStore[`${arkAccountId}:payments`] = ["pay-2", "pay-1"];
 
     // Sync with no new transactions but balance=0 (VTXOs expired)
-    const req = {
+    const ctx = makeContext({
       body: {
         aid: arkAccountId,
         transactions: [],
         balance: 0,
       },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(1);
     expect(sent.payments).toHaveLength(1);
@@ -499,18 +499,16 @@ describe("arkSync reconciliation", () => {
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
 
-    const req = {
+    const ctx = makeContext({
       body: {
         aid: arkAccountId,
         transactions: [],
         balance: 5000,
       },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(0);
     expect(sent.payments).toHaveLength(0);
@@ -534,17 +532,15 @@ describe("arkSync reconciliation", () => {
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
 
-    const req = {
+    const ctx = makeContext({
       body: {
         aid: arkAccountId,
         transactions: [],
       },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(0);
     expect(sent.payments).toHaveLength(0);
@@ -552,6 +548,7 @@ describe("arkSync reconciliation", () => {
 
   test("is idempotent — second sync does not create duplicate", async () => {
     // Seed payment sum = 5000, balance = 0
+    const oldTime = Date.now() - 200_000;
     const pay1 = {
       id: "pay-1",
       aid: arkAccountId,
@@ -562,34 +559,37 @@ describe("arkSync reconciliation", () => {
       uid: custodialUid,
       rate: 50000,
       currency: "USD",
-      created: Date.now(),
+      created: oldTime,
     };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
 
-    const req = {
+    const ctx1 = makeContext({
       body: { aid: arkAccountId, transactions: [], balance: 0 },
       user: makeUser(),
-    };
+    });
 
     // First sync — should create reconciliation
-    const res1 = makeRes();
-    await routes.arkSync(req as any, res1 as any);
-    const sent1 = (res1 as any).getSent();
+    await routes.arkSync(ctx1);
+    const sent1 = ctx1.getSent();
     expect(sent1.synced).toBe(1);
     expect(sent1.payments[0].amount).toBe(-5000);
 
     // Second sync — sum is now 0, matches balance, no new reconciliation
-    const res2 = makeRes();
-    await routes.arkSync(req as any, res2 as any);
-    const sent2 = (res2 as any).getSent();
+    const ctx2 = makeContext({
+      body: { aid: arkAccountId, transactions: [], balance: 0 },
+      user: makeUser(),
+    });
+    await routes.arkSync(ctx2);
+    const sent2 = ctx2.getSent();
     expect(sent2.synced).toBe(0);
     expect(sent2.payments).toHaveLength(0);
   });
 
   test("reconciles partial expiry", async () => {
     // 10000 received, 3000 sent, sum = 7000. Actual balance = 2000 (5000 expired)
+    const oldTime = Date.now() - 200_000;
     const pay1 = {
       id: "pay-1",
       aid: arkAccountId,
@@ -600,7 +600,7 @@ describe("arkSync reconciliation", () => {
       uid: custodialUid,
       rate: 50000,
       currency: "USD",
-      created: Date.now(),
+      created: oldTime,
     };
     const pay2 = {
       id: "pay-2",
@@ -612,7 +612,7 @@ describe("arkSync reconciliation", () => {
       uid: custodialUid,
       rate: 50000,
       currency: "USD",
-      created: Date.now(),
+      created: oldTime,
     };
     store().kvStore[`payment:pay-1`] = JSON.stringify(pay1);
     store().kvStore[`payment:pay-2`] = JSON.stringify(pay2);
@@ -620,14 +620,12 @@ describe("arkSync reconciliation", () => {
     store().kvStore[`payment:${arkAccountId}:h2`] = JSON.stringify("pay-2");
     store().listStore[`${arkAccountId}:payments`] = ["pay-2", "pay-1"];
 
-    const req = {
+    const ctx = makeContext({
       body: { aid: arkAccountId, transactions: [], balance: 2000 },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(1);
     expect(sent.payments[0].amount).toBe(-5000);
@@ -652,14 +650,12 @@ describe("arkSync reconciliation", () => {
     store().kvStore[`payment:${arkAccountId}:h1`] = JSON.stringify("pay-1");
     store().listStore[`${arkAccountId}:payments`] = ["pay-1"];
 
-    const req = {
+    const ctx = makeContext({
       body: { aid: arkAccountId, transactions: [], balance: 5000 },
       user: makeUser(),
-    };
-    const res = makeRes();
-
-    await routes.arkSync(req as any, res as any);
-    const sent = (res as any).getSent();
+    });
+    await routes.arkSync(ctx);
+    const sent = ctx.getSent();
 
     expect(sent.synced).toBe(0);
     expect(sent.payments).toHaveLength(0);
@@ -687,13 +683,17 @@ describe("BOLT12 autowithdraw", () => {
         : { type: "bolt12 invoice", invoice_amount_msat: 980_000, invoice_node_id: "bolt12-payee" },
     );
 
-    const user = makeUser({
+    const user = makeUser();
+    seedUser(user);
+
+    const awAccount = {
+      id: "aw-account",
       autowithdraw: true,
       threshold: 500,
       reserve: 0,
       destination: bolt12Offer,
-    });
-    seedUser(user);
+    };
+    store().kvStore[`account:${awAccount.id}`] = JSON.stringify(awAccount);
 
     const inv = makeInvoice({ type: "lightning", amount: 1000 });
     const p = {
@@ -701,6 +701,7 @@ describe("BOLT12 autowithdraw", () => {
       confirmed: true,
       type: "lightning",
       uid: custodialUid,
+      aid: awAccount.id,
       created: Date.now(),
     };
 
@@ -752,13 +753,17 @@ describe("BOLT12 autowithdraw", () => {
   });
 
   test("regular ln invoice is NOT passed through fetchinvoice", async () => {
-    const user = makeUser({
+    const user = makeUser();
+    seedUser(user);
+
+    const awAccount = {
+      id: "aw-account",
       autowithdraw: true,
       threshold: 500,
       reserve: 0,
       destination: bolt11,
-    });
-    seedUser(user);
+    };
+    store().kvStore[`account:${awAccount.id}`] = JSON.stringify(awAccount);
 
     const inv = makeInvoice({ type: "lightning", amount: 1000 });
     const p = {
@@ -766,6 +771,7 @@ describe("BOLT12 autowithdraw", () => {
       confirmed: true,
       type: "lightning",
       uid: custodialUid,
+      aid: awAccount.id,
       created: Date.now(),
     };
 
@@ -800,13 +806,17 @@ describe("BOLT12 autowithdraw", () => {
       invoice: bolt12Invoice,
     }));
 
-    const user = makeUser({
+    const user = makeUser();
+    seedUser(user);
+
+    const awAccount = {
+      id: "aw-account",
       autowithdraw: true,
       threshold: 500,
       reserve: 0,
       destination: bolt12Offer,
-    });
-    seedUser(user);
+    };
+    store().kvStore[`account:${awAccount.id}`] = JSON.stringify(awAccount);
 
     const inv = makeInvoice({ type: "lightning", amount: 1000 });
     const p = {
@@ -814,6 +824,7 @@ describe("BOLT12 autowithdraw", () => {
       confirmed: true,
       type: "lightning",
       uid: custodialUid,
+      aid: awAccount.id,
       created: Date.now(),
     };
 

@@ -1,3 +1,5 @@
+process.env.URL ||= "http://localhost:3119";
+
 import { mock } from "bun:test";
 
 // This file is loaded before test files via bunfig.toml [test].preload
@@ -142,6 +144,17 @@ if (process.env.INTEGRATION) {
           kv()[k] = v;
           return true;
         },
+        incr: async (k: string) => {
+          const v = Number.parseInt(kv()[k] || "0") + 1;
+          kv()[k] = String(v);
+          return v;
+        },
+        ttl: async (k: string) => (kv()[k] !== undefined ? 300 : -2),
+        decrBy: async (k: string, n: number) => {
+          const v = Number.parseInt(kv()[k] || "0") - n;
+          kv()[k] = String(v);
+          return v;
+        },
         zScore: async () => null,
         zAdd: async () => 1,
         zCard: async () => 0,
@@ -162,6 +175,8 @@ if (process.env.INTEGRATION) {
       s,
       gf,
       ga: async () => null,
+      gfAll: async () => ({}),
+      scan: async function* (_pattern: string) {},
       archive: { lRange: async () => [] },
     };
   });
@@ -191,6 +206,13 @@ if (process.env.INTEGRATION) {
       nostr: "ws://localhost:7777",
       tigerbeetle: { cluster_id: 0n, replica_addresses: ["localhost:3000"] },
       vapid: { pk: "test", sk: "test" },
+      jwt: "test-jwt-secret",
+      publicRelay: "ws://localhost:7777",
+      relays: ["ws://localhost:7777"],
+      hostname: "localhost",
+      admin: "admin",
+      recaptcha: "",
+      ipregistry: undefined,
       support: "test@test.com",
       txWebhookSecret: "test",
     },
@@ -208,9 +230,18 @@ if (process.env.INTEGRATION) {
     tbSetPending: mock(async () => undefined),
     fundDebit: mock(async () => ({ err: null })),
     initTigerBeetle: mock(async () => {}),
+    createBalanceAccount: mock(async () => {}),
+    createCreditAccounts: mock(async () => {}),
+    getPending: mock(async () => 0),
+    getFundBalance: mock(async () => 0),
+    tbFundCredit: mock(async () => {}),
+    tbFundDebit: mock(async () => ({ err: null })),
   }));
 
   mock.module("$lib/ln", () => ({
+    LightningUnavailableError: class LightningUnavailableError extends Error {
+      constructor(msg: string) { super(msg); this.name = "LightningUnavailableError"; }
+    },
     default: {
       decode: mock(async () => ({ type: "bolt11", amount_msat: 1_000_000, payee: "test-payee" })),
       listpeerchannels: mock(async () => ({ channels: [] })),
@@ -226,6 +257,13 @@ if (process.env.INTEGRATION) {
     },
   }));
 
+  mock.module("pino", () => {
+    const noop = () => {};
+    const logger = { info: noop, warn: noop, error: noop, debug: noop, trace: noop, fatal: noop };
+    const pino: any = () => logger;
+    pino.destination = () => ({});
+    return { default: pino };
+  });
   mock.module("$lib/logging", () => ({ l: () => {}, warn: mock(() => {}), err: () => {} }));
   mock.module("$lib/notifications", () => ({ notify: () => {}, nwcNotify: () => {} }));
   mock.module("$lib/webhooks", () => ({ callWebhook: mock(() => {}) }));
@@ -256,6 +294,8 @@ if (process.env.INTEGRATION) {
   mock.module("$lib/nostr", () => ({
     handleZap: async () => {},
     publish: async () => {},
+    getNostrUser: async () => null,
+    getProfile: async () => null,
     serverPubkey: "m",
     serverPubkey2: "m",
     serverSecret: "m",
@@ -268,6 +308,10 @@ if (process.env.INTEGRATION) {
     getArkBalance: async () => 0,
     verifyArkVtxo: async () => true,
   }));
+  mock.module("$lib/bip353", () => ({
+    setupBip353: async () => {},
+    teardownBip353: async () => {},
+  }));
   mock.module("$lib/ecash", () => ({ request: async () => ({}) }));
   mock.module("$lib/lightning", () => ({
     replay: async () => ({}),
@@ -277,9 +321,37 @@ if (process.env.INTEGRATION) {
   mock.module("$lib/mail", () => ({ mail: async () => {}, templates: {} }));
   mock.module("$lib/auth", () => ({
     requirePin: async () => {},
-    auth: (_r: any, _s: any, n: any) => n(),
-    optional: (_r: any, _s: any, n: any) => n(),
-    admin: (_r: any, _s: any, n: any) => n(),
+    auth: async (c: any, next: any) => {
+      c.set("user", {
+        id: "00000000-0000-0000-0000-000000000001",
+        username: "authuser",
+        currency: "USD",
+        currencies: ["USD", "CAD"],
+        fiat: false,
+      });
+      await next();
+    },
+    optional: async (c: any, next: any) => {
+      c.set("user", {
+        id: "00000000-0000-0000-0000-000000000001",
+        username: "authuser",
+        currency: "USD",
+        currencies: ["USD", "CAD"],
+        fiat: false,
+      });
+      await next();
+    },
+    admin: async (c: any, next: any) => {
+      c.set("user", {
+        id: "00000000-0000-0000-0000-000000000001",
+        username: "authuser",
+        admin: true,
+        currency: "USD",
+        currencies: ["USD", "CAD"],
+        fiat: false,
+      });
+      await next();
+    },
   }));
   mock.module("$lib/invoices", () => ({
     generate: mock(async ({ invoice, user }: any) => ({
@@ -358,15 +430,24 @@ if (process.env.INTEGRATION) {
         }
       },
       getUser: async (username: string) => {
-        const raw = kv()[`user:${username}`];
-        return raw ? JSON.parse(raw) : null;
+        const k = username?.replace(/\s/g, "").toLowerCase();
+        const raw = kv()[`user:${k}`];
+        if (raw == null) return null;
+        let user: any;
+        try { user = JSON.parse(raw); } catch { user = raw; }
+        if (typeof user === "string") {
+          const raw2 = kv()[`user:${user}`];
+          if (raw2 == null) return null;
+          try { user = JSON.parse(raw2); } catch { user = raw2; }
+        }
+        return user;
       },
       getAccount: async () => null,
       link: (id: string) => `http://test/${id}`,
       sats: (n: number) => Math.round(n * SATS),
       sleep: async () => {},
       t: () => ({ insufficientFunds: "Insufficient funds" }),
-      bail: (res: any, msg: string) => res.code(500).send(msg),
+      bail: (c: any, msg: string) => c.json(msg, 500),
       bip21: () => "",
       fields: [],
       nada: () => {},

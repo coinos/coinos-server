@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun index.ts",
     "dev": "nodemon --exec bun index.ts",
+    "test": "bun test",
     "lint": "oxlint . && oxfmt --check .",
     "lint:fix": "oxlint --fix . && oxfmt .",
     "format": "oxfmt ."

@@ -83,6 +83,7 @@ beforeAll(async () => {
 describe("ark sync reconciliation", () => {
   test("syncs new transactions and creates payment records", async () => {
     const hash = `test-recv-${Date.now()}`;
+    const oldTime = Date.now() - 200_000;
     const result = await api("/ark/sync", token, {
       method: "POST",
       body: JSON.stringify({
@@ -93,7 +94,7 @@ describe("ark sync reconciliation", () => {
             commitmentTxid: null,
             amount: 10000,
             settled: true,
-            createdAt: Date.now(),
+            createdAt: oldTime,
           },
         ],
         balance: 10000,
@@ -115,7 +116,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [{ arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() }],
+        transactions: [{ arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() - 200_000 }],
         balance: 13000,
       }),
     });
@@ -125,7 +126,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [{ arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() }],
+        transactions: [{ arkTxid: hash, amount: 3000, settled: true, createdAt: Date.now() - 200_000 }],
         balance: 13000,
       }),
     });
@@ -177,7 +178,7 @@ describe("ark sync reconciliation", () => {
       method: "POST",
       body: JSON.stringify({
         aid: arkAccountId,
-        transactions: [{ arkTxid: hash, amount: 5000, settled: true, createdAt: Date.now() }],
+        transactions: [{ arkTxid: hash, amount: 5000, settled: true, createdAt: Date.now() - 200_000 }],
         balance: 5000,
       }),
     });

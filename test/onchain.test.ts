@@ -98,19 +98,30 @@ const resetAll = () => {
   seedUser(makeUser());
 };
 
-const makeRes = () => {
+const makeContext = (opts: { body?: any; user?: any } = {}) => {
   let sent: any;
-  return {
-    send: (data: any) => {
-      sent = data;
+  const ctx: any = {
+    req: {
+      json: async () => opts.body,
+      header: () => undefined,
+      path: "/test",
+      method: "POST",
+      query: () => ({}),
+      raw: { clone: () => ({ json: async () => opts.body }) },
     },
-    code: (_code: number) => ({
-      send: (data: any) => {
-        sent = data;
-      },
-    }),
+    get: (key: string) => {
+      if (key === "user") return opts.user;
+      return undefined;
+    },
+    set: () => {},
+    json: (data: any, _status?: number) => {
+      sent = data;
+      return new Response(JSON.stringify(data), { status: _status || 200 });
+    },
+    env: {},
     getSent: () => sent,
   };
+  return ctx;
 };
 
 // =====================================================================
@@ -325,13 +336,12 @@ describe("confirm (liquid)", () => {
   beforeEach(resetAll);
 
   test("ignores non-liquid types", async () => {
-    const req = {
+    const ctx = makeContext({
       body: { txid: "btctx100", wallet: "test", type: PaymentType.bitcoin },
-    };
-    const res = makeRes();
+    });
 
-    await routes.confirm(req as any, res as any);
-    expect((res as any).getSent()).toEqual({});
+    await routes.confirm(ctx);
+    expect(ctx.getSent()).toEqual({});
     expect(mockTbCredit).not.toHaveBeenCalled();
   });
 
@@ -354,13 +364,11 @@ describe("confirm (liquid)", () => {
       }),
     };
 
-    const req = {
+    const ctx = makeContext({
       body: { txid: "lqtx001", wallet: "test", type: PaymentType.liquid },
-    };
-    const res = makeRes();
-
-    await routes.confirm(req as any, res as any);
-    expect((res as any).getSent()).toEqual({});
+    });
+    await routes.confirm(ctx);
+    expect(ctx.getSent()).toEqual({});
 
     // Payment should be created via credit()
     const pid = JSON.parse(store().kvStore[`payment:lqtx001:0`]);
@@ -401,12 +409,10 @@ describe("confirm (liquid)", () => {
       }),
     };
 
-    const req = {
+    const ctx = makeContext({
       body: { txid: "lqtx002", wallet: "test", type: PaymentType.liquid },
-    };
-    const res = makeRes();
-
-    await routes.confirm(req as any, res as any);
+    });
+    await routes.confirm(ctx);
 
     // Payment confirmed
     const p = JSON.parse(store().kvStore[`payment:${pendingPayment.id}`]);
@@ -437,12 +443,10 @@ describe("confirm (liquid)", () => {
       }),
     };
 
-    const req = {
+    const ctx = makeContext({
       body: { txid: "lqtx003", wallet: "test", type: PaymentType.liquid },
-    };
-    const res = makeRes();
-
-    await routes.confirm(req as any, res as any);
+    });
+    await routes.confirm(ctx);
     expect(mockTbCredit).not.toHaveBeenCalled();
     expect(mockTbConfirm).not.toHaveBeenCalled();
   });
@@ -463,12 +467,10 @@ describe("confirm (liquid)", () => {
       }),
     };
 
-    const req = {
+    const ctx = makeContext({
       body: { txid: "lqtx004", wallet: "test", type: PaymentType.liquid },
-    };
-    const res = makeRes();
-
-    await routes.confirm(req as any, res as any);
+    });
+    await routes.confirm(ctx);
     expect(mockTbCredit).not.toHaveBeenCalled();
   });
 
@@ -494,12 +496,10 @@ describe("confirm (liquid)", () => {
       }),
     };
 
-    const req = {
+    const ctx = makeContext({
       body: { txid: "lqtx005", wallet: "test", type: PaymentType.liquid },
-    };
-    const res = makeRes();
-
-    await routes.confirm(req as any, res as any);
+    });
+    await routes.confirm(ctx);
     expect(mockTbCredit).not.toHaveBeenCalled();
   });
 
@@ -533,12 +533,10 @@ describe("confirm (liquid)", () => {
       }),
     };
 
-    const req = {
+    const ctx = makeContext({
       body: { txid: "lqtx006", wallet: "test", type: PaymentType.liquid },
-    };
-    const res = makeRes();
-
-    await routes.confirm(req as any, res as any);
+    });
+    await routes.confirm(ctx);
     expect(mockTbConfirm).not.toHaveBeenCalled();
   });
 });
