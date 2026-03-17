@@ -7,6 +7,12 @@ This repo is the API server. The frontend is at [coinos/coinos-ui](https://githu
 ## Getting Started
 
 ```bash
+bash <(curl -s https://raw.githubusercontent.com/coinos/coinos-server/staging/setup.sh)
+```
+
+Or clone and run manually:
+
+```bash
 git clone https://github.com/coinos/coinos-server.git
 cd coinos-server
 ./setup.sh

@@ -1,4 +1,17 @@
 services:
+  ui:
+    image: ghcr.io/coinos/base
+    container_name: ui
+    command: "bun run dev"
+    environment:
+      - NODE_ENV=development
+      - API_URL=http://app:3119
+    ports:
+      - '5173:5173'
+      - '24678:24678'
+    volumes:
+      - ../coinos-ui:/home/bun/app
+    restart: always
   app:
     image: ghcr.io/coinos/base
     container_name: app

@@ -36,6 +36,20 @@ warn()  { echo -e "  ${YELLOW}!${NC} $*"; }
 err()   { echo -e "  ${RED}✗${NC} $*"; }
 step()  { echo -e "\n${BOLD}${GREEN}▸ $*${NC}"; }
 
+# Bootstrap: if run via curl (not from inside the repo), clone first
+if [ ! -f "compose.yml.sample" ]; then
+  REPO_DIR="${COINOS_DIR:-$HOME/coinos-server}"
+  if [ ! -d "$REPO_DIR" ]; then
+    echo -e "  ${BLUE}•${NC} Cloning coinos-server..."
+    git clone https://github.com/coinos/coinos-server.git "$REPO_DIR"
+    cd "$REPO_DIR"
+    git checkout staging 2>/dev/null || true
+  else
+    cd "$REPO_DIR"
+  fi
+  exec bash "$REPO_DIR/setup.sh" "$@"
+fi
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
@@ -275,18 +289,38 @@ setup_network() {
 install_deps() {
   step "Installing application dependencies"
 
+  # Server deps
   if [ -d node_modules ] && [ -d node_modules/.cache ]; then
-    ok "node_modules exists (run 'bun i' manually to update)"
-    return
+    ok "Server node_modules exists"
+  else
+    info "Running bun install for server..."
+    docker run --rm \
+      -v "$DIR":/home/bun/app \
+      -w /home/bun/app \
+      ghcr.io/coinos/base bun i
+    ok "Server dependencies installed"
   fi
 
-  info "Running bun install (via Docker)..."
-  docker run --rm \
-    -v "$DIR":/home/bun/app \
-    -w /home/bun/app \
-    ghcr.io/coinos/base bun i
+  # UI deps
+  local ui_dir="$DIR/../coinos-ui"
+  if [ ! -d "$ui_dir" ]; then
+    info "Cloning coinos-ui..."
+    git clone https://github.com/coinos/coinos-ui.git "$ui_dir" 2>/dev/null || {
+      warn "Could not clone coinos-ui — skipping frontend setup"
+      return
+    }
+  fi
 
-  ok "Dependencies installed"
+  if [ -d "$ui_dir/node_modules" ]; then
+    ok "UI node_modules exists"
+  else
+    info "Running bun install for UI..."
+    docker run --rm \
+      -v "$ui_dir":/home/bun/app \
+      -w /home/bun/app \
+      ghcr.io/coinos/base bun i
+    ok "UI dependencies installed"
+  fi
 }
 
 # ── phase 7: pull images ────────────────────────────────────────────
