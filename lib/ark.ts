@@ -67,7 +67,7 @@ export const refreshArkWallet = async (force = false) => {
     const w = await getWallet();
     const balance = await w.getBalance();
     cachedArkBalance = balance;
-    const manager = new VtxoManager(w);
+    const manager = new VtxoManager(w, undefined, false);
     const provider = new RestArkProvider(config.ark.arkServerUrl);
     const info = await provider.getInfo();
     const dust = Number(info.dust);
@@ -114,7 +114,8 @@ export const refreshArkWallet = async (force = false) => {
       try {
         const allExpiring = await manager.getExpiringVtxos(RENEWAL_THRESHOLD_MS);
         const expiring = allExpiring.filter((v: any) => v.value > Number(info.dust));
-        if (expiring.length > 0) {
+        const allTotal = allExpiring.reduce((s: number, v: any) => s + v.value, 0);
+        if (expiring.length > 0 && allTotal > dust) {
           const expiringTotal = expiring.reduce((s: number, v: any) => s + v.value, 0);
           l("ark renewing", expiring.length, "expiring vtxos, total:", expiringTotal, "sats (skipped", allExpiring.length - expiring.length, "dust)");
           const txid = await withTimeout(manager.renewVtxos(), 60_000, "ark renewal");

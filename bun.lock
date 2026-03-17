@@ -5,7 +5,7 @@
     "": {
       "name": "coinos",
       "dependencies": {
-        "@arkade-os/sdk": "0.4.6",
+        "@arkade-os/sdk": "0.4.7",
         "@asoltys/clightning-client": "^0.2.0",
         "@aws-sdk/client-ses": "^3.997.0",
         "@cashu/cashu-ts": "^2.9.0",
@@ -81,7 +81,7 @@
 
     "@apimatic/schema": ["@apimatic/schema@0.7.21", "", { "dependencies": { "tslib": "^2.8.1" } }, "sha512-RCke4toXjA7fBRxQVa1GR+Lj9utVOEJ3voDI26dhk+bZuAac4UXPzkTEaIO3AIe/o8pcKCOkpNIzhzm57Cv2Qg=="],
 
-    "@arkade-os/sdk": ["@arkade-os/sdk@0.4.6", "", { "dependencies": { "@kukks/bitcoin-descriptors": "3.1.0", "@marcbachmann/cel-js": "7.3.1", "@noble/curves": "2.0.0", "@noble/secp256k1": "3.0.0", "@scure/base": "2.0.0", "@scure/bip32": "2.0.0", "@scure/bip39": "2.0.1", "@scure/btc-signer": "2.0.1", "bip68": "1.0.4" }, "peerDependencies": { "@react-native-async-storage/async-storage": ">=1.0.0", "expo": ">=54.0.0", "expo-background-task": "~1.0.10", "expo-sqlite": "~16.0.10", "expo-task-manager": "~14.0.9" }, "optionalPeers": ["@react-native-async-storage/async-storage", "expo", "expo-background-task", "expo-sqlite", "expo-task-manager"] }, "sha512-bbkuZpD9aPZkwde+F9VFidIm3MLBFdrjWpweew4M+S9CACVoaa6BqSl6aj9A0YVxG6y1oZ6LVitDS4W3veVG4A=="],
+    "@arkade-os/sdk": ["@arkade-os/sdk@0.4.7", "", { "dependencies": { "@kukks/bitcoin-descriptors": "3.1.0", "@marcbachmann/cel-js": "7.3.1", "@noble/curves": "2.0.0", "@noble/secp256k1": "3.0.0", "@scure/base": "2.0.0", "@scure/bip32": "2.0.0", "@scure/bip39": "2.0.1", "@scure/btc-signer": "2.0.1", "bip68": "1.0.4" }, "peerDependencies": { "@react-native-async-storage/async-storage": ">=1.0.0", "expo": ">=54.0.0", "expo-background-task": "~1.0.10", "expo-sqlite": "~16.0.10", "expo-task-manager": "~14.0.9" }, "optionalPeers": ["@react-native-async-storage/async-storage", "expo", "expo-background-task", "expo-sqlite", "expo-task-manager"] }, "sha512-T4C2wr6Tm43hT7I7gAFC5MC+FMeTXo0u31bbC17Km/OCb1qsLyCiO6c+NBFcJxFiKysxMEdGCoBNb+r8iWgV8Q=="],
 
     "@asoltys/clightning-client": ["@asoltys/clightning-client@0.2.0", "", { "dependencies": { "debug": "^4.1.1" } }, "sha512-CYbkyGoS0X1ha/YcFk3sTiI7aRHpPMnib/26WODucfJNrTbWl/9FJ4bpod9a6t9Jbv5OXCa0dYspcPK3kZ71pg=="],
 
