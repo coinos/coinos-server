@@ -305,7 +305,7 @@ install_deps() {
   local ui_dir="$DIR/../coinos-ui"
   if [ ! -d "$ui_dir" ]; then
     info "Cloning coinos-ui..."
-    git clone https://github.com/coinos/coinos-ui.git "$ui_dir" 2>/dev/null || {
+    git clone -b staging https://github.com/coinos/coinos-ui.git "$ui_dir" 2>/dev/null || {
       warn "Could not clone coinos-ui — skipping frontend setup"
       return
     }
