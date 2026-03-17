@@ -70,11 +70,11 @@ wait_for() {
   ok "$name"
 }
 
-bcli() { docker exec bc bitcoin-cli -regtest "$@"; }
-lcli() { docker exec lq elements-cli -chain=liquidregtest "$@"; }
-clcli()  { docker exec cl  lightning-cli --network=regtest "$@"; }
-clbcli() { docker exec clb lightning-cli --network=regtest "$@"; }
-clccli() { docker exec clc lightning-cli --network=regtest "$@"; }
+bcli() { docker exec -w / bc bitcoin-cli -regtest "$@"; }
+lcli() { docker exec -w / lq elements-cli -chain=liquidregtest "$@"; }
+clcli()  { docker exec -w / cl  lightning-cli --network=regtest "$@"; }
+clbcli() { docker exec -w / clb lightning-cli --network=regtest "$@"; }
+clccli() { docker exec -w / clc lightning-cli --network=regtest "$@"; }
 
 mine() {
   local n="${1:-1}"
@@ -348,7 +348,7 @@ start_services() {
 wait_for_services() {
   step "Waiting for services"
 
-  wait_for "Valkey"          "docker exec db valkey-cli ping"    30 2
+  wait_for "Valkey"          "docker exec -w / db valkey-cli ping"    30 2
   wait_for "Bitcoin Core"    "bcli getblockchaininfo"            30 2
   wait_for "Liquid"          "lcli getblockchaininfo"            30 2
   wait_for "Lightning (cl)"  "clcli getinfo"                     60 3
@@ -500,37 +500,37 @@ setup_ark() {
   # Arkd wallet needs initialization on first run
   # Wait for arkd admin port to be available
   wait_for "arkd admin" \
-    "docker exec arkd wget -qO- http://localhost:7071/v1/admin/wallet/status 2>/dev/null | grep -q initialized" 30 3 || {
+    "docker exec -w / arkd wget -qO- http://localhost:7071/v1/admin/wallet/status 2>/dev/null | grep -q initialized" 30 3 || {
     warn "arkd admin not available — skipping"
     return
   }
 
   local wallet_status
-  wallet_status=$(docker exec arkd wget -qO- http://localhost:7071/v1/admin/wallet/status 2>/dev/null) || true
+  wallet_status=$(docker exec -w / arkd wget -qO- http://localhost:7071/v1/admin/wallet/status 2>/dev/null) || true
   if echo "$wallet_status" | grep -q '"initialized":false'; then
     info "Initializing Ark wallet..."
     # Step 1: Get seed
     local seed
-    seed=$(docker exec arkd wget -qO- http://localhost:7071/v1/admin/wallet/seed 2>/dev/null \
+    seed=$(docker exec -w / arkd wget -qO- http://localhost:7071/v1/admin/wallet/seed 2>/dev/null \
       | grep -m1 -o '"seed":"[^"]*"' | cut -d'"' -f4) || true
     if [ -z "$seed" ]; then
       warn "Could not get Ark wallet seed"
       return
     fi
     # Step 2: Create wallet with seed + password
-    docker exec arkd sh -c "wget -qO- --header='Content-Type: application/json' \
+    docker exec -w / arkd sh -c "wget -qO- --header='Content-Type: application/json' \
       --post-data='{\"seed\":\"$seed\",\"password\":\"testpassword\"}' \
       http://localhost:7071/v1/admin/wallet/create" >/dev/null 2>&1 || true
     sleep 2
     # Step 3: Unlock
-    docker exec arkd sh -c "wget -qO- --header='Content-Type: application/json' \
+    docker exec -w / arkd sh -c "wget -qO- --header='Content-Type: application/json' \
       --post-data='{\"password\":\"testpassword\"}' \
       http://localhost:7071/v1/admin/wallet/unlock" >/dev/null 2>&1 || true
     sleep 3
     ok "Ark wallet initialized"
   elif echo "$wallet_status" | grep -q '"unlocked":false'; then
     info "Unlocking Ark wallet..."
-    docker exec arkd sh -c "wget -qO- --header='Content-Type: application/json' \
+    docker exec -w / arkd sh -c "wget -qO- --header='Content-Type: application/json' \
       --post-data='{\"password\":\"testpassword\"}' \
       http://localhost:7071/v1/admin/wallet/unlock" >/dev/null 2>&1 || true
     sleep 3
@@ -540,14 +540,14 @@ setup_ark() {
   fi
 
   # Wait for arkd API to become available (may take a few seconds after unlock)
-  wait_for "arkd API" "docker exec arkd wget -qO- http://localhost:7070/v1/info 2>/dev/null | grep -q signerPubkey" 30 3 || {
+  wait_for "arkd API" "docker exec -w / arkd wget -qO- http://localhost:7070/v1/info 2>/dev/null | grep -q signerPubkey" 30 3 || {
     warn "arkd API not available — skipping Ark funding"
     return
   }
 
   # Extract server pubkey
   local ark_info ark_pubkey
-  ark_info=$(docker exec arkd wget -qO- http://localhost:7070/v1/info 2>/dev/null) || true
+  ark_info=$(docker exec -w / arkd wget -qO- http://localhost:7070/v1/info 2>/dev/null) || true
 
   ark_pubkey=$(echo "$ark_info" | grep -m1 -o '"signerPubkey":"[^"]*"' | cut -d'"' -f4) || true
   if [ -z "$ark_pubkey" ]; then
@@ -564,7 +564,7 @@ setup_ark() {
 
   # Fund Ark wallet
   local boarding_addr ark_wallet_resp
-  ark_wallet_resp=$(docker exec arkd wget -qO- http://localhost:7071/v1/admin/wallet/address 2>/dev/null) || true
+  ark_wallet_resp=$(docker exec -w / arkd wget -qO- http://localhost:7071/v1/admin/wallet/address 2>/dev/null) || true
   boarding_addr=$(echo "$ark_wallet_resp" | grep -m1 -o '"address":"[^"]*"' | cut -d'"' -f4) || true
   if [ -z "$boarding_addr" ]; then
     boarding_addr=$(echo "$ark_wallet_resp" | grep -m1 -o '"address": "[^"]*"' | cut -d'"' -f4) || true
