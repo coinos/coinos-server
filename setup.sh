@@ -131,7 +131,7 @@ check_prereqs() {
   if [ "$avail_gb" -lt 2 ]; then
     warn "Only ${avail_gb}GB free disk space (recommend ≥2GB)"
   else
-    ok "${avail_gb}GB free disk space"
+    ok "≥2GB free disk space (${avail_gb}GB available)"
   fi
 }
 
