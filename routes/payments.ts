@@ -1,7 +1,7 @@
 import config from "$config";
 import api from "$lib/api";
 import { getArkAddress, sendArk, verifyArkVtxo } from "$lib/ark";
-import { requirePin } from "$lib/auth";
+import { requireAccountOwnership, requirePin } from "$lib/auth";
 import { archive, db, g, gf, gfAll, s } from "$lib/db";
 import { getTx } from "$lib/esplora";
 import { generate } from "$lib/invoices";
@@ -854,6 +854,7 @@ export default {
 
     try {
       await requirePin({ body, user });
+      await requireAccountOwnership(db, user.id, aid);
 
       l("ark send", user.username, address, amount);
       const tmpHash = v4();
@@ -915,6 +916,7 @@ export default {
       const body = await c.req.json();
       const user = c.get("user");
       const { hash, amount, aid } = body;
+      await requireAccountOwnership(db, user.id, aid);
       const { rate, currency } = await getUserRate(user);
 
       const p = await createArkPayment({
@@ -938,6 +940,7 @@ export default {
       const body = await c.req.json();
       const user = c.get("user");
       const { amount, hash, aid } = body;
+      await requireAccountOwnership(db, user.id, aid);
 
       if (amount <= 0) fail("Invalid amount");
       await acquireArkLock(hash);
@@ -1021,7 +1024,8 @@ export default {
       const body = await c.req.json();
       const { transactions = [], aid } = body;
       const { id: uid } = user;
-      // verbose arkSync logging removed to reduce noise
+
+      await requireAccountOwnership(db, uid, aid);
 
       const lockKey = `arksynclock:${aid}`;
       const gotLock = await db.set(lockKey, "1", { NX: true, EX: 30 });

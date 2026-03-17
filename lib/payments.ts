@@ -152,6 +152,12 @@ export const debit = async ({
 }) => {
   amount = Number.parseInt(amount);
 
+  // Defense-in-depth: verify account ownership at the debit level
+  if (aid && user && aid !== user.id) {
+    const index = await db.lPos(`${user.id}:accounts`, aid);
+    if (index === null) fail("unauthorized");
+  }
+
   const whitelisted = await db.sIsMember("whitelist", user?.username?.toLowerCase().trim());
 
   const blacklisted = await db.sIsMember("blacklist", user?.username?.toLowerCase().trim());
@@ -715,6 +721,8 @@ export const sendOnchain = async (params) => {
 
   // Non-custodial bitcoin account — use esplora
   if (aid !== user.id) {
+    const index = await db.lPos(`${user.id}:accounts`, aid);
+    if (index === null) fail("unauthorized");
     return sendNonCustodial(params);
   }
 

@@ -49,5 +49,12 @@ export const admin = async (c, next) => {
 };
 
 export const requirePin = async ({ body, user }) => {
-  if (!user || (user.pin && user.pin !== body.pin)) fail("Invalid pin");
+  if (!user) fail("Invalid pin");
+  if (user.pin && (!body?.pin || user.pin !== body.pin)) fail("Invalid pin");
+};
+
+export const requireAccountOwnership = async (db, uid, aid) => {
+  if (!aid || aid === uid) return;
+  const index = await db.lPos(`${uid}:accounts`, aid);
+  if (index === null) fail("unauthorized");
 };
