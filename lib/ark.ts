@@ -185,8 +185,10 @@ export const refreshArkWallet = async (force = false) => {
 };
 
 // Initial check after 60s startup delay; retry every 60s to catch ark rounds
-setTimeout(refreshArkWallet, 60_000);
-setInterval(() => refreshArkWallet(), 60_000);
+if (config.ark?.arkPrivateKey) {
+  setTimeout(refreshArkWallet, 60_000);
+  setInterval(() => refreshArkWallet(), 60_000);
+}
 
 
 export const sendArk = async (address: string, amount: number) => {

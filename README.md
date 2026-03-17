@@ -4,72 +4,87 @@ Coinos is a web-based bitcoin and nostr client. You can use it as a front end to
 
 This repository contains the code for the API server. The frontend code is at <a href="https://github.com/coinos/coinos-ui">https://github.com/coinos/coinos-ui</a>
 
-## Requirements
-
-- Make sure you have <a href="https://docs.docker.com/get-docker/">Docker</a> installed in your system..
-
-## Quick Install
-
-1. Start the Docker application.
-
-2. Run the start up script:
+## Quick Start (regtest)
 
 ```bash
-chmod +x setup.sh
+git clone https://github.com/coinos/coinos-server.git
+cd coinos-server
 ./setup.sh
 ```
 
-The above script will setup docker containers for the different components that Coinos needs to run.
+The setup script handles everything automatically:
 
-## Understanding Coinos:
+- Installs Docker if needed (Linux)
+- Downloads a pre-built regtest snapshot (~2MB) with wallets, blocks, and Lightning channels
+- Pulls container images (~500MB total, all sharing a common base)
+- Starts all services
 
-Coinos comprises of the folowing components:
+If the snapshot isn't available, it falls back to generating everything from scratch (wallets, blocks, channels). Use `./setup.sh --no-snapshot` to force this.
 
-- **The Coinos Server:** This is the main server implementation that setups and handles the API requests. Depends on the Bitcoin node, the Lightning node and the KeyDB database.
-- **[Bitcoin node](https://github.com/bitcoin/bitcoin):** This is the Bitcoin Core implementation that upholds the chains consensus rules.
-- **[Liquid Implementation](https://liquid.net/):** This is a Bitcoin layer-2 network that uses Bitcoin as its native asset and allows users to issue their own assets.
-- **[Core Lightning](https://docs.corelightning.org/docs/home):** This is also a Bitcoin layer-2 network that facilitates lightning fast Bitcoin payments via the Lightning Network protocol.
-- **[KeyDB](https://docs.keydb.dev/):** KeyDB is a high performance fork of Redis with a focus on multithreading, memory efficiency, and high throughput.
-- **[Nostr](https://nostr.com/):** Nostr is a simple, open protocol that enables global, decentralized, and censorship-resistant social media.
-- **[Cashu Nutshell](https://github.com/cashubtc/nutshell):** Nutshell is an Ecash wallet and mint for Bitcoin Lightning based on the Cashu protocol.
+After setup:
 
-A complete Coinos site utilizes all of the above components to support it's features. However,
-its important to note the most important ones: **Coinos Server**, **Bitcoin node**, **Core Lightning** and **KeyDB**. Without these,
-none of the Coinos features would work and the server would probably not start.
+| Service | URL |
+|---|---|
+| API server | http://localhost:3119 |
+| Esplora (block explorer) | http://localhost:3000 |
+| Nostr relay | ws://localhost:7777 |
 
-If you want to run thin, you can remove the other containers
-from the setup(You will get to see where to do this later).
+To start the frontend: `cd ~/coinos-ui && bun dev`
 
-### How Coinos Works
+## Requirements
 
-Running the startup script `./setup.sh` runs a few commands for you in the background. The commands are performed in this order:
+- Linux or macOS
+- [Docker](https://docs.docker.com/get-docker/) with the Compose plugin
+- ~2GB free disk space
 
-1. `cp config.ts.sample config.ts`:
+On Linux, the setup script installs Docker automatically. On macOS, install [Docker Desktop](https://docs.docker.com/desktop/install/mac-install/) first.
 
-A `config.ts` file is created and it's contents copied from the sample file `config.ts.sample`. This file holds the configuration options
-the various Coinos components discussed above.
+## Architecture
 
-2. `cp compose.yml.sample compose.yml`
+**Core services** (always running):
+- **Coinos Server** — Hono/Bun API server
+- **[Bitcoin Core](https://github.com/bitcoin/bitcoin)** — Bitcoin node (regtest)
+- **[Core Lightning](https://docs.corelightning.org/)** — Lightning Network (3 nodes for testing)
+- **[Valkey](https://valkey.io/)** — Redis-compatible database
+- **[TigerBeetle](https://tigerbeetle.com/)** — Double-entry accounting ledger
+- **[Liquid](https://liquid.net/)** — Bitcoin sidechain
+- **[strfry](https://github.com/hoytech/strfry)** — Nostr relay
+- **[Esplora](https://github.com/nicolgit/nigiri)** — Block explorer API (Chopsticks + Electrs)
+- **[Kvrocks](https://kvrocks.apache.org/)** — Archive cache
 
-A `compose.yml` file is created and it's contents copied from the sample file `compose.yml.sample`. This file conatins instructions
-on the various Docker containers required to start Coinos. You will also notice duplicate component containers with different names such as cl,clb and clc. These are meant to easen the testing and development process locally as you can simulate transactions and connections.
+**Optional** (commented out in `compose.yml`, uncomment to enable):
+- **[Ark](https://arkade.fun/)** — Off-chain UTXO protocol
+- **[Cashu Nutshell](https://github.com/cashubtc/nutshell)** — Ecash mint
 
-3. `cp -r sampledata data`
+All `asoltys/*` images share a common `coinos-base` layer, so Docker only downloads the base once.
 
-A folder `data` is created and it's contents copied from the `sampledata` folder. This directory contains various folders for the different components integrated by Coinos. This is where you will find specific configurations and settings for the different components such as Bitcoin and Lightning.
+## Useful Commands
 
-4. `docker compose up -d` and `docker run -it -v $(pwd):/home/bun/app --entrypoint bun asoltys/coinos-server i`
+```bash
+# Mine a block
+docker exec bc bitcoin-cli -regtest generatetoaddress 1 \
+  $(docker exec bc bitcoin-cli -regtest getnewaddress)
 
-Finally, the various Docker containers configured above are started and the Coinos server application is run. At this point, all containers should be running, otherwise it could indicate a problem with the previous tasks execution. You can check your container's status by running this command: `docker ps -a`.
+# Check Lightning node
+docker exec cl lightning-cli --network=regtest getinfo
 
-5. `docker exec -it bc bitcoin-cli createwallet coinos` and `docker exec -it bc bitcoin-cli rescanblockchain`
+# View logs
+docker compose logs -f app
 
-Bitcoin needs a wallet and to be synced to the blockchain to work. The startup script creates a Bitcoin wallet and rescans the blockchain to update it's state. By default, the chain is set to `regtest` so we also generate a few blocks and an address to get going.
+# Restart a service
+docker compose restart app
 
-6. `docker exec -it lq elements-cli createwallet coinos`
+# Stop everything
+docker compose down
 
-Liquid requires a wallet also, thus we generate one for it.
+# Regenerate the regtest snapshot (maintainers)
+./setup.sh snapshot
+```
 
-Basically, the startup script automates tasks you would have done manually and easen the process. You can also add your own custom commands that you would like executed when starting up.
+## Configuration
 
-### Tips
+- `config.ts` — App config (generated from `config.ts.sample`)
+- `compose.yml` — Docker Compose services (generated from `compose.yml.sample`)
+- `data/` — Runtime data for all services
+
+To reset: `rm -rf data config.ts compose.yml` and re-run `./setup.sh`.

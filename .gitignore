@@ -21,3 +21,4 @@ printer
 failedlogins.txt
 .claude
 req*
+regtest-data.tar.gz
