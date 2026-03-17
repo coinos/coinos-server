@@ -54,8 +54,6 @@ export default {
       } else {
         bail(res, "failed captcha");
       }
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
   },
 };

@@ -123,7 +123,6 @@ export const nwcNotify = async (p) => {
       }
     }
   } catch (e) {
-    console.log(e);
     warn("nwc notification failed", e.message);
   }
 };

@@ -193,7 +193,6 @@ export default {
       if (p?.type === PaymentType.fund) p.with = await getUser(p.uid, fields);
       res.send(p);
     } catch (e) {
-      console.log(e);
       err("failed to get payment", e.message);
       bail(res, e.message);
     }
@@ -236,7 +235,6 @@ export default {
 
       res.send({ alias, amount, ourfee });
     } catch (e) {
-      console.log(e);
       err("problem parsing", e.message);
       bail(res, e.message);
     }
@@ -515,7 +513,6 @@ export default {
       }
       res.send({});
     } catch (e) {
-      console.log(e);
       warn(`problem processing ${txid}`);
       bail(res, e.message);
     }
@@ -563,7 +560,6 @@ export default {
       await s("freeze", true);
       res.send("ok");
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -627,7 +623,6 @@ export default {
 
       res.send(p);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },

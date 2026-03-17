@@ -79,7 +79,6 @@ export async function listenForLightning() {
         payment_hash,
       });
     } catch (e) {
-      console.log(e);
       err("problem receiving lightning payment", e.message);
     }
   } catch (e: any) {
@@ -164,7 +163,6 @@ export async function replay(index) {
 
     return p;
   } catch (e) {
-    console.log(e);
     err("problem receiving lightning payment", e.message);
   }
 }

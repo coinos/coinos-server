@@ -38,7 +38,6 @@ const connect = async () => {
       s("rates", rates);
       last = Date.now();
     } catch (e) {
-      console.log(e);
       err("binance message error", e.message);
     }
   };

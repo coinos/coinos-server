@@ -108,7 +108,6 @@ export default {
 
       res.send(event);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -159,7 +158,6 @@ export default {
 
       res.send(thread);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -199,7 +197,6 @@ export default {
 
       res.send(zaps.filter((z) => z.amount > 0));
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -218,7 +215,6 @@ export default {
 
       res.send({});
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -245,7 +241,6 @@ export default {
 
       res.send(events);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -320,7 +315,6 @@ export default {
 
       res.send(followers);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -331,7 +325,6 @@ export default {
       // res.send({ followers: 0, follows: 0 });
       res.send(await getCount(pubkey));
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -380,9 +373,7 @@ export default {
       });
 
       res.send(event);
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
   },
 
   async zap(req, res) {
@@ -400,7 +391,6 @@ export default {
 
       res.send(json);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },

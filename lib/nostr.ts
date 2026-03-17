@@ -185,9 +185,7 @@ export const getCount = async (pubkey) => {
     }
 
     return { follows, followers };
-  } catch (e) {
-    console.log(e);
-  }
+  } catch (e) {}
 };
 
 export const getNostrUser = async (key) => {

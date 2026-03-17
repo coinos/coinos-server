@@ -230,7 +230,6 @@ export default {
       l("enabled 2fa", username);
       res.send({});
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -369,7 +368,6 @@ export default {
       emit(user.id, "user", user);
       res.send({ user });
     } catch (e) {
-      console.log(e);
       warn("failed to update", user.username, e.message);
       bail(res, e.message);
     }
@@ -440,7 +438,6 @@ export default {
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
-      console.log(e);
       err("login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }
@@ -501,7 +498,6 @@ export default {
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
-      console.log(e);
       err("nostr login error", e.message, req.socket.remoteAddress);
       res.code(401).send({});
     }
@@ -524,7 +520,6 @@ export default {
       await db.sAdd(`${id}:subscriptions`, JSON.stringify(subscription));
       res.send(subscription);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -536,7 +531,6 @@ export default {
       await db.sRem(`${id}:subscriptions`, JSON.stringify(subscription));
       res.send(subscription);
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -850,7 +844,6 @@ export default {
 
       res.send(accounts.reverse());
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -911,7 +904,6 @@ export default {
 
       res.send({ ok: true });
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -1019,7 +1011,6 @@ export default {
 
       res.send({});
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },
@@ -1038,7 +1029,6 @@ export default {
       await db.del(`app:${pubkey}`);
       res.send({});
     } catch (e) {
-      console.log(e);
       bail(res, e.message);
     }
   },

@@ -54,9 +54,7 @@ export default {
       await s(`${user.id}:square`, result);
       await s(result.merchantId, user.id);
       res.send({});
-    } catch (e) {
-      console.log(e);
-    }
+    } catch (e) {}
   },
 
   async payment(req, res) {

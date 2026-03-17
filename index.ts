@@ -30,9 +30,7 @@ try {
   nwc();
   check();
   // startHealthCheck();
-} catch (e) {
-  console.log(e);
-}
+} catch (e) {}
 
 setTimeout(listenForLightning, 2000);
 setInterval(sendHeartbeat, 2000);
@@ -202,6 +200,6 @@ const port: number = Number.parseInt(process.env["PORT"]) || 3119;
 
 app.listen({ host, port });
 
-const logerr = (e: Error) => console.log(e);
+const logerr = (e: Error) => {};
 process.on("unhandledRejection", logerr);
 process.on("uncaughtException", logerr);

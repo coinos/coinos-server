@@ -55,8 +55,7 @@ export const getLocations = async () => {
     await s("locations", dedup(locations));
     await s("locations:since", `${new Date().toISOString().split(".")[0]}Z`);
   } catch (e) {
-    console.log(e);
-    err("problem fetching locations", e);
+    err("problem fetching locations", e.message);
   }
 
   setTimeout(getLocations, 60000);

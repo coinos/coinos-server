@@ -196,7 +196,6 @@ export const parseContent = ({
 
         return [`nostr:${type}`, bech32, { ...value, entity }];
       } catch (e) {
-        console.log(e);
         // pass
       }
     }

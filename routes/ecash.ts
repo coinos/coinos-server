@@ -163,7 +163,6 @@ export default {
 
       res.send({ id });
     } catch (e) {
-      console.log(e);
       err(e.message);
       bail(res, e.message);
     }
