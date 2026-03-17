@@ -28,7 +28,7 @@ services:
       - ./data/bitcoin:/home/bitcoin/.bitcoin
     restart: always
   lq:
-    image: ghcr.io/coinos/elements:23.2.4
+    image: ghcr.io/coinos/elements:23.3.2
     container_name: lq
     volumes:
       - ./data/liquid:/home/elements/.elements

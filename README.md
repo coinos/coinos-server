@@ -1,10 +1,10 @@
 # Coinos
 
-Coinos is a web-based bitcoin and nostr client. You can use it as a front end to your personal bitcoin and lightning nodes or host a public instance that allows anyone to register with a username and password. Try ours at https://coinos.io
+A bitcoin web wallet with built-in support for Lightning, Liquid, Nostr, and Ark. Run it as a personal wallet on top of your own node, or deploy a public instance like [coinos.io](https://coinos.io).
 
-This repository contains the code for the API server. The frontend code is at <a href="https://github.com/coinos/coinos-ui">https://github.com/coinos/coinos-ui</a>
+This repo is the API server. The frontend is at [coinos/coinos-ui](https://github.com/coinos/coinos-ui).
 
-## Quick Start (regtest)
+## Getting Started
 
 ```bash
 git clone https://github.com/coinos/coinos-server.git
@@ -12,79 +12,108 @@ cd coinos-server
 ./setup.sh
 ```
 
-The setup script handles everything automatically:
+That's it. The script installs Docker if needed, downloads a pre-built regtest snapshot with funded wallets and Lightning channels, pulls ~500MB of container images, and starts everything. Takes a few minutes on first run.
 
-- Installs Docker if needed (Linux)
-- Downloads a pre-built regtest snapshot (~2MB) with wallets, blocks, and Lightning channels
-- Pulls container images (~500MB total, all sharing a common base)
-- Starts all services
+```
+API server     http://localhost:3119
+Block explorer http://localhost:3000
+Nostr relay    ws://localhost:7777
+```
 
-If the snapshot isn't available, it falls back to generating everything from scratch (wallets, blocks, channels). Use `./setup.sh --no-snapshot` to force this.
+Start the frontend in a separate terminal:
 
-After setup:
+```bash
+cd ~/coinos-ui && bun dev
+```
 
-| Service | URL |
-|---|---|
-| API server | http://localhost:3119 |
-| Esplora (block explorer) | http://localhost:3000 |
-| Nostr relay | ws://localhost:7777 |
+### Requirements
 
-To start the frontend: `cd ~/coinos-ui && bun dev`
+- Linux or macOS (Docker auto-installed on Linux; install [Docker Desktop](https://docs.docker.com/desktop/install/mac-install/) on macOS)
+- ~2GB disk space
 
-## Requirements
+## How It Works
 
-- Linux or macOS
-- [Docker](https://docs.docker.com/get-docker/) with the Compose plugin
-- ~2GB free disk space
+The server runs as a set of Docker containers orchestrated by `compose.yml`:
 
-On Linux, the setup script installs Docker automatically. On macOS, install [Docker Desktop](https://docs.docker.com/desktop/install/mac-install/) first.
+| Container | Image | What it does |
+|-----------|-------|-------------|
+| **app** | coinos-base | API server (Hono/Bun), bind-mounted from this repo |
+| **bc** | bitcoin:30.2 | Bitcoin Core (regtest) |
+| **lq** | elements:23.3.2 | Liquid sidechain |
+| **cl, clb, clc** | lightningd:v25.12.1 | Core Lightning nodes (3 for testing) |
+| **db** | valkey:8.0-alpine | User data (Redis-compatible) |
+| **tb** | tigerbeetle | Double-entry accounting ledger |
+| **sf** | strsrv | Nostr relay (strfry) |
+| **cs** | chopsticks | Block explorer API |
+| **eb** | electrs | Electrum server |
+| **arc** | kvrocks | Archive cache (RocksDB-backed) |
 
-## Architecture
+All `ghcr.io/coinos/*` images share a common base layer (~196MB downloaded once).
 
-**Core services** (always running):
-- **Coinos Server** — Hono/Bun API server
-- **[Bitcoin Core](https://github.com/bitcoin/bitcoin)** — Bitcoin node (regtest)
-- **[Core Lightning](https://docs.corelightning.org/)** — Lightning Network (3 nodes for testing)
-- **[Valkey](https://valkey.io/)** — Redis-compatible database
-- **[TigerBeetle](https://tigerbeetle.com/)** — Double-entry accounting ledger
-- **[Liquid](https://liquid.net/)** — Bitcoin sidechain
-- **[strfry](https://github.com/hoytech/strfry)** — Nostr relay
-- **[Esplora](https://github.com/nicolgit/nigiri)** — Block explorer API (Chopsticks + Electrs)
-- **[Kvrocks](https://kvrocks.apache.org/)** — Archive cache
+### Optional Services
 
-**Optional** (commented out in `compose.yml`, uncomment to enable):
-- **[Ark](https://arkade.fun/)** — Off-chain UTXO protocol
-- **[Cashu Nutshell](https://github.com/cashubtc/nutshell)** — Ecash mint
+Uncomment in `compose.yml` to enable:
 
-All `asoltys/*` images share a common `coinos-base` layer, so Docker only downloads the base once.
+- **Ark** (arkd, arkd-wallet, nbxplorer) — off-chain UTXO protocol
+- **Cashu** (nutshell) — ecash mint backed by Lightning
 
-## Useful Commands
+## Development
 
 ```bash
 # Mine a block
 docker exec bc bitcoin-cli -regtest generatetoaddress 1 \
   $(docker exec bc bitcoin-cli -regtest getnewaddress)
 
-# Check Lightning node
+# Lightning CLI
 docker exec cl lightning-cli --network=regtest getinfo
+docker exec cl lightning-cli --network=regtest listpeerchannels
 
-# View logs
+# Logs
 docker compose logs -f app
 
 # Restart a service
 docker compose restart app
 
-# Stop everything
+# Stop / start
 docker compose down
-
-# Regenerate the regtest snapshot (maintainers)
-./setup.sh snapshot
+docker compose up -d
 ```
 
-## Configuration
+### Project Structure
 
-- `config.ts` — App config (generated from `config.ts.sample`)
-- `compose.yml` — Docker Compose services (generated from `compose.yml.sample`)
-- `data/` — Runtime data for all services
+```
+config.ts           App configuration (from config.ts.sample)
+compose.yml         Docker services (from compose.yml.sample)
+data/               Runtime data for all services (gitignored)
+lib/                Core libraries (payments, lightning, ark, etc.)
+routes/             HTTP route handlers
+setup.sh            One-command dev environment setup
+sampledata/         Default configs copied to data/ on first run
+```
 
-To reset: `rm -rf data config.ts compose.yml` and re-run `./setup.sh`.
+### Reset
+
+```bash
+rm -rf data config.ts compose.yml
+./setup.sh
+```
+
+### Rebuild from Scratch
+
+To skip the snapshot and generate wallets/blocks/channels manually:
+
+```bash
+./setup.sh --no-snapshot
+```
+
+## Contributing
+
+1. Fork and clone
+2. Run `./setup.sh`
+3. Make changes — the app container bind-mounts this directory, so edits are live
+4. `bun test` to run tests
+5. Open a PR
+
+## License
+
+MIT
