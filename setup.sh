@@ -133,11 +133,23 @@ setup_config() {
     ok "config.ts exists"
   fi
 
-  if [ ! -f compose.yml ]; then
-    cp compose.yml.sample compose.yml
-    ok "Created compose.yml"
+  if [ -f compose.yml ]; then
+    if ! diff -q compose.yml compose.yml.sample >/dev/null 2>&1; then
+      warn "compose.yml differs from compose.yml.sample"
+      read -rp "  Overwrite compose.yml with compose.yml.sample? [Y/n] " answer
+      if [ "${answer,,}" != "n" ]; then
+        cp compose.yml compose.yml.bak
+        cp compose.yml.sample compose.yml
+        ok "compose.yml updated (old saved as compose.yml.bak)"
+      else
+        ok "compose.yml kept as-is"
+      fi
+    else
+      ok "compose.yml"
+    fi
   else
-    ok "compose.yml exists"
+    cp compose.yml.sample compose.yml
+    ok "compose.yml"
   fi
 }
 
