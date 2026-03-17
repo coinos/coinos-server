@@ -311,6 +311,11 @@ install_deps() {
     }
   fi
 
+  if [ ! -f "$ui_dir/.env" ] && [ -f "$ui_dir/.env.sample" ]; then
+    cp "$ui_dir/.env.sample" "$ui_dir/.env"
+    ok "Created UI .env"
+  fi
+
   if [ -d "$ui_dir/node_modules" ]; then
     ok "UI node_modules exists"
   else
