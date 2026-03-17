@@ -513,7 +513,7 @@ export const sendKeysend = async ({
       extratlvs,
     });
   } catch (e) {
-    reverse(p);
+    try { await reverse(p); } catch (_) {}
     throw e;
   }
 };
@@ -587,7 +587,7 @@ export const sendLightning = async ({
     }
   } catch (e) {
     err("failed to pay", pr.substr(-8));
-    reverse(p);
+    try { await reverse(p); } catch (_) {}
     throw e;
   }
 
