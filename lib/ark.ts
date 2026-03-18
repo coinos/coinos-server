@@ -73,16 +73,19 @@ export const refreshArkWallet = async (force = false) => {
     const dust = Number(info.dust);
 
     const recoverableDisplay = balance.recoverable > dust ? balance.recoverable : 0;
-    l(
-      "ark wallet check — available:",
-      balance.available,
-      "recoverable:",
-      recoverableDisplay,
-      "boarding:",
-      balance.boarding.confirmed,
-      "pending:",
-      balance.boarding.unconfirmed,
-    );
+
+    if (balance.available === 0 || recoverableDisplay > 0 || balance.boarding.unconfirmed > 0) {
+      l(
+        "ark wallet check — available:",
+        balance.available,
+        "recoverable:",
+        recoverableDisplay,
+        "boarding:",
+        balance.boarding.confirmed,
+        "pending:",
+        balance.boarding.unconfirmed,
+      );
+    }
 
     // Recover swept/expired VTXOs (with backoff on repeated failures)
     const recoverableAboveDust = balance.recoverable > dust;
