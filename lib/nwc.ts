@@ -42,6 +42,11 @@ const nwcEventMaxAgeSeconds = 5 * 60;
 const handledKey = "handled:nwc";
 const handledMaxSize = 200000;
 
+// Per-pubkey rate limiting for NWC requests
+const nwcRateLimit = 5; // max requests per minute per pubkey
+const nwcRateWindow = 60 * 1000; // 1 minute in ms
+const nwcRequestTimes: Map<string, number[]> = new Map();
+
 export default () => {
   let r: any;
 
@@ -50,7 +55,7 @@ export default () => {
 
     r.on("open", async (_) => {
       l("nwc connected to strfry");
-      r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2] });
+      r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2], since: Math.floor(Date.now() / 1000) - nwcEventMaxAgeSeconds });
       const info = await finalizeEvent(
         {
           created_at: Math.floor(Date.now() / 1000),
@@ -93,6 +98,14 @@ export default () => {
       const now = Math.floor(Date.now() / 1000);
       if (ev.created_at && now - ev.created_at > nwcEventMaxAgeSeconds) return;
       if (await db.zScore(handledKey, ev.id)) return;
+
+      // Per-pubkey rate limiting
+      const times = nwcRequestTimes.get(ev.pubkey) || [];
+      const cutoff = Date.now() - nwcRateWindow;
+      const recent = times.filter((t) => t > cutoff);
+      if (recent.length >= nwcRateLimit) return;
+      recent.push(Date.now());
+      nwcRequestTimes.set(ev.pubkey, recent);
 
       db.zAdd(handledKey, { score: now, value: ev.id });
       db.zRemRangeByScore(handledKey, 0, now - nwcEventMaxAgeSeconds);

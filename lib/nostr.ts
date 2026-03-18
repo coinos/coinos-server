@@ -10,7 +10,6 @@ import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
 
 export const EX = 60 * 60 * 24;
-const coinos = await Relay.connect(config.nostr);
 
 export const serverSecret = bytesToHex(
   nip19.decode(config.nostrKey).data as Uint8Array,
@@ -234,7 +233,6 @@ export const q = async (f) => {
     pool.subscribeMany(["wss://relay.primal.net"], [f], {
       onevent(e) {
         r.push(e);
-        coinos.publish(e);
       },
       oneose() {
         resolve(r);
