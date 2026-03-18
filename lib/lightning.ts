@@ -21,7 +21,7 @@ export async function listenForLightning() {
 
   try {
     const payIndex = (await g("pay_index")) || 0;
-    l(`lightning listener: waiting for invoice (pay_index=${payIndex})`);
+    // l(`lightning listener: waiting for invoice (pay_index=${payIndex})`);
 
     const inv = await lnListen.waitanyinvoice(payIndex);
     const {

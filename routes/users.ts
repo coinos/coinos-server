@@ -166,8 +166,7 @@ export default {
       const user = await getNostrUser(key);
       res.send(pick(user, fields));
     } catch (e) {
-      err("problem getting user", key, e.message);
-      res.code(500).send(e.message);
+      res.code(404).send("User not found");
     }
   },
 
