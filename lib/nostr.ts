@@ -27,9 +27,13 @@ export const anon = (pubkey) => ({
 
 export async function publish(ev, url = config.nostr) {
   if (!verifyEvent(ev)) fail("Invalid event");
-  const r = await Relay.connect(url);
-  await r.publish(ev);
-  r.close();
+  try {
+    const r = await Relay.connect(url);
+    await r.publish(ev);
+    r.close();
+  } catch (e) {
+    warn("nostr publish failed:", e.message);
+  }
 }
 
 export async function handleZap(invoice, sender = undefined) {
