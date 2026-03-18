@@ -9,7 +9,6 @@ import type { Event } from "nostr-tools";
 import { Relay } from "nostr-tools/relay";
 
 export const EX = 60 * 60 * 24;
-const coinos = await Relay.connect(config.nostr);
 
 export const serverSecret = bytesToHex(nip19.decode(config.nostrKey).data as Uint8Array);
 
@@ -222,7 +221,6 @@ export const q = async (f) => {
                 r.subscribe([f], {
                   onevent(e) {
                     found.push(e);
-                    coinos.publish(e).catch(() => {});
                   },
                   oneose() {
                     r.close();

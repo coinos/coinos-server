@@ -158,8 +158,7 @@ export default {
       const user = await getNostrUser(key);
       return c.json(pick(user, fields));
     } catch (e) {
-      err("problem getting user", key, e.message);
-      return c.json(e.message, 500);
+      return c.json("User not found", 404);
     }
   },
 
