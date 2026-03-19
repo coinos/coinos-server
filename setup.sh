@@ -167,6 +167,31 @@ setup_config() {
   fi
 }
 
+# ── phase 2b: VAPID keys ─────────────────────────────────────────────
+# Run after setup_data since the snapshot may overwrite config.ts
+
+setup_vapid() {
+  if grep -q 'pk: ""' config.ts 2>/dev/null; then
+    step "Generating VAPID keys"
+    local vapid_json
+    vapid_json=$(docker run --rm -w /home/bun/app -v "$DIR":/home/bun/app \
+      ghcr.io/coinos/base bun -e \
+      "const wp = require('web-push'); const k = wp.generateVAPIDKeys(); console.log(JSON.stringify(k))" 2>/dev/null) || true
+    if [ -n "$vapid_json" ]; then
+      local vapid_pk vapid_sk
+      vapid_pk=$(echo "$vapid_json" | grep -o '"publicKey":"[^"]*"' | cut -d'"' -f4)
+      vapid_sk=$(echo "$vapid_json" | grep -o '"privateKey":"[^"]*"' | cut -d'"' -f4)
+      if [ -n "$vapid_pk" ] && [ -n "$vapid_sk" ]; then
+        sed -i "s|pk: \"\"|pk: \"$vapid_pk\"|" config.ts
+        sed -i "s|sk: \"\"|sk: \"$vapid_sk\"|" config.ts
+        ok "Generated VAPID keys"
+      fi
+    else
+      warn "Could not generate VAPID keys — web push notifications won't work"
+    fi
+  fi
+}
+
 # ── phase 3: data directories ───────────────────────────────────────
 
 setup_data() {
@@ -312,8 +337,9 @@ install_deps() {
   fi
 
   if [ ! -f "$ui_dir/.env" ] && [ -f "$ui_dir/.env.sample" ]; then
-    cp "$ui_dir/.env.sample" "$ui_dir/.env"
-    ok "Created UI .env"
+    sed 's|PUBLIC_COINOS_URL=http://localhost:3119|PUBLIC_COINOS_URL=http://app:3119|' \
+      "$ui_dir/.env.sample" > "$ui_dir/.env"
+    ok "Created UI .env (with Docker service URLs)"
   fi
 
   if [ -d "$ui_dir/node_modules" ]; then
@@ -659,6 +685,7 @@ main() {
   check_prereqs
   setup_config
   setup_data
+  setup_vapid
   setup_tigerbeetle
   setup_network
   install_deps
