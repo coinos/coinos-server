@@ -16,4 +16,3 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN groupadd -g 1000 bun && useradd -u 1000 -g bun -m -s /bin/sh bun
 WORKDIR /home/bun/app
-USER bun
