@@ -1,7 +1,7 @@
 import app from "$lib/app";
 import { admin, auth, optional } from "$lib/auth";
 
-import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
+import { fixBolt12, listenForLightning, ensureListenerAlive, replay } from "$lib/lightning";
 import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
 import nwc from "$lib/nwc";
@@ -33,6 +33,7 @@ try {
 } catch (e) {}
 
 setTimeout(listenForLightning, 2000);
+setInterval(ensureListenerAlive, 120000);
 setInterval(sendHeartbeat, 2000);
 
 app.get("/balances", info.balances);

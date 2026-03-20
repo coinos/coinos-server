@@ -10,6 +10,7 @@ const LISTENER_RETRY_DELAY = 5000; // 5 seconds
 const MAX_LISTENER_RETRIES = 10;
 let listenerRetries = 0;
 let listenerActive = false;
+let lastPayTime = Date.now();
 
 export async function listenForLightning() {
   if (listenerActive) {
@@ -36,6 +37,7 @@ export async function listenForLightning() {
     } = inv;
 
     await s("pay_index", pay_index);
+    lastPayTime = Date.now();
 
     // Reset retry counter on successful receive
     if (listenerRetries > 0) {
@@ -116,6 +118,13 @@ export async function listenForLightning() {
         `in ${LISTENER_RETRY_DELAY / 1000}s`
     );
     setTimeout(listenForLightning, LISTENER_RETRY_DELAY);
+  }
+}
+
+export function ensureListenerAlive() {
+  if (!listenerActive) {
+    warn("lightning listener: not active, restarting");
+    listenForLightning();
   }
 }
 
