@@ -88,7 +88,7 @@ export const getUserRate = async (user) => {
 };
 
 export const acquireArkLock = async (hash) => {
-  const locked = await db.set(`arklock:${hash}`, "1", { NX: true, EX: 60 });
+  const locked = await db.set(`arklock:${hash}`, "1", { NX: true });
   if (!locked) fail("Already processed");
 };
 

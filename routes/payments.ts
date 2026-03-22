@@ -939,17 +939,23 @@ export default {
     try {
       const body = await c.req.json();
       const user = c.get("user");
-      const { amount, hash, aid } = body;
+      const hash = body.hash || body.arkTxid;
+      const { aid } = body;
       await requireAccountOwnership(db, user.id, aid);
 
-      if (amount <= 0) fail("Invalid amount");
+      if (!hash) fail("Missing transaction hash");
       await acquireArkLock(hash);
+
+      const { found, amount: verifiedAmount } = await verifyArkVtxo(hash);
+      if (!found) fail("VTXO not found");
+      if (verifiedAmount <= 0) fail("Invalid VTXO amount");
+
       const { rate, currency } = await getUserRate(user);
 
       const p = await createArkPayment({
         aid,
         uid: user.id,
-        amount,
+        amount: verifiedAmount,
         hash,
         rate,
         currency,
@@ -969,34 +975,33 @@ export default {
     try {
       const body = await c.req.json();
       const user = c.get("user");
-      const { iid, amount, hash } = body;
+      const hash = body.hash || body.arkTxid;
+      const { iid } = body;
       const { id: uid } = user;
 
-      if (amount <= 0) fail("Invalid amount");
+      if (!hash) fail("Missing transaction hash");
 
       const invoice = await getInvoice(iid);
       if (invoice.uid !== user?.id) fail("Unauthorized");
 
       let { aid, type, currency } = invoice;
 
-      if (hash) {
-        await acquireArkLock(hash);
+      await acquireArkLock(hash);
 
-        if (!(aid && aid !== uid)) {
-          if (!(await verifyArkVtxo(hash))) fail("VTXO not found in server wallet");
-        }
-      }
+      const { found, amount: verifiedAmount } = await verifyArkVtxo(hash);
+      if (!found) fail("VTXO not found in server wallet");
+      if (verifiedAmount <= 0) fail("Invalid VTXO amount");
 
-      invoice.received += amount;
+      invoice.received += verifiedAmount;
       const { rates } = await getUserRate(user);
       const rate = rates[currency];
 
-      await tbCredit(uid, uid, type, amount, false);
+      await tbCredit(uid, uid, type, verifiedAmount, false);
 
       const p = await createArkPayment({
         aid: uid,
         uid,
-        amount,
+        amount: verifiedAmount,
         hash,
         rate,
         currency,
@@ -1004,7 +1009,7 @@ export default {
         iid,
         extraMultiOps: (m, p) => {
           m.set(`invoice:${invoice.id}`, JSON.stringify(invoice));
-          if (hash) m.set(`payment:${aid}:${hash}`, p.id);
+          m.set(`payment:${aid}:${hash}`, p.id);
         },
       });
 
@@ -1073,10 +1078,16 @@ export default {
 
           const primaryHash = hashes[0];
 
+          const locked = await db.set(`arklock:${primaryHash}`, "1", { NX: true });
+          if (!locked) continue;
+
+          const { found: vtxoFound, amount: verifiedAmount } = await verifyArkVtxo(primaryHash);
+          if (!vtxoFound || verifiedAmount <= 0) continue;
+
           const p = await createArkPayment({
             aid,
             uid,
-            amount: tx.amount,
+            amount: verifiedAmount,
             hash: primaryHash,
             rate,
             currency,
@@ -1086,8 +1097,8 @@ export default {
 
           payments.push(p);
           synced++;
-          if (tx.amount > 0) {
-            received += tx.amount;
+          if (verifiedAmount > 0) {
+            received += verifiedAmount;
 
             const invoiceIds = await db.lRange(`${aid}:invoices`, 0, 20);
             for (const iid of invoiceIds) {
