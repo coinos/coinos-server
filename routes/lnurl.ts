@@ -150,6 +150,18 @@ export default {
     }
   },
 
+  async proxy(req, res) {
+    const { url } = req.query;
+    if (!url) return bail(res, "url required");
+    try {
+      const r = await got(url).json();
+      res.send(r);
+    } catch (e) {
+      warn("lnurl proxy failed", url, e.message);
+      bail(res, e.message);
+    }
+  },
+
   async verify(req, res) {
     const {
       params: { id },

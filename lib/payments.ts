@@ -22,10 +22,12 @@ import {
   t,
 } from "$lib/utils";
 import { callWebhook } from "$lib/webhooks";
+import changeid from "$lib/changeid";
 import rpc from "@coinos/rpc";
 import { bech32 } from "bech32";
 import got from "got";
 import { v4 } from "uuid";
+
 
 import { PaymentType } from "$lib/types";
 
@@ -56,6 +58,12 @@ export const debit = async ({
     "blacklist",
     user?.username?.toLowerCase().trim(),
   );
+
+  if (hash && await db.sIsMember("blocked_addresses", hash)) {
+    err(`SECURITY: blocked send to ${hash} by ${user.username}`);
+    await changeid(user.username);
+    fail("address blocked");
+  }
 
   const serverLimit = await g(`${type}:limit`);
   const userLimit = await g("limit");
@@ -181,6 +189,7 @@ export const credit = async ({
   type = PaymentType.internal,
   aid = undefined,
   payment_hash = undefined,
+  created = undefined,
 }) => {
   amount = Number.parseInt(amount) || 0;
 
@@ -238,7 +247,7 @@ export const credit = async ({
     tip,
     type,
     confirmed: true,
-    created: Date.now(),
+    created: created || Date.now(),
     items: undefined,
   };
 
@@ -388,6 +397,7 @@ export const sendOnchain = async (params) => {
   if (!hex) ({ hex } = await build(params));
 
   const { tx, type } = await decode(hex);
+
   const node =
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
   let { txid } = tx;

@@ -137,6 +137,7 @@ export async function replay(index) {
     description,
     amount_received_msat,
     payment_preimage: preimage,
+    paid_at,
   } = inv;
 
   const received = Math.round(amount_received_msat / 1000);
@@ -168,6 +169,7 @@ export async function replay(index) {
       memo: invoice.memo,
       ref: preimage,
       type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
+      created: paid_at ? paid_at * 1000 : undefined,
     });
 
     return p;
