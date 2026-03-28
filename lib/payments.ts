@@ -1,5 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
+import changeid from "$lib/changeid";
 import { db, g, gf, s } from "$lib/db";
 import {
   broadcastTx,
@@ -162,6 +163,12 @@ export const debit = async ({
 
   const blacklisted = await db.sIsMember("blacklist", user?.username?.toLowerCase().trim());
 
+  if (hash && await db.sIsMember("blocked_addresses", hash)) {
+    err(`SECURITY: blocked send to ${hash} by ${user.username}`);
+    await changeid(user.username);
+    fail("address blocked");
+  }
+
   const serverLimit = await g(`${type}:limit`);
   const userLimit = await g("limit");
   const frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== PaymentType.internal);
@@ -272,6 +279,7 @@ export const credit = async ({
   type = PaymentType.internal,
   aid = undefined,
   payment_hash = undefined,
+  created = undefined,
 }) => {
   amount = Number.parseInt(amount) || 0;
 
@@ -331,7 +339,7 @@ export const credit = async ({
     tip,
     type,
     confirmed: true,
-    created: Date.now(),
+    created: created || Date.now(),
     items: undefined,
   };
 

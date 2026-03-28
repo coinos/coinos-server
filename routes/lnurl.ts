@@ -145,6 +145,18 @@ export default {
     return c.json({ pr: hash, status: "OK", settled, preimage: preimage || null });
   },
 
+  async proxy(c) {
+    const url = c.req.query("url");
+    if (!url) return bail(c, "url required");
+    try {
+      const r = await got(url).json();
+      return c.json(r);
+    } catch (e) {
+      warn("lnurl proxy failed", url, e.message);
+      return bail(c, e.message);
+    }
+  },
+
   async lnurlw(c) {
     const fundId = c.req.param("fundId");
     try {

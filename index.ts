@@ -138,6 +138,7 @@ app.post("/square/payment", square.payment);
 
 app.get("/encode", lnurl.encode);
 app.get("/decode", lnurl.decode);
+app.get("/lnurl/proxy", lnurl.proxy);
 app.get("/lnurl/verify/:id", lnurl.verify);
 app.get("/lnurlp/:username", lnurl.lnurlp);
 app.get("/lnurl/:id", lnurl.lnurl);
