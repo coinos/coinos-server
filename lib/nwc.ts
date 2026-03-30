@@ -49,12 +49,30 @@ const nwcRequestTimes: Map<string, number[]> = new Map();
 
 export default () => {
   let r: any;
+  let heartbeatInterval: any;
 
   function connect() {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
     r = new Relay("ws://sf:7777", { reconnect: false });
 
     r.on("open", async (_) => {
       l("nwc connected to strfry");
+
+      // Periodically check if connection is alive
+      heartbeatInterval = setInterval(() => {
+        try {
+          if (!r?.ws || r.ws.readyState !== 1) {
+            warn("nwc heartbeat: connection dead, reconnecting");
+            clearInterval(heartbeatInterval);
+            try { r.close(); } catch (_) {}
+            setTimeout(connect, 1000);
+          }
+        } catch (_) {
+          warn("nwc heartbeat: error, reconnecting");
+          clearInterval(heartbeatInterval);
+          setTimeout(connect, 1000);
+        }
+      }, 30000);
       r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2], since: Math.floor(Date.now() / 1000) - nwcEventMaxAgeSeconds });
       const info = await finalizeEvent(
         {
@@ -87,6 +105,7 @@ export default () => {
 
     r.on("close", () => {
       warn("nwc strfry connection lost, reconnecting in 5s");
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
       setTimeout(connect, 5000);
     });
 
@@ -147,16 +166,10 @@ export default () => {
         response = await finalizeEvent(response, hexToBytes(sk));
         r.send(["EVENT", response]);
       } catch (e) {
-        // err(
-        //   "problem with nwc",
-        //   pubkey,
-        //   method,
-        //   JSON.stringify(params),
-        //   e.message,
-        // );
+        err("problem with nwc", pubkey, method, e.message);
       }
     } catch (e) {
-      // err("problem with nwc", e.message);
+      err("problem with nwc event", e.message);
     }
   });
   }

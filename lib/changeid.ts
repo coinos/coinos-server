@@ -80,7 +80,7 @@ export default async function changeid(un: string) {
         } else if (k.includes("user:")) {
           await client.del(k);
         } else {
-          await client.rename(k, nk);
+          if (await client.exists(k)) await client.rename(k, nk);
         }
       } catch (e: any) {
         err(`changeid [${label}]`, k, e.message);
@@ -100,17 +100,18 @@ export default async function changeid(un: string) {
   }
   await db.del(`${id}:apps`);
 
-  // Update invoices that reference the old uid
-  for await (const k of db.scanIterator({ MATCH: "invoice:*" })) {
+  // Update uid/aid in invoice objects and their offer pointers
+  const invoiceIds = await db.lRange(`${nid}:invoices`, 0, -1);
+  for (const iid of invoiceIds) {
     try {
-      const inv = await g(k);
+      const inv = await g(`invoice:${iid}`);
       if (!inv || typeof inv === "string") continue;
       let changed = false;
       if (inv.uid === id) { inv.uid = nid; changed = true; }
       if (inv.aid === id) { inv.aid = nid; changed = true; }
       if (changed) {
-        await s(k, inv);
-        l("changeid: updated invoice", k);
+        await s(`invoice:${iid}`, inv);
+        l("changeid: updated invoice", iid);
       }
     } catch (e) {}
   }
