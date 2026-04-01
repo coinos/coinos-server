@@ -29,7 +29,6 @@ export default [
   "notify",
   "npub",
   "nsec",
-  "nwc",
   "payments",
   "picture",
   "profile",
