@@ -597,7 +597,16 @@ export const sendLightning = async ({
     }
   } catch (e) {
     err("failed to pay", pr.substr(-8));
-    try { await reverse(p); } catch (_) {}
+    try {
+      const { pays } = await ln.listpays(pr);
+      const completed = pays.find((p) => p.status === "complete");
+      if (completed) {
+        warn("payment completed despite error, finalizing", p.id);
+        try { await finalize(completed, p); } catch (_) {}
+      } else {
+        await reverse(p);
+      }
+    } catch (_) {}
     throw e;
   }
 
@@ -780,7 +789,7 @@ export const catchUp = async () => {
     err("problem syncing", e.message);
   }
 
-  setTimeout(catchUp, 10000);
+  setTimeout(catchUp, 30000);
 };
 
 export const check = async () => {
@@ -814,7 +823,7 @@ export const check = async () => {
     err("payment check failed", e.message);
   }
 
-  setTimeout(check, 2000);
+  setTimeout(check, 5000);
 };
 
 const finalize = async (r, p) => {

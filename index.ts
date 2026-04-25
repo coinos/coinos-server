@@ -34,7 +34,7 @@ try {
 
 setTimeout(listenForLightning, 2000);
 setInterval(ensureListenerAlive, 120000);
-setInterval(sendHeartbeat, 2000);
+setInterval(sendHeartbeat, 5000);
 
 app.get("/balances", info.balances);
 app.get("/health", info.health);
@@ -46,7 +46,7 @@ app.get("/rates", rates.index);
 
 app.get("/locations", locations.list);
 
-app.get("/invoice/:id", invoices.get);
+app.get("/invoice/:id", { config: { rateLimit: { max: 30, timeWindow: 10000, keyGenerator: (req) => { const ip = (req.headers["cf-connecting-ip"] as string) || req.ip; const token = (req.headers.authorization || "").slice(0, 50); return token ? `invoice:${token}` : `invoice:${ip}`; } } } }, invoices.get);
 app.get("/invoices", auth, invoices.list);
 app.post("/invoice", optional, invoices.create);
 app.post("/invoice/:id", optional, invoices.update);
