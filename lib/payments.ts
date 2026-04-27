@@ -487,6 +487,11 @@ export const sendOnchain = async (params) => {
     return p;
   } catch (e) {
     delete inflight[txid];
+    // Release UTXOs that build() locked, so the user can retry without abandoning coins.
+    try {
+      const vin = tx?.vin?.map(({ txid, vout }) => ({ txid, vout })) ?? [];
+      if (vin.length) await node.lockUnspent(true, vin);
+    } catch {}
     throw e;
   }
 };
@@ -756,6 +761,17 @@ export const build = async ({
     inputs.push({ witnessUtxo, path });
   }
 
+  // Reserve selected UTXOs so concurrent builds don't pick the same inputs.
+  // Locks are in-memory only; cleared on bitcoind restart. sendOnchain unlocks on broadcast failure.
+  try {
+    await node.lockUnspent(
+      false,
+      vin.map(({ txid, vout }) => ({ txid, vout })),
+    );
+  } catch (e: any) {
+    warn("lockUnspent failed", e.message);
+  }
+
   return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs, subtract };
 };
 
@@ -764,7 +780,7 @@ export const catchUp = async () => {
     const txns = [];
     for (const [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
       txns.push(
-        ...(await n.listTransactions("*", 10)).filter((tx) => {
+        ...(await n.listTransactions("*", 100)).filter((tx) => {
           tx.type = type;
           return tx.category === "receive" && tx.confirmations > 0;
         }),
