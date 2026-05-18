@@ -33,6 +33,38 @@ import { PaymentType } from "$lib/types";
 
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
+
+// Throttled warn — emit at most once per WARN_THROTTLE_MS per (key, message) pair
+// so a downed external service (lq, bc, etc.) doesn't flood the log every loop tick.
+const WARN_THROTTLE_MS = 5 * 60 * 1000;
+const warnLastEmitted: Record<string, number> = {};
+const warnThrottled = (key: string, message: string) => {
+  const k = `${key}|${message}`;
+  const now = Date.now();
+  if ((warnLastEmitted[k] || 0) + WARN_THROTTLE_MS > now) return;
+  warnLastEmitted[k] = now;
+  warn(`${key}:`, message);
+};
+
+// Per-asset-type async mutex. The May 18 2026 drain exploited the fact that
+// the limit check + payment broadcast were non-atomic: a burst of concurrent
+// withdrawals would each pass the same stale ${type}:limit value before any
+// of them decremented it. This lock serializes the check + reservation per
+// asset type. freezeCheck also takes the lock when overwriting limits so its
+// periodic reconciliation can't race with an in-flight check.
+const limitLocks: Record<string, Promise<void>> = {};
+async function withLimitLock<T>(type: string, fn: () => Promise<T>): Promise<T> {
+  const prev = limitLocks[type] || Promise.resolve();
+  let release: () => void = () => {};
+  const next = new Promise<void>((res) => { release = res; });
+  limitLocks[type] = prev.then(() => next);
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
 const { URL } = process.env;
 
 const dust = 547;
@@ -65,26 +97,27 @@ export const debit = async ({
     fail("address blocked");
   }
 
-  const serverLimit = await g(`${type}:limit`);
   const userLimit = await g("limit");
   const frozen =
     (await g("hardfreeze")) ||
     ((await g("freeze")) && type !== PaymentType.internal);
 
-  if (frozen || (amount > userLimit && !whitelisted) || amount > serverLimit) {
-    warn(
-      "Blocking",
-      user.username,
-      amount,
-      hash,
-      user.id,
-      type,
-      frozen,
-      userLimit,
-      serverLimit,
-    );
+  if (frozen || (amount > userLimit && !whitelisted)) {
+    warn("Blocking", user.username, amount, hash, user.id, type, frozen, userLimit);
     fail("Problem sending payment");
   }
+
+  // Atomic check + reserve against the per-asset-type server limit. Decrement
+  // immediately so concurrent calls can't reuse the same budget; freezeCheck
+  // reconciles to actual on-chain balance every 10s.
+  await withLimitLock(type, async () => {
+    const serverLimit = Number.parseInt((await g(`${type}:limit`)) ?? "0", 10) || 0;
+    if (amount > serverLimit) {
+      warn("Blocking", user.username, amount, hash, user.id, type, "serverLimit", serverLimit);
+      fail("Problem sending payment");
+    }
+    await db.decrBy(`${type}:limit`, amount);
+  });
 
   let ref;
   const { id: uid, currency } = user;
@@ -891,29 +924,51 @@ const reverse = async (p) => {
 };
 
 const freezeCheck = async () => {
+  // Each asset is fetched independently so e.g. lq being unreachable doesn't
+  // prevent lightning and bitcoin limits from refreshing.
+  let lnbalance: number | undefined;
   try {
     const funds = await ln.listfunds();
-    const lnbalance = Math.round(
+    lnbalance = Math.round(
       funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
     );
-
-    const bcbalance = Math.round((await bc.getBalance()) * SATS);
-    const { bitcoin } = await lq.getBalance();
-    const lqbalance = Math.round(bitcoin * SATS);
-
-    const lnthreshold = await g("lightning:threshold");
-    const bcthreshold = await g("bitcoin:threshold");
-    const lqthreshold = await g("liquid:threshold");
-
-    await s("lightning:limit", Math.max(lnbalance - lnthreshold, 0));
-    await s("bitcoin:limit", Math.max(bcbalance - bcthreshold, 0));
-    await s("liquid:limit", Math.max(lqbalance - lqthreshold, 0));
-
-    await s("fund:limit", Math.max(lnbalance - lnthreshold, 0));
-    await s("ecash:limit", Math.max(lnbalance - lnthreshold, 0));
-    await s("bolt12:limit", Math.max(lnbalance - lnthreshold, 0));
   } catch (e: any) {
-    warn("freezeCheck failed:", e.message);
+    warnThrottled("freezeCheck lightning", e.message);
+  }
+
+  let bcbalance: number | undefined;
+  try {
+    bcbalance = Math.round((await bc.getBalance()) * SATS);
+  } catch (e: any) {
+    warnThrottled("freezeCheck bitcoin", e.message);
+  }
+
+  let lqbalance: number | undefined;
+  try {
+    const { bitcoin } = await lq.getBalance();
+    lqbalance = Math.round(bitcoin * SATS);
+  } catch (e: any) {
+    warnThrottled("freezeCheck liquid", e.message);
+  }
+
+  if (lnbalance !== undefined) {
+    const lnthreshold = await g("lightning:threshold");
+    const lim = Math.max(lnbalance - lnthreshold, 0);
+    for (const t of ["lightning", "fund", "ecash", "bolt12"]) {
+      await withLimitLock(t, async () => { await s(`${t}:limit`, lim); });
+    }
+  }
+  if (bcbalance !== undefined) {
+    const bcthreshold = await g("bitcoin:threshold");
+    await withLimitLock("bitcoin", async () => {
+      await s("bitcoin:limit", Math.max(bcbalance - bcthreshold, 0));
+    });
+  }
+  if (lqbalance !== undefined) {
+    const lqthreshold = await g("liquid:threshold");
+    await withLimitLock("liquid", async () => {
+      await s("liquid:limit", Math.max(lqbalance - lqthreshold, 0));
+    });
   }
 
   setTimeout(freezeCheck, 10000);
