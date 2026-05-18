@@ -448,6 +448,15 @@ export const sendOnchain = async (params) => {
     if (inflight[txid]) fail("payment in flight");
     inflight[txid] = true;
 
+    // Reserve UTXOs to keep concurrent sends from selecting the same inputs.
+    // Released in the catch block on failure; spent UTXOs make the lock moot on success.
+    try {
+      const lockVin = tx.vin.map(({ txid, vout }) => ({ txid, vout }));
+      if (lockVin.length) await node.lockUnspent(false, lockVin);
+    } catch (e: any) {
+      warn("lockUnspent failed", e.message);
+    }
+
     if (!signed) {
       if (config[type].walletpass)
         await node.walletPassphrase(config[type].walletpass, 300);
@@ -803,16 +812,6 @@ export const build = async ({
     inputs.push({ witnessUtxo, path });
   }
 
-  // Reserve selected UTXOs so concurrent builds don't pick the same inputs.
-  // Locks are in-memory only; cleared on bitcoind restart. sendOnchain unlocks on broadcast failure.
-  try {
-    await node.lockUnspent(
-      false,
-      vin.map(({ txid, vout }) => ({ txid, vout })),
-    );
-  } catch (e: any) {
-    warn("lockUnspent failed", e.message);
-  }
 
   return { feeRate, ourfee, fee, fees, hex: tx.hex, inputs, subtract };
 };
