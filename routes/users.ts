@@ -39,7 +39,7 @@ const verifyRecaptcha = async (response, c?, body?) => {
   const { recaptcha: secret } = config;
   if (!secret) return true;
 
-  const reqHost = c?.req?.header("host") || "";
+  const reqHost = c?.req?.header("x-forwarded-host") || c?.req?.header("host") || "";
   if (reqHost.endsWith(".onion")) return true;
 
   const uaRaw = c?.req?.header("user-agent");
