@@ -104,7 +104,6 @@ app.post("/take", auth, payments.take);
 app.post("/print", auth, payments.print);
 app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
 app.post("/send", auth, payments.internal);
-app.post("/gateway", payments.gateway);
 app.post("/bump", auth, payments.bump);
 app.get("/decode/:bolt11", payments.decode);
 app.post("/fetchinvoice", payments.fetchinvoice);

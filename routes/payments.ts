@@ -749,14 +749,6 @@ export default {
     }
   },
 
-  async gateway(c) {
-    const body = await c.req.json();
-    const { short_channel_id, webhook } = body;
-
-    await s(short_channel_id, webhook);
-    return c.json({ ok: true });
-  },
-
   async bump(c) {
     const body = await c.req.json();
     const { id } = body;
