@@ -147,6 +147,7 @@ export default () => {
         const app = await g(`app:${pubkey}`);
         if (!app) fail("pubkey not found");
         const user = await g(`user:${app.uid}`);
+        if (!user) fail("user not found");
 
         const result = await handle(method, params, ev, app, user);
         const payload = JSON.stringify({ result_type: method, ...result });
@@ -166,6 +167,8 @@ export default () => {
         response = await finalizeEvent(response, hexToBytes(sk));
         r.send(["EVENT", response]);
       } catch (e) {
+        // Stale client state (deleted app or migrated user) is not a server fault — don't log.
+        if (e.message === "pubkey not found" || e.message === "user not found") return;
         err("problem with nwc", pubkey, method, e.message);
       }
     } catch (e) {
@@ -195,7 +198,7 @@ const handle = (method, params, ev, app, user) =>
       };
 
       const pids = await db.lRange(`${pubkey}:payments`, 0, -1);
-      let payments = await Promise.all(pids.map((pid) => g(`payment:${pid}`)));
+      let payments = await Promise.all(pids.map((pid) => gf(`payment:${pid}`)));
       payments = payments.filter(
         (p) => p?.created > Date.now() - periods[budget_renewal],
       );
@@ -455,6 +458,7 @@ const handle = (method, params, ev, app, user) =>
       for (const pid of payments) {
         const p = await gf(`payment:${pid}`);
         if (!p) continue;
+        if (p.revertedDuplicate) continue;
         const created_at = Math.floor(p.created / 1000);
         if (created_at < from || created_at > until) continue;
         if (p.amount < 0 && type === "incoming") continue;
