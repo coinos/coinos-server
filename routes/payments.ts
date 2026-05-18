@@ -1,7 +1,7 @@
 import config from "$config";
 import api from "$lib/api";
 import { requirePin } from "$lib/auth";
-import { archive, db, g, gf, s } from "$lib/db";
+import { archive, db, g, gf, s, sa } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
@@ -135,6 +135,7 @@ export default {
             warn("user", id, "missing payment", pid);
             return;
           }
+          if (p.revertedDuplicate) return;
           if (received && p.amount < 0) return;
           if (p.created < start || p.created > end) return;
           if (p.type === PaymentType.internal)
@@ -485,9 +486,24 @@ export default {
           });
         } else if (confirmations >= 1) {
           const id = `payment:${txid}:${vout}`;
+          // Atomic guard against concurrent /confirm callers double-crediting:
+          // walletnotify, catchUp, and bulk sweeps can all fire for the same
+          // txid:vout in parallel. Without this, two callers can each read
+          // p.confirmed=false and each run the multi() that increments balance.
+          const lockKey = `confirmlock:${txid}:${vout}`;
+          const acquired = await db.set(lockKey, "1", { NX: true, EX: 60 });
+          if (!acquired) continue;
+
           const p = await getPayment(`${txid}:${vout}`);
-          if (!p) return db.sAdd("missed", id);
-          if (p.confirmed) return;
+          if (!p) {
+            await db.sAdd("missed", id);
+            await db.del(lockKey);
+            return;
+          }
+          if (p.confirmed) {
+            await db.del(lockKey);
+            return;
+          }
 
           const invoice = await getInvoice(address);
           const { id: iid } = invoice;
@@ -505,6 +521,14 @@ export default {
             .decrBy(`pending:${p.aid || p.uid}`, p.amount)
             .incrBy(`balance:${p.aid || p.uid}`, p.amount)
             .exec();
+
+          // Mirror the now-confirmed record into arc so a future bulk sweep
+          // finds it via gf() fallback even if the main-db pointer is wiped
+          // (see feedback_apr29_double_credit_incident.md).
+          await sa(`payment:${p.id}`, p);
+          await sa(`invoice:${iid}`, invoice);
+
+          await db.del(lockKey);
 
           const user = await g(`user:${p.uid}`);
           await completePayment(invoice, p, user);

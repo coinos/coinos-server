@@ -1,6 +1,6 @@
 import config from "$config";
 import api from "$lib/api";
-import { db, g, ga, gf, s } from "$lib/db";
+import { archive, db, g, ga, gf, s, sa } from "$lib/db";
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
@@ -298,8 +298,13 @@ export const credit = async ({
     p.confirmed = false;
     balanceKey = "pending";
     await s(`payment:${txid}:${vout}`, id);
+    // Mirror the txid:vout pointer into arc so future bulk /confirm sweeps find
+    // the prior credit via gf() fallback and don't double-credit. See
+    // feedback_apr29_double_credit_incident.md for the incident this prevents.
+    await sa(`payment:${txid}:${vout}`, id);
   } else {
     await s(`payment:${hash}`, id);
+    await sa(`payment:${hash}`, id);
   }
 
   const m = await db.multi();
@@ -322,6 +327,10 @@ export const credit = async ({
     .incrBy(`${balanceKey}:${aid || uid}`, amount)
     .set(`${aid || uid}:payments:last`, p.created)
     .exec();
+
+  // Mirror the payment record + invoice into arc for the same protection.
+  await sa(`payment:${p.id}`, p);
+  await sa(`invoice:${inv.id}`, inv);
 
   if (inv.items?.length) {
     formatReceipt(inv.items, inv.currency);
