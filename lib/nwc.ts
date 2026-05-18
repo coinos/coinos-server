@@ -121,6 +121,7 @@ export default () => {
           const app = await g(`app:${pubkey}`);
           if (!app) fail("pubkey not found");
           const user = await g(`user:${app.uid}`);
+          if (!user) fail("user not found");
 
           const result = await handle(method, params, ev, app, user);
           const payload = JSON.stringify({ result_type: method, ...result });
@@ -429,6 +430,7 @@ const handle = (method, params, ev, app, user) =>
       for (const pid of payments) {
         const p = await gf(`payment:${pid}`);
         if (!p) continue;
+        if (p.revertedDuplicate) continue;
         const created_at = Math.floor(p.created / 1000);
         if (created_at < from || created_at > until) continue;
         if (p.amount < 0 && type === "incoming") continue;
