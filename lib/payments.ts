@@ -586,7 +586,9 @@ export const sendKeysend = async ({
       // else: pending or completed — leave the debit; check() loop will
       // reconcile. Reversing on pending would refund while CLN may still
       // settle the keysend.
-    } catch (_) {}
+    } catch (verifyErr: any) {
+      warnThrottled("listpays verification failed (keysend)", verifyErr?.message ?? String(verifyErr));
+    }
     throw e;
   }
 };
@@ -673,7 +675,13 @@ export const sendLightning = async ({
       // else: pending — leave the debit in place; check() loop will reconcile
       // once CLN confirms outcome. Reversing while still in flight would
       // refund the user even though the payment may yet complete.
-    } catch (_) {}
+    } catch (verifyErr: any) {
+      // listpays itself errored (CLN unreachable). We deliberately don't
+      // reverse here — the debit stays and pending stays in the reconciler
+      // set, so check() will retry once CLN is back. Surface the failure so
+      // a real outage doesn't go unnoticed.
+      warnThrottled("listpays verification failed", verifyErr?.message ?? String(verifyErr));
+    }
     throw e;
   }
 
