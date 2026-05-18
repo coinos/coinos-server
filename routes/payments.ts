@@ -626,15 +626,6 @@ export default {
     }
   },
 
-  async gateway(req, res) {
-    const {
-      body: { short_channel_id, webhook },
-    } = req;
-
-    await s(short_channel_id, webhook);
-    res.send({ ok: true });
-  },
-
   async replace(req, res) {
     const {
       body: { id },
