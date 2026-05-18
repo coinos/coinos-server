@@ -972,7 +972,16 @@ export const sendKeysend = async ({
       extratlvs,
     });
   } catch (e) {
-    reverse(p);
+    try {
+      const { pays } = await ln.listpays({ payment_hash: hash });
+      const failed = !pays.length || pays.every((p) => p.status === "failed");
+      if (failed) await reverse(p);
+      // else: pending or completed — leave the debit; check() loop will
+      // reconcile. Reversing on pending would refund while CLN may still
+      // settle the keysend.
+    } catch (verifyErr: any) {
+      warn("listpays verification failed (keysend)", verifyErr?.message ?? String(verifyErr));
+    }
     throw e;
   }
 };
@@ -1035,7 +1044,22 @@ export const sendLightning = async ({ user, pr, amount, fee = undefined, memo = 
     }
   } catch (e) {
     err("failed to pay", pr.substr(-8));
-    reverse(p);
+    try {
+      const { pays } = await ln.listpays(pr);
+      const completed = pays.find((p) => p.status === "complete");
+      const failed = !pays.length || pays.every((p) => p.status === "failed");
+      if (completed) {
+        warn("payment completed despite error, finalizing", p.id);
+        try { await finalize(completed, p); } catch (_) {}
+      } else if (failed) {
+        await reverse(p);
+      }
+      // else: pending — leave the debit in place; check() loop will reconcile
+      // once CLN confirms outcome. Reversing while still in flight would
+      // refund the user even though the payment may yet complete.
+    } catch (verifyErr: any) {
+      warn("listpays verification failed", verifyErr?.message ?? String(verifyErr));
+    }
     throw e;
   }
 
