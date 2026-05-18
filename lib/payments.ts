@@ -1111,7 +1111,17 @@ const getAddressType = async (a) => {
     try {
       await lq.getAddressInfo(a);
       return PaymentType.liquid;
-    } catch (e) {
+    } catch (e: any) {
+      // Distinguish "lq is down" from "address isn't liquid" so users get a
+      // useful message instead of "unrecognized address" when cs/lq is the
+      // actual problem.
+      if (
+        e?.message?.includes("Unable to connect") ||
+        e?.code === "ECONNREFUSED" ||
+        e?.code === "ETIMEDOUT"
+      ) {
+        fail("liquid temporarily unavailable");
+      }
       fail("unrecognized address");
     }
   }
