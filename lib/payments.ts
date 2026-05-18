@@ -705,7 +705,16 @@ const getAddressType = async (a) => {
     try {
       await lq.getAddressInfo(a);
       return PaymentType.liquid;
-    } catch (e) {
+    } catch (e: any) {
+      // Distinguish "lq is down" from "address isn't liquid" so users get a useful
+      // message instead of "unrecognized address" when cs/lq is the actual problem.
+      if (
+        e?.message?.includes("Unable to connect") ||
+        e?.code === "ECONNREFUSED" ||
+        e?.code === "ETIMEDOUT"
+      ) {
+        fail("liquid temporarily unavailable");
+      }
       fail("unrecognized address");
     }
   }
@@ -819,18 +828,28 @@ export const build = async ({
 export const catchUp = async () => {
   try {
     const txns = [];
+    // Each chain is isolated: one being unreachable (e.g. lq when cs is down)
+    // must not stop the other chain's deposit-recovery loop.
     for (const [type, n] of Object.entries({ bitcoin: bc, liquid: lq })) {
-      txns.push(
-        ...(await n.listTransactions("*", 100)).filter((tx) => {
-          tx.type = type;
-          return tx.category === "receive" && tx.confirmations > 0;
-        }),
-      );
+      try {
+        txns.push(
+          ...(await n.listTransactions("*", 100)).filter((tx) => {
+            tx.type = type;
+            return tx.category === "receive" && tx.confirmations > 0;
+          }),
+        );
+      } catch (e: any) {
+        warnThrottled(`catchUp ${type}`, e.message);
+      }
     }
 
     for (const { txid, type } of txns) {
       try {
         if (await db.zScore("seen", txid)) continue;
+        // walletnotify is the primary path; catchUp is a safety net. The
+        // double-call I added 2026-05-05 was for when walletnotify was broken
+        // on cs's lq — now that's fixed, a single call suffices and avoids
+        // contributing to /confirm race conditions.
         await got.post(`http://localhost:${process.env.PORT || 3119}/confirm`, {
           json: { txid, wallet: config[type].wallet, type },
         });
