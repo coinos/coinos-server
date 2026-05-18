@@ -202,23 +202,21 @@ export default {
     const paymentKeys = payments.map((pid) => `payment:${pid}`);
     const fetched = await gfAll(paymentKeys);
 
-    const missingIds: any[] = [];
     const validPayments: any[] = [];
 
     for (let i = 0; i < fetched.length; i++) {
       const p = fetched[i];
       if (!p) {
+        // Don't lRem the id — the underlying record may be temporarily
+        // unavailable (arc fallback miss, transient db issue) and we'd
+        // permanently lose the user's payment history pointer. Leave the
+        // orphan in the list so a back-fill from a backup can restore it.
         warn("user", id, "missing payment", payments[i]);
-        missingIds.push(payments[i]);
         continue;
       }
       if (received && p.amount < 0) continue;
       if (p.created < start || p.created > end) continue;
       validPayments.push(p);
-    }
-
-    if (missingIds.length) {
-      for (const pid of missingIds) await db.lRem(listKey, 0, pid);
     }
 
     const internalRefs = [...new Set(
