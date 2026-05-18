@@ -1,7 +1,7 @@
 import config from "$config";
 import api from "$lib/api";
 import changeid from "$lib/changeid";
-import { db, g, gf, s } from "$lib/db";
+import { db, g, gf, s, sa } from "$lib/db";
 import {
   broadcastTx,
   btcNetwork,
@@ -356,8 +356,13 @@ export const credit = async ({
     p.confirmed = false;
     balanceKey = "pending";
     await s(`payment:${txid}:${vout}`, id);
+    // Mirror the txid:vout pointer into arc so future bulk /confirm sweeps find
+    // the prior credit via gf() fallback and don't double-credit even if the
+    // main-db pointer is wiped by a data-loss event.
+    await sa(`payment:${txid}:${vout}`, id);
   } else {
     await s(`payment:${hash}`, id);
+    await sa(`payment:${hash}`, id);
   }
 
   let creditType = type;
@@ -373,6 +378,10 @@ export const credit = async ({
     .lPush(`${aid || uid}:payments`, p.id)
     .set(`${aid || uid}:payments:last`, p.created)
     .exec();
+
+  // Mirror the payment + invoice records into arc for the same protection.
+  await sa(`payment:${p.id}`, p);
+  await sa(`invoice:${inv.id}`, inv);
 
   if (inv.items?.length) {
     formatReceipt(inv.items, inv.currency);
