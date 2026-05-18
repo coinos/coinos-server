@@ -975,8 +975,16 @@ const freezeCheck = async () => {
   let lnbalance: number | undefined;
   try {
     const funds = await ln.listfunds();
+    // Only spendable channels — ONCHAIN/CLOSING funds are locked in pending
+    // sweeps and aren't usable for lightning sends, so counting them inflates
+    // the limit. CHANNELD_AWAITING_SPLICE is included so an in-flight splice
+    // doesn't briefly drop the limit to zero.
     lnbalance = Math.round(
-      funds.channels.reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
+      funds.channels
+        .filter((c) =>
+          c.state === "CHANNELD_NORMAL" || c.state === "CHANNELD_AWAITING_SPLICE",
+        )
+        .reduce((a, b) => a + b.our_amount_msat, 0) / 1000,
     );
   } catch (e: any) {
     warnThrottled("freezeCheck lightning", e.message);
