@@ -97,9 +97,8 @@ export default {
       let { username } = user;
       username = username.replace(/\s/g, "").toLowerCase();
 
-      const memo = comment ?? `Paying ${username}@${host}`;
       let metadata = JSON.stringify([
-        ["text/plain", memo],
+        ["text/plain", `Paying ${username}@${host}`],
         ["text/identifier", `${username}@${host}`],
       ]);
 
@@ -123,6 +122,11 @@ export default {
             },
             user,
           });
+
+      if (comment) {
+        invoice.memo = comment;
+        await s(`invoice:${invoice.id}`, invoice);
+      }
 
       return c.json({
         pr: invoice.text,
