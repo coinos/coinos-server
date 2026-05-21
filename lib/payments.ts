@@ -707,16 +707,18 @@ export const sendLightning = async ({
       layers: ["prefer-kappa"],
     });
 
-    // Dump the full xpay response shape so we can see what CLN actually
-    // returned — especially failed_parts, missing preimage, partial sends.
-    warn("xpay returned", p.id, JSON.stringify({
-      status: r?.status,
-      failed_parts: r?.failed_parts,
-      parts: r?.parts,
-      has_preimage: !!(r?.payment_preimage ?? r?.preimage),
-      amount_sent_msat: r?.amount_sent_msat,
-      amount_msat: r?.amount_msat,
-    }));
+    // Only log the xpay response shape when there's something interesting —
+    // failed_parts > 0 or a missing preimage. The success case is noise.
+    if (r?.failed_parts || !(r?.payment_preimage ?? r?.preimage)) {
+      warn("xpay returned (abnormal)", p.id, JSON.stringify({
+        status: r?.status,
+        failed_parts: r?.failed_parts,
+        parts: r?.parts,
+        has_preimage: !!(r?.payment_preimage ?? r?.preimage),
+        amount_sent_msat: r?.amount_sent_msat,
+        amount_msat: r?.amount_msat,
+      }));
+    }
 
     if (r.failed_parts) {
       // xpay didn't throw but reported failed parts. The old code path
@@ -779,11 +781,11 @@ export const sendLightning = async ({
     throw e;
   }
 
-  // Leak guard: outcomes that leave a confirmed=true debit with no ref AND
-  // no entry in the pending set are the joho33-style stuck state. Pending-*
-  // outcomes are fine — check() will reconcile. Finalize-via-* outcomes
-  // are clean successes via a fallback path. The truly stranded cases are
-  // the finalize-threw-* family.
+  // Leak guard: re-read the db record before deciding. If the payment has
+  // ref set in db, it's settled regardless of which code path threw —
+  // finalize() may have set ref via db.set and then thrown on a later line
+  // (e.g. balance.incrBy for the fee refund), but the payment itself is
+  // recorded as complete. Only treat as a real leak if ref is not in db.
   const finalizedOutcomes = new Set([
     "finalized",
     "finalized-via-listpays-after-failed_parts",
@@ -797,8 +799,10 @@ export const sendLightning = async ({
     "verify-failed-after-failed_parts",
     "verify-failed-after-xpay-throw",
   ]);
-  if (finalizedOutcomes.has(outcome)) {
-    l("sendLightning outcome", p.id, "=", outcome);
+  const persisted = await g(`payment:${p.id}`);
+  const refInDb = !!persisted?.ref;
+  if (refInDb || finalizedOutcomes.has(outcome)) {
+    l("sendLightning outcome", p.id, "=", outcome, refInDb && !finalizedOutcomes.has(outcome) ? "(ref set in db despite throw)" : "");
   } else if (safeNonFinalized.has(outcome)) {
     warn("sendLightning outcome", p.id, "=", outcome);
   } else {
