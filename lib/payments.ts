@@ -779,14 +779,30 @@ export const sendLightning = async ({
     throw e;
   }
 
-  // Leak guard: if we got here without a clean finalize, the payment is
-  // confirmed=true (from debit's default) but has no ref/preimage — the
-  // exact stuck state we want to avoid. Log loudly so the next occurrence
-  // shows up in app logs immediately.
-  if (outcome !== "finalized") {
-    err("LEAKED DEBIT in sendLightning", p.id, "outcome=", outcome, "user=", user?.username, "amount=", amount, "fee=", fee);
-  } else {
+  // Leak guard: outcomes that leave a confirmed=true debit with no ref AND
+  // no entry in the pending set are the joho33-style stuck state. Pending-*
+  // outcomes are fine — check() will reconcile. Finalize-via-* outcomes
+  // are clean successes via a fallback path. The truly stranded cases are
+  // the finalize-threw-* family.
+  const finalizedOutcomes = new Set([
+    "finalized",
+    "finalized-via-listpays-after-failed_parts",
+    "finalized-after-xpay-throw",
+  ]);
+  const safeNonFinalized = new Set([
+    "reversed-via-failed_parts",
+    "reversed-after-xpay-throw",
+    "pending-after-failed_parts",
+    "pending-after-xpay-throw",
+    "verify-failed-after-failed_parts",
+    "verify-failed-after-xpay-throw",
+  ]);
+  if (finalizedOutcomes.has(outcome)) {
     l("sendLightning outcome", p.id, "=", outcome);
+  } else if (safeNonFinalized.has(outcome)) {
+    warn("sendLightning outcome", p.id, "=", outcome);
+  } else {
+    err("LEAKED DEBIT in sendLightning", p.id, "outcome=", outcome, "user=", user?.username, "amount=", amount, "fee=", fee);
   }
 
   return p;
