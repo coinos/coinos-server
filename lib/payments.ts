@@ -689,8 +689,6 @@ export const sendLightning = async ({
 
   await db.sAdd("pending", pr);
 
-  l("paying lightning invoice", pr.substr(-8), amount, fee);
-
   // Instrumentation: track which exit path the payment took so we can
   // diagnose any future stuck "optimistic" cases (confirmed=true with no
   // ref, no pending-set membership). Logged just before the function
@@ -804,7 +802,13 @@ export const sendLightning = async ({
   const persisted = await g(`payment:${p.id}`);
   const refInDb = !!persisted?.ref;
   if (refInDb || finalizedOutcomes.has(outcome)) {
-    l("sendLightning outcome", p.id, "=", outcome, refInDb && !finalizedOutcomes.has(outcome) ? "(ref set in db despite throw)" : "");
+    // Only log when the outcome wasn't the boring success case — every
+    // payment goes through "finalized" so logging it is just noise. The
+    // recovery-via-fallback variants (finalized-via-listpays-*, etc.) are
+    // worth knowing about, so emit those.
+    if (outcome !== "finalized") {
+      l("sendLightning outcome", p.id, "=", outcome, refInDb && !finalizedOutcomes.has(outcome) ? "(ref set in db despite throw)" : "");
+    }
   } else if (safeNonFinalized.has(outcome)) {
     warn("sendLightning outcome", p.id, "=", outcome);
   } else {
@@ -1053,7 +1057,6 @@ const finalize = async (r, p) => {
   if (!preimage) fail("missing preimage");
 
   await db.sRem("pending", p.hash);
-  l("payment completed", p.id, r.payment_preimage);
   nwcNotify(p);
 
   const maxfee = p.fee;
@@ -1080,7 +1083,6 @@ const finalize = async (r, p) => {
     await s(`payment:${p.id}`, p);
     const refund = maxfee - p.fee;
     if (Number.isFinite(refund) && Number.isInteger(refund)) {
-      l("refunding fee", maxfee, p.fee, refund, p.ref);
       await db.incrBy(`balance:${p.uid}`, refund);
     } else {
       warn("finalize: skipping fee refund (non-integer delta)", p.id,
