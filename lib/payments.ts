@@ -707,36 +707,38 @@ export const sendLightning = async ({
       layers: ["prefer-kappa"],
     });
 
-    // Only log the xpay response shape when there's something interesting —
-    // failed_parts > 0 or a missing preimage. The success case is noise.
-    if (r?.failed_parts || !(r?.payment_preimage ?? r?.preimage)) {
-      warn("xpay returned (abnormal)", p.id, JSON.stringify({
+    // Only log the xpay response when there's a real concern — no preimage
+    // at all (xpay failed silently and we'll need to reverse) is interesting;
+    // failed_parts WITH a preimage is normal multi-path retry behavior and
+    // not worth warning about. The failed_parts branch below handles the
+    // recovery without log spam in the success case.
+    if (!(r?.payment_preimage ?? r?.preimage)) {
+      warn("xpay returned no preimage", p.id, JSON.stringify({
         status: r?.status,
         failed_parts: r?.failed_parts,
         parts: r?.parts,
-        has_preimage: !!(r?.payment_preimage ?? r?.preimage),
         amount_sent_msat: r?.amount_sent_msat,
         amount_msat: r?.amount_msat,
       }));
     }
 
     if (r.failed_parts) {
-      // xpay didn't throw but reported failed parts. The old code path
-      // skipped finalize and left the debit stranded. Verify with listpays
-      // and act accordingly.
-      warn("xpay returned failed_parts without throwing", p.id, r.failed_parts);
+      // xpay didn't throw but reported failed parts. Verify with listpays
+      // before deciding — for multi-path payments this is the common path
+      // and usually finalizes cleanly; the noisy warns only fire when
+      // listpays disagrees with xpay or finalize itself throws.
       try {
         const { pays } = await ln.listpays(pr);
         const completed = pays.find((x) => x.status === "complete");
         const failed = !pays.length || pays.every((x) => x.status === "failed");
         if (completed) {
-          warn("xpay failed_parts but listpays complete — finalizing", p.id);
           try { await finalize(completed, p); outcome = "finalized-via-listpays-after-failed_parts"; } catch (e: any) { warn("finalize threw in failed_parts branch", p.id, e?.message); outcome = "finalize-threw-failed_parts"; }
         } else if (failed) {
           warn("xpay failed_parts and listpays failed — reversing", p.id);
           await reverse(p); outcome = "reversed-via-failed_parts";
         } else {
-          outcome = "pending-after-failed_parts";  // leave for check() loop
+          warn("xpay failed_parts, listpays still pending — leaving for check()", p.id);
+          outcome = "pending-after-failed_parts";
         }
       } catch (verifyErr: any) {
         warnThrottled("listpays verification failed (failed_parts branch)", verifyErr?.message ?? String(verifyErr));
