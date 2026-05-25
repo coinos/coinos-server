@@ -1055,15 +1055,35 @@ const finalize = async (r, p) => {
   nwcNotify(p);
 
   const maxfee = p.fee;
-  const { amount_msat } = await ln.decode(p.hash);
-  p.fee = Math.round((r.amount_sent_msat - amount_msat) / 1000);
+  // Compute the actual fee xpay paid (sent − invoice amount, both msat).
+  // Robust against zero-amount invoices (decoded amount_msat is undefined,
+  // fall back to r.amount_msat) and against CLN occasionally returning
+  // unexpected response shapes — if we can't compute a finite integer
+  // fee, keep p.fee at the originally-reserved maxfee so the subsequent
+  // refund delta is 0 instead of NaN (which would crash db.incrBy with
+  // "value is not an integer or out of range" and leave finalize in a
+  // partial state).
+  const decoded = await ln.decode(p.hash);
+  const invMsat = Number(decoded.amount_msat ?? r.amount_msat);
+  const sentMsat = Number(r.amount_sent_msat);
+  const computedFee = Math.round((sentMsat - invMsat) / 1000);
+  if (!Number.isFinite(computedFee)) {
+    warn("finalize: non-finite fee compute, keeping reserved maxfee", p.id,
+         "sent_msat=", r.amount_sent_msat, "inv_msat=", decoded.amount_msat ?? r.amount_msat);
+  }
+  p.fee = Number.isFinite(computedFee) ? computedFee : maxfee;
   p.ref = preimage;
 
   if (!(await g(`payment:${p.id}`)).ref) {
     await s(`payment:${p.id}`, p);
-
-    l("refunding fee", maxfee, p.fee, maxfee - p.fee, p.ref);
-    await db.incrBy(`balance:${p.uid}`, maxfee - p.fee);
+    const refund = maxfee - p.fee;
+    if (Number.isFinite(refund) && Number.isInteger(refund)) {
+      l("refunding fee", maxfee, p.fee, refund, p.ref);
+      await db.incrBy(`balance:${p.uid}`, refund);
+    } else {
+      warn("finalize: skipping fee refund (non-integer delta)", p.id,
+           "maxfee=", maxfee, "p.fee=", p.fee, "refund=", refund);
+    }
   }
 
   return p;
