@@ -135,14 +135,22 @@ export const debit = async ({
   // Atomic check + reserve against the per-asset-type server limit. Decrement
   // immediately so concurrent calls can't reuse the same budget; freezeCheck
   // reconciles to actual on-chain balance every 10s.
-  await withLimitLock(type, async () => {
-    const serverLimit = Number.parseInt((await g(`${type}:limit`)) ?? "0", 10) || 0;
-    if (amount > serverLimit) {
-      warn("Blocking", user.username, amount, hash, user.id, type, "serverLimit", serverLimit);
-      fail("Problem sending payment");
-    }
-    await db.decrBy(`${type}:limit`, amount);
-  });
+  //
+  // Internal sends are exempt: they're pure ledger moves between coinos users
+  // and never touch an external wallet, so there's no hot-wallet liquidity to
+  // reserve against. freezeCheck only ever populates limits for external types
+  // (lightning/fund/ecash/bolt12/bitcoin/liquid), so `internal:limit` stays 0
+  // forever — applying the check here blocks every internal payment.
+  if (type !== PaymentType.internal) {
+    await withLimitLock(type, async () => {
+      const serverLimit = Number.parseInt((await g(`${type}:limit`)) ?? "0", 10) || 0;
+      if (amount > serverLimit) {
+        warn("Blocking", user.username, amount, hash, user.id, type, "serverLimit", serverLimit);
+        fail("Problem sending payment");
+      }
+      await db.decrBy(`${type}:limit`, amount);
+    });
+  }
 
   let ref;
   const { id: uid, currency } = user;
