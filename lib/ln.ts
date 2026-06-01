@@ -44,7 +44,52 @@ function isUnavailable(e: any) {
 
 function isSocketDied(e: any) {
   const code = e?.code ?? e?.errno;
-  return code === "EPIPE" || code === "ECONNRESET" || code === "ENOENT" || code === 2;
+  return (
+    code === "EPIPE" ||
+    code === "ECONNRESET" ||
+    code === "ENOENT" ||
+    code === 2 ||
+    // A timed-out RPC (see RPC_TIMEOUT below) means the socket is open but cl
+    // stopped responding (zombie/half-open). Treat it as dead so the client is
+    // dropped and the next call reconnects — without restarting the process.
+    code === "ETIMEDOUT"
+  );
+}
+
+// Wall-clock cap for short-lived RPCs. A unix-domain socket has no TCP
+// keepalive, so a hung cl would otherwise leave the await pending forever
+// (the "stuck spinner past /pay/bob, no error" symptom). 30s matches the
+// health-check RPC_TIMEOUT in lib/health.ts.
+const RPC_TIMEOUT = 30_000;
+
+// Methods that MUST NOT get a client-side timeout:
+//  - waitanyinvoice/waitinvoice/waitsendpay/waitblockheight: long-polls that
+//    are designed to block until something happens.
+//  - pay/xpay/sendpay/keysend: in-flight payments. Rejecting the caller early
+//    while the HTLC may still settle is exactly the leaked-debit hazard the
+//    sendLightning guards exist to prevent — let these run to completion.
+//  - fetchinvoice/sendinvoice/offer: bolt12 flows that round-trip to a remote
+//    node over the network and can legitimately take a long time.
+const NO_TIMEOUT = new Set([
+  "waitanyinvoice",
+  "waitinvoice",
+  "waitsendpay",
+  "waitblockheight",
+  "pay",
+  "xpay",
+  "sendpay",
+  "keysend",
+  "fetchinvoice",
+  "sendinvoice",
+  "offer",
+]);
+
+class RpcTimeoutError extends Error {
+  code = "ETIMEDOUT" as const;
+  constructor(method: string, ms: number) {
+    super(`Lightning RPC ${method} timed out after ${ms}ms`);
+    this.name = "RpcTimeoutError";
+  }
 }
 
 function lightningProxy(rpcPath: string) {
@@ -105,9 +150,26 @@ function lightningProxy(rpcPath: string) {
 
           if (typeof v !== "function") return v;
 
+          const method = String(prop);
           try {
-            return await v.apply(c, args);
+            const call = v.apply(c, args);
+            if (NO_TIMEOUT.has(method)) return await call;
+
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            const timeout = new Promise((_resolve, reject) => {
+              timer = setTimeout(
+                () => reject(new RpcTimeoutError(method, RPC_TIMEOUT)),
+                RPC_TIMEOUT,
+              );
+            });
+            try {
+              return await Promise.race([call, timeout]);
+            } finally {
+              clearTimeout(timer);
+            }
           } catch (e: any) {
+            // ETIMEDOUT (from RpcTimeoutError) is included in isSocketDied, so a
+            // hung RPC drops the client and the next call reconnects.
             if (isSocketDied(e)) client = null;
             throw e;
           }
