@@ -36,6 +36,8 @@ export default async (user, ip) => {
     });
   }
 
+  user.created = Date.now();
+
   user.currency = "USD";
   if (config.ipregistry) {
     try {
@@ -46,6 +48,7 @@ export default async (user, ip) => {
       ).json();
 
       user.currency = countries[code];
+      user.country = code; // stored for analytics (signup geography)
     } catch (e) {
       warn("unable to detect country from IP", username);
     }
