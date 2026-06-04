@@ -3,16 +3,21 @@
 // aggregates payment + balance + user data into an insight report.
 //
 // Usage:
-//   bun scripts/analytics.ts [--days N] [--top N] [--json]
+//   bun scripts/analytics.ts [--days N] [--top N] [--json] [--csv PATH]
 //
 // Defaults: --days 30, --top 20. Reads only the live db (redis://127.0.0.1:6379);
 // archived payments (older, in `arc`) are out of scope for the trailing window.
+// --csv appends one metrics row to PATH (writing a header if the file is new),
+// for month-over-month trend tracking; the human report still prints to stdout.
 
 import { createClient } from "redis";
+import { appendFileSync, existsSync } from "fs";
 
 const argDays = Number(process.argv[process.argv.indexOf("--days") + 1]) || 30;
 const TOP = Number(process.argv[process.argv.indexOf("--top") + 1]) || 20;
 const asJson = process.argv.includes("--json");
+const csvIdx = process.argv.indexOf("--csv");
+const csvPath = csvIdx >= 0 ? process.argv[csvIdx + 1] : null;
 
 const now = Date.now();
 const cutoff = now - argDays * 24 * 60 * 60 * 1000;
@@ -168,6 +173,50 @@ const regularBolt12 = [...bolt12Recipients.entries()].filter(([, n]) => n >= 4);
 regularBolt12.sort((a, b) => b[1] - a[1]);
 
 const totalVolume = Object.values(byType).reduce((s, a) => s + a.volume, 0);
+
+// ---- CSV append (trend tracking) -------------------------------------------
+// One row per run. Stable column set so months line up; per-type volume/count
+// columns let us chart the lightning/liquid/bitcoin/internal/bolt12 mix over
+// time. Written before stdout output so it happens in both text and --json modes.
+if (csvPath) {
+  const typeCols = ["lightning", "liquid", "bitcoin", "internal", "bolt12", "fund"];
+  const header = [
+    "date",
+    "window_days",
+    "users_total",
+    "new_users",
+    "mau",
+    "wau",
+    "payments",
+    "total_volume_sats",
+    "custodied_sats",
+    "holders",
+    "fee_revenue_sats",
+    "bolt12_recipients",
+    "regular_bolt12",
+    ...typeCols.flatMap((t) => [`${t}_vol`, `${t}_txns`]),
+  ];
+  const row = [
+    new Date(now).toISOString().slice(0, 10),
+    argDays,
+    userRecords,
+    newUsers,
+    activeUids.size,
+    weekActive.size,
+    paymentsInWindow,
+    totalVolume,
+    totalCustodied,
+    holders.length,
+    feeRevenue,
+    bolt12Recipients.size,
+    regularBolt12.length,
+    ...typeCols.flatMap((t) => [byType[t]?.volume || 0, byType[t]?.count || 0]),
+  ];
+  const fresh = !existsSync(csvPath);
+  appendFileSync(csvPath, (fresh ? header.join(",") + "\n" : "") + row.join(",") + "\n");
+  // To stderr so it doesn't pollute the saved stdout report / --json output.
+  console.error(`[csv] appended row to ${csvPath}`);
+}
 
 // ---- output ----------------------------------------------------------------
 
