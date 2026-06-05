@@ -222,10 +222,22 @@ export default () => {
 const handle = (method, params, ev, app, user) =>
   ({
     async pay_invoice() {
-      const { invoice: pr, metadata } = params;
+      const { invoice: pr, metadata, amount: reqAmountMsat } = params;
       const { amount_msat, payee } = await ln.decode(pr);
       const { id } = await ln.getinfo();
-      const amount = Math.round(amount_msat / 1000);
+      // For an amountless bolt11, the invoice carries no amount — NIP-47 lets the
+      // client specify it in the request's `amount` field (msat). Fall back to
+      // that so amountless invoices aren't rejected with "Invalid amount"
+      // (issue #83). Invoice amount takes precedence when present.
+      const amountMsat = amount_msat || reqAmountMsat;
+      if (!amountMsat) {
+        return error({
+          code: "OTHER",
+          message:
+            "Amountless invoice requires an amount; specify amount (msat) in the request",
+        });
+      }
+      const amount = Math.round(amountMsat / 1000);
       const { max_amount, max_fee, budget_renewal, pubkey, created } = app;
 
       const periods = {
