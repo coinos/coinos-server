@@ -144,6 +144,22 @@ function lightningProxy(rpcPath: string) {
         if (prop === "toString") return () => "[LightningProxy]";
         if (prop === Symbol.toStringTag) return "LightningProxy";
 
+        // Force the underlying socket to be dropped so the next call reconnects.
+        // Used by the lightning-listener watchdog to recover a zombie long-poll
+        // (waitanyinvoice blocked on a dead socket while cl is actually alive —
+        // the per-call timeout can't catch it because long-polls are exempt).
+        if (prop === "reset") {
+          return () => {
+            const had = !!client;
+            try {
+              client?.removeAllListeners?.();
+              client?.destroy?.();
+            } catch (_) {}
+            client = null;
+            return had;
+          };
+        }
+
         return async (...args: any[]) => {
           const c = ensure();
           const v = c[prop as any];

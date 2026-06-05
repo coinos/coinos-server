@@ -8,9 +8,23 @@ import { getInvoice, getPayment, getUser } from "$lib/utils";
 
 const LISTENER_RETRY_DELAY = 5000; // 5 seconds
 const MAX_LISTENER_RETRIES = 10;
+// If the listener has been blocked in waitanyinvoice this long without the call
+// returning, AND cl is actually reachable, treat the socket as a zombie and
+// force-recycle it. Sized well above normal quiet periods (receives are sparse
+// but cl still responds to getinfo) so it only fires on a genuine stall.
+const LISTENER_STALL_MS = 5 * 60 * 1000; // 5 minutes
 let listenerRetries = 0;
 let listenerActive = false;
 let lastPayTime = Date.now();
+// When the current waitanyinvoice call started — used by the watchdog to tell a
+// legitimately-quiet listener (recently armed) from a zombie (armed long ago,
+// never returned). Reset every time we (re)enter the wait.
+let waitStartedAt = Date.now();
+// Incremented whenever the watchdog force-recycles a stalled listener. The
+// blocked invocation captures the epoch at entry; if it later unblocks (the
+// reset makes its waitanyinvoice reject) it sees the epoch has moved and bows
+// out instead of re-arming, so we never run two listeners concurrently.
+let listenerEpoch = 0;
 
 export async function listenForLightning() {
   if (listenerActive) {
@@ -19,6 +33,8 @@ export async function listenForLightning() {
   }
 
   listenerActive = true;
+  waitStartedAt = Date.now();
+  const myEpoch = listenerEpoch;
 
   try {
     const payIndex = (await g("pay_index")) || 0;
@@ -35,6 +51,12 @@ export async function listenForLightning() {
       amount_received_msat,
       payment_preimage: preimage,
     } = inv;
+
+    // If the watchdog recycled the listener while this call was blocked, a new
+    // listener now owns the stream. Bail without advancing pay_index or
+    // processing — the new listener's waitanyinvoice(payIndex) will return this
+    // same invoice and handle it, so nothing is lost or double-credited.
+    if (myEpoch !== listenerEpoch) return;
 
     await s("pay_index", pay_index);
     lastPayTime = Date.now();
@@ -85,6 +107,12 @@ export async function listenForLightning() {
     }
   } catch (e: any) {
     listenerActive = false;
+
+    // If the watchdog already recycled us (its reset is what made this
+    // waitanyinvoice reject), a fresh listener is running — don't retry or
+    // re-arm here, or we'd run two listeners.
+    if (myEpoch !== listenerEpoch) return;
+
     const errorCode = e?.code ?? e?.errno ?? "unknown";
     const errorMsg = e?.message ?? String(e);
 
@@ -121,11 +149,47 @@ export async function listenForLightning() {
   }
 }
 
-export function ensureListenerAlive() {
+export async function ensureListenerAlive() {
+  // Case 1: listener fell over (threw, or never armed) — just restart it.
   if (!listenerActive) {
     warn("lightning listener: not active, restarting");
     listenForLightning();
+    return;
   }
+
+  // Case 2: listener claims active but has been blocked in waitanyinvoice far
+  // longer than any normal quiet period. This is the zombie-socket case that
+  // stalled receives for ~2h on 2026-06-04: cl restarted, the listener's
+  // long-poll hung on the dead socket, listenerActive stayed true forever, and
+  // nothing detected it. The per-call RPC timeout in ln.ts can't help —
+  // waitanyinvoice is intentionally exempt (it's meant to block).
+  if (Date.now() - waitStartedAt < LISTENER_STALL_MS) return;
+
+  // Stalled. Confirm cl is actually reachable before blaming the socket — if cl
+  // itself is down, the regular retry/exit path handles it; we only want to
+  // recover the case where cl is alive but our listen socket is dead.
+  let clAlive = false;
+  try {
+    const info = await ln.getinfo();
+    clAlive = !!info?.id;
+  } catch (_) {
+    clAlive = false;
+  }
+  if (!clAlive) return; // cl down; not our zombie case, leave it.
+
+  err(
+    `lightning listener: stalled ${Math.round(
+      (Date.now() - waitStartedAt) / 1000,
+    )}s while cl is alive — recycling listen socket`,
+  );
+  // Bump the epoch first so the wedged invocation bows out when its
+  // waitanyinvoice rejects, then drop the socket and re-arm a fresh listener.
+  listenerEpoch++;
+  try {
+    (lnListen as any).reset?.();
+  } catch (_) {}
+  listenerActive = false;
+  setTimeout(listenForLightning);
 }
 
 export async function replay(index) {
