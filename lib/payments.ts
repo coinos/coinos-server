@@ -404,7 +404,15 @@ export const completePayment = async (inv, p, user) => {
 
   squarePayment(p, user);
 
-  l(username, "received", p.type, p.amount);
+  // completePayment runs at two lifecycle points for on-chain (bitcoin/liquid)
+  // deposits — once when the tx is first seen (pending) and again from /confirm
+  // when it confirms — plus once for instant lightning receives. Logging a bare
+  // "received" at each made a single on-chain deposit look like two receives in
+  // the logs (it never double-credited — the /confirm `p.confirmed` guard and
+  // the `seen` set prevent that; it was only noisy/misleading). Distinguish the
+  // states so the log reads as one deposit moving pending -> confirmed.
+  const stage = p.confirmed ? "received" : "receiving (pending)";
+  l(username, stage, p.type, p.amount);
   callWebhook(inv, p);
 };
 
