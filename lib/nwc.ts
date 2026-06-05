@@ -403,11 +403,14 @@ const handle = (method, params, ev, app, user) =>
         expiry,
       };
 
-      const {
-        hash,
-        created: created_at,
-        paymentHash,
-      } = await generate({ invoice, user });
+      const { hash, created, paymentHash } = await generate({ invoice, user });
+
+      // generate() stores `created` in milliseconds (Date.now()), but NWC
+      // timestamps are Unix SECONDS (NIP-47). Returning ms here produced an
+      // expires_at ~1.78e12 that overflowed clients' date parsers — e.g.
+      // ptcpay's .NET DateTimeOffset (issue #84: "Valid values are between
+      // -62135596800 and 253402300799"). Convert to seconds.
+      const created_at = Math.floor(created / 1000);
 
       return result({
         type: "incoming",
