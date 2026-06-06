@@ -42,8 +42,12 @@ const nwcEventMaxAgeSeconds = 5 * 60;
 const handledKey = "handled:nwc";
 const handledMaxSize = 200000;
 
-// Per-pubkey rate limiting for NWC requests
-const nwcRateLimit = 5; // max requests per minute per pubkey
+// Per-pubkey rate limiting for NWC requests. Raised 5 -> 60/min: normal client
+// usage (a balance check or two + a payment + a few lookup_invoice reconciles)
+// blows past 5 trivially, and over-limit requests were dropped SILENTLY with no
+// reply — indistinguishable from lost replies. 60/min (1/s avg) is ample
+// headroom for interactive use while still capping abuse.
+const nwcRateLimit = 60; // max requests per minute per pubkey
 const nwcRateWindow = 60 * 1000; // 1 minute in ms
 const nwcRequestTimes: Map<string, number[]> = new Map();
 
@@ -157,11 +161,44 @@ export default () => {
       if (ev.created_at && now - ev.created_at > nwcEventMaxAgeSeconds) return;
       if (await db.zScore(handledKey, ev.id)) return;
 
-      // Per-pubkey rate limiting
+      let { content, pubkey } = ev;
+      const pk = ev.tags.find((t) => t[0] === "p")[1];
+      const sk = serverKeys[pk];
+      const { params, method } = JSON.parse(
+        await nip04.decrypt(sk, pubkey, content),
+      );
+
+      // Helper: send a 23195 reply (used for both results and errors). Pulled
+      // up so the rate-limit path can reply instead of dropping silently.
+      const reply = async (payloadObj: any) => {
+        const enc = await nip04.encrypt(sk, pubkey, JSON.stringify(payloadObj));
+        const signed = await finalizeEvent(
+          {
+            created_at: Math.floor(Date.now() / 1000),
+            kind: 23195,
+            pubkey: serverPubkey,
+            tags: [["p", pubkey], ["e", ev.id]],
+            content: enc,
+          } as UnsignedEvent,
+          hexToBytes(sk),
+        );
+        r.send(["EVENT", signed]);
+      };
+
+      // Per-pubkey rate limiting. Over-limit requests get a NIP-47 RATE_LIMITED
+      // error reply (not a silent drop) so the client can distinguish throttling
+      // from a lost reply and back off.
       const times = nwcRequestTimes.get(ev.pubkey) || [];
       const cutoff = Date.now() - nwcRateWindow;
       const recent = times.filter((t) => t > cutoff);
-      if (recent.length >= nwcRateLimit) return;
+      if (recent.length >= nwcRateLimit) {
+        db.zAdd(handledKey, { score: now, value: ev.id });
+        await reply({
+          result_type: method,
+          error: { code: "RATE_LIMITED", message: "Too many requests, slow down" },
+        });
+        return;
+      }
       recent.push(Date.now());
       nwcRequestTimes.set(ev.pubkey, recent);
 
@@ -171,12 +208,6 @@ export default () => {
       if (size > handledMaxSize) {
         await db.zRemRangeByRank(handledKey, 0, size - handledMaxSize - 1);
       }
-      let { content, pubkey } = ev;
-      const pk = ev.tags.find((t) => t[0] === "p")[1];
-      const sk = serverKeys[pk];
-      const { params, method } = JSON.parse(
-        await nip04.decrypt(sk, pubkey, content),
-      );
 
       // console.log("nwc", method, params, pubkey);
 
@@ -189,26 +220,27 @@ export default () => {
         if (!user) fail("user not found");
 
         const result = await handle(method, params, ev, app, user);
-        const payload = JSON.stringify({ result_type: method, ...result });
-        content = await nip04.encrypt(sk, pubkey, payload);
-
-        let response: UnsignedEvent = {
-          created_at: Math.floor(Date.now() / 1000),
-          kind: 23195,
-          pubkey: serverPubkey,
-          tags: [
-            ["p", pubkey],
-            ["e", ev.id],
-          ],
-          content,
-        };
-
-        response = await finalizeEvent(response, hexToBytes(sk));
-        r.send(["EVENT", response]);
+        // A handler returning nothing (e.g. pay_invoice that couldn't confirm in
+        // time) must still produce a reply, or the client hangs forever waiting.
+        if (result === undefined || result === null) {
+          await reply({
+            result_type: method,
+            error: { code: "INTERNAL", message: "No response from handler" },
+          });
+        } else {
+          await reply({ result_type: method, ...result });
+        }
       } catch (e) {
         // Stale client state (deleted app or migrated user) is not a server fault — don't log.
         if (e.message === "pubkey not found" || e.message === "user not found") return;
         err("problem with nwc", pubkey, method, e.message);
+        // Still reply so the client isn't left hanging on the failure.
+        try {
+          await reply({
+            result_type: method,
+            error: { code: "INTERNAL", message: e.message },
+          });
+        } catch (_) {}
       }
     } catch (e) {
       err("problem with nwc event", e.message);
@@ -318,7 +350,12 @@ const handle = (method, params, ev, app, user) =>
       }
 
       try {
-        const { id: pid } = await sendLightning({
+        // sendLightning runs xpay to completion and finalize() sets p.ref to the
+        // preimage on success, so the returned record already carries it — no
+        // need to poll listpays and race a 20s timeout (the old loop returned a
+        // misleading "Payment timed out" error on slow routes even though the
+        // payment had settled; see issue #80).
+        const p = await sendLightning({
           amount,
           fee: max_fee || Math.round(amount * 0.01),
           user,
@@ -326,22 +363,30 @@ const handle = (method, params, ev, app, user) =>
           memo: JSON.stringify(metadata),
         });
 
-        await db.lPush(`${pubkey}:payments`, pid);
+        await db.lPush(`${pubkey}:payments`, p.id);
 
-        for (let i = 0; i < 10; i++) {
+        if (p.ref) return result({ preimage: p.ref });
+
+        // Fallback: ref missing (shouldn't normally happen) — confirm via
+        // listpays before giving up, with a longer window than before.
+        for (let i = 0; i < 30; i++) {
           const { pays } = await ln.listpays(pr);
-          const p = pays.find((p) => p.status === "complete");
-          if (p) {
-            const { preimage } = p;
-            return result({ preimage });
-          }
+          const done = pays.find((x) => x.status === "complete");
+          if (done?.preimage) return result({ preimage: done.preimage });
+          if (pays.length && pays.every((x) => x.status === "failed"))
+            return error({ code: "PAYMENT_FAILED", message: "Payment failed" });
           await sleep(2000);
         }
       } catch (e) {
-        return error({ code: "INTERNAL", message: e.message });
+        return error({ code: "PAYMENT_FAILED", message: e.message });
       }
 
-      return error({ code: "INTERNAL", message: "Payment timed out" });
+      // Still in flight after the fallback window: the payment may yet settle.
+      // Tell the client explicitly rather than implying success or hard failure.
+      return error({
+        code: "INTERNAL",
+        message: "Payment still in flight; check status with lookup_invoice",
+      });
     },
 
     async pay_keysend() {
