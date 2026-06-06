@@ -989,12 +989,11 @@ export default {
 
       if (app && uid !== app.uid) fail("Unauthorized");
       if (secret) pubkey = getPublicKey(hexToBytes(secret));
-      // Default notifications ON. The info event advertises payment_received/
-      // payment_sent, but notify previously defaulted to false unless the client
-      // sent notify:"true" — which most don't — so the advertised notifications
-      // never fired (only ~1% of apps had it on). Only disable when explicitly
-      // set to "false".
-      notify = String(notify) !== "false";
+      // Notifications are opt-in (default off): most users don't consume them and
+      // publishing payment_sent/payment_received for every app would flood the
+      // relay. A client enables them by sending notify:"true" when creating the
+      // connection. (Reverted a brief default-on change, 2026-06-06.)
+      notify = String(notify) === "true";
 
       app = {
         ...app,
