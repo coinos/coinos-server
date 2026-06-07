@@ -157,30 +157,37 @@ export async function ensureListenerAlive() {
     return;
   }
 
-  // Case 2: listener claims active but has been blocked in waitanyinvoice far
-  // longer than any normal quiet period. This is the zombie-socket case that
-  // stalled receives for ~2h on 2026-06-04: cl restarted, the listener's
-  // long-poll hung on the dead socket, listenerActive stayed true forever, and
-  // nothing detected it. The per-call RPC timeout in ln.ts can't help —
-  // waitanyinvoice is intentionally exempt (it's meant to block).
+  // Case 2: listener claims active. A long-blocked waitanyinvoice is NORMAL
+  // during quiet periods — the only way to tell a zombie socket from a healthy
+  // idle wait is whether cl actually has a paid invoice the listener is failing
+  // to pick up. (The original "blocked > 5min while cl alive" check false-fired
+  // every few minutes during normal quiet stretches and needlessly recycled the
+  // socket — see 2026-06-07.) So: only act if there's a real backlog.
   if (Date.now() - waitStartedAt < LISTENER_STALL_MS) return;
 
-  // Stalled. Confirm cl is actually reachable before blaming the socket — if cl
-  // itself is down, the regular retry/exit path handles it; we only want to
-  // recover the case where cl is alive but our listen socket is dead.
-  let clAlive = false;
+  // Probe for a backlog: ask cl (on the MAIN socket, not the wedged listen one)
+  // whether a paid invoice exists at or after the app's stored pay_index, using
+  // waitanyinvoice with a short server-side timeout so it returns fast either
+  // way. If it returns an invoice, the listener's socket is stuck while real
+  // payments are waiting -> genuine zombie, recycle. If it times out (no waiting
+  // invoice), the listener is simply idle and healthy -> leave it alone.
+  let backlog = false;
   try {
-    const info = await ln.getinfo();
-    clAlive = !!info?.id;
-  } catch (_) {
-    clAlive = false;
+    const payIndex = (await g("pay_index")) || 0;
+    const probe = await ln.waitanyinvoice(payIndex, 2); // 2s server-side timeout
+    if (probe?.pay_index) backlog = true;
+  } catch (e: any) {
+    // CLN returns an error (code 904) on timeout with no waiting invoice — that
+    // means NO backlog (healthy). Any other error: stay conservative, don't
+    // recycle on ambiguous signals.
+    backlog = false;
   }
-  if (!clAlive) return; // cl down; not our zombie case, leave it.
+  if (!backlog) return; // healthy idle wait, not a zombie.
 
   err(
-    `lightning listener: stalled ${Math.round(
+    `lightning listener: backlog detected while listener blocked ${Math.round(
       (Date.now() - waitStartedAt) / 1000,
-    )}s while cl is alive — recycling listen socket`,
+    )}s — recycling listen socket`,
   );
   // Bump the epoch first so the wedged invocation bows out when its
   // waitanyinvoice rejects, then drop the socket and re-arm a fresh listener.
