@@ -1,5 +1,5 @@
 FROM ghcr.io/coinos/base AS builder
-ARG VERSION=30.2
+ARG VERSION=31.0
 USER root
 RUN wget -qO- https://bitcoincore.org/bin/bitcoin-core-$VERSION/bitcoin-$VERSION-x86_64-linux-gnu.tar.gz | tar -xz --strip-components=1 -C /usr/local
 
