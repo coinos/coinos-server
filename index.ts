@@ -5,7 +5,7 @@ import { admin, auth, optional } from "$lib/auth";
 import { getDelegateInfo, receiveDelegation } from "$lib/delegator";
 import { g, s } from "$lib/db";
 
-import { fixBolt12, listenForLightning, replay } from "$lib/lightning";
+import { ensureListenerAlive, fixBolt12, listenForLightning, replay } from "$lib/lightning";
 import { l } from "$lib/logging";
 import { startHealthCheck } from "$lib/health";
 import { getLocations } from "$lib/locations";
@@ -49,6 +49,7 @@ setTimeout(listenForLightning, 2000);
 listenForDMs();
 initMlsIndex();
 setInterval(sendHeartbeat, 2000);
+setInterval(ensureListenerAlive, 120_000); // LN listener watchdog
 
 app.get("/balances", info.balances);
 app.get("/health", info.health);

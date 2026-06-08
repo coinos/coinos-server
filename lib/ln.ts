@@ -98,6 +98,7 @@ function lightningProxy(rpcPath: string): any {
       get(_t, prop: string | symbol) {
         if (prop === "toString") return () => "[LightningProxy]";
         if (prop === Symbol.toStringTag) return "LightningProxy";
+        if (prop === "reset") return () => { client = null; }; // watchdog: drop a zombie socket
 
         return async (...args: any[]) => {
           const c = ensure();

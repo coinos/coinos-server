@@ -9,8 +9,13 @@ import { getInvoice, getPayment, getUser } from "$lib/utils";
 
 const LISTENER_RETRY_DELAY = 5000; // 5 seconds
 const MAX_LISTENER_RETRIES = 10;
+// If the listener has been blocked in waitanyinvoice this long without returning,
+// AND cl is reachable, treat the listen socket as a zombie and recycle it.
+const LISTENER_STALL_MS = 5 * 60 * 1000; // 5 minutes
 let listenerRetries = 0;
 let listenerActive = false;
+let waitStartedAt = Date.now();
+let listenerEpoch = 0;
 
 export async function listenForLightning() {
   if (listenerActive) {
@@ -19,6 +24,8 @@ export async function listenForLightning() {
   }
 
   listenerActive = true;
+  waitStartedAt = Date.now();
+  const myEpoch = listenerEpoch;
 
   try {
     const payIndex = (await g("pay_index")) || 0;
@@ -35,6 +42,9 @@ export async function listenForLightning() {
       amount_received_msat,
       payment_preimage: preimage,
     } = inv;
+
+    // watchdog recycled us while blocked — a fresh listener owns the stream now.
+    if (myEpoch !== listenerEpoch) return;
 
     await s("pay_index", pay_index);
 
@@ -84,6 +94,7 @@ export async function listenForLightning() {
     }
   } catch (e: any) {
     listenerActive = false;
+    if (myEpoch !== listenerEpoch) return; // watchdog already re-armed a fresh listener
     const errorCode = e?.code ?? e?.errno ?? "unknown";
     const errorMsg = e?.message ?? String(e);
 
@@ -114,6 +125,34 @@ export async function listenForLightning() {
     );
     setTimeout(listenForLightning, LISTENER_RETRY_DELAY);
   }
+}
+
+export async function ensureListenerAlive() {
+  if (!listenerActive) {
+    warn("lightning listener: not active, restarting");
+    listenForLightning();
+    return;
+  }
+  if (Date.now() - waitStartedAt < LISTENER_STALL_MS) return;
+  let clAlive = false;
+  try {
+    const info = await ln.getinfo();
+    clAlive = !!info?.id;
+  } catch (_) {
+    clAlive = false;
+  }
+  if (!clAlive) return; // cl itself down — the retry/exit path handles that
+  err(
+    `lightning listener: stalled ${Math.round(
+      (Date.now() - waitStartedAt) / 1000,
+    )}s while cl is alive — recycling listen socket`,
+  );
+  listenerEpoch++;
+  try {
+    (lnListen as any).reset?.();
+  } catch (_) {}
+  listenerActive = false;
+  setTimeout(listenForLightning);
 }
 
 export async function replay(index) {
