@@ -646,6 +646,109 @@ export default {
     res.send({});
   },
 
+  // Authenticated self-delete: wipes every key tied to the calling user,
+  // mirroring scripts/delall-legacy.ts. Gated by typing the username (works for
+  // password and nostr accounts alike) and refuses while a balance remains so a
+  // user can't accidentally destroy funds.
+  async deleteSelf(req, res) {
+    try {
+      const { user } = req;
+      const { id, username, pubkey } = user;
+
+      const confirm = (req.body?.confirm || "").toString().trim().toLowerCase();
+      if (confirm !== username.toLowerCase())
+        fail("Type your username to confirm account deletion");
+
+      // Allow deletion through dust (often too small to withdraw); only block
+      // a meaningful balance so nobody destroys real funds by accident.
+      const balance = Number(await db.get(`balance:${id}`)) || 0;
+      const pending = Number(await db.get(`pending:${id}`)) || 0;
+      if (balance + pending > 10000)
+        fail("Withdraw your balance before deleting your account");
+
+      const keys = [
+        `user:${id}`,
+        // username->uid mapping is stored lowercased+despaced (see register.ts);
+        // include both forms so a mixed-case username can't leave a dangling alias.
+        `user:${username.toLowerCase().replace(/\s/g, "")}`,
+        `user:${username}`,
+        `${id}:payments`,
+        `${id}:payments:last`,
+        `${id}:apps`,
+        `${id}:lastlen`,
+        `${id}:accounts`,
+        `${id}:contacts`,
+        `${id}:invoices`,
+        `${id}:items`,
+        `${id}:pins`,
+        `${id}:subscriptions`,
+        `${id}:trust`,
+        `${id}:square`,
+        `${id}:codeVerifier`,
+        `account:${id}`,
+        `balance:${id}`,
+        `pending:${id}`,
+        `credit:bitcoin:${id}`,
+        `credit:lightning:${id}`,
+        `credit:liquid:${id}`,
+      ];
+
+      if (pubkey) {
+        keys.push(
+          `user:${pubkey}`,
+          `${pubkey}:follows`,
+          `${pubkey}:follows:n`,
+          `${pubkey}:followers`,
+          `${pubkey}:followers:n`,
+          `${pubkey}:pubkeys`,
+        );
+        if (user.nip5) await db.sRem("nip5", `${username}:${pubkey}`);
+      }
+
+      // Connected NWC apps: drop each app record + its payment index.
+      // `${id}:apps` is a SET (sAdd in register.ts), so use sMembers, not lRange.
+      for (const ap of await db.sMembers(`${id}:apps`))
+        keys.push(`app:${ap}`, `${ap}:payments`);
+
+      // Sub-accounts and their payment records.
+      for (const aid of await db.lRange(`${id}:accounts`, 0, -1)) {
+        if (aid === id) continue;
+        for (const pid of await db.lRange(`${aid}:payments`, 0, -1))
+          keys.push(`payment:${pid}`);
+        keys.push(
+          `account:${aid}`,
+          `${aid}:payments`,
+          `${aid}:payments:last`,
+          `${aid}:invoices`,
+          `balance:${aid}`,
+          `pending:${aid}`,
+        );
+      }
+
+      // Main-account payment + invoice records.
+      for (const pid of await db.lRange(`${id}:payments`, 0, -1))
+        keys.push(`payment:${pid}`);
+      for (const iid of await db.lRange(`${id}:invoices`, 0, -1))
+        keys.push(`invoice:${iid}`);
+
+      let deleted = 0;
+      for (const k of keys) {
+        if (await db.exists(k)) {
+          await db.del(k);
+          deleted++;
+        }
+      }
+
+      l("user self-deleted", username, id, `${deleted} keys`);
+      try {
+        res.clearCookie("token");
+      } catch {}
+      res.send({ deleted: true });
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
   async reset(req, res) {
     const {
       body: { code, username, password },
