@@ -342,6 +342,21 @@ export const credit = async ({
     await sa(`payment:${hash}`, id);
   }
 
+  // Idempotency guard for external settlements. The getPayment() pre-check in
+  // the lightning listener/replay is not atomic: N concurrent re-credits of the
+  // same payment all read it as uncredited before any writes the pointer, so
+  // each runs the incrBy below — the /replay double-credit race. SET NX is
+  // atomic, so only the first caller claims the settlement and credits; the rest
+  // bail here, before the incrBy. `ref` is the lightning preimage, unique per
+  // settlement; internal/fund/ecash pass ref=uid and are exempt.
+  if ([PaymentType.lightning, PaymentType.bolt12].includes(type) && ref) {
+    const claimed = await db.set(`credited:${ref}`, id, { NX: true });
+    if (!claimed) {
+      warn("duplicate credit blocked", hash, ref);
+      return;
+    }
+  }
+
   const m = await db.multi();
 
   let creditType = type;
