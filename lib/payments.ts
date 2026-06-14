@@ -1,4 +1,5 @@
 import config from "$config";
+import { existsSync } from "fs";
 import api from "$lib/api";
 import changeid from "$lib/changeid";
 import { db, g, gf, s, sa } from "$lib/db";
@@ -64,6 +65,20 @@ const lq = rpc(config.liquid);
 const { URL } = process.env;
 
 const dust = 547;
+
+// External-withdrawal lockfiles. Out-of-band emergency stop: nobal.sh (or a
+// human) can `touch /home/adam/locks/<type>.locked` on the host, which is
+// bind-mounted into this container at /locks. Existence of /locks/<type>.locked
+// (or /locks/ALL.locked) blocks all external sends of that type. Lives outside
+// db so it can't be disabled by a db-write vector (May 18 /gateway lesson).
+//
+// Internal payments are never blocked by these — receives and internal
+// transfers between coinos users keep working with the site fully online.
+const isWithdrawLocked = (type: string): string | null => {
+  if (existsSync("/locks/ALL.locked")) return "ALL";
+  if (existsSync(`/locks/${type}.locked`)) return type;
+  return null;
+};
 
 const resolveBip353 = async (name: string, domain: string) => {
   const qname = `${name}.user._bitcoin-payment.${domain}`;
@@ -178,6 +193,16 @@ export const debit = async ({
   const userLimit = await g("limit");
   const frozen = (await g("hardfreeze")) || ((await g("freeze")) && type !== PaymentType.internal);
   const skipServerLimit = type === PaymentType.fund || type === PaymentType.internal;
+
+  // Out-of-band withdrawal lock (file-based, can't be defeated by db writes).
+  // Internal sends are exempt — they don't touch external wallets.
+  if (type !== PaymentType.internal) {
+    const lockedKind = isWithdrawLocked(type);
+    if (lockedKind) {
+      warn("Blocking", user.username, amount, hash, user.id, type, "withdraw-lock", lockedKind);
+      fail("External withdrawals temporarily disabled");
+    }
+  }
 
   if (frozen || (userLimit != null && amount > userLimit && !whitelisted) || (!skipServerLimit && serverLimit != null && amount > serverLimit)) {
     warn("Blocking", user.username, amount, hash, user.id, type, frozen, userLimit, serverLimit);
