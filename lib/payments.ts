@@ -1017,25 +1017,46 @@ export const sendKeysend = async ({
     type: PaymentType.lightning,
   });
 
+  let outcome = "unknown";
   try {
-    return await ln.keysend({
+    const r = await ln.keysend({
       destination: pubkey,
       amount_msat: amount * 1000,
       maxfee: fee * 1000,
       retry_for: 20,
       extratlvs,
     });
-  } catch (e) {
+    warn("keysend returned", p.id, JSON.stringify({
+      status: r?.status,
+      has_preimage: !!(r?.payment_preimage ?? r?.preimage),
+      amount_sent_msat: r?.amount_sent_msat,
+    }));
+    outcome = "keysend-returned";  // success path — caller handles preimage polling
+    l("sendKeysend outcome", p.id, "=", outcome);
+    return r;
+  } catch (e: any) {
+    err("failed keysend", hash?.slice(0, 16), "error:", e?.message);
     try {
       const { pays } = await ln.listpays({ payment_hash: hash });
-      const failed = !pays.length || pays.every((p) => p.status === "failed");
-      if (failed) await reverse(p);
+      warn("listpays after keysend-threw", p.id, JSON.stringify(pays?.map((x) => ({ status: x.status, amount_sent_msat: x.amount_sent_msat })) ?? []));
+      const completed = pays.find((x) => x.status === "complete");
+      const failed = !pays.length || pays.every((x) => x.status === "failed");
+      if (completed) {
+        outcome = "keysend-completed-despite-throw";
+      } else if (failed) {
+        await reverse(p);
+        outcome = "reversed-after-keysend-throw";
+      } else {
+        outcome = "pending-after-keysend-throw";
+      }
       // else: pending or completed — leave the debit; check() loop will
       // reconcile. Reversing on pending would refund while CLN may still
       // settle the keysend.
     } catch (verifyErr: any) {
       warn("listpays verification failed (keysend)", verifyErr?.message ?? String(verifyErr));
+      outcome = "verify-failed-after-keysend-throw";
     }
+    warn("sendKeysend outcome", p.id, "=", outcome);
     throw e;
   }
 };
@@ -1082,6 +1103,11 @@ export const sendLightning = async ({ user, pr, amount, fee = undefined, memo = 
 
   l("paying lightning invoice", pr.substr(-8), amount, fee);
 
+  // Instrumentation: track which exit path the payment took so we can diagnose
+  // any future stuck "optimistic" cases (confirmed=true with no ref, no
+  // pending-set membership). Used by the leak guard at the function end.
+  let outcome = "unknown";
+
   try {
     const r = await ln.xpay({
       invstring: pr.replace(/\s/g, "").toLowerCase(),
@@ -1091,30 +1117,103 @@ export const sendLightning = async ({ user, pr, amount, fee = undefined, memo = 
       retry_for: 20,
     });
 
-    try {
-      if (!r.failed_parts) p = await finalize(r, p);
-    } catch (e) {
-      warn("failed to process payment", p.id);
+    // Only log the xpay response shape when there's something interesting —
+    // failed_parts > 0 or a missing preimage. The success case is noise.
+    if (r?.failed_parts || !(r?.payment_preimage ?? r?.preimage)) {
+      warn("xpay returned (abnormal)", p.id, JSON.stringify({
+        status: r?.status,
+        failed_parts: r?.failed_parts,
+        parts: r?.parts,
+        has_preimage: !!(r?.payment_preimage ?? r?.preimage),
+        amount_sent_msat: r?.amount_sent_msat,
+        amount_msat: r?.amount_msat,
+      }));
     }
-  } catch (e) {
-    err("failed to pay", pr.substr(-8));
+
+    if (r.failed_parts) {
+      // xpay didn't throw but reported failed parts. The old code path skipped
+      // finalize and left the debit stranded. Verify with listpays and act.
+      warn("xpay returned failed_parts without throwing", p.id, r.failed_parts);
+      try {
+        const { pays } = await ln.listpays(pr);
+        const completed = pays.find((x) => x.status === "complete");
+        const failed = !pays.length || pays.every((x) => x.status === "failed");
+        if (completed) {
+          warn("xpay failed_parts but listpays complete — finalizing", p.id);
+          try { p = await finalize(completed, p); outcome = "finalized-via-listpays-after-failed_parts"; } catch (e: any) { warn("finalize threw in failed_parts branch", p.id, e?.message); outcome = "finalize-threw-failed_parts"; }
+        } else if (failed) {
+          warn("xpay failed_parts and listpays failed — reversing", p.id);
+          await reverse(p); outcome = "reversed-via-failed_parts";
+        } else {
+          outcome = "pending-after-failed_parts";  // leave for check() loop
+        }
+      } catch (verifyErr: any) {
+        warn("listpays verification failed (failed_parts branch)", verifyErr?.message ?? String(verifyErr));
+        outcome = "verify-failed-after-failed_parts";
+      }
+    } else {
+      try {
+        p = await finalize(r, p);
+        outcome = "finalized";
+      } catch (e: any) {
+        warn("finalize threw despite no failed_parts", p.id, e?.message);
+        outcome = "finalize-threw";
+      }
+    }
+  } catch (e: any) {
+    err("failed to pay", pr.substr(-8), "xpay error:", e?.message);
     try {
       const { pays } = await ln.listpays(pr);
+      warn("listpays after xpay-threw", p.id, JSON.stringify(pays?.map((x) => ({ status: x.status, amount_sent_msat: x.amount_sent_msat })) ?? []));
       const completed = pays.find((p) => p.status === "complete");
       const failed = !pays.length || pays.every((p) => p.status === "failed");
       if (completed) {
         warn("payment completed despite error, finalizing", p.id);
-        try { await finalize(completed, p); } catch (_) {}
+        try { p = await finalize(completed, p); outcome = "finalized-after-xpay-throw"; } catch (_) { outcome = "finalize-threw-after-xpay-throw"; }
       } else if (failed) {
-        await reverse(p);
+        await reverse(p); outcome = "reversed-after-xpay-throw";
+      } else {
+        outcome = "pending-after-xpay-throw";
       }
       // else: pending — leave the debit in place; check() loop will reconcile
       // once CLN confirms outcome. Reversing while still in flight would
       // refund the user even though the payment may yet complete.
     } catch (verifyErr: any) {
       warn("listpays verification failed", verifyErr?.message ?? String(verifyErr));
+      outcome = "verify-failed-after-xpay-throw";
     }
+    warn("sendLightning outcome", p.id, "=", outcome);
     throw e;
+  }
+
+  // Leak guard: re-read the db record before deciding. If the payment has ref
+  // set in db it's settled regardless of which code path threw — finalize() may
+  // have set ref via s() and then thrown on a later line (e.g. the tbRefund fee
+  // refund), but the payment itself is recorded as complete. Only treat as a
+  // real leak if ref is genuinely missing from the db record. Pending-* outcomes
+  // are fine — check() will reconcile. finalize-threw-* with no ref is the
+  // joho33-style stuck state we want zero of; grep "LEAKED DEBIT" in app logs.
+  const finalizedOutcomes = new Set([
+    "finalized",
+    "finalized-via-listpays-after-failed_parts",
+    "finalized-after-xpay-throw",
+  ]);
+  const safeNonFinalized = new Set([
+    "reversed-via-failed_parts",
+    "reversed-after-xpay-throw",
+    "pending-after-failed_parts",
+    "pending-after-xpay-throw",
+    "verify-failed-after-failed_parts",
+    "verify-failed-after-xpay-throw",
+  ]);
+  const persisted = await g(`payment:${p.id}`);
+  const refInDb = !!persisted?.ref;
+  if (refInDb || finalizedOutcomes.has(outcome)) {
+    l("sendLightning outcome", p.id, "=", outcome, refInDb && !finalizedOutcomes.has(outcome) ? "(ref set in db despite throw)" : "");
+  } else if (safeNonFinalized.has(outcome)) {
+    warn("sendLightning outcome", p.id, "=", outcome);
+  } else {
+    err("LEAKED DEBIT in sendLightning", p.id, "outcome=", outcome, "user=", user?.username, "amount=", amount, "fee=", fee);
   }
 
   return p;
