@@ -128,8 +128,9 @@ export async function listenForLightning() {
 }
 
 // Watchdog (run periodically): restart a dead listener, or recycle a zombie one
-// that's been blocked in waitanyinvoice far past any normal quiet period while cl
-// is actually alive (the dead-listen-socket case).
+// whose waitanyinvoice is wedged on a dead listen socket. A long block alone is
+// normal when idle, so it only recycles when cl actually has a paid invoice
+// waiting (a real backlog) — see the body for the probe.
 export async function ensureListenerAlive() {
   if (!listenerActive) {
     warn("lightning listener: not active, restarting");
@@ -137,18 +138,33 @@ export async function ensureListenerAlive() {
     return;
   }
   if (Date.now() - waitStartedAt < LISTENER_STALL_MS) return;
-  let clAlive = false;
+
+  // A long-blocked waitanyinvoice is NORMAL during quiet periods — the only way
+  // to tell a zombie socket from a healthy idle wait is whether cl actually has
+  // a paid invoice the listener is failing to pick up. (The original "blocked >
+  // 5min while cl alive" check false-fired every few minutes during normal quiet
+  // stretches and needlessly recycled the socket — see 2026-06-07.) So only act
+  // on a real backlog: probe cl on the MAIN socket (not the wedged listen one)
+  // with waitanyinvoice at the stored pay_index and a short server-side timeout.
+  // An invoice returned -> genuine backlog the wedged listener missed -> recycle.
+  // A timeout (CLN code 904, nothing waiting) -> listener is idle and healthy.
+  let backlog = false;
   try {
-    const info = await ln.getinfo();
-    clAlive = !!info?.id;
-  } catch (_) {
-    clAlive = false;
+    const payIndex = (await g("pay_index")) || 0;
+    const probe = await ln.waitanyinvoice(payIndex, 2); // 2s server-side timeout
+    if (probe?.pay_index) backlog = true;
+  } catch (e: any) {
+    // CLN returns an error (code 904) on timeout with no waiting invoice — that
+    // means NO backlog (healthy). Any other error: stay conservative, don't
+    // recycle on ambiguous signals.
+    backlog = false;
   }
-  if (!clAlive) return; // cl itself down — the retry/exit path handles that
+  if (!backlog) return; // healthy idle wait, not a zombie.
+
   err(
-    `lightning listener: stalled ${Math.round(
+    `lightning listener: backlog detected while listener blocked ${Math.round(
       (Date.now() - waitStartedAt) / 1000,
-    )}s while cl is alive — recycling listen socket`,
+    )}s — recycling listen socket`,
   );
   listenerEpoch++;
   try {
