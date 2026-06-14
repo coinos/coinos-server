@@ -44,44 +44,79 @@ const nwcRequestTimes: Map<string, number[]> = new Map();
 
 export default () => {
   let r: any;
+  let infoCheckInterval: any;
+
+  // Tracks which server pubkeys already have their kind 13194 info event on the
+  // relay, populated by the existence query in ensureInfo() below.
+  const infoSeen = new Set<string>();
+
+  function publishInfo(pk: string, sk: string) {
+    const info = finalizeEvent(
+      {
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 13194,
+        tags: [
+          ["p", pk],
+          ["notifications", "payment_received payment_sent"],
+        ],
+        content: methods.join(" "),
+      },
+      hexToBytes(sk),
+    );
+    r.send(["EVENT", info]);
+    l("nwc published 13194 info event", pk);
+  }
+
+  // The kind 13194 info event (NWC capability advertisement) is REPLACEABLE, so
+  // it's meant to be published once and persist on the relay. NWC clients (Alby
+  // Go, Lightning Piggies, etc.) fetch it before they'll talk to the wallet —
+  // without it they report "no info event" and show an unknown balance.
+  //
+  // Rather than blindly republishing, query the relay on connect and publish
+  // only the pubkeys whose info event is missing. This is normally a no-op, but
+  // self-heals the case where the event went missing (e.g. the strfry restart on
+  // 2026-05-29 that left clients broken for days). The "infocheck" subscription
+  // is handled by the event/eose branches below.
+  function ensureInfo() {
+    if (!r?.ws || r.ws.readyState !== 1) return;
+    infoSeen.clear();
+    r.subscribe("infocheck", {
+      kinds: [13194],
+      authors: [serverPubkey, serverPubkey2],
+    });
+  }
 
   function connect() {
+    if (infoCheckInterval) clearInterval(infoCheckInterval);
     r = new Relay("ws://sf:7777", { reconnect: false });
 
     r.on("open", async (_) => {
       l("nwc connected to strfry");
       r.subscribe("nwc", { kinds: [23194], "#p": [serverPubkey, serverPubkey2], since: Math.floor(Date.now() / 1000) - nwcEventMaxAgeSeconds });
-      const info = await finalizeEvent(
-        {
-          created_at: Math.floor(Date.now() / 1000),
-          kind: 13194,
-          tags: [
-            ["p", serverPubkey],
-            ["notifications", "payment_received payment_sent"],
-          ],
-          content: methods.join(" "),
-        },
-        hexToBytes(serverSecret),
-      );
-      r.send(["EVENT", info]);
 
-      const info2 = await finalizeEvent(
-        {
-          created_at: Math.floor(Date.now() / 1000),
-          kind: 13194,
-          tags: [
-            ["p", serverPubkey2],
-            ["notifications", "payment_received payment_sent"],
-          ],
-          content: methods.join(" "),
-        },
-        hexToBytes(serverSecret2),
-      );
-      r.send(["EVENT", info2]);
+      // Verify the 13194 info events exist on the relay, publish any missing.
+      ensureInfo();
+
+      // Re-check hourly so a relay restart that leaves our socket intact (or any
+      // other cause of the info event going missing) self-heals without waiting
+      // for the next app reconnect.
+      infoCheckInterval = setInterval(ensureInfo, 60 * 60 * 1000);
+    });
+
+    r.on("eose", (sub) => {
+      if (sub !== "infocheck") return;
+      for (const [pk, sk] of [
+        [serverPubkey, serverSecret],
+        [serverPubkey2, serverSecret2],
+      ]) {
+        if (!infoSeen.has(pk)) publishInfo(pk, sk);
+      }
+      try { r.unsubscribe("infocheck"); } catch (_) {}
     });
 
     r.on("close", () => {
       warn("nwc strfry connection lost, reconnecting in 5s");
+      if (infoCheckInterval) clearInterval(infoCheckInterval);
       setTimeout(connect, 5000);
     });
 
@@ -89,6 +124,10 @@ export default () => {
 
     r.on("event", async (sub, ev) => {
       try {
+        if (sub === "infocheck") {
+          if (ev.kind === 13194) infoSeen.add(ev.pubkey);
+          return;
+        }
         if (sub !== "nwc") return;
         const now = Math.floor(Date.now() / 1000);
         if (ev.created_at && now - ev.created_at > nwcEventMaxAgeSeconds) return;
