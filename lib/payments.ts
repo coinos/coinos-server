@@ -161,7 +161,12 @@ export const debit = async ({
 
   const whitelisted = await db.sIsMember("whitelist", user?.username?.toLowerCase().trim());
 
-  const blacklisted = await db.sIsMember("blacklist", user?.username?.toLowerCase().trim());
+  // Blacklist (freeze) matches on EITHER the current username OR the uid. The
+  // uid never changes, so renaming the account can't shake the freeze — add the
+  // uid to the `blacklist` set to freeze a compromised account durably.
+  const blacklisted =
+    (await db.sIsMember("blacklist", user?.username?.toLowerCase().trim())) ||
+    (!!user?.id && (await db.sIsMember("blacklist", user.id)));
 
   if (hash && await db.sIsMember("blocked_addresses", hash)) {
     err(`SECURITY: blocked send to ${hash} by ${user.username}`);
