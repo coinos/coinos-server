@@ -241,7 +241,7 @@ app.post("/melt", auth, ecash.melt);
 app.post("/ecash/:id", ecash.receive);
 
 app.get("/replay/:index", (c) => {
-  replay(c.req.param("index"));
+  // replay(c.req.param("index"));
   return c.json({});
 });
 
