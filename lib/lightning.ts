@@ -127,6 +127,9 @@ export async function listenForLightning() {
   }
 }
 
+// Watchdog (run periodically): restart a dead listener, or recycle a zombie one
+// that's been blocked in waitanyinvoice far past any normal quiet period while cl
+// is actually alive (the dead-listen-socket case).
 export async function ensureListenerAlive() {
   if (!listenerActive) {
     warn("lightning listener: not active, restarting");

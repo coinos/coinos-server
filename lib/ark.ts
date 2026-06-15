@@ -59,6 +59,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string) =>
   ]);
 
 export const refreshArkWallet = async (force = false) => {
+  if (!config.ark?.arkPrivateKey) return; // ark disabled
   const now = Date.now();
   if (refreshing || (!force && now - lastRefresh < REFRESH_COOLDOWN)) return;
   try {
