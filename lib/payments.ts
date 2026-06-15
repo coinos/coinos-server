@@ -49,6 +49,21 @@ import { PaymentType } from "$lib/types";
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
 
+// Fire-and-forget: push a freshly-broadcast tx straight to public explorers so
+// they see it immediately instead of waiting for it to propagate to their node
+// over the p2p network (measured ~8s otherwise). Never throws; never blocks.
+const broadcastToExplorers = (hex: string) => {
+  const net = config.bitcoin?.network;
+  if (net === "regtest" || net === "testnet") return; // public explorers are mainnet
+  for (const base of ["https://mempool.space/api", "https://blockstream.info/api"]) {
+    fetch(`${base}/tx`, {
+      method: "POST",
+      body: hex,
+      headers: { "Content-Type": "text/plain" },
+    }).catch(() => {});
+  }
+};
+
 // Throttled warn — emit at most once per WARN_THROTTLE_MS per (key, message) pair
 // so a downed external service (lq, bc, etc.) doesn't flood the log every loop tick.
 const WARN_THROTTLE_MS = 5 * 60 * 1000;
@@ -591,6 +606,7 @@ export const sendOnchain = async (params) => {
     await s(`payment:${p.id}`, p);
 
     await node.sendRawTransaction(hex);
+    broadcastToExplorers(hex);
 
     delete inflight[txid];
     return p;
