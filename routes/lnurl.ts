@@ -4,7 +4,8 @@ import { err, warn } from "$lib/logging";
 import { serverPubkey2 } from "$lib/nostr";
 import { SATS, bail, fail, getInvoice, getUser } from "$lib/utils";
 import { bech32 } from "bech32";
-import got from "got";
+import { safeGot } from "$lib/safe-fetch";
+import { verifyEvent } from "nostr-tools";
 import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
@@ -24,7 +25,7 @@ export default {
       .replace(/\s/g, "")}`;
 
     try {
-      const r = await got(url).json();
+      const r = await safeGot(url);
       if (r.tag !== "payRequest") fail("not an ln address");
     } catch (e) {
       const m = `failed to lookup lightning address ${address}`;
@@ -45,7 +46,7 @@ export default {
         bech32.fromWords(bech32.decode(text, 20000).words),
       ).toString();
 
-      const r = await got(url).json();
+      const r = await safeGot(url);
       res.send(r);
     } catch (e) {
       bail(res, e.message);
@@ -116,7 +117,10 @@ export default {
       if (nostr) {
         try {
           const event = JSON.parse(decodeURIComponent(nostr));
-          // TODO: validate the event
+          // NIP-57: must be a signed kind-9734 zap request. Reject anything
+          // else so we can't be tricked into storing a forged zap receipt.
+          if (event.kind !== 9734 || !verifyEvent(event))
+            throw new Error("invalid zap request");
           await s(`zap:${id}`, event);
           metadata = nostr;
         } catch (e) {
@@ -154,7 +158,7 @@ export default {
     const { url } = req.query;
     if (!url) return bail(res, "url required");
     try {
-      const r = await got(url).json();
+      const r = await safeGot(url);
       res.send(r);
     } catch (e) {
       warn("lnurl proxy failed", url, e.message);
