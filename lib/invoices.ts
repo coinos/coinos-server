@@ -159,7 +159,13 @@ export const generate = async ({ invoice, user }) => {
 
   await s(`invoice:${hash}`, id);
   await s(`invoice:${id}`, invoice);
-  await db.lPush(`${aid}:invoices`, id);
+  // generate() is also called on UPDATE (re-using an existing invoice id, e.g.
+  // a tip/webhook change or a repeated bolt12 offer create), which must NOT
+  // re-append the id to the list. Only add it the first time — otherwise the
+  // user's :invoices accumulates duplicate entries and the same offer/invoice
+  // renders multiple times (see kaliyi's OCEAN offer, listed 2-6x).
+  if ((await db.lPos(`${aid}:invoices`, id)) === null)
+    await db.lPush(`${aid}:invoices`, id);
 
   if (request_id) {
     const request = await g(`request:${request_id}`);
