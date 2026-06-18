@@ -1077,7 +1077,15 @@ export const check = async () => {
         continue;
       }
       const p = await getPayment(pr);
-      if (!p || Date.now() - p.created < 10000) continue;
+      // Skip payments sendLightning may still be actively driving. xpay retries
+      // for 30s (retry_for: 30), during which listpays can momentarily show all
+      // attempts "failed" before the winning part lands. The old 10s threshold
+      // let check() reverse/refund such a payment mid-flight; it then completed,
+      // and sendLightning's finalize threw on the deleted record — refunding a
+      // payment that actually settled (the LEAKED DEBIT losses). Wait well past
+      // the retry window so sendLightning has finished finalize()/reverse() and
+      // removed it from `pending` before check() ever touches it.
+      if (!p || Date.now() - p.created < 60000) continue;
       const { pays } = await ln.listpays(pr);
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");
@@ -1128,7 +1136,16 @@ const finalize = async (r, p) => {
   p.fee = Number.isFinite(computedFee) ? computedFee : maxfee;
   p.ref = preimage;
 
-  if (!(await g(`payment:${p.id}`)).ref) {
+  const current = await g(`payment:${p.id}`);
+  // The record is gone because a concurrent reverse() already refunded this
+  // payment — yet here we are finalizing it, so it actually COMPLETED on the
+  // network and the refund was wrong (coinos is now short the amount). Do NOT
+  // silently re-create the record; raise a clear, greppable error so the
+  // LEAKED DEBIT guard logs it for manual recovery instead of a cryptic
+  // null-deref. (The check()-window fix should make this path very rare.)
+  if (!current) fail(`finalize: payment ${p.id} reversed-then-completed (double-pay leak)`);
+
+  if (!current.ref) {
     await s(`payment:${p.id}`, p);
     const refund = maxfee - p.fee;
     if (Number.isFinite(refund) && Number.isInteger(refund)) {
