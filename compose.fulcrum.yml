@@ -1,0 +1,22 @@
+# Fulcrum for regtest — an Electrum server over WebSocket, matching what prod
+# runs. Replaces the old electrs + ews bridge for Hal's realtime: it gets instant
+# block/mempool pushes from bitcoind's ZMQ (see sampledata/bitcoin/bitcoin.conf
+# zmqpubhashblock/hashtx) and serves them to the browser over the WS port.
+# Config + datadir live under the gitignored data/ (seeded from sampledata by
+# setup.sh). Start after the main stack (needs `bc`):
+#   docker compose -f compose.fulcrum.yml up -d
+services:
+  fulcrum:
+    image: coinos/fulcrum:latest
+    container_name: fulcrum
+    volumes:
+      - ./data/fulcrum/fulcrum.conf:/etc/fulcrum/fulcrum.conf:ro
+      - ./data/fulcrum/db:/data
+    ports:
+      - "50001:50001"   # Electrum TCP
+      - "50003:50003"   # Electrum WebSocket (Hal connects here)
+    restart: unless-stopped
+networks:
+  default:
+    name: net
+    external: true
