@@ -65,8 +65,14 @@ export const jwtStrategy = new jwt.Strategy(
       user &&
       ((await db.sIsMember("evicted", user.id)) ||
         (await db.sIsMember("evicted", user.username?.toLowerCase?.().trim())))
-    )
+    ) {
+      // Distinctive, greppable line carrying the real source IP so the realtime
+      // auto-banner (scripts/atk-autoban.sh) can insta-ban it at Cloudflare.
+      console.error(
+        `EVICTED_AUTH ${user.username} ${req.headers["cf-connecting-ip"] || req.ip}`,
+      );
       return next(null, false);
+    }
 
     next(null, user);
   },
