@@ -1,4 +1,5 @@
 import config from "$config";
+import { db } from "$lib/db";
 import { fail, getUser } from "$lib/utils";
 import fastifyPassport from "@fastify/passport";
 import jwt from "passport-jwt";
@@ -54,6 +55,19 @@ export const jwtStrategy = new jwt.Strategy(
       id = id.slice(0, -3);
 
     const user = await getUser(id);
+
+    // Hard eviction: an account in the `evicted` set cannot authenticate AT ALL
+    // — every request, every endpoint — regardless of source IP/VPN. Unlike the
+    // `blacklist` freeze (which only blocks sends), this kills the value of a
+    // compromised/attacker JWT outright. Match on the immutable uid OR username
+    // so a rename can't shake it.
+    if (
+      user &&
+      ((await db.sIsMember("evicted", user.id)) ||
+        (await db.sIsMember("evicted", user.username?.toLowerCase?.().trim())))
+    )
+      return next(null, false);
+
     next(null, user);
   },
 );
