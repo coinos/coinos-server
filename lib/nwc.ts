@@ -60,7 +60,13 @@ export default () => {
   // relay, populated by the existence query in ensureInfo() below.
   const infoSeen = new Set<string>();
 
-  function publishInfo(pk: string, sk: string) {
+  // Publish the kind 13194 info event and CONFIRM the relay stored it. The
+  // long-lived NWC socket's send is fire-and-forget (await wait_connected; ws.send)
+  // and was called without await — so a send that rejected (e.g. ws in CLOSING
+  // state during a reconnect) was silently dropped while we logged success,
+  // leaving clients with "no info event" until a manual republish. Publish over a
+  // fresh short-lived socket and wait for the relay's OK, retrying a few times.
+  async function publishInfo(pk: string, sk: string) {
     const info = finalizeEvent(
       {
         created_at: Math.floor(Date.now() / 1000),
@@ -73,8 +79,46 @@ export default () => {
       },
       hexToBytes(sk),
     );
-    r.send(["EVENT", info]);
-    l("nwc published 13194 info event", pk);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (await sendEventConfirmed(info)) {
+        l("nwc published 13194 info event", pk);
+        return true;
+      }
+      warn(`nwc 13194 publish not confirmed (attempt ${attempt})`, pk);
+      await sleep(1000);
+    }
+    err("nwc failed to publish 13194 info event after retries", pk);
+    return false;
+  }
+
+  // Send an event to strfry over a fresh socket and resolve true once the relay
+  // replies OK=accepted. Independent of the long-lived NWC socket, whose
+  // fire-and-forget send proved unreliable for the persisted info event.
+  function sendEventConfirmed(ev: any, timeoutMs = 5000): Promise<boolean> {
+    return new Promise((resolve) => {
+      let ws: WebSocket;
+      let done = false;
+      const finish = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        try { ws.close(); } catch (_) {}
+        resolve(ok);
+      };
+      try {
+        ws = new WebSocket("ws://sf:7777");
+      } catch (_) {
+        return resolve(false);
+      }
+      ws.onopen = () => ws.send(JSON.stringify(["EVENT", ev]));
+      ws.onmessage = (e: any) => {
+        try {
+          const m = JSON.parse(e.data);
+          if (m[0] === "OK" && m[1] === ev.id) finish(!!m[2]);
+        } catch (_) {}
+      };
+      ws.onerror = () => finish(false);
+      setTimeout(() => finish(false), timeoutMs);
+    });
   }
 
   // The kind 13194 info event (NWC capability advertisement) is REPLACEABLE, so
