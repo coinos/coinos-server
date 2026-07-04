@@ -1,4 +1,4 @@
-FROM elementsproject/lightningd:v25.12.1 AS source
+FROM elementsproject/lightningd:v26.06.2 AS source
 
 FROM ghcr.io/coinos/base
 USER root
