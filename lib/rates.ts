@@ -26,12 +26,25 @@ const connect = async () => {
       });
 
       try {
-        rates.IRT = (
-          (await got(
-            "https://api.nobitex.ir/v2/orderbook/BTCIRT",
-          ).json()) as any
-        ).lastTradePrice;
-      } catch (e) {}
+        // Nobitex is the real Iranian market rate (fixer's IRR is the
+        // official peg, which undervalues by ~20%). Its API quotes in RIAL
+        // despite the IRT pair name, so IRR = lastTradePrice and Toman =
+        // Rial / 10. (Host moved from api. to apiv2.; the old one is now
+        // NXDOMAIN, which silently blanked both currencies.)
+        const irr = Number(
+          (
+            (await got(
+              "https://apiv2.nobitex.ir/v2/orderbook/BTCIRT",
+            ).json()) as any
+          ).lastTradePrice,
+        );
+        if (irr > 0) {
+          rates.IRR = irr;
+          rates.IRT = irr / 10;
+        }
+      } catch (e) {
+        err("nobitex IRR/IRT rate fetch failed", e.message);
+      }
 
       rate = msg.c;
       s("rate", rate);
