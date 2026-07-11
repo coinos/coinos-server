@@ -22,6 +22,17 @@ const app = fastify({
 const reqLogger = pino(pino.destination("req"));
 const resLogger = pino(pino.destination("res"));
 
+// Never log plaintext passwords. Redact password fields from request bodies
+// before they reach the request log.
+const REDACT_FIELDS = ["password", "confirm"];
+const redactBody = (body: any) => {
+  if (!body || typeof body !== "object") return body;
+  const copy: any = { ...body };
+  for (const field of REDACT_FIELDS)
+    if (field in copy) copy[field] = "[redacted]";
+  return copy;
+};
+
 // app.addHook("onRequest", async (req) => {
 //   reqLogger.info({ url: req.raw.url, id: req.id });
 // });
@@ -55,7 +66,7 @@ app.addHook("preHandler", async (req) => {
     ip,
     headers: req.headers,
     query: req.query,
-    body: req.body,
+    body: redactBody(req.body),
     user: (req.user as any)?.username,
     id: req.id,
   });
