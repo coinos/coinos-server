@@ -49,12 +49,23 @@ export default {
       const { body } = req;
       const { tip, webhook, secret } = body.invoice;
 
-      if (tip < 0) fail("Invalid tip");
-
       let invoice = await gf(`invoice:${id}`);
+      if (!invoice) fail("invoice not found");
       const user = await g(`user:${invoice.uid}`);
 
-      if (typeof tip !== "undefined") invoice.tip = tip;
+      if (typeof tip !== "undefined") {
+        const t = Number.parseInt(tip);
+        if (!Number.isSafeInteger(t) || t < 0 || t > 2_100_000_000_000_000)
+          fail("Invalid tip");
+        // Defense-in-depth: never change the tip once the invoice is paid/
+        // settled. The primary mint guard is on the credit side (it uses the
+        // tip the sender was actually debited); this stops post-settlement
+        // tampering. The endpoint stays open by design — payers set tips on
+        // merchants' invoices before paying — so we do NOT require ownership.
+        if (invoice.received > 0 || invoice.settled)
+          fail("Invoice already settled");
+        invoice.tip = t;
+      }
 
       if (webhook && secret) {
         if (invoice.uid !== req.user?.id) fail("Unauthorized");

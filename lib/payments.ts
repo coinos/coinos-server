@@ -273,6 +273,7 @@ export const credit = async ({
   aid = undefined,
   payment_hash = undefined,
   created = undefined,
+  tip = undefined,
 }) => {
   amount = Number.parseInt(amount) || 0;
 
@@ -288,8 +289,14 @@ export const credit = async ({
     return;
   }
 
-  let { path, tip } = inv;
-  tip = Number.parseInt(tip) || 0;
+  let { path } = inv;
+  // Use the tip the sender was actually debited (passed in for internal
+  // transfers) rather than re-reading the invoice. The invoice's tip can be
+  // mutated between the sender debit and this credit (PUT /invoice), which
+  // otherwise lets a payer credit a tip they were never charged — minting
+  // balance. Fall back to the invoice tip only for external receipts
+  // (lightning/ecash) where there is no paired coinos debit to diverge from.
+  tip = tip !== undefined ? Number.parseInt(tip) || 0 : Number.parseInt(inv.tip) || 0;
 
   if (!memo) ({ memo } = inv);
   if (memo && memo.length > 5000) fail("memo too long");
@@ -890,7 +897,7 @@ export const sendInternal = async ({
 
   const { hash } = invoice;
   const p = await debit({ hash, amount, memo, user: sender });
-  await credit({ hash, amount, memo, ref: sender.id });
+  await credit({ hash, amount, memo, ref: sender.id, tip: p.tip });
 
   if (invoice.memo?.includes("9734")) {
     const { invoices } = await ln.listinvoices({ invstring: hash });
