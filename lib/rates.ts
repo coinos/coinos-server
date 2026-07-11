@@ -8,6 +8,18 @@ import WebSocket from "ws";
 export let rate;
 let last;
 let ws;
+
+// The Iranian market IRR is fetched on its own timer rather than on every binance
+// tick — fetching inline hammered the source and, when it's unreachable (recurring
+// geo-block / outage), failed + logged on every tick. We cache the last-good value
+// and apply it in onmessage; the tick loop never blocks on it.
+// Source: Wallex (api.wallex.ir) BTCTMN last price. We switched off Nobitex on
+// 2026-07-10 after apiv2.nobitex.ir became unreachable from our egress (its
+// Iranian IPs refuse foreign connections); Wallex's API is reachable and its
+// BTCTMN cross-checks against BTCUSDT × USDTTMN to <0.1%.
+let iranIrr = 0;
+let iranIrrTime = 0;
+let iranErrLogged = 0;
 const connect = async () => {
   if (ws && ws.readyState === 1 && Date.now() - last < 5000) return;
   if (ws) ws.terminate() && (await sleep(Math.round(Math.random() * 1000)));
@@ -25,25 +37,13 @@ const connect = async () => {
         rates[symbol] = msg.c * fx[symbol];
       });
 
-      try {
-        // Nobitex is the real Iranian market rate (fixer's IRR is the
-        // official peg, which undervalues by ~20%). Its API quotes in RIAL
-        // despite the IRT pair name, so IRR = lastTradePrice and Toman =
-        // Rial / 10. (Host moved from api. to apiv2.; the old one is now
-        // NXDOMAIN, which silently blanked both currencies.)
-        const irr = Number(
-          (
-            (await got(
-              "https://apiv2.nobitex.ir/v2/orderbook/BTCIRT",
-            ).json()) as any
-          ).lastTradePrice,
-        );
-        if (irr > 0) {
-          rates.IRR = irr;
-          rates.IRT = irr / 10;
-        }
-      } catch (e) {
-        err("nobitex IRR/IRT rate fetch failed", e.message);
+      // Apply the Iranian market IRR cached by updateIranRate() below (Wallex).
+      // iranIrr is stored in Rial, so IRR = iranIrr and Toman = Rial / 10. If the
+      // source has been unreachable for over an hour, we leave the fixer official
+      // IRR set in the fx loop above rather than serving an ever-staler market rate.
+      if (iranIrr > 0 && Date.now() - iranIrrTime < 60 * 60 * 1000) {
+        rates.IRR = iranIrr;
+        rates.IRT = iranIrr / 10;
       }
 
       rate = msg.c;
@@ -61,6 +61,31 @@ const connect = async () => {
 
   return ws;
 };
+
+// Fetch the Iranian market rate from Wallex on its own 60s timer, decoupled from
+// the binance tick loop. Wallex quotes BTCTMN in Toman, so IRR (Rial) = price*10.
+// Caches the last-good value; on failure (recurring geo-block / outage) throttles
+// error logging to once per 5 min instead of spamming on every attempt. A 5s
+// request timeout keeps a hung endpoint from piling up.
+const updateIranRate = async () => {
+  try {
+    const data = (await got("https://api.wallex.ir/v1/markets", {
+      timeout: { request: 5000 },
+    }).json()) as any;
+    const tmn = Number(data?.result?.symbols?.BTCTMN?.stats?.lastPrice);
+    if (tmn > 0) {
+      iranIrr = tmn * 10; // Toman -> Rial
+      iranIrrTime = Date.now();
+    }
+  } catch (e) {
+    if (Date.now() - iranErrLogged > 5 * 60 * 1000) {
+      err("Iran IRR/IRT rate fetch failed (wallex)", e.message);
+      iranErrLogged = Date.now();
+    }
+  }
+  setTimeout(updateIranRate, 60000);
+};
+updateIranRate();
 
 export const getFx = async () => {
   connect();
