@@ -2,6 +2,7 @@ import config from "$config";
 import { db, g, s } from "$lib/db";
 import { request } from "$lib/ecash";
 import ln from "$lib/ln";
+import { warn } from "$lib/logging";
 import { emit } from "$lib/sockets";
 import { SATS, bip21, fail, getInvoice, getUser } from "$lib/utils";
 import rpc from "@coinos/rpc";
@@ -32,6 +33,7 @@ export const generate = async ({ invoice, user }) => {
     memoPrompt,
     prompt,
     type = PaymentType.lightning,
+    usePreimage,
     webhook,
     secret,
   } = invoice;
@@ -74,14 +76,47 @@ export const generate = async ({ invoice, user }) => {
     } else {
       expiry ||= 60 * 60 * 24 * 30;
 
-      r = await ln.invoice({
+      const args = {
         amount_msat: amount ? `${amount + tip}sat` : "any",
         label: `${id} ${user.username} ${Date.now()}`,
         description: memo || "",
         expiry,
         deschashonly: true,
         cltv: 19,
-      });
+      };
+
+      if (usePreimage) {
+        // Consume the merchant's pre-loaded preimages (FIFO) so the invoice's
+        // payment hash is sha256(preimage) and paying it reveals a secret the
+        // merchant chose. Never fall back to a random preimage — a buyer would
+        // be paying for a secret that unlocks nothing.
+        const queue = `${user.id}:preimages`;
+        let preimage;
+        while ((preimage = await db.lPop(queue))) {
+          try {
+            r = await ln.invoice({ ...args, preimage });
+            // Keep the preimage recoverable for internal settlements, where
+            // cln never pays the invoice and so never reveals it — credit()
+            // picks this up as the payment ref
+            await db.set(`preimage:${r.payment_hash}`, preimage, {
+              EX: expiry,
+            });
+            break;
+          } catch (e) {
+            // cln rejects a preimage whose payment hash it has already seen —
+            // that one is permanently unusable, so drop it and try the next
+            if (/preimage/i.test(e.message)) {
+              warn("discarding unusable preimage", user.username, e.message);
+              continue;
+            }
+            await db.lPush(queue, preimage);
+            throw e;
+          }
+        }
+        if (!r) fail("no preimages available");
+      } else {
+        r = await ln.invoice(args);
+      }
     }
 
     hash = r.bolt11;

@@ -288,6 +288,19 @@ export const credit = async ({
     return;
   }
 
+  // usePreimage invoices keep their merchant-supplied preimage at
+  // preimage:${paymentHash} (see generate()). Prefer it as the settlement
+  // ref: external settlements already carry the same value, but internal
+  // ones pass ref=sender.id, which would otherwise be surfaced as the
+  // payment preimage and lose the secret the buyer paid for.
+  if (
+    inv.paymentHash &&
+    ![PaymentType.bitcoin, PaymentType.liquid].includes(type)
+  ) {
+    const stored = await db.get(`preimage:${inv.paymentHash}`);
+    if (stored) ref = stored;
+  }
+
   let { path, tip } = inv;
   tip = Number.parseInt(tip) || 0;
 

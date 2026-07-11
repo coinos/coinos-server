@@ -18,6 +18,7 @@ import lnurl from "$routes/lnurl";
 import locations from "$routes/locations";
 import nostr from "$routes/nostr";
 import payments from "$routes/payments";
+import preimages from "$routes/preimages";
 import rates from "$routes/rates";
 import shopify from "$routes/shopify";
 import square from "$routes/square";
@@ -51,6 +52,10 @@ app.get("/invoices", auth, invoices.list);
 app.post("/invoice", optional, invoices.create);
 app.post("/invoice/:id", optional, invoices.update);
 app.post("/sign", auth, invoices.sign);
+
+app.get("/preimages", auth, preimages.list);
+app.post("/preimages", auth, preimages.add);
+app.post("/preimages/delete", auth, preimages.clear);
 
 app.get("/assetlinks.json", (_, res) => res.sendFile("assetlinks.json"));
 app.get("/nostr.json", nostr.identities);
