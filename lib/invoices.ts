@@ -53,6 +53,18 @@ export const generate = async ({ invoice, user }) => {
   if (!rate) rate = rates[currency];
   if (fiat) amount = Math.round((SATS * fiat) / rate);
   if (amount < 0) fail("invalid amount");
+  // On-chain deposits below 300 sats are silently dropped by the dust filter in
+  // the /confirm credit path (routes/payments.ts), so reject creating a bitcoin/
+  // liquid invoice for a specific sub-300-sat amount rather than letting a
+  // deposit vanish. amount = 0 (any-amount address) is unaffected.
+  if (
+    (type === PaymentType.bitcoin || type === PaymentType.liquid) &&
+    amount > 0 &&
+    amount < 300
+  )
+    fail(
+      "On-chain deposits must be at least 300 sats. Use a Lightning invoice for smaller amounts.",
+    );
   if (tip < 0) fail("invalid tip");
   if (rate < 0) fail("invalid rate");
   if (memo && memo.length > 5000) fail("memo too long");
