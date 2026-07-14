@@ -13,6 +13,16 @@ import { PaymentType } from "$lib/types";
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
 
+// Preimage queue entries are {preimage, price} JSON, but entries queued
+// before prices existed are bare hex strings — treat those as priceless
+export const parseEntry = (e) => {
+  try {
+    const parsed = JSON.parse(e);
+    if (parsed?.preimage) return { price: null, ...parsed };
+  } catch {}
+  return { preimage: e, price: null };
+};
+
 export const generate = async ({ invoice, user }) => {
   let {
     address_type,
@@ -89,7 +99,6 @@ export const generate = async ({ invoice, user }) => {
       expiry ||= 60 * 60 * 24 * 30;
 
       const args = {
-        amount_msat: amount ? `${amount + tip}sat` : "any",
         label: `${id} ${user.username} ${Date.now()}`,
         description: memo || "",
         expiry,
@@ -103,10 +112,19 @@ export const generate = async ({ invoice, user }) => {
         // merchant chose. Never fall back to a random preimage — a buyer would
         // be paying for a secret that unlocks nothing.
         const queue = `${user.id}:preimages`;
-        let preimage;
-        while ((preimage = await db.lPop(queue))) {
+        let entry;
+        while ((entry = await db.lPop(queue))) {
+          const { preimage, price } = parseEntry(entry);
+          // The invoice creator is unauthenticated, so a merchant-set price
+          // must win over the amount in the request — otherwise a buyer
+          // could name their own price for the secret
+          if (price) amount = price;
           try {
-            r = await ln.invoice({ ...args, preimage });
+            r = await ln.invoice({
+              ...args,
+              amount_msat: amount ? `${amount + tip}sat` : "any",
+              preimage,
+            });
             // Keep the preimage recoverable for internal settlements, where
             // cln never pays the invoice and so never reveals it — credit()
             // picks this up as the payment ref
@@ -121,13 +139,16 @@ export const generate = async ({ invoice, user }) => {
               warn("discarding unusable preimage", user.username, e.message);
               continue;
             }
-            await db.lPush(queue, preimage);
+            await db.lPush(queue, entry);
             throw e;
           }
         }
         if (!r) fail("no preimages available");
       } else {
-        r = await ln.invoice(args);
+        r = await ln.invoice({
+          ...args,
+          amount_msat: amount ? `${amount + tip}sat` : "any",
+        });
       }
     }
 

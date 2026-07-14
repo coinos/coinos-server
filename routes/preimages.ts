@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
 import { db } from "$lib/db";
+import { parseEntry } from "$lib/invoices";
 import { bail, fail } from "$lib/utils";
 
 // Merchants pre-load payment preimages here, then have buyers create invoices
 // with usePreimage: true — each such invoice consumes the next queued preimage
 // so its payment hash is sha256(preimage). Once paid, the preimage is exposed
 // on the invoice record, letting a static storefront sell decryption secrets
-// with no backend of its own.
+// with no backend of its own. An optional per-batch price (sats) is enforced
+// at invoice creation — invoice creation is unauthenticated, so without it a
+// buyer could name their own price for the secret.
 
 const MAX_QUEUE = 1000;
 const key = (uid) => `${uid}:preimages`;
@@ -16,7 +19,7 @@ const sha256 = (hex) =>
 export default {
   async add(req, res) {
     try {
-      const { preimages } = req.body;
+      const { preimages, price = null } = req.body;
       if (!Array.isArray(preimages) || !preimages.length)
         fail("preimages array required");
       if (
@@ -25,10 +28,12 @@ export default {
         )
       )
         fail("preimages must be 64-character hex strings");
+      if (price !== null && (!Number.isInteger(price) || price <= 0))
+        fail("price must be a positive integer amount of sats");
 
       const k = key(req.user.id);
       const existing = await db.lRange(k, 0, -1);
-      const seen = new Set(existing);
+      const seen = new Set(existing.map((e) => parseEntry(e).preimage));
       const fresh = [];
       for (let p of preimages) {
         p = p.toLowerCase();
@@ -39,11 +44,19 @@ export default {
 
       if (existing.length + fresh.length > MAX_QUEUE)
         fail(`queue limited to ${MAX_QUEUE} preimages`);
-      if (fresh.length) await db.rPush(k, fresh);
+      if (fresh.length)
+        await db.rPush(
+          k,
+          fresh.map((preimage) => JSON.stringify({ preimage, price })),
+        );
 
       res.send({
         queued: existing.length + fresh.length,
-        added: fresh.map((preimage) => ({ preimage, hash: sha256(preimage) })),
+        added: fresh.map((preimage) => ({
+          preimage,
+          hash: sha256(preimage),
+          price,
+        })),
       });
     } catch (e) {
       bail(res, e.message);
@@ -52,13 +65,13 @@ export default {
 
   async list(req, res) {
     try {
-      const preimages = await db.lRange(key(req.user.id), 0, -1);
+      const entries = await db.lRange(key(req.user.id), 0, -1);
       res.send({
-        queued: preimages.length,
-        preimages: preimages.map((preimage) => ({
-          preimage,
-          hash: sha256(preimage),
-        })),
+        queued: entries.length,
+        preimages: entries.map((e) => {
+          const { preimage, price } = parseEntry(e);
+          return { preimage, hash: sha256(preimage), price };
+        }),
       });
     } catch (e) {
       bail(res, e.message);

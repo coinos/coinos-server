@@ -293,10 +293,13 @@ export const credit = async ({
   // preimage:${paymentHash} (see generate()). Prefer it as the settlement
   // ref: external settlements already carry the same value, but internal
   // ones pass ref=sender.id, which would otherwise be surfaced as the
-  // payment preimage and lose the secret the buyer paid for.
+  // payment preimage and lose the secret the buyer paid for. Only once the
+  // invoice is fully paid, though — internal sends can settle partial
+  // amounts, and an underpayment must not reveal the secret.
   if (
     inv.paymentHash &&
-    ![PaymentType.bitcoin, PaymentType.liquid].includes(type)
+    ![PaymentType.bitcoin, PaymentType.liquid].includes(type) &&
+    inv.received + amount >= inv.amount
   ) {
     const stored = await db.get(`preimage:${inv.paymentHash}`);
     if (stored) ref = stored;
