@@ -13,14 +13,16 @@ import { PaymentType } from "$lib/types";
 const bc = rpc(config.bitcoin);
 const lq = rpc(config.liquid);
 
-// Preimage queue entries are {preimage, price} JSON, but entries queued
-// before prices existed are bare hex strings — treat those as priceless
+// Preimage queue entries are {preimage, price, fiat, currency} JSON, but
+// entries queued before prices existed are bare hex strings — treat those
+// as priceless
 export const parseEntry = (e) => {
   try {
     const parsed = JSON.parse(e);
-    if (parsed?.preimage) return { price: null, ...parsed };
+    if (parsed?.preimage)
+      return { price: null, fiat: null, currency: null, ...parsed };
   } catch {}
-  return { preimage: e, price: null };
+  return { preimage: e, price: null, fiat: null, currency: null };
 };
 
 export const generate = async ({ invoice, user }) => {
@@ -114,11 +116,27 @@ export const generate = async ({ invoice, user }) => {
         const queue = `${user.id}:preimages`;
         let entry;
         while ((entry = await db.lPop(queue))) {
-          const { preimage, price } = parseEntry(entry);
+          const {
+            preimage,
+            price,
+            fiat: entryFiat,
+            currency: entryCurrency,
+          } = parseEntry(entry);
           // The invoice creator is unauthenticated, so a merchant-set price
           // must win over the amount in the request — otherwise a buyer
-          // could name their own price for the secret
+          // could name their own price for the secret. Fiat prices convert
+          // at the current rate, and the invoice takes on the merchant's
+          // currency so receipts show the fiat price as set.
           if (price) amount = price;
+          else if (entryFiat) {
+            if (!rates[entryCurrency]) {
+              await db.lPush(queue, entry);
+              fail(`no rate available for ${entryCurrency}`);
+            }
+            currency = entryCurrency;
+            rate = rates[currency];
+            amount = Math.round((SATS * entryFiat) / rate);
+          }
           try {
             r = await ln.invoice({
               ...args,
