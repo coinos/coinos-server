@@ -351,16 +351,23 @@ const parseInstruction = (payment) => {
   return s.startsWith("ln") ? s : null;
 };
 
-// CLN v26.06 adds an experimental `createproof` RPC producing the lnp payer
-// proof that NIP-177 zap receipts (kind 9736) embed: createproof(invstring,
-// [note], [include]) -> { proofs: [{ bolt12: "lnp..." }] }. Feature-detect
-// through the generic call() — on older nodes (current: v25.12) this errors
-// and we omit the proof, which the nwc `pay` spec allows. The proof format is
-// still draft; once 26.06 is deployed, check whether NIP-177's required
-// fields (invreq_payer_note, invoice_amount) need an explicit `include` list.
-const createPayerProof = async (invstring: string) => {
+// CLN v26.06's experimental `createproof` RPC produces the lnp payer proof
+// that NIP-177 zap receipts (kind 9736) embed. The default proof OMITS
+// invreq_payer_note, which NIP-177 verification requires disclosed (it binds
+// the payment to the zap intent) — and passing `include` REPLACES the default
+// disclosure set, so invoice_amount must be re-listed alongside it or the
+// amount gets hidden too. Feature-detected through the generic call() — on
+// older nodes this errors and we omit the proof, which the nwc `pay` spec
+// allows.
+const createPayerProof = async (
+  invstring: string,
+  hasPayerNote: boolean = false,
+) => {
   try {
-    const r = await ln.call("createproof", { invstring });
+    const r = await ln.call("createproof", {
+      invstring,
+      ...(hasPayerNote && { include: ["invreq_payer_note", "invoice_amount"] }),
+    });
     return r?.proofs?.[0]?.bolt12;
   } catch (e) {
     return undefined;
@@ -640,7 +647,7 @@ const handle = (method, params, ev, app, user) =>
           // invoice fetched from it)
           payer_proof:
             instruction_type === "bolt12"
-              ? await createPayerProof(p.hash)
+              ? await createPayerProof(p.hash, !!payer_note)
               : undefined,
           created_at,
           settled_at: Math.floor(Date.now() / 1000),
