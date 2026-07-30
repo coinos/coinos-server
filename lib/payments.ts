@@ -18,7 +18,7 @@ const isWithdrawLocked = (type: string): string | null => {
 };
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
-import { err, l, warn } from "$lib/logging";
+import { err, l, shortError, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { notify, nwcNotify } from "$lib/notifications";
 import { squarePayment } from "$lib/square";
@@ -196,19 +196,41 @@ export const debit = async ({
     }
   }
 
-  const tip = Number.parseInt(invoice?.tip) || null;
+  // Capture the tip ONCE, and only for INTERNAL payments — where credit() pays
+  // the invoice owner the same tip (sendInternal passes p.tip through). External
+  // sends (bitcoin/liquid/lightning/bolt12/fund) must NOT inherit a tip: the
+  // destination `hash` can coincidentally match another user's deposit invoice,
+  // which would otherwise pull that stranger's tip into this debit's balance
+  // check and stored record (the LiquidNode negative-balance vector). This one
+  // captured value feeds the ourfee calc, the atomic debit, and the record, so
+  // the record can never disagree with what was actually debited.
+  const tip =
+    type === PaymentType.internal ? Number.parseInt(invoice?.tip) || null : null;
   if (tip < 0) fail("Invalid tip");
 
   if (!amount || amount < 0) fail("Amount must be greater than zero");
 
   let creditType = type;
   if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
+
+  // High-throughput pass-through accounts (flagged `ln:nofree` by
+  // ln-freetier-monitor.ts) pay an elevated platform fee on lightning
+  // withdrawals; everyone else pays the standard rate. Flagged accounts already
+  // accrue no free-tier credit, so this rate is what they actually pay.
+  let feeRate = config.fee[creditType];
+  if (
+    creditType === PaymentType.lightning &&
+    aid === uid &&
+    (await g(`ln:nofree:${uid}`))
+  )
+    feeRate = config.fee.lightningHigh;
+
   let ourfee: any = [
     PaymentType.bitcoin,
     PaymentType.liquid,
     PaymentType.lightning,
   ].includes(type)
-    ? Math.round((amount + fee + tip) * config.fee[creditType])
+    ? Math.round((amount + fee + tip) * feeRate)
     : 0;
 
   if (aid !== uid) ourfee = 0;
@@ -228,6 +250,17 @@ export const debit = async ({
 
   if (ourfee.err) fail(ourfee.err);
 
+  // Defense-in-depth: the DEBIT lua rejects overdrafts, so a negative balance
+  // here means the invariant was violated by a mismatched input or a non-lua
+  // balance write. Log loudly with full context so the exact vector is greppable
+  // (SECURITY: negative balance) instead of surfacing days later as a stuck
+  // negative account.
+  const postBal = Number.parseInt((await db.get(`balance:${aid}`)) || "0");
+  if (postBal < 0)
+    err(
+      `SECURITY: negative balance ${postBal} after debit user=${user?.username} aid=${aid} amount=${amount} tip=${tip} fee=${fee} ourfee=${ourfee} type=${type} hash=${hash}`,
+    );
+
   const id = v4();
   const p = {
     id,
@@ -240,7 +273,13 @@ export const debit = async ({
     memo,
     iid,
     uid,
-    confirmed: true,
+    // Lightning/bolt12 sends are IN-FLIGHT until the HTLC settles (preimage
+    // revealed). Don't mark them confirmed on the optimistic debit — finalize()
+    // flips this to true once the preimage arrives. Hold invoices (e.g. Ark)
+    // can keep an HTLC pending for hours/days; showing "confirmed" while the
+    // recipient hasn't been paid is misleading. Other send types settle
+    // immediately (internal) or are broadcast right away (bitcoin/liquid/fund).
+    confirmed: ![PaymentType.lightning, PaymentType.bolt12].includes(type),
     rate,
     currency,
     type,
@@ -399,15 +438,26 @@ export const credit = async ({
 
   let creditType = type;
   if (creditType === PaymentType.bolt12) creditType = PaymentType.lightning;
-  if (
-    [PaymentType.bitcoin, PaymentType.liquid, PaymentType.lightning].includes(
-      creditType,
-    )
-  )
+  // Bitcoin/liquid always accrue the same-network fee credit.
+  if ([PaymentType.bitcoin, PaymentType.liquid].includes(creditType)) {
     m.incrBy(
       `credit:${creditType}:${uid}`,
       Math.round(amount * config.fee[creditType]),
     );
+  } else if (creditType === PaymentType.lightning) {
+    // Lightning FREE TIER: a lightning (incl. bolt12) receipt accrues a fee
+    // credit — so a normal deposit+withdraw is free — UNLESS this account is
+    // flagged as a high-throughput pass-through (using us to rebalance channels
+    // for free). ln-freetier-monitor.ts sets `ln:nofree:<uid>` from a 30-day
+    // round-trip analysis. It's behavioral + per-account, so it can't be dodged
+    // by splitting across sockpuppets: every puppet that rebalances gets flagged.
+    const noFree = await g(`ln:nofree:${uid}`);
+    if (!noFree)
+      m.incrBy(
+        `credit:lightning:${uid}`,
+        Math.round(amount * config.fee.lightning),
+      );
+  }
 
   m.set(`invoice:${inv.id}`, JSON.stringify(inv))
     .set(`payment:${p.id}`, JSON.stringify(p))
@@ -449,7 +499,7 @@ export const completePayment = async (inv, p, user) => {
         }
       } catch (e) {
         withdrawal = { failed: true };
-        warn(username, "autowithdraw failed", e.message);
+        warn(username, "autowithdraw failed", shortError(e.message));
       }
     }
   }
@@ -539,18 +589,28 @@ export const sendOnchain = async (params) => {
   const node =
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
   let { txid } = tx;
+  let locked = false;
 
   try {
     if (inflight[txid]) fail("payment in flight");
     inflight[txid] = true;
 
-    // Reserve UTXOs to keep concurrent sends from selecting the same inputs.
-    // Released in the catch block on failure; spent UTXOs make the lock moot on success.
-    try {
-      const lockVin = tx.vin.map(({ txid, vout }) => ({ txid, vout }));
-      if (lockVin.length) await node.lockUnspent(false, lockVin);
-    } catch (e: any) {
-      warn("lockUnspent failed", e.message);
+    // Reserve the exact inputs this tx spends. If locking fails, bitcoind is
+    // telling us an input is no longer unspent ("expected unspent output") —
+    // another send already committed it in the gap between build() (coin
+    // selection) and here. Broadcasting anyway would double-spend, and the
+    // higher-fee tx wins, silently losing the loser's funds (the replaced-tx
+    // incident). So abort hard rather than warn-and-continue; the debit hasn't
+    // happened yet and build() will pick fresh inputs on retry.
+    const lockVin = tx.vin.map(({ txid, vout }) => ({ txid, vout }));
+    if (lockVin.length) {
+      try {
+        await node.lockUnspent(false, lockVin);
+        locked = true;
+      } catch (e: any) {
+        warn("lockUnspent failed, aborting send", e.message);
+        fail("Selected inputs are no longer available, please retry");
+      }
     }
 
     if (!signed) {
@@ -635,11 +695,14 @@ export const sendOnchain = async (params) => {
     return p;
   } catch (e) {
     delete inflight[txid];
-    // Release UTXOs that build() locked, so the user can retry without abandoning coins.
-    try {
-      const vin = tx?.vin?.map(({ txid, vout }) => ({ txid, vout })) ?? [];
-      if (vin.length) await node.lockUnspent(true, vin);
-    } catch {}
+    // Release UTXOs only if WE locked them, so we don't accidentally free
+    // another concurrent send's reservation on a shared input.
+    if (locked) {
+      try {
+        const vin = tx?.vin?.map(({ txid, vout }) => ({ txid, vout })) ?? [];
+        if (vin.length) await node.lockUnspent(true, vin);
+      } catch {}
+    }
     throw e;
   }
 };
@@ -685,7 +748,7 @@ export const sendKeysend = async ({
     l("sendKeysend outcome", p.id, "=", outcome);
     return r;
   } catch (e: any) {
-    err("failed keysend", hash?.slice(0,16), "error:", e?.message);
+    err("failed keysend", hash?.slice(0,16), "error:", shortError(e?.message));
     try {
       const { pays } = await ln.listpays({ payment_hash: hash });
       warn("listpays after keysend-threw", p.id, JSON.stringify(pays?.map((x) => ({ status: x.status, amount_sent_msat: x.amount_sent_msat })) ?? []));
@@ -854,7 +917,7 @@ export const sendLightning = async ({
       }
     }
   } catch (e: any) {
-    err("failed to pay", pr.substr(-8), "xpay error:", e?.message);
+    err("failed to pay", pr.substr(-8), "xpay error:", shortError(e?.message));
     try {
       const { pays } = await ln.listpays(pr);
       warn("listpays after xpay-threw", p.id, JSON.stringify(pays?.map((x) => ({ status: x.status, amount_sent_msat: x.amount_sent_msat })) ?? []));
@@ -1191,6 +1254,8 @@ const finalize = async (r, p) => {
   }
   p.fee = Number.isFinite(computedFee) ? computedFee : maxfee;
   p.ref = preimage;
+  // The HTLC settled (we have the preimage) — the send is now fully confirmed.
+  p.confirmed = true;
 
   const current = await g(`payment:${p.id}`);
   // The record is gone because a concurrent reverse() already refunded this
@@ -1220,7 +1285,13 @@ const reverse = async (p) => {
 
   const total = Math.abs(p.amount) + p.fee + p.ourfee;
   const ourfee = p.ourfee || 0;
-  const credit = Math.round(total * config.fee[PaymentType.lightning]) - ourfee;
+  // Restore the free-tier credit consumed at debit time. Use the SAME rate the
+  // send was charged at — flagged `ln:nofree` accounts were charged the elevated
+  // rate, so reversing with the standard rate would push their credit negative.
+  const rate = (await g(`ln:nofree:${p.uid}`))
+    ? config.fee.lightningHigh
+    : config.fee.lightning;
+  const credit = Math.round(total * rate) - ourfee;
 
   l("reversing", p.id, p.amount, p.fee, total, ourfee, credit);
 
@@ -1240,6 +1311,12 @@ const reverse = async (p) => {
 };
 
 const freezeCheck = async () => {
+ // Crash-resilient loop: ANY error in the body (an unhandled rejection in the
+ // limit-write section, a stuck withLimitLock, etc.) used to escape here and
+ // kill the loop silently (the global unhandledRejection handler is a no-op),
+ // freezing every ${type}:limit until someone noticed sends failing. Wrap the
+ // whole body so errors are logged and the next tick is ALWAYS scheduled.
+ try {
   // Each asset is fetched independently so e.g. lq being unreachable doesn't
   // prevent lightning and bitcoin limits from refreshing.
   let lnbalance: number | undefined;
@@ -1294,7 +1371,10 @@ const freezeCheck = async () => {
       await s("liquid:limit", Math.max(lqbalance - lqthreshold, 0));
     });
   }
-
-  setTimeout(freezeCheck, 10000);
+ } catch (e: any) {
+   warn("freezeCheck: iteration failed, will retry next tick:", e?.message ?? String(e));
+ } finally {
+   setTimeout(freezeCheck, 10000);
+ }
 };
 freezeCheck();

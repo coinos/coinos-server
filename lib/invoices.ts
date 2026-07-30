@@ -90,14 +90,14 @@ export const generate = async ({ invoice, user }) => {
   let paymentHash;
 
   if (type === PaymentType.lightning) {
+    // SECURITY: never accept a caller-supplied bolt11. It let anyone register any
+    // node-payable invoice (incl. a nutshell mint quote) as their own coinos
+    // deposit — which both double-credited (coinos balance + mint ecash) and let
+    // an attacker hijack another user's incoming payment (there was no ownership
+    // guard, so it overwrote invoice:<bolt11>). Always mint the invoice here.
+    if (bolt11) fail("Cannot provide your own Lightning invoice");
     let r;
-    if (bolt11) {
-      const { id: nodeid } = await ln.getinfo();
-      r = await ln.decode(bolt11);
-      if (r.payee !== nodeid) fail("invalid invoice");
-      amount = Math.round(r.amount_msat / 1000);
-      r.bolt11 = bolt11;
-    } else {
+    {
       expiry ||= 60 * 60 * 24 * 30;
 
       const args = {
@@ -174,14 +174,11 @@ export const generate = async ({ invoice, user }) => {
     text = r.bolt11;
     paymentHash = r.payment_hash;
   } else if (type === PaymentType.bolt12) {
+    // SECURITY: same as bolt11 — never accept a caller-supplied bolt12. Always
+    // mint the offer server-side.
+    if (bolt12) fail("Cannot provide your own bolt12 invoice");
     let r;
-    if (bolt12) {
-      const { id: nodeid } = await ln.getinfo();
-      r = await ln.decode(bolt12);
-      if (r.invoice_node_id !== nodeid) fail("invalid invoice");
-      amount = Math.round(r.invoice_amount_msat / 1000);
-      r.bolt12 = bolt12;
-    } else {
+    {
       r = await ln.offer({
         amount: amount ? `${amount + tip}sat` : "any",
         label: `${id} ${user.username} ${new Date()}`,

@@ -42,6 +42,7 @@ export async function listenForLightning() {
 
     const inv = await lnListen.waitanyinvoice(payIndex);
     const {
+      label,
       local_offer_id,
       bolt11,
       bolt12,
@@ -76,6 +77,15 @@ export async function listenForLightning() {
 
     try {
       if (!preimage) return;
+
+      // The mint (nutshell) shares this cl node, so waitanyinvoice also fires for
+      // mint-quote invoices. Those are owned by the mint (it issues ecash for
+      // them) and must NOT credit a coinos balance — otherwise a single payment
+      // is credited twice (coinos balance + ecash = double-mint exploit). The
+      // mint labels its invoices "lbl<random>"; coinos labels are
+      // "<uuid> <username> <ts>". Never credit a mint-owned invoice.
+      if (typeof label === "string" && label.startsWith("lbl"))
+        return warn("skipping mint-owned invoice (not a coinos deposit)", label, bolt11);
 
       const invoice = await getInvoice(bolt11 ?? local_offer_id ?? bolt12);
       if (!invoice) return warn("received lightning with no invoice", bolt11);

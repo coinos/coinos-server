@@ -5,7 +5,7 @@ import { archive, db, g, gf, s, sa } from "$lib/db";
 import { generate, getUserOffer } from "$lib/invoices";
 import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
-import { err, l, warn } from "$lib/logging";
+import { err, l, shortError, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
 import {
   build,
@@ -45,6 +45,14 @@ export default {
     const balance = await g(`balance:${user.id}`);
 
     try {
+      // Reject non-string payreq/hash up front. A client sending a number/object
+      // here otherwise reaches a decoder that calls `.startsWith` on it and throws
+      // an opaque "n.startsWith is not a function" (logged bare via the catch
+      // below). A malformed *string* is fine — it fails later with a clear error.
+      if (payreq != null && typeof payreq !== "string")
+        fail("Invalid payment request");
+      if (hash != null && typeof hash !== "string") fail("Invalid invoice");
+
       if (typeof amount !== "undefined") {
         amount = Number.parseInt(amount);
         if (amount < 0 || amount > SATS || Number.isNaN(amount))
@@ -93,7 +101,7 @@ export default {
       res.send(p);
     } catch (e) {
       warn(user.username, "payment failed", amount, balance, hash, payreq);
-      err(e.message);
+      err(shortError(e.message));
       bail(res, e.message);
     }
   },
@@ -578,7 +586,7 @@ export default {
 
       res.send(p);
     } catch (e) {
-      warn(user.username, "payment failed", e.message);
+      warn(user.username, "payment failed", shortError(e.message));
       res.code(500).send(e.message);
     }
   },
