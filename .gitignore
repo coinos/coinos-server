@@ -21,3 +21,7 @@ printer
 failedlogins.txt
 .claude
 req*
+
+# local backups (may contain secrets — never commit)
+*.bak
+*.bak-*
