@@ -188,7 +188,15 @@ export const generate = async ({ invoice, user }) => {
         description: memo || id,
       });
 
-      if (await getInvoice(r.offer_id)) fail("Duplicate offer exists");
+      // CLN returns the same offer_id for identical offer contents, so a
+      // re-create of an offer we already track must not register a second
+      // invoice for it (duplicate :invoices entries — see kaliyi's OCEAN
+      // offer). If it's the same user's offer, hand back the existing record.
+      const existing = await getInvoice(r.offer_id);
+      if (existing) {
+        if (existing.uid === user.id) return existing;
+        fail("Duplicate offer exists");
+      }
       await s(`invoice:${r.offer_id}`, id);
     }
 
@@ -264,5 +272,34 @@ export const generate = async ({ invoice, user }) => {
     }
   }
 
+  return invoice;
+};
+
+// Each user gets one standing amountless bolt12 offer (lno1...) they can hand
+// out as a reusable payment code — e.g. published in a kind 10058 list for
+// NIP-177 bolt12 zaps. Created lazily on first request, then reused; incoming
+// payments credit through the regular bolt12 receive path via local_offer_id.
+export const getUserOffer = async (user) => {
+  const key = `${user.id}:offer`;
+  const existingId = await g(key);
+  if (existingId) {
+    const existing = await g(`invoice:${existingId}`);
+    if (existing?.hash) return existing;
+  }
+
+  let domain;
+  try {
+    domain = new globalThis.URL(process.env.URL).host;
+  } catch (e) {}
+
+  const invoice = await generate({
+    invoice: {
+      type: PaymentType.bolt12,
+      memo: domain ? `${user.username}@${domain}` : user.username,
+    },
+    user,
+  });
+
+  await s(key, invoice.id);
   return invoice;
 };

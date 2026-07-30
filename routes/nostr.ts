@@ -21,6 +21,36 @@ import { decode } from "nostr-tools/nip19";
 import type { ProfilePointer } from "nostr-tools/nip19";
 import { getZapEndpoint, makeZapRequest } from "nostr-tools/nip57";
 
+// Amount and payer of a zap receipt. NIP-57 kind 9735: amount comes from
+// decoding the paid bolt11, payer from the embedded 9734 zap request in the
+// description tag. NIP-177 kind 9736 (BOLT12 zaps): amount is an explicit
+// msat tag, and the receipt is payer-published with the signed 9737 intent in
+// the description tag.
+const parseZap = async (ev) => {
+  const { kind, tags, pubkey } = ev;
+  const description = tags.find((t) => t[0] === "description")?.[1];
+
+  let payer;
+  try {
+    payer = JSON.parse(description).pubkey;
+  } catch (e) {}
+  payer ||= pubkey;
+
+  let amount = 0;
+  if (kind === 9736) {
+    const msat = Number.parseInt(tags.find((t) => t[0] === "amount")?.[1]);
+    if (msat > 0) amount = Math.round(msat / 1000);
+  } else {
+    try {
+      const bolt11 = tags.find((t) => t[0] === "bolt11")?.[1];
+      const { amount_msat } = await ln.decode(bolt11);
+      if (amount_msat) amount = Math.round(amount_msat / 1000);
+    } catch (e) {}
+  }
+
+  return { amount, pubkey: payer };
+};
+
 export default {
   async event(req, res) {
     try {
@@ -46,23 +76,14 @@ export default {
         )
         .map(({ value }) => value.pubkey);
 
-      const zapEvents = await scan({ kinds: [9735], "#e": [id] });
+      const zapEvents = await scan({ kinds: [9735, 9736], "#e": [id] });
       const zaps = [];
-      for (const { tags } of zapEvents) {
-        const bolt11 = tags.find((t) => t[0] === "bolt11")?.[1];
-        const description = tags.find((t) => t[0] === "description")?.[1];
-        const { pubkey } = JSON.parse(description);
-        let amount = 0;
-        try {
-          const { amount_msat } = await ln.decode(bolt11);
-          if (amount_msat) amount = Math.round(amount_msat / 1000);
-        } catch (e) {}
-
-        zaps.push({ amount, pubkey });
+      for (const zapEvent of zapEvents) {
+        zaps.push(await parseZap(zapEvent));
       }
 
       pubkeys.push(event.pubkey);
-      pubkeys.push(...zaps.map((z) => z.pubkey));
+      pubkeys.push(...zaps.map((z) => z.pubkey).filter((p) => p));
       pubkeys = [...new Set(pubkeys)];
       const profiles = await scan({ kinds: [0], authors: pubkeys });
       const found = profiles.map((p) => p.pubkey);
@@ -167,24 +188,16 @@ export default {
       let { id } = req.params;
       if (id.startsWith("nevent")) id = decode(id).data.id;
       if (id.startsWith("note")) id = decode(id).data;
-      const filter = { kinds: [9735], "#e": [id] };
-      let events = await scan(filter);
-      if (!events.length) {
-        await sync("wss://relay.primal.net", filter);
-        events = await scan(filter);
-      }
+      // q() scans the local strfry and falls back to primal (the old code
+      // called a `sync` helper that never existed and threw ReferenceError
+      // whenever the local relay had no receipts)
+      const filter = { kinds: [9735, 9736], "#e": [id] };
+      const events = await q(filter);
       if (!events.length) return res.send([]);
 
       const zaps = [];
-      for (const { tags } of events) {
-        const bolt11 = tags.find((t) => t[0] === "bolt11")?.[1];
-        const description = tags.find((t) => t[0] === "description")?.[1];
-        const { pubkey } = JSON.parse(description);
-        let amount = 0;
-        try {
-          const { amount_msat } = await ln.decode(bolt11);
-          if (amount_msat) amount = Math.round(amount_msat / 1000);
-        } catch (e) {}
+      for (const zapEvent of events) {
+        const { amount, pubkey } = await parseZap(zapEvent);
 
         let user;
         if (pubkey) {

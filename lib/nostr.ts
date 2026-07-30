@@ -4,7 +4,14 @@ import { l, warn } from "$lib/logging";
 import { scan } from "$lib/strfry";
 import { fail, fields, getUser, pick } from "$lib/utils";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
-import { finalizeEvent, getPublicKey, nip19, verifyEvent } from "nostr-tools";
+import {
+  finalizeEvent,
+  getPublicKey,
+  nip04,
+  nip19,
+  nip44,
+  verifyEvent,
+} from "nostr-tools";
 import type { Event } from "nostr-tools";
 import { AbstractSimplePool } from "nostr-tools/abstract-pool";
 import { Relay } from "nostr-tools/relay";
@@ -36,6 +43,21 @@ export const anon = (pubkey) => ({
   follows: [],
   followers: [],
 });
+
+// NIP-47 encryption schemes: clients pick one from the 13194 info event's
+// `encryption` tag and mark their requests with the same tag; replies use
+// whatever the request used. No tag means legacy nip04.
+export const encryptionSchemes = "nip44_v2 nip04";
+
+export const decryptPayload = (scheme, sk, pk, content) =>
+  scheme === "nip44_v2"
+    ? nip44.decrypt(content, nip44.getConversationKey(hexToBytes(sk), pk))
+    : nip04.decrypt(sk, pk, content);
+
+export const encryptPayload = (scheme, sk, pk, plaintext) =>
+  scheme === "nip44_v2"
+    ? nip44.encrypt(plaintext, nip44.getConversationKey(hexToBytes(sk), pk))
+    : nip04.encrypt(sk, pk, plaintext);
 
 export async function publish(ev, url = config.nostr) {
   if (!verifyEvent(ev)) fail("Invalid event");

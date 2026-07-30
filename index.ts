@@ -91,6 +91,7 @@ app.post("/send/:lnaddress/:amount", auth, payments.lnaddress);
 app.post("/send", auth, payments.internal);
 app.post("/replace", auth, payments.replace);
 app.get("/decode/:bolt11", payments.decode);
+app.get("/offer", auth, payments.offer);
 app.post("/fetchinvoice", payments.fetchinvoice);
 
 app.get("/square/connect", auth, square.connect);

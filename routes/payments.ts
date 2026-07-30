@@ -2,7 +2,7 @@ import config from "$config";
 import api from "$lib/api";
 import { requirePin } from "$lib/auth";
 import { archive, db, g, gf, s, sa } from "$lib/db";
-import { generate } from "$lib/invoices";
+import { generate, getUserOffer } from "$lib/invoices";
 import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
@@ -219,21 +219,30 @@ export default {
       let amount_msat;
       let payee;
 
-      if (decoded.type.includes("bolt12")) {
+      if (decoded.type === "bolt12 offer") {
+        ({ offer_amount_msat: amount_msat } = decoded);
+        payee = decoded.offer_issuer_id || decoded.offer_node_id;
+      } else if (decoded.type.includes("bolt12")) {
         ({ invoice_amount_msat: amount_msat, invoice_node_id: payee } =
           decoded);
       } else ({ amount_msat, payee } = decoded);
 
       const node = nodes.find((n) => n.nodeid === payee);
-      const alias = node ? node.alias : payee.substr(0, 12);
+      const alias = node ? node.alias : (payee || "").substr(0, 12);
 
-      const amount = Math.round(amount_msat / 1000);
+      const amount = Math.round((amount_msat || 0) / 1000);
       let ourfee = Math.round(amount * config.fee[PaymentType.lightning]);
       const credit = await g(`credit:lightning:${user.id}`);
       const covered = Math.min(credit, ourfee) || 0;
       ourfee -= covered;
 
-      res.send({ alias, amount, ourfee });
+      res.send({
+        alias,
+        amount,
+        ourfee,
+        type: decoded.type,
+        description: decoded.offer_description || decoded.description,
+      });
     } catch (e) {
       err("problem parsing", e.message);
       bail(res, e.message);
@@ -716,9 +725,26 @@ export default {
     res.send(await ln.decode(bolt11));
   },
 
+  // The user's standing bolt12 offer (lno1...) — reusable receive code they
+  // can publish (e.g. in a nostr kind 10058 list for bolt12 zaps)
+  async offer(req, res) {
+    try {
+      res.send(await getUserOffer(req.user));
+    } catch (e) {
+      bail(res, e.message);
+    }
+  },
+
   async fetchinvoice(req, res) {
-    const { amount, offer } = req.body;
-    res.send(await ln.fetchinvoice(offer, amount ? amount * 1000 : null));
+    const { amount, offer, payer_note } = req.body;
+    res.send(
+      await ln.fetchinvoice({
+        offer,
+        amount_msat: amount ? amount * 1000 : undefined,
+        payer_note,
+        timeout: 60,
+      }),
+    );
   },
 
   async auth(req, res) {

@@ -46,6 +46,7 @@ export async function listenForLightning() {
       bolt11,
       bolt12,
       description,
+      invreq_payer_note,
       pay_index,
       payment_hash,
       amount_received_msat,
@@ -97,7 +98,9 @@ export async function listenForLightning() {
       await credit({
         hash: bolt11 || bolt12,
         amount: received,
-        memo: invoice.memo,
+        // A bolt12 payer note (e.g. nostr:nip177:<zap-intent-id>) identifies
+        // this specific payment; the offer's own memo is just its static label
+        memo: invreq_payer_note || invoice.memo,
         ref: preimage,
         type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
         payment_hash,
@@ -206,6 +209,7 @@ export async function replay(index) {
     bolt11,
     bolt12,
     description,
+    invreq_payer_note,
     amount_received_msat,
     payment_preimage: preimage,
     paid_at,
@@ -237,7 +241,7 @@ export async function replay(index) {
     p = await credit({
       hash: bolt11 || bolt12,
       amount: received,
-      memo: invoice.memo,
+      memo: invreq_payer_note || invoice.memo,
       ref: preimage,
       type: bolt12 ? PaymentType.bolt12 : PaymentType.lightning,
       created: paid_at ? paid_at * 1000 : undefined,

@@ -1,9 +1,12 @@
 import config from "$config";
 import { archive, db, g, gf } from "$lib/db";
-import { generate } from "$lib/invoices";
+import { generate, getUserOffer } from "$lib/invoices";
 import ln from "$lib/ln";
 import { err, l, warn } from "$lib/logging";
 import {
+  decryptPayload,
+  encryptPayload,
+  encryptionSchemes,
   handleZap,
   serverPubkey,
   serverPubkey2,
@@ -13,9 +16,10 @@ import {
 import { sendInternal, sendKeysend, sendLightning } from "$lib/payments";
 import { fail, getInvoice, sleep } from "$lib/utils";
 import rpc from "@coinos/rpc";
-import { hexToBytes } from "@noble/hashes/utils";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { Relay } from "nostr";
-import { finalizeEvent, nip04 } from "nostr-tools";
+import { finalizeEvent } from "nostr-tools";
 import type { UnsignedEvent } from "nostr-tools";
 
 const serverKeys = {
@@ -30,6 +34,8 @@ const bc = rpc(config.bitcoin);
 const methods = [
   "pay_keysend",
   "pay_invoice",
+  "pay",
+  "receive",
   "get_balance",
   "get_info",
   "make_invoice",
@@ -74,6 +80,7 @@ export default () => {
         tags: [
           ["p", pk],
           ["notifications", "payment_received payment_sent"],
+          ["encryption", encryptionSchemes],
         ],
         content: methods.join(" "),
       },
@@ -197,7 +204,18 @@ export default () => {
     r.on("event", async (sub, ev) => {
     try {
       if (sub === "infocheck") {
-        if (ev.kind === 13194) infoSeen.add(ev.pubkey);
+        // Only count the stored info event as present if it's CURRENT —
+        // otherwise a stale replaceable event (old method list, missing
+        // encryption tag) would never get refreshed, since we only publish
+        // the ones not "seen".
+        if (ev.kind === 13194) {
+          const current =
+            ev.content === methods.join(" ") &&
+            ev.tags?.some(
+              (t) => t[0] === "encryption" && t[1] === encryptionSchemes,
+            );
+          if (current) infoSeen.add(ev.pubkey);
+        }
         return;
       }
       if (sub !== "nwc") return;
@@ -208,20 +226,31 @@ export default () => {
       let { content, pubkey } = ev;
       const pk = ev.tags.find((t) => t[0] === "p")[1];
       const sk = serverKeys[pk];
+      // Clients mark nip44 requests with an `encryption` tag; absence means
+      // legacy nip04 (NIP-47). Replies must use the same scheme.
+      const scheme =
+        ev.tags.find((t) => t[0] === "encryption")?.[1] === "nip44_v2"
+          ? "nip44_v2"
+          : "nip04";
       const { params, method } = JSON.parse(
-        await nip04.decrypt(sk, pubkey, content),
+        await decryptPayload(scheme, sk, pubkey, content),
       );
 
       // Helper: send a 23195 reply (used for both results and errors). Pulled
       // up so the rate-limit path can reply instead of dropping silently.
       const reply = async (payloadObj: any) => {
-        const enc = await nip04.encrypt(sk, pubkey, JSON.stringify(payloadObj));
+        const enc = await encryptPayload(
+          scheme,
+          sk,
+          pubkey,
+          JSON.stringify(payloadObj),
+        );
         const signed = await finalizeEvent(
           {
             created_at: Math.floor(Date.now() / 1000),
             kind: 23195,
             pubkey: serverPubkey,
-            tags: [["p", pubkey], ["e", ev.id]],
+            tags: [["p", pubkey], ["e", ev.id], ["encryption", scheme]],
             content: enc,
           } as UnsignedEvent,
           hexToBytes(sk),
@@ -295,6 +324,95 @@ export default () => {
   connect();
 };
 
+// Pull the single lightning instruction out of a BIP-321 payment string for
+// the nwc `pay` method (nwc#2): a bitcoin: URI (preferring lno= over
+// lightning=), a lightning: URI, or a bare bolt11/bolt12 string.
+const parseInstruction = (payment) => {
+  if (typeof payment !== "string") return null;
+  let s = payment.replace(/\s/g, "");
+  const lower = s.toLowerCase();
+  if (lower.startsWith("lightning:")) {
+    s = s.slice("lightning:".length);
+  } else if (lower.startsWith("bitcoin:")) {
+    const i = s.indexOf("?");
+    if (i === -1) return null;
+    let lno;
+    let bolt11;
+    // BIP-321 keys are case-insensitive and may repeat; first one wins
+    for (const [k, v] of new URLSearchParams(s.slice(i + 1))) {
+      const key = k.toLowerCase();
+      if (key === "lno") lno ||= v;
+      else if (key === "lightning") bolt11 ||= v;
+    }
+    s = lno || bolt11;
+    if (!s) return null;
+  }
+  s = s.toLowerCase();
+  return s.startsWith("ln") ? s : null;
+};
+
+// CLN v26.06 adds an experimental `createproof` RPC producing the lnp payer
+// proof that NIP-177 zap receipts (kind 9736) embed: createproof(invstring,
+// [note], [include]) -> { proofs: [{ bolt12: "lnp..." }] }. Feature-detect
+// through the generic call() — on older nodes (current: v25.12) this errors
+// and we omit the proof, which the nwc `pay` spec allows. The proof format is
+// still draft; once 26.06 is deployed, check whether NIP-177's required
+// fields (invreq_payer_note, invoice_amount) need an explicit `include` list.
+const createPayerProof = async (invstring: string) => {
+  try {
+    const r = await ln.call("createproof", { invstring });
+    return r?.proofs?.[0]?.bolt12;
+  } catch (e) {
+    return undefined;
+  }
+};
+
+// Connection validity + spending budget for an NWC app, shared by pay_invoice
+// and pay. Returns a NIP-47 error payload, or null when the spend is allowed.
+const checkBudget = async (app, amount) => {
+  const { max_amount, budget_renewal, pubkey, created } = app;
+
+  if (!created) {
+    return error({
+      code: "UNAUTHORIZED",
+      message: `This NWC connection is no longer valid please create a new one at https://coinos.io/settings/nostr`,
+    });
+  }
+
+  const periods = {
+    daily: 60 * 60 * 24 * 1000,
+    weekly: 60 * 60 * 24 * 7 * 1000,
+    monthly: 60 * 60 * 24 * 30 * 1000,
+    yearly: 60 * 60 * 24 * 365 * 1000,
+    never: 60 * 60 * 24 * 365 * 10 * 1000,
+  };
+
+  const pids = await db.lRange(`${pubkey}:payments`, 0, -1);
+  let payments = await Promise.all(pids.map((pid) => gf(`payment:${pid}`)));
+  payments = payments.filter(
+    (p) => p?.created > Date.now() - periods[budget_renewal],
+  );
+
+  const spent = payments.reduce(
+    (a, b) =>
+      a +
+      (Math.abs(Number.parseInt(b.amount || 0)) +
+        Number.parseInt(b.tip || 0) +
+        Number.parseInt(b.fee || 0) +
+        Number.parseInt(b.ourfee || 0)),
+    0,
+  );
+
+  if (max_amount > 0 && spent + amount > max_amount) {
+    return error({
+      code: "QUOTA_EXCEEDED",
+      message: `Budget exceeded: ${spent + amount} of ${max_amount}`,
+    });
+  }
+
+  return null;
+};
+
 const handle = (method, params, ev, app, user) =>
   ({
     async pay_invoice() {
@@ -314,53 +432,10 @@ const handle = (method, params, ev, app, user) =>
         });
       }
       const amount = Math.round(amountMsat / 1000);
-      const { max_amount, max_fee, budget_renewal, pubkey, created } = app;
+      const { max_fee, pubkey } = app;
 
-      const periods = {
-        daily: 60 * 60 * 24 * 1000,
-        weekly: 60 * 60 * 24 * 7 * 1000,
-        monthly: 60 * 60 * 24 * 30 * 1000,
-        yearly: 60 * 60 * 24 * 365 * 1000,
-        never: 60 * 60 * 24 * 365 * 10 * 1000,
-      };
-
-      const pids = await db.lRange(`${pubkey}:payments`, 0, -1);
-      let payments = await Promise.all(pids.map((pid) => gf(`payment:${pid}`)));
-      payments = payments.filter(
-        (p) => p?.created > Date.now() - periods[budget_renewal],
-      );
-
-      const spent = payments.reduce(
-        (a, b) =>
-          a +
-          (Math.abs(Number.parseInt(b.amount || 0)) +
-            Number.parseInt(b.tip || 0) +
-            Number.parseInt(b.fee || 0) +
-            Number.parseInt(b.ourfee || 0)),
-        0,
-      );
-
-      if (!created) {
-        return error({
-          code: "UNAUTHORIZED",
-          message: `This NWC connection is no longer valid please create a new one at https://coinos.io/settings/nostr`,
-        });
-      }
-
-      if (max_amount > 0 && spent + amount > max_amount) {
-        // warn(
-        //   "budget exceeded",
-        //   pubkey,
-        //   user?.username,
-        //   spent,
-        //   amount,
-        //   max_amount,
-        // );
-        return error({
-          code: "QUOTA_EXCEEDED",
-          message: `Budget exceeded: ${spent + amount} of ${max_amount}`,
-        });
-      }
+      const budgetError = await checkBudget(app, amount);
+      if (budgetError) return budgetError;
 
       if (payee === id) {
         const invoice = await getInvoice(pr);
@@ -431,6 +506,181 @@ const handle = (method, params, ev, app, user) =>
         code: "INTERNAL",
         message: "Payment still in flight; check status with lookup_invoice",
       });
+    },
+
+    // nwc#2 generalized payment: BIP-321 URI carrying a bolt11 invoice or a
+    // bolt12 offer/invoice. This is what Amethyst v1.13+ uses for bolt12 zaps —
+    // payer_note carries the nostr:nip177:<intent-id> binding and the client
+    // builds the kind 9736 receipt from the returned preimage/payer_proof.
+    async pay() {
+      const { payment, amount: reqAmountMsat, payer_note, metadata } = params;
+      const { pubkey } = app;
+
+      const pr = parseInstruction(payment);
+      if (!pr) {
+        return error({
+          code: "UNSUPPORTED_PAYMENT_INSTRUCTION",
+          message: "No lightning instruction found (bolt11 or bolt12 required)",
+        });
+      }
+
+      let decoded;
+      try {
+        decoded = await ln.decode(pr);
+        if (decoded.valid === false) throw new Error("invalid");
+      } catch (e) {
+        return error({
+          code: "BAD_REQUEST",
+          message: "Failed to decode payment instruction",
+        });
+      }
+
+      const instruction_type = decoded.type.includes("bolt12")
+        ? "bolt12"
+        : "bolt11";
+      const instructionAmountMsat =
+        decoded.type === "bolt12 offer"
+          ? decoded.offer_amount_msat
+          : instruction_type === "bolt12"
+            ? decoded.invoice_amount_msat
+            : decoded.amount_msat;
+
+      const amountMsat = instructionAmountMsat || reqAmountMsat;
+      if (!amountMsat) {
+        return error({
+          code: "BAD_REQUEST",
+          message:
+            "Amountless payment instruction requires an amount (msat) in the request",
+        });
+      }
+      const amount = Math.round(amountMsat / 1000);
+
+      const budgetError = await checkBudget(app, amount);
+      if (budgetError) return budgetError;
+
+      const created_at = Math.floor(Date.now() / 1000);
+
+      // Recipient is a coinos user (their invoice or standing offer is ours):
+      // settle internally, same as pay_invoice does
+      const invoice = await getInvoice(pr);
+      if (invoice) {
+        const recipient = await g(`user:${invoice.uid}`);
+
+        if (recipient?.username !== "mint") {
+          const { id: pid } = await sendInternal({
+            amount,
+            invoice,
+            recipient,
+            sender: user,
+          });
+
+          if (pubkey !== user.pubkey) await db.lPush(`${pubkey}:payments`, pid);
+
+          if (invoice.memo?.includes("9734")) {
+            const { invoices } = await ln.listinvoices({ invstring: pr });
+            const inv = invoices[0];
+            if (inv) {
+              inv.payment_preimage = pid;
+              inv.paid_at = created_at;
+              try {
+                await handleZap(inv, user.pubkey);
+              } catch (e) {
+                console.log("zap receipt failed", e);
+              }
+            }
+          }
+
+          // Internal settlement never touches CLN, so there's no real
+          // preimage or payer proof to hand back
+          return result({
+            transaction_id: pid,
+            state: "settled",
+            instruction_type,
+            amount: amountMsat,
+            fees_paid: 0,
+            created_at,
+            settled_at: Math.floor(Date.now() / 1000),
+          });
+        }
+      }
+
+      try {
+        const p = await sendLightning({
+          amount,
+          fee: app.max_fee || Math.round(amount * 0.01),
+          user,
+          pr,
+          memo: metadata ? JSON.stringify(metadata) : undefined,
+          payerNote: payer_note,
+        });
+
+        await db.lPush(`${pubkey}:payments`, p.id);
+
+        const preimage = p.ref;
+        if (!preimage) {
+          return result({
+            transaction_id: p.id,
+            state: "pending",
+            instruction_type,
+            amount: amountMsat,
+            fees_paid: 0,
+            created_at,
+          });
+        }
+
+        return result({
+          transaction_id: p.id,
+          state: "settled",
+          instruction_type,
+          amount: amountMsat,
+          fees_paid: (p.fee || 0) * 1000,
+          payment_hash: bytesToHex(sha256(hexToBytes(preimage))),
+          preimage,
+          // p.hash is the invoice actually paid (for an offer, the bolt12
+          // invoice fetched from it)
+          payer_proof:
+            instruction_type === "bolt12"
+              ? await createPayerProof(p.hash)
+              : undefined,
+          created_at,
+          settled_at: Math.floor(Date.now() / 1000),
+        });
+      } catch (e) {
+        return error({ code: "PAYMENT_FAILED", message: e.message });
+      }
+    },
+
+    // nwc#2 counterpart to pay: hand back a BIP-321 URI combining a fresh
+    // bolt11 invoice with the user's standing bolt12 offer
+    async receive() {
+      const { amount, description } = params;
+
+      try {
+        const invoice = await generate({
+          invoice: {
+            amount: amount ? Math.round(amount / 1000) : 0,
+            type: "lightning",
+            memo: description,
+          },
+          user,
+        });
+
+        const qs = new URLSearchParams();
+        qs.set("lightning", invoice.hash);
+        try {
+          const offer = await getUserOffer(user);
+          if (offer?.hash) qs.set("lno", offer.hash);
+        } catch (e) {
+          warn("failed to include offer in receive", e.message);
+        }
+
+        return result({
+          bip321: `bitcoin:?${qs.toString()}`,
+          transaction_id: invoice.id,
+        });
+      } catch (e) {
+        return error({ code: "BAD_REQUEST", message: e.message });
+      }
     },
 
     async pay_keysend() {
