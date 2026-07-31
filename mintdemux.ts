@@ -92,7 +92,13 @@ Bun.serve({
       if (path === "/v1/keysets") {
         const [rn, ro] = await Promise.all([fetch(`${NEW}/v1/keysets`).then(r => r.json()).catch(() => ({})), fetch(`${OLD}/v1/keysets`).then(r => r.json()).catch(() => ({}))]);
         const seen = new Set<string>(); const keysets: any[] = [];
-        for (const k of [...((rn as any).keysets || []), ...((ro as any).keysets || [])]) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push(k); } }
+        // NEW mint keysets keep their flags. OLD (recovery) keysets are forced
+        // active:false — they're redeem/melt-only, so wallets never mint or swap
+        // into them. Prevents advertising two active "sat" keysets at
+        // mint.coinos.io (the old mint is panic-locked anyway; this is the
+        // client-facing view).
+        for (const k of ((rn as any).keysets || [])) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push(k); } }
+        for (const k of ((ro as any).keysets || [])) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push({ ...k, active: false }); } }
         return new Response(JSON.stringify({ keysets }), { headers: J });
       }
       const km = path.match(/^\/v1\/keys\/(.+)$/);
