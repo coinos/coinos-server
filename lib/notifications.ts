@@ -94,8 +94,13 @@ export const nwcNotify = async (p) => {
         } catch (e) {}
       }
       for (const pubkey of pubkeys) {
-        const { notify } = await g(`app:${pubkey}`);
-        if (!notify) continue;
+        // The app record may be missing/not-yet-written: a pubkey lands in
+        // `${uid}:apps` before its `app:<pubkey>` is persisted (creation race when
+        // adding an NWC connection), or a stale entry outlived its record. Guard
+        // the lookup — destructuring `notify` off null threw and, since the catch
+        // wraps the whole loop, aborted notifications for ALL the user's apps.
+        const app = await g(`app:${pubkey}`);
+        if (!app?.notify) continue;
 
         l("notifying", pubkey, p.type, p.amount);
         const notification = {
