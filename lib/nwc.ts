@@ -326,29 +326,74 @@ export default () => {
 
 // Pull the single lightning instruction out of a BIP-321 payment string for
 // the nwc `pay` method (nwc#2): a bitcoin: URI (preferring lno= over
-// lightning=), a lightning: URI, or a bare bolt11/bolt12 string.
+// lightning=), a lightning: URI, or a bare bolt11/bolt12 string. Returns
+// { instruction } or { error } (a ready-to-send NIP-47 error payload).
+const noInstruction = error({
+  code: "UNSUPPORTED_PAYMENT_INSTRUCTION",
+  message: "No lightning instruction found (bolt11 or bolt12 required)",
+});
 const parseInstruction = (payment) => {
-  if (typeof payment !== "string") return null;
+  if (typeof payment !== "string") return noInstruction;
   let s = payment.replace(/\s/g, "");
   const lower = s.toLowerCase();
   if (lower.startsWith("lightning:")) {
     s = s.slice("lightning:".length);
   } else if (lower.startsWith("bitcoin:")) {
     const i = s.indexOf("?");
-    if (i === -1) return null;
+    if (i === -1) return noInstruction;
     let lno;
     let bolt11;
     // BIP-321 keys are case-insensitive and may repeat; first one wins
     for (const [k, v] of new URLSearchParams(s.slice(i + 1))) {
       const key = k.toLowerCase();
+      // BIP-321: a req- parameter the wallet doesn't understand invalidates
+      // the whole URI. We support none — including req-pop, since we can't
+      // open a proof-of-payment callback — so any req- key is a rejection.
+      // A plain (optional) pop is skippable and falls through harmlessly.
+      if (key.startsWith("req-")) {
+        return error({
+          code: "BAD_REQUEST",
+          message: `Unsupported required BIP-321 parameter: ${key}`,
+        });
+      }
       if (key === "lno") lno ||= v;
       else if (key === "lightning") bolt11 ||= v;
     }
     s = lno || bolt11;
-    if (!s) return null;
+    if (!s) return noInstruction;
   }
   s = s.toLowerCase();
-  return s.startsWith("ln") ? s : null;
+  return s.startsWith("ln") ? { instruction: s } : noInstruction;
+};
+
+// Network matching for the nwc `pay` method: the spec requires rejecting a
+// payment instruction for a different Bitcoin network BEFORE paying (error
+// code UNSUPPORTED_NETWORK) rather than letting xpay fail after the debit.
+// bolt11 encodes the network in its bech32 prefix (decode's `currency`);
+// bolt12 carries BOLT chain_hashes (genesis hash, internal byte order), with
+// absence meaning mainnet. Keyed by CLN getinfo's `network` name.
+const bolt11Prefixes = {
+  bitcoin: "bc",
+  testnet: "tb",
+  signet: "tbs",
+  regtest: "bcrt",
+};
+const chainHashes = {
+  bitcoin: "6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000",
+  testnet: "43497fd7f826957108f4a30fd9cec3aeba79972084e90ead01ea330900000000",
+  signet: "f61eee3b63a380a477a063af32b2bbc97c9ff9f01f2c4225e973988108000000",
+  regtest: "06226e46111a0b59caaf126043eb5bbf28c34f3a5e332a1fc7b2b73cf188910f",
+};
+const matchesNetwork = (decoded, network) => {
+  if (decoded.type === "bolt11 invoice")
+    return decoded.currency === bolt11Prefixes[network];
+  const ours = chainHashes[network];
+  if (decoded.type === "bolt12 offer")
+    return decoded.offer_chains
+      ? decoded.offer_chains.includes(ours)
+      : network === "bitcoin";
+  const chain = decoded.invreq_chain || chainHashes.bitcoin;
+  return chain === ours;
 };
 
 // CLN v26.06's experimental `createproof` RPC produces the lnp payer proof
@@ -523,13 +568,9 @@ const handle = (method, params, ev, app, user) =>
       const { payment, amount: reqAmountMsat, payer_note, metadata } = params;
       const { pubkey } = app;
 
-      const pr = parseInstruction(payment);
-      if (!pr) {
-        return error({
-          code: "UNSUPPORTED_PAYMENT_INSTRUCTION",
-          message: "No lightning instruction found (bolt11 or bolt12 required)",
-        });
-      }
+      const parsed = parseInstruction(payment);
+      if (parsed.error) return parsed;
+      const pr = parsed.instruction;
 
       let decoded;
       try {
@@ -542,15 +583,52 @@ const handle = (method, params, ev, app, user) =>
         });
       }
 
+      const { network } = await ln.getinfo();
+      if (!matchesNetwork(decoded, network)) {
+        return error({
+          code: "UNSUPPORTED_NETWORK",
+          message: "Payment instruction is for a different Bitcoin network",
+        });
+      }
+
       const instruction_type = decoded.type.includes("bolt12")
         ? "bolt12"
         : "bolt11";
+
+      // payer_note rides in a bolt12 invoice request's invreq_payer_note;
+      // bolt11 has no payer-message field, and the spec requires delivering
+      // the note or rejecting before payment — never silently dropping it
+      if (payer_note && instruction_type !== "bolt12") {
+        return error({
+          code: "BAD_REQUEST",
+          message: "payer_note requires a bolt12 payment instruction",
+        });
+      }
+
       const instructionAmountMsat =
         decoded.type === "bolt12 offer"
           ? decoded.offer_amount_msat
           : instruction_type === "bolt12"
             ? decoded.invoice_amount_msat
             : decoded.amount_msat;
+
+      if (
+        reqAmountMsat !== undefined &&
+        reqAmountMsat !== null &&
+        (!Number.isFinite(Number(reqAmountMsat)) || Number(reqAmountMsat) <= 0)
+      ) {
+        return error({ code: "BAD_REQUEST", message: "Invalid amount" });
+      }
+      if (
+        reqAmountMsat &&
+        instructionAmountMsat &&
+        Number(reqAmountMsat) !== Number(instructionAmountMsat)
+      ) {
+        return error({
+          code: "BAD_REQUEST",
+          message: `Requested amount conflicts with the instruction amount (${instructionAmountMsat} msat)`,
+        });
+      }
 
       const amountMsat = instructionAmountMsat || reqAmountMsat;
       if (!amountMsat) {
@@ -574,9 +652,14 @@ const handle = (method, params, ev, app, user) =>
         const recipient = await g(`user:${invoice.uid}`);
 
         if (recipient?.username !== "mint") {
+          // Internal settlement never builds a bolt12 invoice request, so the
+          // spec's deliver-or-reject rule for payer_note is met by handing the
+          // note to the recipient as the payment memo (bolt11 + payer_note was
+          // already rejected above)
           const { id: pid } = await sendInternal({
             amount,
             invoice,
+            memo: payer_note,
             recipient,
             sender: user,
           });
@@ -675,7 +758,24 @@ const handle = (method, params, ev, app, user) =>
         const qs = new URLSearchParams();
         qs.set("lightning", invoice.hash);
         try {
-          const offer = await getUserOffer(user);
+          // The spec requires the description in EVERY instruction that
+          // supports one (offers do), and an amount shouldn't come back as an
+          // amountless lno — so an amounted or described receive mints a
+          // matching per-request offer; the reusable standing offer only fits
+          // the blank request. On failure (e.g. an identical offer already
+          // registered to another user) the lno is omitted rather than
+          // substituting one with the wrong description/amount.
+          const offer =
+            amount || description
+              ? await generate({
+                  invoice: {
+                    type: "bolt12",
+                    amount: amount ? Math.round(amount / 1000) : 0,
+                    memo: description,
+                  },
+                  user,
+                })
+              : await getUserOffer(user);
           if (offer?.hash) qs.set("lno", offer.hash);
         } catch (e) {
           warn("failed to include offer in receive", e.message);
@@ -730,7 +830,7 @@ const handle = (method, params, ev, app, user) =>
     },
 
     async get_info() {
-      const { alias, blockheight, color, id } = await ln.getinfo();
+      const { alias, blockheight, color, id, network } = await ln.getinfo();
 
       return result({
         alias,
@@ -738,7 +838,8 @@ const handle = (method, params, ev, app, user) =>
         block_height: blockheight,
         color,
         pubkey: id,
-        network: "mainnet",
+        // CLN calls mainnet "bitcoin"; NIP-47 clients expect "mainnet"
+        network: network === "bitcoin" ? "mainnet" : network,
         methods,
         notifications: ["payment_received", "payment_sent"],
       });
