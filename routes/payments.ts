@@ -515,6 +515,14 @@ export default {
           const invoice = await getInvoice(address);
           if (!hot && aid !== invoice?.aid) continue;
           if (sats(amount) < 300) continue;
+          // Atomic first-seen guard (COINOS-2). The getPayment() read above is not
+          // a lock: concurrent callers (walletnotify, catchUp, bulk /confirm
+          // sweeps — /confirm is unauthenticated) can all read p==null for one
+          // deposit and each run credit(), double-crediting the pending balance
+          // AND inflating the spendable credit:<net>:<uid> fee accumulator. Mirror
+          // the confirm-stage lock so only the first caller credits.
+          const firstlock = `firstseenlock:${txid}:${vout}`;
+          if (!(await db.set(firstlock, "1", { NX: true, EX: 60 }))) continue;
           await credit({
             hash: address,
             amount: sats(amount),
