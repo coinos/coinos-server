@@ -731,12 +731,38 @@ export const sendKeysend = async ({
   });
 
   let outcome = "unknown";
+
+  // COINOS-1: keysend randomizes its payment hash (the CLN command takes no
+  // preimage arg) and a throw yields no result object, so the caller-supplied
+  // `hash` is NOT the payment's real hash — verifying with it is what made the
+  // old code reverse on every throw. CLN keysend errors carry no payment_hash
+  // either (verified on v26.06.2: the error is {code, message, attempts}).
+  //
+  // Instead, tag the payment with our own unique `label` and note where the
+  // sendpays index stands beforehand. `wait sendpays created 0` returns the
+  // current index immediately, so on a throw we can list only sendpays created
+  // since — no full scan — and find ours by label regardless of error shape.
+  // `wait` isn't in the rpc client's generated method list, so go through the
+  // generic call(). nextvalue 0 never blocks — it returns the current index.
+  let startIndex: number | undefined;
+  try {
+    const w = await ln.call("wait", {
+      subsystem: "sendpays",
+      indexname: "created",
+      nextvalue: 0,
+    });
+    startIndex = w?.created;
+  } catch (e: any) {
+    warnThrottled("keysend: wait sendpays unavailable", e?.message ?? String(e));
+  }
+
   try {
     const r = await ln.keysend({
       destination: pubkey,
       amount_msat: amount * 1000,
       maxfee: fee * 1000,
       retry_for: 10,
+      label: hash,
       extratlvs,
     });
     warn("keysend returned", p.id, JSON.stringify({
@@ -750,23 +776,38 @@ export const sendKeysend = async ({
   } catch (e: any) {
     err("failed keysend", hash?.slice(0,16), "error:", shortError(e?.message));
     try {
-      const { pays } = await ln.listpays({ payment_hash: hash });
-      warn("listpays after keysend-threw", p.id, JSON.stringify(pays?.map((x) => ({ status: x.status, amount_sent_msat: x.amount_sent_msat })) ?? []));
-      const completed = pays.find((x) => x.status === "complete");
-      const failed = !pays.length || pays.every((x) => x.status === "failed");
-      if (completed) {
-        outcome = "keysend-completed-despite-throw";
-      } else if (failed) {
-        await reverse(p);
-        outcome = "reversed-after-keysend-throw";
+      if (startIndex === undefined) {
+        // Couldn't establish the index baseline, so we can't bound the search.
+        // Never refund a payment that may have settled — leave the debit.
+        warn("keysend threw with no sendpays baseline — NOT reversing (manual review)", p.id, pubkey);
+        outcome = "unverified-after-keysend-throw (not reversed)";
       } else {
-        outcome = "pending-after-keysend-throw";
+        const { payments = [] } = await ln.listsendpays({
+          index: "created",
+          start: startIndex,
+        });
+        const ours = payments.filter((x: any) => x.label === hash);
+        warn("sendpays after keysend-threw", p.id, JSON.stringify(ours.map((x: any) => ({ status: x.status }))));
+
+        if (ours.some((x: any) => x.status === "complete")) {
+          // Settled despite the throw — reversing here is the drain.
+          outcome = "keysend-completed-despite-throw";
+        } else if (!ours.length) {
+          // CLN records a sendpay BEFORE it sends the HTLC, so no record at all
+          // means nothing left the node (the common no-route/no-path failure).
+          // Safe — and necessary — to refund.
+          await reverse(p);
+          outcome = "reversed-after-keysend-throw (no htlc sent)";
+        } else if (ours.every((x: any) => x.status === "failed")) {
+          await reverse(p);
+          outcome = "reversed-after-keysend-throw (confirmed failed)";
+        } else {
+          // Still in flight: CLN may yet settle it, so leave the debit.
+          outcome = "pending-after-keysend-throw";
+        }
       }
-      // else: pending or completed — leave the debit; check() loop will
-      // reconcile. Reversing on pending would refund while CLN may still
-      // settle the keysend.
     } catch (verifyErr: any) {
-      warnThrottled("listpays verification failed (keysend)", verifyErr?.message ?? String(verifyErr));
+      warnThrottled("sendpays verification failed (keysend)", verifyErr?.message ?? String(verifyErr));
       outcome = "verify-failed-after-keysend-throw";
     }
     warn("sendKeysend outcome", p.id, "=", outcome);
