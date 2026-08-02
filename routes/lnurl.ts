@@ -13,6 +13,8 @@ import { PaymentType } from "$lib/types";
 const { URL } = process.env;
 const host = URL.split("/").at(-1);
 const fiveMinutes = 1000 * 60 * 5;
+// v3 payment addresses (coinos v3 / halwallet) are registered here.
+const NAMES_URL = process.env.NAMES_URL || "https://names.coinos.io";
 
 export default {
   async encode(req, res) {
@@ -67,7 +69,25 @@ export default {
           .toLowerCase(),
       );
 
-      if (!user) fail(`User ${username} not found`);
+      // Not one of ours? It may be a v3 payment address, which lives at this
+      // same domain but is served by the names registrar. Hand its response
+      // through unchanged — the callback it returns is absolute, so the payer
+      // talks to the registrar directly from here on.
+      if (!user) {
+        const name = username.toLowerCase().replace(/\s/g, "");
+        try {
+          const r = await fetch(
+            `${NAMES_URL}/.well-known/lnurlp/${encodeURIComponent(name)}?domain=${host}`,
+          );
+          if (r.ok) {
+            const body: any = await r.json();
+            if (body?.tag === "payRequest") return res.send(body);
+          }
+        } catch (e) {
+          warn("names lookup failed for", name, (e as any).message);
+        }
+        fail(`User ${username} not found`);
+      }
       const { id: uid } = user;
 
       const metadata = JSON.stringify([
