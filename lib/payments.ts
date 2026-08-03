@@ -356,6 +356,16 @@ export const credit = async ({
   if (!memo) ({ memo } = inv);
   if (memo && memo.length > 5000) fail("memo too long");
   if (amount < 0 || tip < 0) fail("Invalid amount");
+  // For a NON-internal receipt the tip is only a cosmetic split of the real
+  // settled `amount` — there is no paired coinos debit carrying it — so it can
+  // never legitimately exceed `amount`. If the invoice tip was mutated via
+  // PUT /invoice to a value larger than the amount actually received, the
+  // fallback above would pull in that inflated tip and the stored record's
+  // `amount - tip` would go negative: a corrupt record that could be reversed
+  // into balance. The balance credit itself is `amount` and is unaffected, but
+  // clamp the tip so the record can never be negative. Internal transfers keep
+  // the full debited tip (their record stores the base amount, non-negative).
+  if (type !== PaymentType.internal && tip > amount) tip = amount;
   if (type === PaymentType.internal) amount += tip;
 
   const user = await getUser(inv.uid);
@@ -537,12 +547,21 @@ const pay = async ({ aid = undefined, amount, to, user }) => {
   }
 
   const recipient = await getUser(to);
-  if (recipient)
+  if (recipient) {
+    // An autowithdraw destination that resolves back to the sender is a
+    // self-send: the internal credit re-fires completePayment, which re-runs
+    // autowithdraw, and since the balance nets to the same value it never
+    // falls below threshold — an unbounded loop. Reject it here (the route's
+    // create() has the equivalent `Cannot send to self` guard; pay() lacked
+    // it, which is what let a self-pointed autowithdraw spin forever).
+    if (recipient.id === aid)
+      fail("Cannot autowithdraw to your own account");
     return sendInternal({
       amount,
       recipient,
       sender: user,
     });
+  }
 
   const fee = Math.max(5, Math.round(amount * 0.02));
   if (lnurl) {
