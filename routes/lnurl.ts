@@ -69,11 +69,11 @@ export default {
           .toLowerCase(),
       );
 
-      // Not one of ours? It may be a v3 payment address, which lives at this
-      // same domain but is served by the names registrar. Hand its response
-      // through unchanged — the callback it returns is absolute, so the payer
+      // Not one of ours — or migrated to coinos v3, where the name now lives.
+      // Either way the names registrar answers for it. Hand its response
+      // through unchanged: the callback it returns is absolute, so the payer
       // talks to the registrar directly from here on.
-      if (!user) {
+      if (!user || user.migrated) {
         const name = username.toLowerCase().replace(/\s/g, "");
         try {
           const r = await fetch(

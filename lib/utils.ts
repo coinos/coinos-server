@@ -175,6 +175,8 @@ export const fields = [
   "hidepay",
   "lud16",
   "memoPrompt",
+  // a v3-migrated account: the names registrar owns this name for receiving
+  "migrated",
   "npub",
   "picture",
   "prompt",

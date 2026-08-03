@@ -318,6 +318,7 @@ export default {
         "language",
         "locktime",
         "memoPrompt",
+        "migrated",
         "nip5",
         "notify",
         "nsec",
