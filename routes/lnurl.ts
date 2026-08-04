@@ -69,25 +69,15 @@ export default {
           .toLowerCase(),
       );
 
-      // Not one of ours — or migrated to coinos v3, where the name now lives.
-      // Either way the names registrar answers for it. Hand its response
-      // through unchanged: the callback it returns is absolute, so the payer
-      // talks to the registrar directly from here on.
-      if (!user || user.migrated) {
-        const name = username.toLowerCase().replace(/\s/g, "");
-        try {
-          const r = await fetch(
-            `${NAMES_URL}/.well-known/lnurlp/${encodeURIComponent(name)}?domain=${host}`,
-          );
-          if (r.ok) {
-            const body: any = await r.json();
-            if (body?.tag === "payRequest") return res.send(body);
-          }
-        } catch (e) {
-          warn("names lookup failed for", name, (e as any).message);
-        }
-        fail(`User ${username} not found`);
-      }
+      // The v3 names registrar (v3.coinos.io) is the FRONT for v3 accounts and
+      // falls back to THIS coinos.io endpoint for anything it doesn't have. So
+      // this endpoint is the fallback target: it must serve its own accounts
+      // directly and must NOT defer back to the registrar — that inverts the
+      // fallback and loops once the registrar's fallback is live. (It also can't
+      // key off `migrated`: register.ts stamps that flag on essentially every
+      // account, and those names were never synced to the registrar.) Just serve
+      // the local account, and 404 only when there is no local account at all.
+      if (!user) fail(`User ${username} not found`);
       const { id: uid } = user;
 
       const metadata = JSON.stringify([
