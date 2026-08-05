@@ -16,6 +16,34 @@ const fiveMinutes = 1000 * 60 * 5;
 // v3 payment addresses (coinos v3 / halwallet) are registered here.
 const NAMES_URL = process.env.NAMES_URL || "https://names.coinos.io";
 
+// Does the v3 registrar serve this name? Returns its payRequest, or null.
+// Cached briefly: claims change on the order of days, and this sits on the
+// payment path for every coinos.io address lookup. Only definitive answers
+// (payRequest / 404) are cached — a sick registrar shouldn't be remembered.
+const registrarCache = new Map();
+const REGISTRAR_TTL = 60_000;
+async function registrarLookup(name) {
+  const hit = registrarCache.get(name);
+  if (hit && Date.now() - hit.at < REGISTRAR_TTL) return hit.body;
+  try {
+    const r = await fetch(
+      `${NAMES_URL}/.well-known/lnurlp/${encodeURIComponent(name)}?domain=${host}`,
+      { signal: AbortSignal.timeout(3000) },
+    );
+    if (r.ok) {
+      const body: any = await r.json();
+      if (body?.tag === "payRequest") {
+        registrarCache.set(name, { at: Date.now(), body });
+        return body;
+      }
+    }
+    if (r.status === 404) registrarCache.set(name, { at: Date.now(), body: null });
+  } catch (e) {
+    warn("names registrar lookup failed for", name, (e as any).message);
+  }
+  return null;
+}
+
 export default {
   async encode(req, res) {
     const {
@@ -61,22 +89,32 @@ export default {
       query: { minSendable = 1000, maxSendable = 100000000000 },
     } = req;
     try {
-      const user = await getUser(
-        username
-          .replace("lightning:", "")
-          .replace(/\s/g, "")
-          .replace("=", "")
-          .toLowerCase(),
-      );
+      const name = username
+        .replace("lightning:", "")
+        .replace(/\s/g, "")
+        .replace("=", "")
+        .toLowerCase();
 
-      // The v3 names registrar (v3.coinos.io) is the FRONT for v3 accounts and
-      // falls back to THIS coinos.io endpoint for anything it doesn't have. So
-      // this endpoint is the fallback target: it must serve its own accounts
-      // directly and must NOT defer back to the registrar — that inverts the
-      // fallback and loops once the registrar's fallback is live. (It also can't
-      // key off `migrated`: register.ts stamps that flag on essentially every
-      // account, and those names were never synced to the registrar.) Just serve
-      // the local account, and 404 only when there is no local account at all.
+      // Resolution order for name@coinos.io — this has flip-flopped twice, so
+      // the invariant, in full:
+      //   1. A name CLAIMED in the v3 registrar is served by it. That is where
+      //      migrated accounts live — their legacy user record still exists
+      //      here, so "local account exists" does NOT mean the name is ours —
+      //      and also v3-native custom names, which have no local account and
+      //      only a npub1* Cloudflare rule redirecting for them today.
+      //   2. Otherwise a local account is served locally. Never key this on
+      //      `migrated`: register.ts stamps that flag on essentially every
+      //      account (it means "don't reserve this name for v3", not "user
+      //      moved away").
+      //   3. Neither → not found.
+      // No loop: step 1 defers only for names the registrar HAS, and the
+      // registrar never queries this endpoint for those. If the registrar is
+      // unreachable we fall through and serve the local account — a briefly
+      // stale destination beats an unpayable address.
+      const v3 = await registrarLookup(name);
+      if (v3) return res.send(v3);
+
+      const user = await getUser(name);
       if (!user) fail(`User ${username} not found`);
       const { id: uid } = user;
 
