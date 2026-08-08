@@ -11,7 +11,12 @@
 //   - /v1/melt/bolt11        -> routed by the submitted proofs' keyset: OLD-keyset
 //        proofs get a fresh OLD melt quote (from the remembered invoice) and are
 //        executed on OLD (where panic mode blocks blacklisted attacker ecash);
+//        change outputs are STRIPPED on that path (wallets blind them to the NEW
+//        active keyset, which OLD can't sign — OLD would reject the whole melt),
+//        and the OLD quote id in the response is mapped back to the caller's;
 //        everything else executes on NEW
+//   - GET /v1/melt/quote/bolt11/<id> -> OLD (id rewritten) if that melt was
+//        executed on OLD, else NEW — so wallets can poll a recovery melt
 //   - /v1/checkstate         -> both mints, merged (spent if either says spent)
 //   - everything else (swap, mint, restore, mint quote) -> NEW
 // The OLD mint also stands alone at mintrecovery.coinos.io (direct).
@@ -64,6 +69,21 @@ function rememberQuote(id: string, info: QInfo) {
   try { writeFileSync(QFILE, JSON.stringify(quoteMem)); } catch {}
 }
 
+// --- NEW-quote-id -> OLD-quote-id map for melts executed on OLD, so status
+// polls (GET /v1/melt/quote/bolt11/<id>) can be routed to the mint that ran
+// the melt. Kept long: a pending lightning payment can be polled much later.
+const MFILE = `${DIR}/oldmelts.json`;
+type MInfo = { old: string; ts: number };
+let oldMelts: Record<string, MInfo> = {};
+if (existsSync(MFILE)) oldMelts = parse(readFileSync(MFILE, "utf8")) || {};
+const MTTL = 7 * 24 * 3600_000;
+function rememberOldMelt(newId: string, oldId: string) {
+  oldMelts[newId] = { old: oldId, ts: Date.now() };
+  const cut = Date.now() - MTTL;
+  for (const k of Object.keys(oldMelts)) if ((oldMelts[k].ts || 0) < cut) delete oldMelts[k];
+  try { writeFileSync(MFILE, JSON.stringify(oldMelts)); } catch {}
+}
+
 console.log(`mintdemux on :${PORT}  NEW=${NEW} OLD=${OLD}  new=[${[...newKeysets]}] old=[${[...oldKeysets]}]`);
 
 const keysetsInBody = (body: any): string[] => {
@@ -103,6 +123,13 @@ Bun.serve({
       }
       const km = path.match(/^\/v1\/keys\/(.+)$/);
       if (km) return proxy(oldKeysets.has(km[1]) ? OLD : NEW, "GET", ps);
+      const qm = path.match(/^\/v1\/melt\/quote\/bolt11\/([^/]+)$/);
+      if (qm && oldMelts[qm[1]]) {
+        const r = await fetch(`${OLD}/v1/melt/quote/bolt11/${oldMelts[qm[1]].old}`);
+        const txt = await r.text(); const j = parse(txt);
+        if (j?.quote) j.quote = qm[1]; // caller knows its own id, not OLD's
+        return new Response(j ? JSON.stringify(j) : txt, { status: r.status, headers: J });
+      }
       return proxy(NEW, "GET", ps); // /v1/info, /v1/keys, anything else GET
     }
 
@@ -134,16 +161,22 @@ Bun.serve({
       if (hasOld && hasNew)
         return new Response(JSON.stringify({ detail: "Cannot melt old and new ecash in one operation; melt them separately.", code: 12003 }), { status: 400, headers: J });
       if (hasOld) {
+        const ip = req.headers.get("cf-connecting-ip") || "";
         const info = quoteMem[body.quote];
-        if (!info) return new Response(JSON.stringify({ detail: "Melt quote expired or unknown for old-ecash recovery; request a new melt quote and try again.", code: 12004 }), { status: 400, headers: J });
+        if (!info) { log(`melt->OLD refused (quote unknown/expired) keysets=${ids.join(",")} ip=${ip}`); return new Response(JSON.stringify({ detail: "Melt quote expired or unknown for old-ecash recovery; request a new melt quote and try again.", code: 12004 }), { status: 400, headers: J }); }
         // re-quote on OLD for the same invoice, then execute there (panic mode gates it)
         const oq = await fetch(`${OLD}/v1/melt/quote/bolt11`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ request: info.invoice, unit: info.unit }) });
         const oqt = await oq.text(); const oqj = parse(oqt);
         if (!oq.ok || !oqj?.quote) { log(`OLD re-quote failed for melt: ${oqt.slice(0, 120)}`); return respond(oq, oqt); }
-        const execBody = JSON.stringify({ ...body, quote: oqj.quote });
-        const r = await fetch(`${OLD}/v1/melt/bolt11`, { method: "POST", headers: { "content-type": "application/json" }, body: execBody });
-        const txt = await r.text();
-        log(`melt->OLD(recovery) keysets=${ids.join(",")} status=${r.status}`);
+        rememberOldMelt(String(body.quote), String(oqj.quote));
+        // Strip change outputs: wallets blind them to the NEW active keyset,
+        // which OLD doesn't know and rejects before even reading the proofs
+        // ("keyset id unknown"). Recovery melts forfeit fee-return change.
+        const { outputs, ...bodyNoChange } = body;
+        const r = await fetch(`${OLD}/v1/melt/bolt11`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...bodyNoChange, quote: oqj.quote }) });
+        const txt = await r.text(); const j = parse(txt);
+        log(`melt->OLD(recovery) keysets=${ids.join(",")} status=${r.status} ip=${ip}${outputs ? " outputs-stripped" : ""}`);
+        if (j?.quote) { j.quote = String(body.quote); return new Response(JSON.stringify(j), { status: r.status, headers: J }); }
         return respond(r, txt);
       }
       // new (or unknown) keysets -> NEW
