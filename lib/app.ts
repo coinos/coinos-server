@@ -33,6 +33,17 @@ const redactBody = (body: any) => {
   return copy;
 };
 
+// Never persist session credentials to the request log. The Authorization
+// bearer token and the token cookie are full account credentials (JWTs that
+// don't expire) — logging them turns log-read access into account takeover.
+const REDACT_HEADERS = ["authorization", "cookie"];
+const redactHeaders = (headers: any) => {
+  if (!headers || typeof headers !== "object") return headers;
+  const copy: any = { ...headers };
+  for (const h of REDACT_HEADERS) if (h in copy) copy[h] = "[redacted]";
+  return copy;
+};
+
 // app.addHook("onRequest", async (req) => {
 //   reqLogger.info({ url: req.raw.url, id: req.id });
 // });
@@ -64,7 +75,7 @@ app.addHook("preHandler", async (req) => {
     method: req.method,
     url,
     ip,
-    headers: req.headers,
+    headers: redactHeaders(req.headers),
     query: req.query,
     body: redactBody(req.body),
     user: (req.user as any)?.username,

@@ -454,7 +454,13 @@ export default {
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 432000000),
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      });
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
@@ -514,7 +520,13 @@ export default {
 
       const payload = { id: user.id };
       const token = jwt.sign(payload, config.jwt);
-      res.cookie("token", token, { expires: new Date(Date.now() + 432000000) });
+      res.cookie("token", token, {
+        expires: new Date(Date.now() + 432000000),
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      });
       user = pick(user, whitelist);
       res.send({ user, token });
     } catch (e) {
