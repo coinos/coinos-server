@@ -131,7 +131,7 @@ app.post("/2fa", auth, users.enable2fa);
 app.post("/user", auth, users.update);
 app.post("/delete", auth, users.deleteSelf);
 app.post("/reset", optional, users.reset);
-app.post("/upload/:type", users.upload);
+app.post("/upload/:type", auth, users.upload);
 app.get("/users/delete/:username", users.del);
 app.post("/acl", users.acl);
 app.post("/superuser", users.superuser);
