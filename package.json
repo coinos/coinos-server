@@ -5,6 +5,7 @@
   "scripts": {
     "start": "bun index.ts",
     "dev": "nodemon --exec bun index.ts",
+    "test:regtest": "docker exec app sh -c 'cd /home/bun/app && bun test test/'",
     "format": "biome format *.js **/*.js --write"
   },
   "dependencies": {
