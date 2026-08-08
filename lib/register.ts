@@ -32,7 +32,7 @@ export default async (user, ip) => {
   if (password) {
     user.password = await Bun.password.hash(password, {
       algorithm: "bcrypt",
-      cost: 4,
+      cost: 12,
     });
   }
 
