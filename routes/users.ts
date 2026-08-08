@@ -693,10 +693,19 @@ export default {
         fail("Type your username to confirm account deletion");
 
       // Allow deletion through dust (often too small to withdraw); only block
-      // a meaningful balance so nobody destroys real funds by accident.
-      const balance = Number(await db.get(`balance:${id}`)) || 0;
-      const pending = Number(await db.get(`pending:${id}`)) || 0;
-      if (balance + pending > 10000)
+      // a meaningful balance so nobody destroys real funds by accident. Sum
+      // EVERY account (main + sub-accounts) — the deletion loop below wipes each
+      // sub-account's balance:/pending: keys unconditionally, so a guard that
+      // only checked the main account let a user with funds parked in a
+      // sub-account pass and silently destroy them.
+      const aids = await db.lRange(`${id}:accounts`, 0, -1);
+      if (!aids.includes(id)) aids.push(id);
+      let total = 0;
+      for (const aid of aids) {
+        total += Number(await db.get(`balance:${aid}`)) || 0;
+        total += Number(await db.get(`pending:${aid}`)) || 0;
+      }
+      if (total > 10000)
         fail("Withdraw your balance before deleting your account");
 
       const keys = [
