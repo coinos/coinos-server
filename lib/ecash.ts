@@ -24,6 +24,28 @@ const enc = (proofs) =>
     proofs,
   });
 
+// Serialize every read-modify-write of the shared `cash` house-wallet token. The
+// mint swap sits between reading the current proofs and writing the merged set,
+// so two concurrent claim()/mint() calls would each read the same `current` and
+// the later write would clobber the earlier — the earlier call's freshly-swapped
+// proofs vanish from the stored token while both users stay credited (an
+// insolvency leak). This mutex is in-process; if the server ever runs
+// multi-process, move to a redis lock (WATCH/MULTI or SET NX).
+let cashLock: Promise<void> = Promise.resolve();
+const withCashLock = async <T>(fn: () => Promise<T>): Promise<T> => {
+  const prev = cashLock;
+  let release: () => void = () => {};
+  cashLock = new Promise((res) => {
+    release = res;
+  });
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+};
+
 const ext = async (mint) => {
   const issuer = new CashuMint(mint);
   const { pubkey: issuerPk } = await issuer.getInfo();
@@ -37,26 +59,29 @@ export async function get(id) {
 }
 
 export async function claim(token) {
-  const { proofs: current } = getDecodedToken(await g("cash"));
   const { mint } = getDecodedToken(token);
 
   if (await ext(mint)) fail("Unable to receive from other mints");
 
-  const rcvd = await w.receive(token);
-
-  await s("cash", enc([...current, ...rcvd]));
-  return rcvd.reduce((a, b) => a + b.amount, 0);
+  return withCashLock(async () => {
+    const { proofs: current } = getDecodedToken(await g("cash"));
+    const rcvd = await w.receive(token);
+    await s("cash", enc([...current, ...rcvd]));
+    return rcvd.reduce((a, b) => a + b.amount, 0);
+  });
 }
 
 export async function mint(amount) {
   const { keysets } = await m.getKeySets();
   const w = new CashuWallet(m, { keysets });
-  const { proofs } = getDecodedToken(await g("cash"));
-  const { send, keep } = await w.send(amount, proofs);
-  const rcvd = await w.receive(enc(send));
-  const change = enc(keep);
-  await s("cash", change);
-  return enc(rcvd);
+  return withCashLock(async () => {
+    const { proofs } = getDecodedToken(await g("cash"));
+    const { send, keep } = await w.send(amount, proofs);
+    const rcvd = await w.receive(enc(send));
+    const change = enc(keep);
+    await s("cash", change);
+    return enc(rcvd);
+  });
 }
 
 export async function check(token) {
