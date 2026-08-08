@@ -354,7 +354,14 @@ export const credit = async ({
   tip = tip !== undefined ? Number.parseInt(tip) || 0 : Number.parseInt(inv.tip) || 0;
 
   if (!memo) ({ memo } = inv);
-  if (memo && memo.length > 5000) fail("memo too long");
+  // Truncate rather than throw: credit() runs AFTER the payment has settled (an
+  // incoming lightning/bolt12 deposit already advanced pay_index; an internal
+  // send already debited the sender). Throwing here left the sats in the house
+  // wallet with no retry path — the payer saw a completed payment and the
+  // recipient was never credited. An oversized memo (attacker-controllable via
+  // the lnurl comment or a bolt12 payer_note) must never destroy a settled
+  // payment; a clipped note is harmless.
+  if (memo && memo.length > 5000) memo = memo.slice(0, 5000);
   if (amount < 0 || tip < 0) fail("Invalid amount");
   // For a NON-internal receipt the tip is only a cosmetic split of the real
   // settled `amount` — there is no paired coinos debit carrying it — so it can
