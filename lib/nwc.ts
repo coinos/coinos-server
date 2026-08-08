@@ -45,8 +45,10 @@ const methods = [
 
 const week = 7 * 24 * 60 * 60;
 const nwcEventMaxAgeSeconds = 5 * 60;
+// Tolerated clock skew for future-dated events. Events further ahead than this
+// are rejected so a captured, future-dated signed event can't be replayed later.
+const nwcClockSkewSeconds = 60;
 const handledKey = "handled:nwc";
-const handledMaxSize = 200000;
 
 // Per-pubkey rate limiting for NWC requests. Raised 5 -> 60/min: normal client
 // usage (a balance check or two + a payment + a few lookup_invoice reconciles)
@@ -56,6 +58,28 @@ const handledMaxSize = 200000;
 const nwcRateLimit = 60; // max requests per minute per pubkey
 const nwcRateWindow = 60 * 1000; // 1 minute in ms
 const nwcRequestTimes: Map<string, number[]> = new Map();
+
+// Per-app async mutex for spends. checkBudget reads `${pubkey}:payments` and the
+// spend is only recorded after the payment settles, so N concurrent requests on
+// one connection would each read the same stale "spent" total and all pass —
+// up to N × max_amount out. Serializing the check + send + record per app closes
+// that window (same shape as withLimitLock for the asset-type limits).
+const budgetLocks: Map<string, Promise<void>> = new Map();
+const withBudgetLock = async <T>(key: string, fn: () => Promise<T>): Promise<T> => {
+  const prev = budgetLocks.get(key) || Promise.resolve();
+  let release: () => void = () => {};
+  const next = new Promise<void>((res) => {
+    release = res;
+  });
+  budgetLocks.set(key, prev.then(() => next));
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+};
+const budgetedMethods = new Set(["pay_invoice", "pay", "pay_keysend"]);
 
 export default () => {
   let r: any;
@@ -185,8 +209,25 @@ export default () => {
     try {
       if (sub !== "nwc") return;
       const now = Math.floor(Date.now() / 1000);
-      if (ev.created_at && now - ev.created_at > nwcEventMaxAgeSeconds) return;
-      if (await db.zScore(handledKey, ev.id)) return;
+      // Reject events outside the accepted window in BOTH directions. Old events
+      // are stale; future-dated ones (beyond a small skew) could otherwise be
+      // replayed indefinitely once a time-bounded dedup entry expired.
+      if (ev.created_at) {
+        if (now - ev.created_at > nwcEventMaxAgeSeconds) return;
+        if (ev.created_at - now > nwcClockSkewSeconds) return;
+      }
+      // Atomic dedup claim. SET NX is a single-command check-and-set, so two
+      // concurrent deliveries of the same signed event cannot both pass — the
+      // previous zScore-then-(unawaited)-zAdd let duplicate relay deliveries each
+      // reach handle() and pay twice. The claim outlives the accepted age window
+      // so a future-dated event can't be replayed after it would have expired.
+      if (
+        !(await db.set(`${handledKey}:${ev.id}`, "1", {
+          NX: true,
+          EX: 2 * nwcEventMaxAgeSeconds,
+        }))
+      )
+        return;
 
       let { content, pubkey } = ev;
       const pk = ev.tags.find((t) => t[0] === "p")[1];
@@ -230,7 +271,7 @@ export default () => {
       const cutoff = Date.now() - nwcRateWindow;
       const recent = times.filter((t) => t > cutoff);
       if (recent.length >= nwcRateLimit) {
-        db.zAdd(handledKey, { score: now, value: ev.id });
+        // The event is already claimed above, so it won't be reprocessed.
         await reply({
           result_type: method,
           error: { code: "RATE_LIMITED", message: "Too many requests, slow down" },
@@ -239,13 +280,6 @@ export default () => {
       }
       recent.push(Date.now());
       nwcRequestTimes.set(ev.pubkey, recent);
-
-      db.zAdd(handledKey, { score: now, value: ev.id });
-      db.zRemRangeByScore(handledKey, 0, now - nwcEventMaxAgeSeconds);
-      const size = await db.zCard(handledKey);
-      if (size > handledMaxSize) {
-        await db.zRemRangeByRank(handledKey, 0, size - handledMaxSize - 1);
-      }
 
       // console.log("nwc", method, params, pubkey);
 
@@ -257,7 +291,13 @@ export default () => {
         const user = await g(`user:${app.uid}`);
         if (!user) fail("user not found");
 
-        const result = await handle(method, params, ev, app, user);
+        // Serialize budget-affecting methods per app so the budget check and the
+        // resulting spend can't interleave with a concurrent request on the same
+        // connection. Read-only methods run without contending for the lock.
+        const run = () => handle(method, params, ev, app, user);
+        const result = budgetedMethods.has(method)
+          ? await withBudgetLock(app.pubkey, run)
+          : await run();
         // A handler returning nothing (e.g. pay_invoice that couldn't confirm in
         // time) must still produce a reply, or the client hangs forever waiting.
         if (result === undefined || result === null) {
@@ -769,6 +809,13 @@ const handle = (method, params, ev, app, user) =>
         }
       }
 
+      // Keysend spends the same custodial balance as pay_invoice, so it must be
+      // subject to the same budget — otherwise a budget-limited connection string
+      // is a full-drain credential. It also left no `${app.pubkey}:payments`
+      // entry, so subsequent budgeted calls under-counted the spend.
+      const budgetError = await checkBudget(app, amount);
+      if (budgetError) return budgetError;
+
       try {
         const { payment_hash } = await sendKeysend({
           hash: ev.id,
@@ -776,7 +823,14 @@ const handle = (method, params, ev, app, user) =>
           pubkey,
           user,
           extratlvs,
+          fee: app.max_fee,
         });
+
+        // Record the debit against the app budget. debit() stored the payment id
+        // under the keysend label (= ev.id); resolve and push it so checkBudget
+        // counts this spend going forward.
+        const pid = await g(`payment:${ev.id}`);
+        if (pid) await db.lPush(`${app.pubkey}:payments`, pid);
 
         for (let i = 0; i < 10; i++) {
           const { pays } = await ln.listpays({ payment_hash });
