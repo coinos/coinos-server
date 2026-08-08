@@ -70,7 +70,7 @@ const verifyRecaptcha = async (response, req?) => {
         },
       })
       .json();
-    return success || response === config.adminpass;
+    return success || (!!config.adminpass && response === config.adminpass);
   } catch {
     return false;
   }
@@ -383,7 +383,12 @@ export default {
       if (ipCount === 1) await db.expire(ipKey, 10);
       if (ipCount > 30) return res.code(429).send({});
 
-      const isAdmin = password === config?.adminpass;
+      // Fail closed: an unset adminpass must never authenticate, and an omitted
+      // password field must never coincide with an unset value (undefined ===
+      // undefined). Both the configured value and the supplied one must be
+      // non-empty and match exactly.
+      const isAdmin =
+        !!config?.adminpass && !!password && password === config.adminpass;
 
       if (!isAdmin) {
         const recaptchaOk = await verifyRecaptcha(recaptcha, req);

@@ -12,7 +12,10 @@ export default {
     "wss://relay.nostr.bg",
     "wss://nostr.orangepill.dev"
   ],
-  jwt: "00d0ab4f7738a83feb37f661526512063c41e49278b7c32cba87314269a5788b",
+  // SECURITY: generate a fresh 32-byte secret before deploying —
+  // `openssl rand -hex 32`. This also keys @fastify/secure-session, so a
+  // published value lets anyone forge session JWTs and read the session cookie.
+  jwt: "0000000000000000000000000000000000000000000000000000000000000000",
   bitcoin: {
     host: "bc",
     wallet: "coinos",
@@ -33,10 +36,16 @@ export default {
   lightning: "/home/bun/app/data/lightning/regtest/lightning-rpc",
   lightningb: "/home/bun/app/data/lightningb/regtest/lightning-rpc",
   fee: 0.001,
-  adminpass: "pwa",
+  // SECURITY: the admin login path is disabled when this is empty (fails
+  // closed). Set a strong, unique value only if you need admin impersonation;
+  // never ship the sample value.
+  adminpass: "",
   support: "support@coinos.io",
-  nostrKey: "nsec1msk3dqy2pzqy2murmm5s5gejfgkjkm2zesnh266gud2wcvhcunzqlu0h90",
-  nostrKey2: "nsec17ugnsk0qrnakf7xaxzckya4xvx58q063k6q4vq2l577k4uyv9r0qmdcgm5",
+  // SECURITY: generate fresh keys — never deploy these sample values. These are
+  // the server NWC wallet-service key and the zap-receipt signer.
+  //   node -e "import('nostr-tools').then(n=>console.log(n.nip19.nsecEncode(n.generateSecretKey())))"
+  nostrKey: "nsec1replacewithafreshlygeneratedkeydonotusethissamplevalue0",
+  nostrKey2: "nsec1replacewithafreshlygeneratedkeydonotusethissamplevalue1",
   mintUrl: "http://mint:3338",
   square: {
     environment: SquareEnvironment.Sandbox,

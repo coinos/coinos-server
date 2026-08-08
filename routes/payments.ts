@@ -625,7 +625,7 @@ export default {
       body: { secret },
     } = req;
     try {
-      if (secret !== config.adminpass) fail("unauthorized");
+      if (!config.adminpass || secret !== config.adminpass) fail("unauthorized");
       await s("freeze", true);
       res.send("ok");
     } catch (e) {
