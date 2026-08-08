@@ -204,7 +204,7 @@ export default {
 
     user.twofa = false;
     await s(`user:${id}`, user);
-    emit(username, "user", user);
+    emit(username, "user", pick(user, whitelist));
     emit(username, "otpsecret", user.otpsecret);
     l("disabled 2fa", username);
     res.send({});
@@ -221,7 +221,7 @@ export default {
       if (isValid) {
         user.twofa = true;
         await s(`user:${id}`, user);
-        emit(username, "user", user);
+        emit(username, "user", pick(user, whitelist));
       } else {
         return res.code(500).send("Invalid token");
       }
@@ -365,8 +365,8 @@ export default {
       await s(`user:${user.id}`, user);
       if (user.nip5) await db.sAdd("nip5", `${user.username}:${user.pubkey}`);
 
-      emit(user.id, "user", user);
-      res.send({ user });
+      emit(user.id, "user", pick(user, whitelist));
+      res.send({ user: pick(user, whitelist) });
     } catch (e) {
       warn("failed to update", user.username, e.message);
       bail(res, e.message);

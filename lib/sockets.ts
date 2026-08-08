@@ -1,8 +1,20 @@
+import config from "$config";
 import store from "$lib/store";
 import jwt from "jsonwebtoken";
 import { v4 } from "uuid";
 import { err, warn } from "$lib/logging";
 import { fail, getUser } from "$lib/utils";
+
+// Verify the token's signature — never trust jwt.decode() here. A decode-only
+// gate let anyone forge {id: <victim uid>} (alg:none or any key) and register
+// their socket under the victim's uid, receiving every emit for that account.
+const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, config.jwt);
+  } catch (e) {
+    return null;
+  }
+};
 
 const code = 1000;
 const all = {};
@@ -44,7 +56,7 @@ export const broadcast = (type, data) => {
 
 const track = async (ws, token) => {
   const { id } = ws;
-  const { id: uid } = jwt.decode(token);
+  const { id: uid } = verifyToken(token) || {};
 
   if (!uid) fail("Invalid JWT token");
   const user = await getUser(uid);
@@ -97,7 +109,7 @@ Bun.serve({
 
         case "login":
           try {
-            if (!data || data === "null" || !jwt.decode(data))
+            if (!data || data === "null" || !verifyToken(data))
               return ws.close(code, `bad token ${data}`);
 
             await track(ws, data);
