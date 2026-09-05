@@ -2,7 +2,7 @@
 //
 // Sits INLINE between the mint and cl's CLNRest: the mint is pointed at
 // MINT_CLNREST_URL=http://meltguard:3011 instead of http://cl:3010. Every melt
-// is a POST /v1/pay; the guard decodes the invoice amount (via cl's own /v1/decode,
+// is a POST /v1/pay or /v1/xpay; the guard decodes the invoice amount (via cl's own /v1/decode,
 // so no hand-rolled bolt11 parsing) and enforces two caps the mint cannot bypass —
 // even if panic mode has a bug or the mint is compromised, it physically cannot
 // move money except through this guard:
@@ -15,7 +15,7 @@
 // State lives in plain files OUTSIDE any db (like the nobal failsafe), so a db
 // compromise can't move them and a restart can't forget them.
 //
-// Everything that is not POST /v1/pay is proxied through untouched, so mint
+// Everything that is not POST /v1/pay|/v1/xpay is proxied through untouched, so mint
 // startup (getinfo, listinvoices, waitanyinvoice, invoice, listpays…) works normally.
 //
 // Env: CL_URL (http://cl:3010), MELT_MAX_SAT, MELT_CUM_MAX_SAT, GUARD_DIR (/guard),
@@ -55,20 +55,50 @@ Bun.serve({
   async fetch(req) {
     const url = new URL(req.url);
     const rune = req.headers.get("Rune");
-    const isPay = req.method === "POST" && url.pathname === "/v1/pay";
+    // nutshell >= 0.20.3.1 CLNRestWallet pays via /v1/xpay (form field `invstring`,
+    // `maxfee`); older versions used /v1/pay (`bolt11`/`invoice`). Guard both, so a
+    // backend switch can never route a melt around the caps.
+    const isXpay = req.method === "POST" && url.pathname === "/v1/xpay";
+    const isPay = isXpay || (req.method === "POST" && url.pathname === "/v1/pay");
 
     if (isPay) {
       if (isFrozen()) return err(403, "meltguard: FROZEN — operator review required");
-      const body: any = await req.json().catch(() => ({}));
-      const amt = await decodeSat(body.bolt11 || "", rune);
+      // nutshell's CoreLightningRestWallet (mint-old) posts /v1/pay FORM-encoded
+      // with the invoice under `invoice` (old c-lightning-REST dialect); the newer
+      // CLNRestWallet uses `bolt11`. Parse form first, fall back to JSON, and
+      // accept either field name. (Prior code did req.json()+body.bolt11 only, so
+      // it never parsed the mint's form body -> every old-ecash melt was rejected
+      // at the amount check.)
+      const raw = await req.text();
+      let invoice = "";
+      const extra: Record<string, string> = {};
+      try {
+        const p = new URLSearchParams(raw);
+        if ([...p.keys()].length) {
+          invoice = p.get("invstring") || p.get("invoice") || p.get("bolt11") || "";
+          for (const [k, v] of p) if (k !== "invoice" && k !== "bolt11" && k !== "invstring") extra[k] = v;
+        }
+      } catch {}
+      if (!invoice) {
+        try {
+          const j = JSON.parse(raw);
+          invoice = j.invstring || j.bolt11 || j.invoice || "";
+          for (const k of Object.keys(j)) if (k !== "invoice" && k !== "bolt11" && k !== "invstring") extra[k] = String(j[k]);
+        } catch {}
+      }
+      const amt = await decodeSat(invoice, rune);
       if (amt == null) return err(400, "meltguard: could not determine invoice amount — refusing to forward");
       if (amt > PER) { log(`REJECT per-melt ${amt} > ${PER}`); return err(403, `meltguard: per-melt cap ${PER} sat exceeded (${amt})`); }
       const cum = readCum();
       if (cum + amt > CUM) { freeze(`cumulative ${cum}+${amt} > ${CUM}`); return err(403, `meltguard: cumulative cap ${CUM} sat — FROZEN, operator review required`); }
-      // forward the pay; count toward cumulative only if cl reports success
-      const resp = await fetch(`${CL}/v1/pay`, { method: "POST", headers: { "content-type": "application/json", ...(rune ? { Rune: rune } : {}) }, body: JSON.stringify(body) });
+      // forward to cl (official CLNREST) as FORM on the SAME endpoint the mint
+      // called (`invstring` for xpay, `bolt11` for pay), preserving the mint's
+      // other params (maxfee / maxfeepercent / exemptfee). Count cumulative only
+      // on cl-reported success.
+      const fwd = new URLSearchParams(isXpay ? { invstring: invoice, ...extra } : { bolt11: invoice, ...extra });
+      const resp = await fetch(`${CL}${isXpay ? "/v1/xpay" : "/v1/pay"}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", ...(rune ? { Rune: rune } : {}) }, body: fwd.toString() });
       const text = await resp.text();
-      if (resp.ok) { writeCum(cum + amt); log(`PAID ${amt} sat (cumulative ${cum + amt}/${CUM})`); }
+      if (resp.ok) { writeCum(cum + amt); log(`PAID ${amt} sat via ${isXpay ? "xpay" : "pay"} (cumulative ${cum + amt}/${CUM})`); }
       return new Response(text, { status: resp.status, headers: { "content-type": "application/json" } });
     }
 
