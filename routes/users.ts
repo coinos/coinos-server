@@ -1,5 +1,6 @@
-import { createReadStream } from "node:fs";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import config from "$config";
 import { requirePin } from "$lib/auth";
 import { db, g, ga, gf, s } from "$lib/db";
@@ -1077,17 +1078,26 @@ export default {
   },
 
   async flash(req, res) {
+    // Build in a per-request scratch dir. A shared ./printer/config.txt and
+    // ./littlefs.img let two overlapping requests hand one user the other's
+    // wifi key and API token.
+    const dir = await mkdtemp(join(tmpdir(), "flash-"));
     try {
       const { ssid, key, token } = req.body;
       if (!ssid || !key || !token) fail("ssid, key and token required");
       const cfg = `${ssid.trim()}\n${key.trim()}\n${token.trim()}\n`;
-      await mkdir("./printer", { recursive: true });
-      await writeFile("./printer/config.txt", cfg, "utf8");
-      await $`./mklittlefs -c ./printer -p 256 -b 4096 -s 0x20000 ./littlefs.img`;
+      const src = join(dir, "fs");
+      const img = join(dir, "littlefs.img");
+      await mkdir(src);
+      await writeFile(join(src, "config.txt"), cfg, "utf8");
+      await $`./mklittlefs -c ${src} -p 256 -b 4096 -s 0x20000 ${img}`;
       res.header("Content-Type", "application/octet-stream");
-      return res.send(createReadStream("./littlefs.img"));
+      // Read it fully before the finally below removes the directory.
+      return res.send(await readFile(img));
     } catch (e) {
       bail(res, e.message);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
     }
   },
 
