@@ -807,7 +807,26 @@ export const sendKeysend = async ({
       has_preimage: !!(r?.payment_preimage ?? r?.preimage),
       amount_sent_msat: r?.amount_sent_msat,
     }));
-    outcome = "keysend-returned";  // success path — caller handles preimage polling
+    // keysend blocks on retry_for until it settles or fails, so a successful
+    // return carries the preimage. Finalize HERE — flip the record
+    // pending->confirmed and refund the unused fee reserve — so every caller is
+    // covered. The NWC pay_keysend caller only polls listpays for the preimage
+    // to hand back to the client and never confirmed the record, which left
+    // every successful zap stuck "pending" forever (and check() can't rescue a
+    // keysend: its label isn't a bolt11, so the reconciler evicts it). Guard on
+    // complete+preimage; anything else stays pending for the caller/retry path.
+    const settledPreimage = r?.payment_preimage ?? r?.preimage;
+    if (r?.status === "complete" && settledPreimage) {
+      try {
+        await finalizeKeysend(r, p, settledPreimage);
+        outcome = "finalized-keysend";
+      } catch (e: any) {
+        warn("finalizeKeysend threw", p.id, e?.message);
+        outcome = "keysend-returned (finalize threw)";
+      }
+    } else {
+      outcome = "keysend-returned"; // not settled yet — caller polls for preimage
+    }
     l("sendKeysend outcome", p.id, "=", outcome);
     return r;
   } catch (e: any) {
@@ -1378,6 +1397,40 @@ const finalize = async (r, p) => {
     }
   }
 
+  return p;
+};
+
+// Keysend variant of finalize(). Keysend has no bolt11, so finalize()'s
+// `ln.decode(p.hash)` can't run — the real fee is instead the msat actually sent
+// minus the record's own amount. Otherwise identical: flip pending->confirmed,
+// set the preimage, refund the unused fee reserve, and refuse to re-create a
+// record a concurrent reverse() already removed (a settled-but-refunded payment
+// is a double-pay leak, surfaced for manual recovery rather than papered over).
+const finalizeKeysend = async (r, p, preimage) => {
+  await db.sRem("pending", p.hash); // keysend rarely enters the set; defensive
+
+  const maxfee = p.fee;
+  const sentMsat = Number(r.amount_sent_msat);
+  const actualFee = Math.round((sentMsat - Math.abs(p.amount) * 1000) / 1000);
+  p.fee = Number.isFinite(actualFee) && actualFee >= 0 ? actualFee : maxfee;
+  p.ref = preimage;
+  p.confirmed = true;
+
+  const current = await g(`payment:${p.id}`);
+  if (!current) fail(`finalizeKeysend: payment ${p.id} reversed-then-completed (double-pay leak)`);
+
+  if (!current.ref) {
+    await s(`payment:${p.id}`, p);
+    const refund = maxfee - p.fee;
+    if (Number.isFinite(refund) && Number.isInteger(refund)) {
+      await db.incrBy(`balance:${p.uid}`, refund);
+    } else {
+      warn("finalizeKeysend: skipping fee refund (non-integer delta)", p.id,
+           "maxfee=", maxfee, "p.fee=", p.fee, "refund=", refund);
+    }
+  }
+
+  nwcNotify(p);
   return p;
 };
 
