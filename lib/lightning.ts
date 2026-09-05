@@ -112,6 +112,15 @@ export async function listenForLightning() {
       const invoice = await getInvoice(bolt11 ?? local_offer_id ?? bolt12);
       if (!invoice) return warn("received lightning with no invoice", bolt11);
 
+      // A deleted account's invoice or bolt12 offer can still be paid (OCEAN
+      // payouts to a deleted user's offer, 2026-09-05). Nothing can be
+      // credited, and the post-credit persistence check below would throw and
+      // wedge the listener on this settlement forever. Record and skip.
+      if (!(await getUser(invoice.uid))) {
+        await db.sAdd("missing", preimage);
+        return warn("received lightning for missing user", invoice.uid, bolt11 ?? bolt12, received);
+      }
+
       const p = await getPayment(bolt11 || bolt12);
       if (p) return warn("already processed", bolt11 || bolt12);
 
