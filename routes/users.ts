@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { unlink, writeFile } from "node:fs/promises";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
 import config from "$config";
 import { requirePin } from "$lib/auth";
 import { db, g, ga, gf, s } from "$lib/db";
@@ -1077,12 +1077,18 @@ export default {
   },
 
   async flash(req, res) {
-    const { ssid, key, token } = req.body;
-    const cfg = `${ssid.trim()}\n${key.trim()}\n${token.trim()}\n`;
-    await writeFile("./printer/config.txt", cfg, "utf8");
-    await $`./mklittlefs -c ./printer -p 256 -b 4096 -s 0x20000 ./littlefs.img`;
-    res.header("Content-Type", "application/octet-stream");
-    return res.send(createReadStream("./littlefs.img"));
+    try {
+      const { ssid, key, token } = req.body;
+      if (!ssid || !key || !token) fail("ssid, key and token required");
+      const cfg = `${ssid.trim()}\n${key.trim()}\n${token.trim()}\n`;
+      await mkdir("./printer", { recursive: true });
+      await writeFile("./printer/config.txt", cfg, "utf8");
+      await $`./mklittlefs -c ./printer -p 256 -b 4096 -s 0x20000 ./littlefs.img`;
+      res.header("Content-Type", "application/octet-stream");
+      return res.send(createReadStream("./littlefs.img"));
+    } catch (e) {
+      bail(res, e.message);
+    }
   },
 
   async app(req, res) {
