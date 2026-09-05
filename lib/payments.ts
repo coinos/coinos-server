@@ -385,6 +385,16 @@ export const credit = async ({
   if (type === PaymentType.internal) amount += tip;
 
   const user = await getUser(inv.uid);
+  if (!user) {
+    // The account is gone (deleted) but its invoice still receives — e.g. a
+    // bolt12 offer a mining pool keeps paying. Record the settlement in
+    // `missing` and skip, like an unknown invoice. Throwing here wedged the
+    // lightning listener on one settlement and blocked every later receipt
+    // for two hours (2026-09-05, pay_index 1068006).
+    warn("received payment for missing user", inv.uid, hash, amount);
+    await db.sAdd("missing", ref.split(":")[0]);
+    return;
+  }
   const { id: uid, currency } = user;
 
   const rates = await g("rates");
