@@ -740,6 +740,7 @@ export default {
       mqtt.publish(
         username,
         `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}`,
+      { qos: 1 },
       );
 
       res.send({ ok: true });

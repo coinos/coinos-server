@@ -19,6 +19,22 @@ if (config.vapid) {
   );
 }
 
+
+// LNURL-pay invoices carry the raw metadata array as their memo when the
+// payer left no comment, e.g. [["text/plain","Paying x@coinos.io"],...].
+// Receipts should show just the human-readable text.
+const printerMemo = (memo) => {
+  if (typeof memo !== "string" || !memo.startsWith("[")) return memo;
+  try {
+    const meta = JSON.parse(memo);
+    if (Array.isArray(meta)) {
+      const plain = meta.find((m) => Array.isArray(m) && m[0] === "text/plain");
+      if (plain) return plain[1];
+    }
+  } catch (e) {}
+  return memo;
+};
+
 export const notify = async (p, user, withdrawal) => {
   emit(user.id, "payment", p);
   let { username } = user;
@@ -74,7 +90,8 @@ export const notify = async (p, user, withdrawal) => {
     if (!mqtt.connected) await mqtt.reconnect();
     mqtt.publish(
       username,
-      `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${p.memo}:${p.items}`,
+      `pay:${p.amount}:${p.tip}:${p.rate}:${p.created}:${p.id}:${printerMemo(p.memo)}:${p.items}`,
+    { qos: 1 },
     );
   }
 };
