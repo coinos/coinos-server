@@ -1,5 +1,5 @@
 import app from "$lib/app";
-import { admin, auth, optional } from "$lib/auth";
+import { auth, optional } from "$lib/auth";
 
 import { fixBolt12, listenForLightning, ensureListenerAlive, replay } from "$lib/lightning";
 import { startHealthCheck } from "$lib/health";
@@ -120,7 +120,6 @@ app.get("/accounts", auth, users.accounts);
 app.post("/accounts", auth, users.createAccount);
 app.post("/account/delete", auth, users.deleteAccount);
 
-app.get("/users", auth, users.list);
 app.get("/me", auth, users.me);
 app.get("/ro", auth, users.ro);
 app.get("/credits", auth, users.credits);
@@ -182,8 +181,6 @@ app.post("/items/sort", auth, items.sort);
 
 app.post("/shopify/:id", shopify);
 
-app.post("/hidepay", admin, users.hidepay);
-app.post("/unlimit", admin, users.unlimit);
 app.get("/bolt12", fixBolt12);
 
 app.get("/cash/:id/:version", ecash.get);

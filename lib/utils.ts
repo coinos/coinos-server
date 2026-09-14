@@ -172,7 +172,6 @@ export const fields = [
   "currency",
   "display",
   "id",
-  "hidepay",
   "lud16",
   "memoPrompt",
   // a v3-migrated account: the names registrar owns this name for receiving

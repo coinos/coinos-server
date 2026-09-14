@@ -16,7 +16,6 @@ export default [
   "follows",
   "haspin",
   "hasprinter",
-  "hidepay",
   "id",
   "index",
   "keys",

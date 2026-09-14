@@ -98,10 +98,19 @@ export default {
       user,
     } = req;
     try {
-      amount = Math.round(amount / 1000);
       const ref = preimage;
       const { lightning: type } = PaymentType;
       if (user.username !== "mint") fail("unauthorized");
+
+      amount = Math.round(amount / 1000);
+      // A negative (or NaN) amount here is a direct ledger-inflation primitive:
+      // db.debit subtracts it, so -N ADDS N to the balance, and the stored
+      // record gets amount: -(-N). The caller gate above limits this to the
+      // mint service account, but that account is not a trust boundary we want
+      // the ledger's integrity resting on — mirror the check debit() makes in
+      // lib/payments.ts before any balance write.
+      if (!Number.isFinite(amount) || amount <= 0)
+        fail("Amount must be greater than zero");
       const { id: uid, currency } = user;
       const ourfee = await db.debit(
         `balance:${uid}`,

@@ -1,6 +1,7 @@
 import config from "$config";
 import { existsSync } from "fs";
 import api from "$lib/api";
+import { requireAccount } from "$lib/auth";
 import { archive, db, g, ga, gf, s, sa } from "$lib/db";
 import { assertWithinSpendLimit } from "$lib/spend-budget";
 
@@ -325,6 +326,13 @@ export const credit = async ({
 }) => {
   amount = Number.parseInt(amount) || 0;
 
+  // Kill switch (see routes/payments.ts confirm): no Liquid credits at all
+  // while `liquid:deposits:disabled` is set.
+  if (type === PaymentType.liquid && (await g("liquid:deposits:disabled"))) {
+    warn("liquid credit blocked (disabled)", hash, amount, ref);
+    return;
+  }
+
   let inv = await getInvoice(hash);
   if (!inv && type === PaymentType.bolt12) {
     const { invoices } = await ln.listinvoices({ invstring: hash });
@@ -626,7 +634,8 @@ export const decode = async (hex) => {
 const inflight = {};
 export const sendOnchain = async (params) => {
   let { aid, hex, rate, user, signed } = params;
-  if (!aid) aid = user.id;
+  aid = await requireAccount({ aid, user });
+  const supplied = !!hex;
   if (!hex) ({ hex } = await build(params));
 
   const { tx, type } = await decode(hex);
@@ -635,6 +644,25 @@ export const sendOnchain = async (params) => {
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
   let { txid } = tx;
   let locked = false;
+
+  // Only sign a transaction WE composed for this account. build() leaves a
+  // short-lived receipt keyed by txid; caller-supplied hex must match one.
+  // Otherwise the hot wallet signs whatever raw tx is posted to /bitcoin/send
+  // and the only thing between an arbitrary tx and the chain is the debit math
+  // below (plus the weSpent credit-side guard in /confirm) — this is the outer
+  // layer, so an unrecognized tx never reaches signRawTransactionWithWallet
+  // and never locks our UTXOs on the way to failing.
+  //
+  // Receipts survive client-side signing: build() returns an unsigned segwit
+  // tx and witness data doesn't change the txid, so the self-custody path
+  // (which posts back hex it finalized itself) matches the same receipt. They
+  // are not single-use — a replay of the identical tx is already stopped by
+  // inflight/lockUnspent/testMempoolAccept, and burning the receipt would
+  // break a legitimate retry after a transient failure.
+  if (supplied) {
+    const builder = await db.get(`build:${txid}`);
+    if (builder !== aid) fail("unrecognized tx");
+  }
 
   try {
     if (inflight[txid]) fail("payment in flight");
@@ -986,7 +1014,20 @@ export const sendLightning = async ({
       // bolt11: pr.replace(/\s/g, "").toLowerCase(),
       amount_msat: amount_msat ? undefined : amount * 1000,
       maxfee: fee * 1000,
-      retry_for: 30,
+      // 30s wasn't enough to get past a drained zero-fee hop. Route-finding
+      // prefers free channels, so xpay would spend the whole budget retrying
+      // one 0-base/0-ppm channel that is permanently empty in our direction
+      // and time out ("64 attempts, temporary_channel_failure for the same
+      // scid") without ever trying the paths that work — Strike/Zap payments
+      // failed this way for every user. xpay is in ln.ts's NO_TIMEOUT set and
+      // nothing in front of it (fastify, Caddy, the UI fetch) imposes a
+      // deadline, so the longer budget runs to completion.
+      //
+      // COUPLED TO check(): that reversal sweep must keep skipping payments
+      // for at least twice this window, or it reverses a payment xpay is
+      // still driving and we refund one that settles (the LEAKED DEBIT
+      // losses). Change both together.
+      retry_for: 60,
       layers: ["prefer-kappa"],
     });
 
@@ -1164,7 +1205,7 @@ export const build = async ({
   user,
 }) => {
   const type = await getAddressType(address);
-  if (!aid) aid = user.id;
+  aid = await requireAccount({ aid, user });
   const node =
     aid === user.id ? rpc(config[type]) : rpc({ ...config[type], wallet: aid });
 
@@ -1241,7 +1282,12 @@ export const build = async ({
   }
 
   const inputs = [];
-  const { vin } = await node.decodeRawTransaction(tx.hex);
+  const { vin, txid: built } = await node.decodeRawTransaction(tx.hex);
+
+  // Receipt for sendOnchain(): this account composed this exact tx. Bound to
+  // aid so one account can't replay another's build, and short-lived so a hex
+  // can't be banked for later.
+  await db.set(`build:${built}`, aid, { EX: 3600 });
 
   for (const { txid, vout } of vin) {
     const rawTx = await node.getRawTransaction(txid);
@@ -1318,13 +1364,15 @@ export const check = async () => {
       }
       const p = await getPayment(pr);
       // Skip payments sendLightning may still be actively driving. xpay retries
-      // for 30s (retry_for: 30), during which listpays can momentarily show all
+      // for 60s (retry_for: 60), during which listpays can momentarily show all
       // attempts "failed" before the winning part lands. The old 10s threshold
       // let check() reverse/refund such a payment mid-flight; it then completed,
       // and sendLightning's finalize threw on the deleted record — refunding a
       // payment that actually settled (the LEAKED DEBIT losses). Wait well past
       // the retry window so sendLightning has finished finalize()/reverse() and
-      // removed it from `pending` before check() ever touches it.
+      // removed it from `pending` before check() ever touches it. This is 2x
+      // retry_for, the same margin the 60s threshold gave the old 30s window —
+      // raise it with retry_for if that ever changes again.
       // No record anywhere (main db or archive) means there's nothing left to
       // reconcile — the debit was already reversed or the entry is a stale
       // stray. Drop it: sendLightning now refuses to re-pay an invoice while
@@ -1334,7 +1382,7 @@ export const check = async () => {
         await db.sRem("pending", pr);
         continue;
       }
-      if (Date.now() - p.created < 60000) continue;
+      if (Date.now() - p.created < 120000) continue;
       const { pays } = await ln.listpays(pr);
 
       const failed = !pays.length || pays.every((p) => p.status === "failed");

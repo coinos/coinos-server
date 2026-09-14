@@ -204,6 +204,8 @@ export const generate = async ({ invoice, user }) => {
     hash = await bc.getNewAddress({ address_type });
     text = bip21(hash, invoice);
   } else if (type === PaymentType.liquid) {
+    if (await g("liquid:deposits:disabled"))
+      fail("Liquid deposits are temporarily disabled");
     address_type ||= "blech32";
     hash = await lq.getNewAddress({ address_type });
     text = bip21(hash, invoice);

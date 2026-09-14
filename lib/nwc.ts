@@ -29,6 +29,21 @@ const serverKeys = {
 
 const result = (result) => ({ result });
 const error = (error) => ({ error });
+// Every rejected NWC payment used to vanish without a trace: the error went
+// back to the client and nothing was logged, so a user reporting "zaps over
+// 1k fail" left no evidence server-side. One warn line per failure: who,
+// which connection, how much, and why.
+const payFail = (method, app, user, amount, err) => {
+  warn(
+    `nwc ${method} failed`,
+    user?.username,
+    String(app?.pubkey || "").slice(0, 12),
+    amount,
+    err?.error?.code,
+    String(err?.error?.message || "").slice(0, 160),
+  );
+  return err;
+};
 const bc = rpc(config.bitcoin);
 
 const methods = [
@@ -638,7 +653,7 @@ const handle = (method, params, ev, app, user) =>
       const { max_fee, pubkey } = app;
 
       const { budgetError, remaining } = await checkBudget(app, amount);
-      if (budgetError) return budgetError;
+      if (budgetError) return payFail("pay_invoice", app, user, amount, budgetError);
 
       if (payee === id) {
         const invoice = await getInvoice(pr);
@@ -698,11 +713,15 @@ const handle = (method, params, ev, app, user) =>
           const done = pays.find((x) => x.status === "complete");
           if (done?.preimage) return result({ preimage: done.preimage });
           if (pays.length && pays.every((x) => x.status === "failed"))
-            return error({ code: "PAYMENT_FAILED", message: "Payment failed" });
+            return payFail("pay_invoice", app, user, amount,
+              error({ code: "PAYMENT_FAILED", message: "Payment failed" }));
           await sleep(2000);
         }
+        return payFail("pay_invoice", app, user, amount,
+          error({ code: "PAYMENT_FAILED", message: "Payment still pending after 60s" }));
       } catch (e) {
-        return error({ code: "PAYMENT_FAILED", message: e.message });
+        return payFail("pay_invoice", app, user, amount,
+          error({ code: "PAYMENT_FAILED", message: e.message }));
       }
 
       // Still in flight after the fallback window: the payment may yet settle.

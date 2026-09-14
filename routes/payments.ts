@@ -561,6 +561,19 @@ export default {
         if (type === PaymentType.liquid && asset !== config.liquid.btc)
           continue;
 
+        // Kill switch: `liquid:deposits:disabled` stops every Liquid receive
+        // from being credited or confirmed (sends still get their
+        // confirmation bookkeeping below). Set during a security incident;
+        // clear the key to re-enable.
+        if (
+          type === PaymentType.liquid &&
+          category !== "send" &&
+          (await g("liquid:deposits:disabled"))
+        ) {
+          warn("liquid deposit blocked (disabled)", txid, vout, sats(amount), address);
+          continue;
+        }
+
         if (category === "send") {
           const p = await getPayment(txid);
           if (!p) continue;

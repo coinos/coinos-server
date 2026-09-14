@@ -8,6 +8,7 @@ import { err, l, warn } from "$lib/logging";
 import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
 import register from "$lib/register";
+import { assertNameFree } from "$lib/names";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
@@ -125,42 +126,6 @@ export default {
     }
   },
 
-  async list(req, res) {
-    const { user } = req;
-    if (!user.admin) fail("unauthorized");
-
-    const users = [];
-
-    for await (const k of db.scanIterator({ MATCH: "balance:*" })) {
-      const uid = k.split(":")[1];
-      const user = await getUser(uid);
-
-      if (!user) {
-        await db.del(`balance:${uid}`);
-        continue;
-      }
-
-      user.balance = await g(k);
-
-      const payments = await db.lRange(`${uid}:payments`, 0, -1);
-
-      let total = 0;
-      for (const pid of payments) {
-        const p = await gf(`payment:${pid}`);
-        if (!p) continue;
-        total += p.amount;
-        if (p.amount < 0)
-          total -= (p.fee || 0) + (p.ourfee || 0) + (p.tip || 0);
-        else total += p.tip || 0;
-      }
-
-      user.expected = total;
-      users.push(user);
-    }
-
-    res.send(users);
-  },
-
   async get(req, res) {
     let {
       params: { key },
@@ -192,6 +157,51 @@ export default {
       const ip = headers["cf-connecting-ip"];
       if (!body.user) fail("no user object provided");
       let { user } = body;
+
+      // Per-IP registration cap. Nothing else throttles /register (the
+      // recaptcha check only runs on login; the fastify limiters cover
+      // /login and /send), so one VPN exit created ~500 empty accounts at
+      // 3/min on 2026-09-08 without tripping anything. Five an hour is far
+      // above any household; an internal/private source IP (proxy without
+      // the Cloudflare header) is exempt so a misrouted request can't lock
+      // everyone out. Counted before validation so failed attempts count too.
+      if (ip && !/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|::1$|fc|fd)/.test(ip)) {
+        const k = `register:ip:${ip}`;
+        const n = await db.incr(k);
+        if (n === 1) await db.expire(k, 3600);
+        if (n > 5) {
+          warn("registration cap hit", ip, n);
+          fail("Too many accounts created from this address, try again later");
+        }
+      }
+
+      // Forged browser User-Agent. Every engine that reports AppleWebKit also
+      // reports the "(KHTML, like Gecko)" token right behind it, so a UA that
+      // claims AppleWebKit without it was assembled by hand. Across 4.8M
+      // logged requests this matches 2,366: the c<epoch> registration bot
+      // (1,203 accounts from 596 rotating residential IPs — which is exactly
+      // why the per-IP cap above never touched it), PetalBot, Bytespider, and
+      // nothing else. Real browsers carry the token; non-browser clients that
+      // register legitimately (python-requests, curl, damus, our own Bun SSR)
+      // never claim AppleWebKit at all, so none of them match.
+      const ua = String(headers["user-agent"] || "");
+      if (ua.includes("AppleWebKit/") && !ua.includes("KHTML")) {
+        warn("registration blocked, forged user-agent", ip, ua.slice(0, 80));
+        fail("Registration unavailable");
+      }
+
+      // The signup form has always sent a recaptcha token and /register has
+      // always discarded it — it isn't even in the `fields` pick below — so
+      // the captcha only ever gated login. Verify it when one is supplied.
+      // Supplied-and-invalid is the only rejection: an ABSENT token still
+      // passes, because half of all registrations are API clients that never
+      // had one and requiring it would break them. verifyRecaptcha keeps its
+      // own bypasses (onion host, x-api-key, allowlisted UA) and fails open
+      // when Google is unreachable.
+      if (user.recaptcha && !(await verifyRecaptcha(user.recaptcha, req))) {
+        warn("registration blocked, failed captcha", ip, user.username);
+        fail("Failed captcha");
+      }
 
       const fields = ["pubkey", "password", "username", "picture", "fresh"];
       user = await register(pick(user, fields), ip);
@@ -287,7 +297,12 @@ export default {
 
         const event = JSON.parse(body.event);
         const challenge = event.tags.find((t) => t[0] === "challenge")[1];
-        const c = await g(`challenge:${challenge}`);
+        // Single-use: GETDEL claims the challenge atomically, so the identical
+        // signed event can't be replayed within the 5-minute TTL (it is also
+        // written to the request log, so a log reader could otherwise reuse it).
+        // Burn it on read rather than on success — a failed attempt costs the
+        // client one extra GET /challenge, and two racing replays cannot both win.
+        const c = await db.getDel(`challenge:${challenge}`);
         if (!c) fail("Invalid or expired challenge");
 
         if (!verifyEvent(event) || event.pubkey !== pubkey)
@@ -314,6 +329,8 @@ export default {
             err("username taken", username, currentUsername);
             fail("Username taken");
           } else {
+            // A name the v3 registrar holds is taken too (see lib/names.ts).
+            await assertNameFree(username, user.pubkey);
             l("changing username", currentUsername, username);
             await db.del(`user:${currentUsername}`);
             user.username = username;
@@ -499,7 +516,9 @@ export default {
       if (!recaptchaOk) {
         return res.code(401).send("failed captcha");
       }
-      const c = await g(`challenge:${challenge}`);
+      // Single-use — see the GETDEL note on the other challenge consumer. The
+      // captcha is checked above, so a captcha failure doesn't burn a challenge.
+      const c = await db.getDel(`challenge:${challenge}`);
       const { pubkey: key, kind } = event;
       if (kind !== 27235) fail("Invalid event");
       if (!c) fail("Invalid or expired login challenge");
@@ -813,7 +832,6 @@ export default {
       user: u,
     } = req;
     try {
-      const admin = u?.admin;
       let id;
       let user;
 
@@ -964,26 +982,6 @@ export default {
     } catch (e) {
       bail(res, e.message);
     }
-  },
-
-  async hidepay(req, res) {
-    const {
-      body: { username },
-    } = req;
-    const u = await getUser(username);
-    u.hidepay = true;
-    await s(`user:${u.id}`, u);
-    res.send({});
-  },
-
-  async unlimit(req, res) {
-    const {
-      body: { username },
-    } = req;
-    const u = await getUser(username);
-    u.unlimited = true;
-    await s(`user:${u.id}`, u);
-    res.send({});
   },
 
   async account(req, res) {

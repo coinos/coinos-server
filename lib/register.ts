@@ -3,6 +3,7 @@ import countries from "$lib/countries";
 import { db, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail } from "$lib/utils";
+import { assertNameFree } from "$lib/names";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { got } from "got";
 import { getPublicKey, nip19 } from "nostr-tools";
@@ -28,6 +29,8 @@ export default async (user, ip) => {
 
   const exists = await db.exists(`user:${username}`);
   if (exists) fail(`Username ${username} taken`);
+  // A name the v3 registrar holds is taken too (see lib/names.ts).
+  await assertNameFree(username, pubkey);
 
   if (password) {
     user.password = await Bun.password.hash(password, {

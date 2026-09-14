@@ -94,6 +94,20 @@ export default {
   async sign(req, res) {
     try {
       const { address, message, type = "bitcoin" } = req.body;
+
+      // Sign only with an address the CALLER owns. Users have no per-user keys
+      // in this custodial design — every address belongs to the server hot
+      // wallet — so without this any authenticated account could have the node
+      // sign an arbitrary message under any address the wallet controls
+      // (another user's deposit address, a change address, a cold-storage
+      // address published as ours), which is a proof-of-control forgery
+      // primitive. The legitimate flow (coinos.io/sign, for Ocean offers that
+      // need a signable on-chain address) mints a fresh invoice address for
+      // the caller and posts that back, so it always satisfies this check.
+      const invoice = await getInvoice(address);
+      if (!invoice || (invoice.uid !== req.user.id && invoice.aid !== req.user.id))
+        fail("unauthorized");
+
       const node = rpc(config[type]);
 
       if (config[type].walletpass)

@@ -1,6 +1,7 @@
 import config from "$config";
 import { g, s } from "$lib/db";
 import { lnb } from "$lib/ln";
+import { safeGot } from "$lib/safe-fetch";
 import { fail, wait } from "$lib/utils";
 import {
   CashuMint,
@@ -46,9 +47,17 @@ const withCashLock = async <T>(fn: () => Promise<T>): Promise<T> => {
   }
 };
 
+// `mint` comes straight out of an attacker-supplied cashu token, and this is
+// the first thing we do with it — so fetching it with cashu-ts's plain fetch
+// made every /cash and /ecash entry point an unauthenticated SSRF probe into
+// the internal network. Use the same IP-pinning fetcher lnurl resolution uses
+// (it rejects loopback/private/link-local/CGNAT/metadata targets and closes the
+// DNS-rebinding window by pinning the socket to the IP it validated). NUT-06
+// /v1/info is exactly what CashuMint.getInfo() would have called.
 const ext = async (mint) => {
-  const issuer = new CashuMint(mint);
-  const { pubkey: issuerPk } = await issuer.getInfo();
+  const { pubkey: issuerPk } = await safeGot(
+    `${String(mint).replace(/\/+$/, "")}/v1/info`,
+  );
   const { pubkey: ourPk } = await m.getInfo();
   return issuerPk !== ourPk;
 };

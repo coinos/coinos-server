@@ -4,17 +4,6 @@ import { fail, getUser } from "$lib/utils";
 import fastifyPassport from "@fastify/passport";
 import jwt from "passport-jwt";
 
-export const admin = {
-  preValidation: fastifyPassport.authenticate(
-    "jwt",
-    { session: false },
-    (req, res, err, user, info) => {
-      if (!user.admin) return res.code(401).send("unauthorized");
-      req.user = user;
-    },
-  ),
-};
-
 export const optional = {
   preValidation: fastifyPassport.authenticate(
     "jwt",
@@ -34,6 +23,19 @@ export const auth = {
 
 export const requirePin = async ({ body, user }) => {
   if (!user || (user.pin && user.pin !== body.pin)) fail("Invalid pin");
+};
+
+// A caller-supplied `aid` decides which account's node wallet composes and
+// signs a withdrawal and whose balance gets debited, so it has to be an
+// account the caller actually owns. `${uid}:accounts` is the ownership list —
+// the same one GET /account/:id and payments.list already check — and a user's
+// own id is in it. Omitted `aid` means "my own account".
+export const requireAccount = async ({ aid, user }) => {
+  if (!user) fail("unauthorized");
+  if (!aid || aid === user.id) return user.id;
+  if ((await db.lPos(`${user.id}:accounts`, aid)) === null)
+    fail("unauthorized");
+  return aid;
 };
 
 export const jwtStrategy = new jwt.Strategy(
