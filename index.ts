@@ -186,8 +186,6 @@ app.get("/bolt12", fixBolt12);
 app.get("/cash/:id/:version", ecash.get);
 app.post("/cash", ecash.save);
 app.post("/claim", auth, ecash.claim);
-app.post("/mint", auth, ecash.mint);
-app.post("/melt", auth, ecash.melt);
 app.post("/ecash/:id", ecash.receive);
 
 app.get("/replay/:index", (req, res) => {

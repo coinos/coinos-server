@@ -206,7 +206,7 @@ describe("fnd-006 — deleteSelf guard sums every account", () => {
 
 describe("S8 / fnd-007 — the spend/cash mutex serializes critical sections", () => {
   test("no two sections run concurrently and FIFO order holds", async () => {
-    // Same shape as withBudgetLock (nwc.ts) and withCashLock (ecash.ts).
+    // Same shape as withBudgetLock (nwc.ts).
     let lock: Promise<void> = Promise.resolve();
     const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
       const prev = lock;

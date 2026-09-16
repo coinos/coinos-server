@@ -2,7 +2,6 @@ import { archive } from "$lib/db";
 import { db } from "$lib/db";
 import { getHealthStatus } from "$lib/health";
 import ln from "$lib/ln";
-import { pool } from "$lib/ecash";
 
 export default {
   async health(_, res) {
@@ -28,10 +27,7 @@ export default {
     );
     const lnwallet = parseInt(funds.outputs.reduce((a, b) => a + b.value, 0));
 
-    const cash = (await pool()).reduce((a, b) => a + b.amount, 0);
-
     const info = {
-      cash,
       lnchannel,
       lnwallet,
     };

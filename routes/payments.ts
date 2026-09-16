@@ -66,7 +66,7 @@ export default {
       const invoice = await getInvoice(payreq || hash);
       const recipient = invoice ? await getUser(invoice.uid) : undefined;
       if (payreq) {
-        if (invoice && recipient.username !== "mint") {
+        if (invoice) {
           if (invoice.aid === user.id) fail("Cannot send to self");
           hash = payreq;
           if (!amount) ({ amount } = invoice);

@@ -657,9 +657,12 @@ const handle = (method, params, ev, app, user) =>
 
       if (payee === id) {
         const invoice = await getInvoice(pr);
-        const recipient = await g(`user:${invoice.uid}`);
+        const recipient = await g(`user:${invoice?.uid}`);
 
-        if (recipient?.username !== "mint") {
+        // No coinos invoice record means the bolt11 is on our node but not
+        // ours to settle internally (a mint quote, say) — pay it over
+        // Lightning below like any other.
+        if (invoice) {
           const { id: pid } = await sendInternal({
             amount,
             invoice,
@@ -823,48 +826,46 @@ const handle = (method, params, ev, app, user) =>
       if (invoice) {
         const recipient = await g(`user:${invoice.uid}`);
 
-        if (recipient?.username !== "mint") {
-          // Internal settlement never builds a bolt12 invoice request, so the
-          // spec's deliver-or-reject rule for payer_note is met by handing the
-          // note to the recipient as the payment memo (bolt11 + payer_note was
-          // already rejected above)
-          const { id: pid } = await sendInternal({
-            amount,
-            invoice,
-            memo: payer_note,
-            recipient,
-            sender: user,
-            maxTotal: remaining,
-          });
+        // Internal settlement never builds a bolt12 invoice request, so the
+        // spec's deliver-or-reject rule for payer_note is met by handing the
+        // note to the recipient as the payment memo (bolt11 + payer_note was
+        // already rejected above)
+        const { id: pid } = await sendInternal({
+          amount,
+          invoice,
+          memo: payer_note,
+          recipient,
+          sender: user,
+          maxTotal: remaining,
+        });
 
-          await db.lPush(`${pubkey}:payments`, pid);
+        await db.lPush(`${pubkey}:payments`, pid);
 
-          if (invoice.memo?.includes("9734")) {
-            const { invoices } = await ln.listinvoices({ invstring: pr });
-            const inv = invoices[0];
-            if (inv) {
-              inv.payment_preimage = pid;
-              inv.paid_at = created_at;
-              try {
-                await handleZap(inv, user.pubkey);
-              } catch (e) {
-                console.log("zap receipt failed", e);
-              }
+        if (invoice.memo?.includes("9734")) {
+          const { invoices } = await ln.listinvoices({ invstring: pr });
+          const inv = invoices[0];
+          if (inv) {
+            inv.payment_preimage = pid;
+            inv.paid_at = created_at;
+            try {
+              await handleZap(inv, user.pubkey);
+            } catch (e) {
+              console.log("zap receipt failed", e);
             }
           }
-
-          // Internal settlement never touches CLN, so there's no real
-          // preimage or payer proof to hand back
-          return result({
-            transaction_id: pid,
-            state: "settled",
-            instruction_type,
-            amount: amountMsat,
-            fees_paid: 0,
-            created_at,
-            settled_at: Math.floor(Date.now() / 1000),
-          });
         }
+
+        // Internal settlement never touches CLN, so there's no real
+        // preimage or payer proof to hand back
+        return result({
+          transaction_id: pid,
+          state: "settled",
+          instruction_type,
+          amount: amountMsat,
+          fees_paid: 0,
+          created_at,
+          settled_at: Math.floor(Date.now() / 1000),
+        });
       }
 
       try {
