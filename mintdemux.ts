@@ -54,8 +54,14 @@ const parse = (s: string) => { try { return JSON.parse(s); } catch { return null
 // --- keyset ownership, refreshed hourly ---
 let newKeysets = new Set<string>();
 let oldKeysets = new Set<string>();
+// Our own hourly routing refresh — forwarded as loopback so the mints' per-IP
+// limiter (which exempts 127.0.0.1) doesn't count it against the demux socket.
 async function fetchKeysets(base: string): Promise<string[]> {
-  try { const r = await fetch(`${base}/v1/keysets`); const j: any = await r.json(); return (j.keysets || []).map((k: any) => String(k.id)); }
+  try {
+    const r = await fetch(`${base}/v1/keysets`, { headers: { "cf-connecting-ip": "127.0.0.1" } });
+    if (!r.ok) throw new Error(`status ${r.status}`);
+    const j: any = await r.json(); return (j.keysets || []).map((k: any) => String(k.id));
+  }
   catch (e: any) { console.error("keyset fetch failed", base, e.message); return []; }
 }
 async function refreshKeysets() {
@@ -63,6 +69,7 @@ async function refreshKeysets() {
   if (n.length) newKeysets = new Set(n);
   if (o.length) oldKeysets = new Set(o);
 }
+const lastKeysets: { NEW?: any[]; OLD?: any[] } = {};
 await refreshKeysets();
 setInterval(refreshKeysets, 3600_000);
 
@@ -161,15 +168,29 @@ Bun.serve({
     // --- GET routes ---
     if (req.method === "GET") {
       if (path === "/v1/keysets") {
-        const [rn, ro] = await Promise.all([fetch(`${NEW}/v1/keysets`).then(r => r.json()).catch(() => ({})), fetch(`${OLD}/v1/keysets`).then(r => r.json()).catch(() => ({}))]);
+        // Forward the client's bucket key: without it every wallet's keyset
+        // fetch counted against the demux's own socket IP at both mints, the
+        // shared 60/min bucket tripped, and the swallowed 429s came back to
+        // every wallet as an empty keyset list. A failed upstream now serves
+        // that mint's last-good list instead.
+        const get = async (base: string) => {
+          const r = await fetch(`${base}/v1/keysets`, { headers: fwd(key) });
+          if (!r.ok) throw new Error(`status ${r.status}`);
+          return (await r.json() as any).keysets as any[];
+        };
+        const [rn, ro] = await Promise.all([
+          get(NEW).then(k => (lastKeysets.NEW = k), e => { console.error("keysets NEW", e.message); return lastKeysets.NEW; }),
+          get(OLD).then(k => (lastKeysets.OLD = k), e => { console.error("keysets OLD", e.message); return lastKeysets.OLD; }),
+        ]);
+        if (!rn && !ro) return new Response(JSON.stringify({ detail: "keysets unavailable" }), { status: 503, headers: J });
         const seen = new Set<string>(); const keysets: any[] = [];
         // NEW mint keysets keep their flags. OLD (recovery) keysets are forced
         // active:false — they're redeem/melt-only, so wallets never mint or swap
         // into them. Prevents advertising two active "sat" keysets at
         // mint.coinos.io (the old mint is panic-locked anyway; this is the
         // client-facing view).
-        for (const k of ((rn as any).keysets || [])) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push(k); } }
-        for (const k of ((ro as any).keysets || [])) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push({ ...k, active: false }); } }
+        for (const k of (rn || [])) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push(k); } }
+        for (const k of (ro || [])) { const id = String(k.id); if (!seen.has(id)) { seen.add(id); keysets.push({ ...k, active: false }); } }
         return new Response(JSON.stringify({ keysets }), { headers: J });
       }
       const km = path.match(/^\/v1\/keys\/(.+)$/);
