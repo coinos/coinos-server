@@ -10,6 +10,11 @@ import { v4 } from "uuid";
 
 import { PaymentType } from "$lib/types";
 
+// A payRequest callback id is fetched once, minutes after the metadata
+// request, and never again; without an expiry these one-shot pointers were
+// ~45% of all keys in the main db.
+const LNURL_TTL = 7 * 24 * 60 * 60;
+
 const { URL } = process.env;
 const host = URL.split("/").at(-1);
 const fiveMinutes = 1000 * 60 * 5;
@@ -124,7 +129,7 @@ export default {
       ]);
 
       const id = v4();
-      await s(`lnurl:${id}`, uid);
+      await s(`lnurl:${id}`, uid, LNURL_TTL);
 
       res.send({
         allowsNostr: true,
@@ -283,8 +288,8 @@ export default {
       const total =
         (parseInt(invoice.amount || 0) + parseInt(invoice.tip || 0)) * 1000;
 
-      await s(`lnurl:${id}`, uid);
-      if (total > 0) await s(`lnurl:${id}:invoice`, invoice.id);
+      await s(`lnurl:${id}`, uid, LNURL_TTL);
+      if (total > 0) await s(`lnurl:${id}:invoice`, invoice.id, LNURL_TTL);
 
       res.send({
         allowsNostr: true,

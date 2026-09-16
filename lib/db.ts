@@ -130,9 +130,9 @@ export const g = async (k) => {
   }
 };
 
-export const s = (k, v) => {
+export const s = (k, v, ttl?: number) => {
   if (k === "user:null" || k === "user:undefined") fail("null user");
-  db.set(k, JSON.stringify(v));
+  db.set(k, JSON.stringify(v), ttl ? { EX: ttl } : undefined);
 };
 
 export const ga = async (k) => {
