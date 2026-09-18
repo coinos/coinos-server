@@ -202,13 +202,13 @@ export const generate = async ({ invoice, user }) => {
   } else if (type === PaymentType.bitcoin) {
     address_type ||= "bech32";
     hash = await bc.getNewAddress({ address_type });
-    text = bip21(hash, invoice);
+    text = bip21(hash, { ...invoice, amount, tip, type });
   } else if (type === PaymentType.liquid) {
     if (await g("liquid:deposits:disabled"))
       fail("Liquid deposits are temporarily disabled");
     address_type ||= "blech32";
     hash = await lq.getNewAddress({ address_type });
-    text = bip21(hash, invoice);
+    text = bip21(hash, { ...invoice, amount, tip, type });
   } else if (type === PaymentType.internal) {
     hash = id;
   } else if (type === PaymentType.ecash) {

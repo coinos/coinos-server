@@ -38,7 +38,7 @@ export const bip21 = (address, { amount, memo, tip, type }) => {
   const url = new URLSearchParams();
 
   if (amount) {
-    url.append("amount", btc(amount + tip).toFixed(8));
+    url.append("amount", btc(amount + (tip || 0)).toFixed(8));
     if (type === "liquid") url.append("assetid", config.liquid.btc);
   }
 
