@@ -2,7 +2,6 @@ import config from "$config";
 import { g } from "$lib/db";
 import { generate } from "$lib/invoices";
 import { warn } from "$lib/logging";
-import { safeGot } from "$lib/safe-fetch";
 import { PaymentType } from "$lib/types";
 import { fail, getPayment, sleep, wait } from "$lib/utils";
 import {
@@ -38,21 +37,31 @@ const keysets = async () => {
   return keysets;
 };
 
-const decode = async (token) => getDecodedToken(token, await keysets());
+// A short keyset id that doesn't expand against our keysets belongs to some
+// other mint; say so instead of surfacing cashu-ts's mapping error.
+const decode = async (token) => {
+  try {
+    return getDecodedToken(token, await keysets());
+  } catch (e) {
+    if (/short keyset id/i.test(e.message))
+      fail("Unable to receive from other mints");
+    throw e;
+  }
+};
 
-// `mint` comes straight out of an attacker-supplied cashu token, and this is
-// the first thing we do with it — so fetching it with cashu-ts's plain fetch
-// made every /cash and /ecash entry point an unauthenticated SSRF probe into
-// the internal network. Use the same IP-pinning fetcher lnurl resolution uses
-// (it rejects loopback/private/link-local/CGNAT/metadata targets and closes the
-// DNS-rebinding window by pinning the socket to the IP it validated). NUT-06
-// /v1/info is exactly what CashuMint.getInfo() would have called.
-const ext = async (mint) => {
-  const { pubkey: issuerPk } = await safeGot(
-    `${String(mint).replace(/\/+$/, "")}/v1/info`,
-  );
-  const { pubkey: ourPk } = await m.getInfo();
-  return issuerPk !== ourPk;
+// A token is ours when every proof is on one of our keysets. Keyset ids are
+// derived from the mint's public keys, so they identify the issuer; the token's
+// `mint` URL is just a label the sending wallet wrote in (tokens of ours turn
+// up with stray ports and paths on it) and is never fetched. A miss refreshes
+// the cached list once in case a keyset was rotated in since it was fetched.
+const ext = async (proofs) => {
+  const ours = (ks) => {
+    const ids = new Set(ks.map((k) => k.id));
+    return proofs.every((p) => ids.has(p.id));
+  };
+  if (ours(await keysets())) return false;
+  cached = undefined;
+  return !ours(await keysets());
 };
 
 const sum = (proofs) => proofs.reduce((a, p) => a + p.amount, 0);
@@ -83,9 +92,9 @@ export async function get(id) {
 // the amount the user receives: the token's value less the mint's input fee
 // and Lightning fee reserve.
 export async function redeem({ token, user, invoice = undefined, memo = undefined }) {
-  const { mint, proofs } = await decode(token);
+  const { proofs } = await decode(token);
   if (!proofs?.length) fail("Token has no proofs");
-  if (await ext(mint)) fail("Unable to receive from other mints");
+  if (await ext(proofs)) fail("Unable to receive from other mints");
 
   // Cheap pre-check so a spent token fails before an invoice is created for
   // it (the melt would reject it anyway, but not before leaving an unpaid
@@ -146,10 +155,9 @@ export async function check(token) {
   const { mint, proofs } = await decode(token);
   const total = sum(proofs);
 
-  const external = await ext(mint);
+  const external = await ext(proofs);
 
-  // Only ask our own mint about proof states; an external mint URL is never
-  // contacted with cashu-ts's unpinned fetch.
+  // Only ask our own mint about proof states.
   let spent = 0;
   if (!external) {
     const w = new CashuWallet(m);
