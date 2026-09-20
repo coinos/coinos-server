@@ -4,6 +4,7 @@ import { db, s } from "$lib/db";
 import { l, warn } from "$lib/logging";
 import { fail } from "$lib/utils";
 import { assertNameFree } from "$lib/names";
+import { isReserved } from "$lib/reserved";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils";
 import { got } from "got";
 import { getPublicKey, nip19 } from "nostr-tools";
@@ -16,12 +17,11 @@ export default async (user, ip) => {
   let { password, pubkey, username } = user;
   l("registering", username);
 
-  const reserved = ["ecash"];
   if (!username) fail("Username required");
   username = username.toLowerCase().replace(/\s/g, "");
   if (!valid.test(username))
     fail("Usernames can only have letters and numbers");
-  if (reserved.includes(username)) fail("Invalid username");
+  if (isReserved(username)) fail("Invalid username");
   if (username.includes("undefined")) fail("Invalid username");
 
   const id = v4();

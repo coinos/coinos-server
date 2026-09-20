@@ -9,6 +9,7 @@ import { mail, templates } from "$lib/mail";
 import { getNostrUser, getProfile, serverPubkey2 } from "$lib/nostr";
 import register from "$lib/register";
 import { assertNameFree } from "$lib/names";
+import { isReserved } from "$lib/reserved";
 import { emit } from "$lib/sockets";
 import upload from "$lib/upload";
 import { bail, fail, fields, getUser, pick } from "$lib/utils";
@@ -271,11 +272,10 @@ export default {
 
       const { confirm, password, pin, newpin } = body;
       const username = body?.username?.toLowerCase().replace(/\s/g, "");
-      const reserved = ["ecash"];
       const valid = /^[\p{L}\p{N}]{2,24}$/u;
       if (!valid.test(username))
         fail("Usernames can only have letters and numbers");
-      if (reserved.includes(username)) fail("Invalid username");
+      if (isReserved(username)) fail("Invalid username");
       if (username?.includes("undefined")) fail("Invalid username");
 
       let exists;
