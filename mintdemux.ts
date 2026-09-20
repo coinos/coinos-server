@@ -33,6 +33,7 @@
 //
 // Env: NEW_MINT (http://mint:3338), OLD_MINT (http://mint-old:3338),
 //      LOG_DIR (/demux), PORT (3341)
+import { createHash } from "crypto";
 import { appendFileSync, mkdirSync, readFileSync, existsSync, writeFileSync } from "fs";
 
 const NEW = process.env.NEW_MINT || "http://mint:3338";
@@ -56,22 +57,35 @@ let newKeysets = new Set<string>();
 let oldKeysets = new Set<string>();
 // Our own hourly routing refresh — forwarded as loopback so the mints' per-IP
 // limiter (which exempts 127.0.0.1) doesn't count it against the demux socket.
-async function fetchKeysets(base: string): Promise<string[]> {
+const lastKeysets: { NEW?: any[]; OLD?: any[] } = {};
+async function fetchKeysets(base: string): Promise<any[]> {
   try {
     const r = await fetch(`${base}/v1/keysets`, { headers: { "cf-connecting-ip": "127.0.0.1" } });
     if (!r.ok) throw new Error(`status ${r.status}`);
-    const j: any = await r.json(); return (j.keysets || []).map((k: any) => String(k.id));
+    const j: any = await r.json(); return (j.keysets || []) as any[];
   }
   catch (e: any) { console.error("keyset fetch failed", base, e.message); return []; }
 }
 async function refreshKeysets() {
   const [n, o] = await Promise.all([fetchKeysets(NEW), fetchKeysets(OLD)]);
-  if (n.length) newKeysets = new Set(n);
-  if (o.length) oldKeysets = new Set(o);
+  // This refresh is exempt from the mints' per-IP limiter (loopback key), so it
+  // also seeds the last-good lists the client-facing /v1/keysets falls back on
+  // when a wallet's own fetch is rate-limited — otherwise a demux restart could
+  // serve a list with no old keysets in it until some client fetch succeeded.
+  if (n.length) { newKeysets = new Set(n.map((k: any) => String(k.id))); lastKeysets.NEW = n; }
+  if (o.length) { oldKeysets = new Set(o.map((k: any) => String(k.id))); lastKeysets.OLD = o; }
 }
-const lastKeysets: { NEW?: any[]; OLD?: any[] } = {};
 await refreshKeysets();
 setInterval(refreshKeysets, 3600_000);
+// Empty routing tables are dangerous: with no old keysets every old-ecash melt
+// looks new and goes to the wrong mint. A restart that races the mints coming
+// up (a compose restart of both) leaves exactly that, so retry every 15s until
+// both sides are known instead of waiting out the hour.
+const warmup = setInterval(async () => {
+  if (newKeysets.size && oldKeysets.size) return clearInterval(warmup);
+  await refreshKeysets();
+  if (newKeysets.size && oldKeysets.size) { clearInterval(warmup); log(`keysets warmed: new=[${[...newKeysets]}] old=[${[...oldKeysets]}]`); }
+}, 15_000);
 
 // --- melt quote -> invoice memory (so an OLD-keyset melt can be re-quoted on OLD) ---
 const QFILE = `${DIR}/meltquotes.json`;
@@ -99,6 +113,23 @@ function rememberOldMelt(newId: string, oldId: string) {
   const cut = Date.now() - MTTL;
   for (const k of Object.keys(oldMelts)) if ((oldMelts[k].ts || 0) < cut) delete oldMelts[k];
   try { writeFileSync(MFILE, JSON.stringify(oldMelts)); } catch {}
+}
+
+// --- dropped old inputs (mixed melts) ---
+// The wallet treats these as spent; the mint never took them, so they sit
+// UNSPENT on OLD forever. Keep an accounting trail: the Y (hash of the secret)
+// identifies a proof to the mint without storing the bearer secret itself.
+const DFILE = `${DIR}/dropped-old-inputs.jsonl`;
+function recordDropped(proofs: any[], ctx: { ip: string; quote: string }) {
+  for (const p of proofs) {
+    try {
+      const y = createHash("sha256").update(String(p?.secret ?? "")).digest("hex");
+      appendFileSync(DFILE, JSON.stringify({
+        ts: new Date().toISOString(), ...ctx,
+        id: p?.id, amount: p?.amount, secret_sha256: y, dleq: !!p?.dleq,
+      }) + "\n");
+    } catch {}
+  }
 }
 
 // --- client-ip forwarding + partner whitelist ---
@@ -230,8 +261,24 @@ Bun.serve({
       const ids = keysetsInBody(body);
       const hasOld = ids.some(id => oldKeysets.has(id));
       const hasNew = ids.some(id => newKeysets.has(id));
-      if (hasOld && hasNew)
-        return new Response(JSON.stringify({ detail: "Cannot melt old and new ecash in one operation; melt them separately.", code: 12003 }), { status: 400, headers: J });
+      // Mixed selection: a wallet holding leftovers of both eras picks some of
+      // each, and the two mints can't co-sign one melt. Rejecting it (the old
+      // 12003) left such wallets permanently stuck — the auditor's among them,
+      // which is why mint.coinos.io reads "offline". Drop the OLD inputs and
+      // melt the NEW ones alone: the old proofs stay UNSPENT at the old mint,
+      // but the wallet will consider them spent, so record what was dropped.
+      // Old ecash is only redeemable through the panic-mode recovery path
+      // anyway (it needs DLEQ + blinding factor, which these inputs lack).
+      if (hasOld && hasNew) {
+        const ip = req.headers.get("cf-connecting-ip") || "";
+        const keep = (arr: any[]) => arr.filter((p: any) => !oldKeysets.has(String(p?.id)));
+        const dropped = (body.inputs || []).filter((p: any) => oldKeysets.has(String(p?.id)));
+        recordDropped(dropped, { ip, quote: String(body.quote || "") });
+        const merged = { ...body, inputs: keep(body.inputs || []) };
+        const r = await proxy(NEW, "POST", ps, JSON.stringify(merged), fwd(key, true));
+        log(`melt mixed: dropped ${dropped.length} old input(s) worth ${dropped.reduce((a: number, p: any) => a + (p?.amount || 0), 0)} sat, melted ${merged.inputs.length} new on NEW status=${r.status} ip=${ip}`);
+        return r;
+      }
       if (hasOld) {
         const ip = req.headers.get("cf-connecting-ip") || "";
         const info = quoteMem[body.quote];
