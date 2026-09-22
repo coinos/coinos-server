@@ -217,14 +217,19 @@ export default {
       user,
     } = req;
     try {
+      // Node alias lookup, refreshed hourly. Only the id→alias map is kept:
+      // the old code stored the full listnodes output (~10MB for 16k nodes)
+      // as an array, so the `last` stamp it hung on the array was dropped by
+      // JSON.stringify and the condition was inverted anyway — every send
+      // page view refetched and rewrote the whole thing.
       const hour = 1000 * 60 * 60;
-      let nodes = await g("nodes");
-      const { last } = nodes || {};
-
-      if (!last || last > Date.now() - hour) {
-        ({ nodes } = await ln.listnodes());
-        nodes.last = Date.now();
-        await s("nodes", nodes);
+      let cache = await g("nodes");
+      if (!cache?.aliases || !cache.last || cache.last < Date.now() - hour) {
+        const { nodes } = await ln.listnodes();
+        const aliases = {};
+        for (const n of nodes) if (n.alias) aliases[n.nodeid] = n.alias;
+        cache = { last: Date.now(), aliases };
+        await s("nodes", cache);
       }
 
       const decoded = await ln.decode(payreq);
@@ -240,8 +245,7 @@ export default {
           decoded);
       } else ({ amount_msat, payee } = decoded);
 
-      const node = nodes.find((n) => n.nodeid === payee);
-      const alias = node ? node.alias : (payee || "").substr(0, 12);
+      const alias = cache.aliases[payee] || (payee || "").substr(0, 12);
 
       const amount = Math.round((amount_msat || 0) / 1000);
       let ourfee = Math.round(amount * config.fee[PaymentType.lightning]);
