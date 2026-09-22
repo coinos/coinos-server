@@ -957,6 +957,7 @@ export default {
           const { fee } = await quoteRoutingFee({ pr: fetched, amount: q.amount });
           if (fee !== q.fee) fail("Routing fee changed, please try again");
         }
+        l("quote max", user.username, q.amount, "fee", q.fee, "ourfee", q.ourfee, "balance", q.balance);
         return res.send({ ...q, ...(fetched ? { payreq: fetched } : {}) });
       }
 
@@ -966,6 +967,7 @@ export default {
         fail("Amount does not match invoice");
       const { fee, parts } = await quoteRoutingFee({ pr, amount: a });
       const ourfee = await platformFee({ uid: user.id, aid, amount: a, fee });
+      l("quote", user.username, a, "fee", fee, "ourfee", ourfee, "parts", parts);
       res.send({
         amount: a,
         fee,
