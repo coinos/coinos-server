@@ -34,6 +34,19 @@ import rpc from "@coinos/rpc";
 import got from "got";
 import { v4 } from "uuid";
 
+// Funds are closed. The mechanism let a caller pull unbacked balance out of a
+// fund (the /take drain, 2026-08-25) and its deposit path never had a
+// kill-switch of its own, so with `fund:disabled` set users could still pay
+// INTO funds they were then unable to withdraw from. Every value-moving entry
+// point — deposit (POST /payments with `fund`), withdrawal (POST /take) and
+// pre-authorization (POST /authorize) — now refuses unconditionally, rather
+// than depending on a redis flag someone can clear by accident.
+//
+// Read paths are deliberately left working: GET /fund/:id and the manager
+// endpoints still serve existing funds so balances stay visible and can be
+// settled out of band.
+const fundsClosed = () => fail("Funds are no longer supported");
+
 export default {
   async info(_, res) {
     res.send(await ln.getinfo());
@@ -86,16 +99,7 @@ export default {
             sender: user,
           });
         } else if (fund) {
-          p = await debit({
-            hash,
-            amount,
-            memo: fund,
-            user,
-            type: PaymentType.fund,
-          });
-          await db.incrBy(`fund:${fund}`, amount);
-          await db.lPush(`fund:${fund}:payments`, p.id);
-          l("funded fund", fund);
+          fundsClosed();
         }
       }
 
@@ -322,11 +326,7 @@ export default {
   // },
 
   async authorize(req, res) {
-    // Kill-switch for the fund/authorize/take mechanism (SECURITY 2026-08-25:
-    // the /take fund-claim path could pay out unbacked balance). Set redis
-    // `fund:disabled` to fail all
-    // fund authorizations closed while the mechanism is audited/rewritten.
-    if (await g("fund:disabled")) fail("Fund transfers temporarily disabled");
+    fundsClosed();
 
     const { id: uid } = req.user;
     const { id, fiat, currency, amount } = req.body;
@@ -361,8 +361,7 @@ export default {
       user,
     } = req;
     try {
-      // Kill-switch — see authorize().
-      if (await g("fund:disabled")) fail("Fund transfers temporarily disabled");
+      fundsClosed();
 
       amount = Number.parseInt(amount);
       if (!Number.isFinite(amount) || amount <= 0) fail("Invalid amount");
