@@ -20,6 +20,7 @@ const isWithdrawLocked = (type: string): string | null => {
 };
 import { generate } from "$lib/invoices";
 import ln from "$lib/ln";
+import { quoteRoutingFee, xpayLayers } from "$lib/lnquote";
 import { err, l, shortError, warn } from "$lib/logging";
 import { handleZap } from "$lib/nostr";
 import { notify, nwcNotify } from "$lib/notifications";
@@ -965,12 +966,35 @@ export const sendLightning = async ({
   }
 
   const amt = amount_msat ? Math.round(amount_msat / 1000) : amount;
-  let minfee = Math.max(5, Math.round(amt * 0.005));
-  const { channels } = await ln.listpeerchannels();
-  if (channels.some((c) => c.peer_id === payee)) minfee = 0;
 
-  fee = Math.max(Number.parseInt(fee) || minfee, minfee);
-  if (fee < 0) fail("Fee cannot be negative");
+  // Ask askrene up front what routing this will cost — the same query xpay
+  // runs — so the maxfee we reserve is the real fee, not a guess. A caller
+  // that names its own cap keeps it (finalize refunds whatever xpay doesn't
+  // spend), but a cap below the quoted fee is rejected here, before any
+  // debit, instead of failing inside xpay after one. If the quote itself
+  // fails (askrene unavailable, no route) fall back to the old heuristic and
+  // let xpay have a go.
+  let quoted: number | undefined;
+  try {
+    ({ fee: quoted } = await quoteRoutingFee({ pr, amount: amt }));
+  } catch (e: any) {
+    warn("route quote failed", pr.substr(-8), shortError(e?.message));
+  }
+
+  const explicit = Number.parseInt(fee);
+  if (Number.isFinite(explicit)) {
+    if (explicit < 0) fail("Fee cannot be negative");
+    if (quoted !== undefined && explicit < quoted)
+      fail(`Routing fee of ⚡️${quoted} required, max fee is ⚡️${explicit}`);
+    fee = explicit;
+  } else if (quoted !== undefined) {
+    fee = quoted;
+  } else {
+    let minfee = Math.max(5, Math.round(amt * 0.005));
+    const { channels } = await ln.listpeerchannels();
+    if (channels.some((c) => c.peer_id === payee)) minfee = 0;
+    fee = minfee;
+  }
 
   const { pays } = await ln.listpays(pr);
   if (pays.find((p) => p.status === "complete"))
@@ -1028,7 +1052,7 @@ export const sendLightning = async ({
       // still driving and we refund one that settles (the LEAKED DEBIT
       // losses). Change both together.
       retry_for: 60,
-      layers: ["prefer-kappa"],
+      layers: await xpayLayers(),
     });
 
     // Only log the xpay response when there's a real concern — no preimage
@@ -1425,7 +1449,12 @@ const finalize = async (r, p) => {
   const decoded = await ln.decode(p.hash);
   const invMsat = Number(decoded.amount_msat ?? r.amount_msat);
   const sentMsat = Number(r.amount_sent_msat);
-  const computedFee = Math.round((sentMsat - invMsat) / 1000);
+  // Round UP: the routing fee was quoted and reserved in whole sats (a
+  // 301 msat route is a 1 sat maxfee — xpay's cap is exact and a few msat
+  // short fails the payment), so charge the sat that was quoted rather than
+  // rounding 301 msat to 0 and refunding it. Otherwise a "send everything"
+  // computed from the quote strands a single sat in the account.
+  const computedFee = Math.ceil((sentMsat - invMsat) / 1000);
   if (!Number.isFinite(computedFee)) {
     warn("finalize: non-finite fee compute, keeping reserved maxfee", p.id,
          "sent_msat=", r.amount_sent_msat, "inv_msat=", decoded.amount_msat ?? r.amount_msat);
@@ -1469,7 +1498,7 @@ const finalizeKeysend = async (r, p, preimage) => {
 
   const maxfee = p.fee;
   const sentMsat = Number(r.amount_sent_msat);
-  const actualFee = Math.round((sentMsat - Math.abs(p.amount) * 1000) / 1000);
+  const actualFee = Math.ceil((sentMsat - Math.abs(p.amount) * 1000) / 1000);
   p.fee = Number.isFinite(actualFee) && actualFee >= 0 ? actualFee : maxfee;
   p.ref = preimage;
   p.confirmed = true;

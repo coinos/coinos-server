@@ -5,6 +5,7 @@ import { archive, db, g, gf, s, sa } from "$lib/db";
 import { generate, getUserOffer } from "$lib/invoices";
 import { replay } from "$lib/lightning";
 import ln from "$lib/ln";
+import { platformFee, quoteMax, quoteRoutingFee } from "$lib/lnquote";
 import { err, l, shortError, warn } from "$lib/logging";
 import mqtt from "$lib/mqtt";
 import {
@@ -852,6 +853,133 @@ export default {
   async decode(req, res) {
     const { bolt11 } = req.params;
     res.send(await ln.decode(bolt11));
+  },
+
+  // Up-front cost of a lightning send: the routing fee askrene quotes for this
+  // invoice (the same answer xpay will get) plus the platform fee debit() will
+  // charge. With `max`, instead solve for the largest amount whose amount +
+  // fees exactly clears the account balance — the "send everything" case where
+  // guessing a maxfee always left dust behind or bounced on insufficient funds.
+  async quote(req, res) {
+    const { body, user } = req;
+    try {
+      let { payreq, amount, max, aid, ceiling } = body;
+      if (typeof payreq !== "string" || !payreq.trim())
+        fail("Invalid payment request");
+      payreq = payreq.replace(/\s/g, "").toLowerCase();
+
+      if (!aid) aid = user.id;
+      else if (typeof aid !== "string") fail("Invalid account");
+      else if (aid !== user.id) {
+        const pos = await db.lPos(`${user.id}:accounts`, aid);
+        if (pos == null) fail("account not found");
+      }
+
+      const parseSats = (v, name) => {
+        if (v === undefined || v === null || v === "") return undefined;
+        const n = Number.parseInt(v);
+        if (Number.isNaN(n) || n < 0 || n > SATS) fail(`Invalid ${name}`);
+        return n;
+      };
+      amount = parseSats(amount, "amount");
+      ceiling = parseSats(ceiling, "ceiling");
+      const balance = Number.parseInt(await g(`balance:${aid}`)) || 0;
+
+      // Paying another coinos user never leaves the ledger: no routing, no
+      // platform fee, the whole balance is sendable.
+      const invoice = await getInvoice(payreq);
+      if (invoice) {
+        const recipient = await getUser(invoice.uid);
+        if (recipient?.username !== "mint") {
+          const a = max ? balance : (amount ?? invoice.amount);
+          return res.send({
+            amount: a,
+            fee: 0,
+            ourfee: 0,
+            total: a,
+            balance,
+            internal: true,
+          });
+        }
+      }
+
+      let decoded = await ln.decode(payreq);
+      let pr = payreq;
+      let fetched: string | undefined;
+
+      // An offer isn't routable by itself — the blinded paths live in the
+      // invoice fetched from it. Fetch one to learn them; in max mode that's a
+      // placeholder amount, and the final invoice is fetched once we know the
+      // real one so the caller can pay exactly what we quoted.
+      const fetchFromOffer = async (a: number) => {
+        const { invoice } = await ln.fetchinvoice({
+          offer: payreq,
+          amount_msat: decoded.offer_amount_msat ? undefined : a * 1000,
+          timeout: 60,
+        });
+        return invoice.replace(/\s/g, "").toLowerCase();
+      };
+
+      if (decoded.type === "bolt12 offer") {
+        if (decoded.offer_currency)
+          fail("Currency-denominated offers are not supported");
+        const offerAmount = decoded.offer_amount_msat
+          ? Math.round(decoded.offer_amount_msat / 1000)
+          : undefined;
+        if (offerAmount) max = false;
+        const a = offerAmount ?? amount ?? (max ? balance : undefined);
+        if (!a) fail("Amount required");
+        pr = fetched = await fetchFromOffer(a);
+        decoded = await ln.decode(pr);
+      }
+
+      let invAmount: number | undefined;
+      if (decoded.type === "bolt12 invoice")
+        invAmount = decoded.invoice_amount_msat
+          ? Math.round(decoded.invoice_amount_msat / 1000)
+          : undefined;
+      else
+        invAmount = decoded.amount_msat
+          ? Math.round(decoded.amount_msat / 1000)
+          : undefined;
+
+      if (max) {
+        // The invoice's own amount is ignored here: an LNURL caller has to
+        // name an amount to get any invoice at all, so it probes with one at
+        // the ceiling, takes the amount we solve for, and fetches the real
+        // invoice for that. Anything that pays a fixed-amount invoice with
+        // a different amount fails at send time, not here.
+        const q = await quoteMax({ pr, uid: user.id, aid, ceiling });
+        // Offer: the placeholder invoice carried the balance, not the answer.
+        if (fetched && q.amount !== invAmount) {
+          fetched = await fetchFromOffer(q.amount);
+          // Re-quote against the real invoice: same paths, so same fee, but
+          // never hand back a number we didn't verify against what gets paid.
+          const { fee } = await quoteRoutingFee({ pr: fetched, amount: q.amount });
+          if (fee !== q.fee) fail("Routing fee changed, please try again");
+        }
+        return res.send({ ...q, ...(fetched ? { payreq: fetched } : {}) });
+      }
+
+      const a = invAmount ?? amount;
+      if (!a) fail("Amount required");
+      if (invAmount && amount && amount !== invAmount)
+        fail("Amount does not match invoice");
+      const { fee, parts } = await quoteRoutingFee({ pr, amount: a });
+      const ourfee = await platformFee({ uid: user.id, aid, amount: a, fee });
+      res.send({
+        amount: a,
+        fee,
+        ourfee,
+        parts,
+        total: a + fee + ourfee,
+        balance,
+        ...(fetched ? { payreq: fetched } : {}),
+      });
+    } catch (e) {
+      warn("problem quoting", user.username, shortError(e.message));
+      bail(res, e.message);
+    }
   },
 
   // The user's standing bolt12 offer (lno1...) — reusable receive code they
