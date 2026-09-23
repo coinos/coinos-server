@@ -51,6 +51,13 @@ export default {
       for (let p of preimages) {
         p = p.toLowerCase();
         if (seen.has(p)) continue;
+        // A preimage that already settled (or backs a live invoice) can't be
+        // credited again — reject it rather than let a buyer pay for nothing.
+        if (
+          (await db.exists(`credited:${p}`)) ||
+          (await db.exists(`preimage:${sha256(p)}`))
+        )
+          fail("preimage already used");
         seen.add(p);
         fresh.push(p);
       }

@@ -155,9 +155,15 @@ export async function listenForLightning() {
       });
 
       // credit() may decline a duplicate idempotency claim. Only advance the
-      // listener once the durable payment pointer proves the ledger write won.
-      if (!(await getPayment(paymentRequest)))
+      // listener once the durable payment pointer proves the ledger write won —
+      // unless the preimage was already credited by an earlier settlement (a
+      // reused merchant preimage), which can never persist and would otherwise
+      // wedge the listener in a restart loop.
+      if (!(await getPayment(paymentRequest))) {
+        if (preimage && (await db.get(`credited:${preimage}`)))
+          return warn("preimage already credited, skipping", paymentRequest);
         throw new Error(`lightning credit did not persist for ${paymentRequest}`);
+      }
     })();
 
     // db.set is awaited directly: s() is intentionally fire-and-forget and an
