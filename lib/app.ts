@@ -9,6 +9,7 @@ import fastifyStatic from "@fastify/static";
 import fastify from "fastify";
 import pino from "pino";
 
+import dns from "node:dns";
 import * as path from "path";
 
 import { jwtStrategy } from "$lib/auth";
@@ -71,6 +72,35 @@ const redactHeaders = (headers: any) => {
 //   reqLogger.info({ url: req.raw.url, id: req.id });
 // });
 //
+
+// The client IP comes from cf-connecting-ip, which Cloudflare sets and lb/ui
+// pass through. Onion traffic skips Cloudflare: the tor container connects to
+// us directly, so whatever cf-connecting-ip / x-forwarded-for / rate-limit-by
+// the client sent would reach the rate limiter and IP bans untouched. Pin those
+// requests to the tor container's own address instead. Registered before the
+// rate limiter so its keyGenerator sees the rewritten header.
+const UNTRUSTED_PEERS = ["tor"];
+let untrusted = new Set<string>();
+const resolveUntrusted = async () => {
+  const next = new Set<string>();
+  for (const host of UNTRUSTED_PEERS) {
+    try {
+      for (const { address } of await dns.promises.lookup(host, { all: true }))
+        next.add(address);
+    } catch {}
+  }
+  if (next.size) untrusted = next;
+};
+await resolveUntrusted();
+setInterval(resolveUntrusted, 30000).unref();
+
+app.addHook("onRequest", async (req) => {
+  const peer = (req.socket.remoteAddress || "").replace(/^::ffff:/, "");
+  if (!untrusted.has(peer)) return;
+  req.headers["cf-connecting-ip"] = peer;
+  delete req.headers["x-forwarded-for"];
+  delete req.headers["rate-limit-by"];
+});
 
 app.addHook("preHandler", async (req) => {
   const url = req.raw.url;
