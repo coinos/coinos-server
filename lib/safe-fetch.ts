@@ -32,18 +32,54 @@ const blockedV4 = (ip: string): boolean => {
   return false;
 };
 
+// Expand an IPv6 address to its 8 16-bit groups. Handles "::" and a trailing
+// dotted quad. new URL() re-serializes IPv6 hosts in hex, so "[::ffff:10.0.0.1]"
+// arrives here as "::ffff:a00:1" — matching on the text form is not enough.
+const v6Groups = (ip: string): number[] | null => {
+  let s = ip.toLowerCase().split("%")[0];
+  const quad = s.match(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (quad) {
+    const [a, b, c, d] = quad.slice(1).map(Number);
+    s = `${s.slice(0, quad.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const halves = s.split("::");
+  if (halves.length > 2) return null;
+  const part = (h: string) => (h ? h.split(":").map((x) => Number.parseInt(x, 16)) : []);
+  const head = part(halves[0]);
+  const tail = halves.length === 2 ? part(halves[1]) : [];
+  const fill = 8 - head.length - tail.length;
+  if (fill < 0 || (halves.length === 1 && fill !== 0)) return null;
+  const g = [...head, ...Array(fill).fill(0), ...tail];
+  return g.some((n) => Number.isNaN(n) || n < 0 || n > 0xffff) ? null : g;
+};
+
+const v4Of = (hi: number, lo: number) =>
+  `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+
+const blockedV6 = (ip: string): boolean => {
+  const g = v6Groups(ip);
+  if (!g) return true;
+  const zero = (from: number, to: number) => g.slice(from, to).every((n) => n === 0);
+  if (zero(0, 8)) return true; // :: unspecified
+  if (zero(0, 7) && g[7] === 1) return true; // ::1 loopback
+  // Every form that carries an IPv4 address is judged by that address.
+  if (zero(0, 5) && g[5] === 0xffff) return blockedV4(v4Of(g[6], g[7])); // ::ffff:0:0/96 mapped
+  if (zero(0, 4) && g[4] === 0xffff && g[5] === 0) return blockedV4(v4Of(g[6], g[7])); // ::ffff:0:0:0/96 translated
+  if (zero(0, 6)) return blockedV4(v4Of(g[6], g[7])); // ::/96 IPv4-compatible
+  if (g[0] === 0x64 && g[1] === 0xff9b) return blockedV4(v4Of(g[6], g[7])); // 64:ff9b::/96, 64:ff9b:1::/48 NAT64
+  if (g[0] === 0x2002) return blockedV4(v4Of(g[1], g[2])); // 2002::/16 6to4
+  if (g[0] === 0x2001 && g[1] === 0) return true; // 2001::/32 Teredo
+  if ((g[0] & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+  if ((g[0] & 0xffc0) === 0xfec0) return true; // fec0::/10 site-local
+  if ((g[0] & 0xfe00) === 0xfc00) return true; // fc00::/7 ULA
+  if ((g[0] & 0xff00) === 0xff00) return true; // ff00::/8 multicast
+  if (g[0] === 0x0100 && zero(1, 4)) return true; // 100::/64 discard
+  return false;
+};
+
 const isBlockedIp = (ip: string): boolean => {
   if (net.isIPv4(ip)) return blockedV4(ip);
-  if (net.isIPv6(ip)) {
-    const low = ip.toLowerCase();
-    if (low === "::1" || low === "::") return true; // loopback / unspecified
-    const mapped = low.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
-    if (mapped) return blockedV4(mapped[1]); // IPv4-mapped
-    if (/^fe[89ab]/.test(low)) return true; // fe80::/10 link-local
-    const head = low.split(":")[0];
-    if (head.startsWith("fc") || head.startsWith("fd")) return true; // fc00::/7 ULA
-    return false;
-  }
+  if (net.isIPv6(ip)) return blockedV6(ip);
   return true; // not a recognizable IP -> block
 };
 
