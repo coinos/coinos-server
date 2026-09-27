@@ -1,19 +1,21 @@
-import { s } from "$lib/db";
 import { check, get, redeem } from "$lib/ecash";
 import { err } from "$lib/logging";
 import { bail, fail, getInvoice, getUser } from "$lib/utils";
 import { getEncodedToken } from "@cashu/cashu-ts";
-import { v4 } from "uuid";
 
 export default {
-  async save(req, res) {
+  // Stateless status lookup for a token the client is holding. This replaced
+  // an unauthenticated POST that stored any submitted string under a fresh id
+  // forever (thousands of forged and foreign tokens accumulated); `get` below
+  // still serves the ids that were handed out while it existed.
+  async status(req, res) {
     const {
       body: { token },
     } = req;
     try {
-      const id = v4();
-      await s(`cash:${id}`, token);
-      res.send({ id });
+      if (typeof token !== "string" || !token.startsWith("cashu"))
+        fail("Invalid token");
+      res.send(await check(token));
     } catch (e) {
       err(e.message);
       bail(res, e.message);

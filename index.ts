@@ -198,7 +198,7 @@ app.post("/shopify/:id", shopify);
 app.get("/bolt12", fixBolt12);
 
 app.get("/cash/:id/:version", ecash.get);
-app.post("/cash", ecash.save);
+app.post("/ecash/status", ecash.status);
 app.post("/claim", auth, ecash.claim);
 app.post("/ecash/:id", ecash.receive);
 
