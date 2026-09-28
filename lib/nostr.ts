@@ -118,7 +118,12 @@ export async function handleZap(invoice, sender = undefined) {
 
     tags.push(["bolt11", invoice.bolt11]);
     tags.push(["description", invoice.description]);
-    tags.push(["preimage", invoice.payment_preimage]);
+    // Internal (coinos→coinos) zaps settle in the ledger, so no Lightning
+    // preimage exists and sendInternal stores the payment id here instead.
+    // NIP-57 makes this tag optional: only publish a real 32-byte hex preimage,
+    // otherwise verifiers flag the receipt as invalid (#93).
+    if (/^[0-9a-f]{64}$/i.test(invoice.payment_preimage || ""))
+      tags.push(["preimage", invoice.payment_preimage]);
 
     const ev = { pubkey, kind, created_at, content, tags };
     const signed = await finalizeEvent(ev, hexToBytes(serverSecret2));
